@@ -1,0 +1,132 @@
+---
+// Player component — rendered on the landing page
+// JS initialization handled by player.js imported in the page
+---
+
+<div class="player">
+  <!-- Track title with blend mode for chrome blob integration -->
+  <h1 id="player-title" class="player-title display-lg">MORPHICS</h1>
+
+  <!-- Glassmorphic playback controls -->
+  <div class="player-controls glass-prominent">
+    <button id="player-prev" class="player-btn" aria-label="Previous track">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z" />
+      </svg>
+    </button>
+
+    <button id="player-play" class="player-btn player-btn--play" aria-label="Play">
+      <span class="play-icon">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M8 5v14l11-7z" />
+        </svg>
+      </span>
+      <span class="pause-icon" style="display:none;">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+        </svg>
+      </span>
+    </button>
+
+    <button id="player-next" class="player-btn" aria-label="Next track">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" />
+      </svg>
+    </button>
+  </div>
+
+  <!-- Waveform canvas -->
+  <div class="player-waveform-container">
+    <canvas id="player-waveform"></canvas>
+  </div>
+</div>
+
+<style>
+  .player {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-8);
+    height: 100%;
+    padding: var(--space-16) var(--space-6);
+    position: relative;
+    z-index: 1;
+  }
+
+  .player-title {
+    color: var(--on-surface);
+    mix-blend-mode: difference;
+    text-align: center;
+    user-select: none;
+  }
+
+  .player-controls {
+    display: flex;
+    align-items: center;
+    gap: var(--space-6);
+    padding: var(--space-3) var(--space-6);
+    border-radius: var(--radius-full);
+    background: rgba(30, 40, 45, 0.6);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+  }
+
+  .player-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--on-surface);
+    opacity: 0.8;
+    transition: opacity 0.2s;
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .player-btn:hover {
+    opacity: 1;
+  }
+
+  .player-btn--play {
+    opacity: 1;
+  }
+
+  .player-waveform-container {
+    width: 100%;
+    max-width: 600px;
+    height: 80px;
+    position: relative;
+  }
+
+  .player-waveform-container canvas {
+    width: 100%;
+    height: 100%;
+  }
+
+  .player-waveform-container::after {
+    content: '';
+    position: absolute;
+    inset: -20px -40px;
+    background: radial-gradient(ellipse, rgba(10, 38, 38, 0.4), transparent 70%);
+    pointer-events: none;
+    z-index: -1;
+  }
+
+  @media (max-width: 480px) {
+    .player {
+      padding: var(--space-8) var(--space-4);
+    }
+
+    .player-controls {
+      flex-direction: column;
+      gap: var(--space-3);
+      padding: var(--space-4);
+      border-radius: var(--radius-xl);
+    }
+
+    .player-waveform-container {
+      max-width: 90vw;
+      height: 50px;
+    }
+  }
+</style>
