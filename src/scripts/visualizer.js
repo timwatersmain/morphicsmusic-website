@@ -13,7 +13,7 @@ import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 // Shader source
 // ---------------------------------------------------------------------------
 
-const VERT_CHROME = /* glsl */`
+const VERT_TENDRIL = /* glsl */`
 varying vec2 vUv;
 void main() {
   vUv = uv;
@@ -21,10 +21,11 @@ void main() {
 }`;
 
 // OCTAVES is injected via ShaderMaterial.defines (5 desktop, 3 mobile)
-const FRAG_CHROME = /* glsl */`
+const FRAG_TENDRIL = /* glsl */`
 precision highp float;
 uniform float uTime;
 uniform float uBass;
+uniform float uMid;
 uniform float uHigh;
 varying vec2 vUv;
 
@@ -38,10 +39,9 @@ float noise(vec2 p) {
   vec2 f = fract(p);
   vec2 u = f * f * (3.0 - 2.0 * f);
   return mix(
-    mix(dot(hash22(i + vec2(0.0,0.0)), f - vec2(0.0,0.0)),
-        dot(hash22(i + vec2(1.0,0.0)), f - vec2(1.0,0.0)), u.x),
-    mix(dot(hash22(i + vec2(0.0,1.0)), f - vec2(0.0,1.0)),
-        dot(hash22(i + vec2(1.0,1.0)), f - vec2(1.0,1.0)), u.x),
+    mix(dot(hash22(i), f), dot(hash22(i + vec2(1.0, 0.0)), f - vec2(1.0, 0.0)), u.x),
+    mix(dot(hash22(i + vec2(0.0, 1.0)), f - vec2(0.0, 1.0)),
+        dot(hash22(i + vec2(1.0, 1.0)), f - vec2(1.0, 1.0)), u.x),
     u.y
   );
 }
@@ -60,31 +60,48 @@ float fbm(vec2 p) {
 
 void main() {
   vec2 uv = (vUv - 0.5) * 2.0;
-  // Base speed 0.12 units/sec; uHigh adds phase offset (shimmer = phase jumps, not speed)
-  float t = uTime * 0.12 + uHigh * 2.0;
+  float t = uTime * 0.08 + uHigh * 2.5;
 
-  // Two-level domain warp: q warps into r, r warps into final sample
-  vec2 q = vec2(fbm(uv + vec2(0.0, t)),
-                fbm(uv + vec2(5.2, t * 0.8)));
-  vec2 r = vec2(fbm(uv + q + vec2(1.7, 9.2) + 0.15 * t),
-                fbm(uv + q + vec2(8.3, 2.8) + 0.126 * t));
+  // Directional bias: stretch noise along radial lines from center
+  float angle = atan(uv.y, uv.x);
+  float radius = length(uv);
+  vec2 polarUv = vec2(angle * 0.5, radius * 1.5);
 
-  // Bass pushes the warp domain outward
-  r += uBass * 0.3;
+  // Two-level domain warp for organic tendril shapes
+  float warpStrength = 0.8 + uBass * 0.6;
+  vec2 q = vec2(fbm(polarUv + vec2(0.0, t)), fbm(polarUv + vec2(5.2, t * 0.7)));
+  vec2 r = vec2(
+    fbm(polarUv + q * warpStrength + vec2(1.7, 9.2) + 0.15 * t),
+    fbm(polarUv + q * warpStrength + vec2(8.3, 2.8) + 0.126 * t)
+  );
 
-  float f = fbm(uv + r);
+  float f = fbm(polarUv + r * warpStrength);
   float n = clamp(f * 0.5 + 0.5, 0.0, 1.0);
 
-  // Chrome color ramp: void -> chrome -> specular white; bass bleeds primary
-  vec3 voidCol    = vec3(0.075, 0.075, 0.075); // #131313
-  vec3 chromeCol  = vec3(0.78,  0.78,  0.78);  // #C8C8C8
-  vec3 specular   = vec3(1.0,   1.0,   1.0);
-  vec3 primary    = vec3(1.0,   0.706, 0.639); // #FFB4A3
+  // Tendril mask: fade toward center (blob occludes) and edges
+  float tendrilMask = smoothstep(0.05, 0.3, radius) * smoothstep(1.4, 0.5, radius);
+  n *= tendrilMask;
 
-  vec3 col = mix(voidCol,   chromeCol, smoothstep(0.2, 0.6,  n));
-  col      = mix(col,       specular,  smoothstep(0.65, 0.9, n));
-  col      = mix(col,       primary,   uBass * smoothstep(0.7, 1.0, n));
-  col     *= 0.75 + uBass * 0.25;
+  // Mid modulates brightness
+  float brightness = 0.8 + uMid * 0.4;
+
+  // Color ramp: void -> deep teal -> bright teal -> cyan highlights
+  vec3 voidCol = vec3(0.04, 0.04, 0.04);
+  vec3 deepTeal = vec3(0.04, 0.15, 0.15);
+  vec3 brightTeal = vec3(0.0, 1.0, 0.667);  // #00FFAA
+  vec3 cyan = vec3(0.0, 0.85, 0.85);
+
+  vec3 col = mix(voidCol, deepTeal, smoothstep(0.15, 0.4, n));
+  col = mix(col, brightTeal * 0.4, smoothstep(0.4, 0.7, n));
+  col = mix(col, cyan * 0.5, smoothstep(0.7, 0.95, n));
+  col *= brightness;
+
+  // L2: Contour lines — concentric rings from center
+  float ringCount = 8.0 + uBass * 4.0;
+  float rings = fract(radius * ringCount);
+  float ringLine = smoothstep(0.0, 0.04, rings) * smoothstep(0.08, 0.04, rings);
+  float ringAlpha = 0.06 + uBass * 0.08;
+  col += vec3(0.0, 0.8, 0.66) * ringLine * ringAlpha * smoothstep(1.2, 0.2, radius);
 
   gl_FragColor = vec4(col, 1.0);
 }`;
@@ -208,19 +225,24 @@ export function initVisualizer(canvas, getAnalyserFn) {
   const camera = new THREE.PerspectiveCamera(50, aspect, 0.1, 100);
   camera.position.z = 3;
 
-  // --- Chrome fluid surface ---
-  const chromeUniforms = {
+  // --- Tendril background plane (L1 + L2) ---
+  const tendrilUniforms = {
     uTime: { value: 0 },
     uBass: { value: AMBIENT.bass },
+    uMid:  { value: AMBIENT.mid },
     uHigh: { value: AMBIENT.high },
   };
-  const chromeMat = new THREE.ShaderMaterial({
-    uniforms:       chromeUniforms,
-    vertexShader:   VERT_CHROME,
-    fragmentShader: FRAG_CHROME,
+  const { w: planeW, h: planeH } = getViewportPlaneSize(camera, -0.5);
+  const tendrilMat = new THREE.ShaderMaterial({
+    uniforms:       tendrilUniforms,
+    vertexShader:   VERT_TENDRIL,
+    fragmentShader: FRAG_TENDRIL,
     defines:        { OCTAVES: isMobile ? 3 : 5 },
   });
-  scene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), chromeMat));
+  const tendrilMesh = new THREE.Mesh(new THREE.PlaneGeometry(planeW, planeH), tendrilMat);
+  tendrilMesh.position.z = -0.5;
+  tendrilMesh.renderOrder = 0;
+  scene.add(tendrilMesh);
 
   // --- Particles ---
   const particleCount = isMobile ? 400 : 1500;
@@ -319,8 +341,14 @@ export function initVisualizer(canvas, getAnalyserFn) {
   // --- Resize ---
   function onResize() {
     const w = canvas.clientWidth, h = canvas.clientHeight;
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
     renderer.setSize(w, h, false);
     composer.setSize(w, h);
+    // Re-scale tendril plane to fill viewport at its z-depth
+    const { w: pw, h: ph } = getViewportPlaneSize(camera, tendrilMesh.position.z);
+    tendrilMesh.geometry.dispose();
+    tendrilMesh.geometry = new THREE.PlaneGeometry(pw, ph);
   }
   window.addEventListener('resize', onResize);
 
@@ -339,9 +367,10 @@ export function initVisualizer(canvas, getAnalyserFn) {
       bass = ema.bass; mid = ema.mid; high = ema.high;
     }
 
-    chromeUniforms.uTime.value = performance.now() / 1000;
-    chromeUniforms.uBass.value = bass;
-    chromeUniforms.uHigh.value = high;
+    tendrilUniforms.uTime.value = performance.now() / 1000;
+    tendrilUniforms.uBass.value = bass;
+    tendrilUniforms.uMid.value  = mid;
+    tendrilUniforms.uHigh.value = high;
 
     if (chromaPass) chromaPass.uniforms.uStrength.value = 0.002 + high * 0.004;
 
