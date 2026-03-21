@@ -253,7 +253,6 @@ const CHROMATIC_SHADER = {
 // ---------------------------------------------------------------------------
 
 const AMBIENT    = { bass: 0.08, mid: 0.05, high: 0.08 };
-const EMA_ALPHA  = 0.15;
 const SPRING_K   = 0.03;
 const DAMPING    = 0.85;
 const JITTER     = 0.0008;  // micro-jitter per frame per axis
@@ -482,9 +481,13 @@ export function initVisualizer(canvas, getAnalyserFn) {
 
     if (analyser) {
       const raw = readBands(analyser);
-      ema.bass = ema.bass * (1 - EMA_ALPHA) + raw.bass * EMA_ALPHA;
-      ema.mid  = ema.mid  * (1 - EMA_ALPHA) + raw.mid  * EMA_ALPHA;
-      ema.high = ema.high * (1 - EMA_ALPHA) + raw.high * EMA_ALPHA;
+      // Asymmetric EMA: fast attack (0.3), slow release (0.08) for musical feel
+      const attackAlpha = 0.3;
+      const releaseAlpha = 0.08;
+      for (const band of ['bass', 'mid', 'high']) {
+        const alpha = raw[band] > ema[band] ? attackAlpha : releaseAlpha;
+        ema[band] = ema[band] * (1 - alpha) + raw[band] * alpha;
+      }
       bass = ema.bass; mid = ema.mid; high = ema.high;
     }
 
