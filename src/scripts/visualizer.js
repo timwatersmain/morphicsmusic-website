@@ -220,7 +220,7 @@ uniform sampler2D uSprite;
 varying float vOpacity;
 void main() {
   vec4 tex = texture2D(uSprite, gl_PointCoord);
-  gl_FragColor = vec4(0.78, 0.78, 0.78, tex.a * vOpacity);
+  gl_FragColor = vec4(0.816, 0.91, 0.91, tex.a * vOpacity);
 }`;
 
 const CHROMATIC_SHADER = {
@@ -272,8 +272,8 @@ function createSpriteTexture() {
   c.width = c.height = size;
   const ctx = c.getContext('2d');
   const g = ctx.createRadialGradient(size/2, size/2, 0, size/2, size/2, size/2);
-  g.addColorStop(0, 'rgba(220,220,220,1)');
-  g.addColorStop(1, 'rgba(220,220,220,0)');
+  g.addColorStop(0, 'rgba(208,232,232,1)');
+  g.addColorStop(1, 'rgba(208,232,232,0)');
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, size, size);
   return new THREE.CanvasTexture(c);
@@ -371,9 +371,10 @@ export function initVisualizer(canvas, getAnalyserFn) {
 
   for (let i = 0; i < particleCount; i++) {
     const [x, y] = gaussian(SIGMA);
+    const [, z] = gaussian(SIGMA * 0.3);
     homePos[i*3]   = positions[i*3]   = x;
     homePos[i*3+1] = positions[i*3+1] = y;
-    homePos[i*3+2] = positions[i*3+2] = 0;
+    homePos[i*3+2] = positions[i*3+2] = z;
     sizes[i]    = Math.random() * 2 + 1;      // 1–3 px
     opacities[i] = Math.random() * 0.5 + 0.4; // 0.4–0.9
   }
@@ -389,8 +390,11 @@ export function initVisualizer(canvas, getAnalyserFn) {
     fragmentShader: FRAG_PARTICLE,
     transparent:    true,
     depthWrite:     false,
+    depthTest:      true,
   });
-  scene.add(new THREE.Points(particleGeo, particleMat));
+  const particlePoints = new THREE.Points(particleGeo, particleMat);
+  particlePoints.renderOrder = 2;
+  scene.add(particlePoints);
 
   // --- Post-processing ---
   const composer = new EffectComposer(renderer);
