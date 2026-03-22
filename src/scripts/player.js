@@ -598,9 +598,9 @@ export async function init() {
       ], { duration: 300, easing: 'ease-out', fill: 'forwards' });
 
       // Phase 1b: Spawn 12 particles that explode outward from button center
-      const btnRect = playBtn.getBoundingClientRect();
-      const pcx = btnRect.left + btnRect.width / 2;
-      const pcy = btnRect.top + btnRect.height / 2;
+      const popRect = playBtn.getBoundingClientRect();
+      const pcx = popRect.left + popRect.width / 2;
+      const pcy = popRect.top + popRect.height / 2;
       const particleCount = 12;
       const particleContainer = document.createElement('div');
       particleContainer.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;';
