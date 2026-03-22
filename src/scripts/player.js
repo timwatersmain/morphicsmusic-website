@@ -96,8 +96,12 @@ function applyWaveToLetters(letters, time) {
     const driftR = Math.sin(t * seed.sr + seed.pr) * seed.ar;
     const x = driftX;
     const y = wave1 + wave2 + driftY;
-    const scale = 1 + Math.sin(t * 0.3 + i * 0.7) * 0.012;
+    const breathe = Math.sin(t * seed.breatheSpeed + seed.breathePhase) * seed.breatheAmp;
+    const scale = 1 + breathe;
     letters[i].style.transform = `translate(${x}px, ${y}px) scale(${scale}) rotate(${driftR}deg)`;
+    // Set initial color/opacity to match the tick loop's resting state — prevents bright flash
+    letters[i].style.color = 'rgba(200, 190, 175, 0.72)';
+    letters[i].style.textShadow = '0 0 6px rgba(0,0,0,0.4), 0 0 20px rgba(0,0,0,0.15)';
   }
 }
 
