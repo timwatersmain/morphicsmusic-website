@@ -589,15 +589,14 @@ export async function init() {
       // Now hide everything for the animation
       controlsEl.classList.add('is-transitioning');
 
-      // Phase 1: Pop — play button inflates outward then bursts
+      // Phase 1: Bubble pop — quick squeeze inward then burst outward and vanish
       const popAnim = playBtn.animate([
-        { transform: 'scale(1)', opacity: 1, filter: 'brightness(1)' },
-        { transform: 'scale(1.15)', opacity: 1, filter: 'brightness(1.2)', offset: 0.15 },
-        { transform: 'scale(1.5)', opacity: 1, filter: 'brightness(1.5)', offset: 0.4 },
-        { transform: 'scale(1.8) rotate(3deg)', opacity: 0.7, filter: 'brightness(1.3)', offset: 0.6 },
-        { transform: 'scale(2.2) rotate(-2deg)', opacity: 0.3, filter: 'brightness(1)', offset: 0.8 },
-        { transform: 'scale(2.8)', opacity: 0, filter: 'brightness(0.8)', offset: 1.0 },
-      ], { duration: 600, easing: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)', fill: 'forwards' });
+        { transform: 'scale(1)', opacity: 1 },
+        { transform: 'scale(0.85)', opacity: 1, offset: 0.12 },
+        { transform: 'scale(1.6)', opacity: 0.6, offset: 0.3 },
+        { transform: 'scale(0)', opacity: 0, offset: 0.5 },
+        { transform: 'scale(0)', opacity: 0, offset: 1.0 },
+      ], { duration: 350, easing: 'cubic-bezier(0.22, 1, 0.36, 1)', fill: 'forwards' });
       popAnim.onfinish = () => {
         popAnim.cancel();  // Remove fill: forwards so CSS takes over
         playBtn.classList.add('is-popped');
@@ -676,30 +675,24 @@ export async function init() {
 
         if (window.__dotsMerging !== undefined) window.__dotsMerging = true;
 
-        // Start metaball fade-in immediately (before dots merge)
-        if (window.__onIntroExit) window.__onIntroExit();
+        // Hide dots immediately
+        for (let i = 0; i < count; i++) {
+          dots[i].style.transition = 'opacity 0.2s ease';
+          dots[i].style.opacity = '0';
+        }
 
-        // Short delay to let metaball start appearing, then merge dots
+        // After bubble pops, hold black briefly then fade in player
         setTimeout(() => {
-          for (let i = 0; i < count; i++) {
-            const distFromCenter = Math.abs(i - center);
-            const maxDist = center;
-            const delay = ((maxDist - distFromCenter) / maxDist) * 0.6;
-            dots[i].style.transitionDelay = `${delay.toFixed(3)}s`;
-            dots[i].style.left = '50%';
-            dots[i].style.transform = 'translate(0, 0) scale(3)';
+          if (fragContainer) {
+            fragContainer.classList.add('is-hidden');
+            fragContainer.style.display = 'none';
           }
-
           landing.classList.remove('is-intro-mode');
-        }, 300);
 
-        setTimeout(() => {
-          if (fragContainer) fragContainer.classList.add('is-hidden');
-        }, 1800);
+          // Start metaball + player fade in from black
+          if (window.__onIntroExit) window.__onIntroExit();
+        }, 600);
 
-        setTimeout(() => {
-          if (fragContainer) fragContainer.style.display = 'none';
-        }, 2600);
       }
     }
     togglePlay();
