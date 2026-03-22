@@ -589,17 +589,59 @@ export async function init() {
       // Now hide everything for the animation
       controlsEl.classList.add('is-transitioning');
 
-      // Phase 1: Smooth outward explosion from center
+      // Phase 1: Quick squeeze then vanish — button disappears as particles spawn
       const popAnim = playBtn.animate([
-        { transform: 'scale(1)', opacity: 1, filter: 'brightness(1)' },
-        { transform: 'scale(0.92)', opacity: 1, filter: 'brightness(1.1)', offset: 0.1 },
-        { transform: 'scale(1.3)', opacity: 1, filter: 'brightness(1.4)', offset: 0.35 },
-        { transform: 'scale(2.0)', opacity: 0.8, filter: 'brightness(1.6)', offset: 0.55 },
-        { transform: 'scale(3.5)', opacity: 0.4, filter: 'brightness(1.2)', offset: 0.75 },
-        { transform: 'scale(5.0)', opacity: 0, filter: 'brightness(0.8)', offset: 1.0 },
-      ], { duration: 800, easing: 'cubic-bezier(0.16, 1, 0.3, 1)', fill: 'forwards' });
+        { transform: 'scale(1)', opacity: 1 },
+        { transform: 'scale(0.88)', opacity: 1, offset: 0.15 },
+        { transform: 'scale(1.1)', opacity: 0, offset: 0.4 },
+        { transform: 'scale(1.1)', opacity: 0, offset: 1.0 },
+      ], { duration: 300, easing: 'ease-out', fill: 'forwards' });
+
+      // Phase 1b: Spawn 12 particles that explode outward from button center
+      const btnRect = playBtn.getBoundingClientRect();
+      const pcx = btnRect.left + btnRect.width / 2;
+      const pcy = btnRect.top + btnRect.height / 2;
+      const particleCount = 12;
+      const particleContainer = document.createElement('div');
+      particleContainer.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;';
+      document.body.appendChild(particleContainer);
+
+      for (let p = 0; p < particleCount; p++) {
+        const angle = (p / particleCount) * Math.PI * 2 + (Math.random() - 0.5) * 0.4;
+        const dist = 80 + Math.random() * 120;
+        const size = 4 + Math.random() * 8;
+        const particle = document.createElement('div');
+        particle.style.cssText = `
+          position:absolute;
+          left:${pcx}px;top:${pcy}px;
+          width:${size}px;height:${size}px;
+          border-radius:50%;
+          background:rgba(235,230,222,0.9);
+          box-shadow:0 0 8px rgba(255,255,255,0.4);
+          transform:translate(-50%,-50%) scale(1);
+          transition:none;
+          pointer-events:none;
+        `;
+        particleContainer.appendChild(particle);
+
+        // Animate each particle outward
+        const tx = Math.cos(angle) * dist;
+        const ty = Math.sin(angle) * dist;
+        const dur = 600 + Math.random() * 400;
+
+        particle.animate([
+          { transform: 'translate(-50%,-50%) scale(1)', opacity: 0.9 },
+          { transform: `translate(calc(-50% + ${tx}px), calc(-50% + ${ty}px)) scale(0.3)`, opacity: 0 },
+        ], { duration: dur, easing: 'cubic-bezier(0.16, 1, 0.3, 1)', fill: 'forwards' });
+      }
+
+      // Clean up particles after animation
+      setTimeout(() => {
+        particleContainer.remove();
+      }, 1200);
+
       popAnim.onfinish = () => {
-        popAnim.cancel();  // Remove fill: forwards so CSS takes over
+        popAnim.cancel();
         playBtn.classList.add('is-popped');
       };
 
