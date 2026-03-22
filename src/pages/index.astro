@@ -75,6 +75,10 @@ import Player from '../components/Player.astro';
       sy: 0.12 + Math.random() * 0.18,
       ax: 1.0 + Math.random() * 1.5,
       ay: 0.8 + Math.random() * 1.2,
+      // Per-button breathing
+      breatheSpeed: 0.12 + Math.random() * 0.2,
+      breathePhase: Math.random() * Math.PI * 2,
+      breatheAmp: 0.02 + Math.random() * 0.03,
     });
     // Fully independent seeds for icon inner wander
     iconSeeds.push({
@@ -160,7 +164,9 @@ import Player from '../components/Player.astro';
       const s = btnSeeds[i];
       const x = Math.sin(bt * s.sx + s.px) * s.ax;
       const y = Math.sin(bt * s.sy + s.py) * s.ay;
+      const btnBreathe = 1 + Math.sin(bt * s.breatheSpeed + s.breathePhase) * s.breatheAmp;
       btnEls[i].style.translate = `${x.toFixed(1)}px ${y.toFixed(1)}px`;
+      btnEls[i].style.scale = btnBreathe.toFixed(4);
 
       const icon = iconEls[i];
       if (icon) {
@@ -225,7 +231,7 @@ import Player from '../components/Player.astro';
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 5;
+    z-index: 7;
     pointer-events: none;
     contain: layout style paint;
   }

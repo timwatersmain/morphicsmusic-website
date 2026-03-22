@@ -124,7 +124,11 @@ for (let i = 0; i < MAX; i++) {
     sr: 0.3 + Math.random() * 0.4,
     ax: 0.6 + Math.random() * 0.8,
     ay: 0.4 + Math.random() * 0.6,
-    ar: 2 + Math.random() ** 2 * 10,  // rotation amplitude 2-12 degrees, skewed toward lower values
+    ar: 2 + Math.random() ** 2 * 10,
+    // Per-letter breathing
+    breatheSpeed: 0.15 + Math.random() * 0.25,
+    breathePhase: Math.random() * Math.PI * 2,
+    breatheAmp: 0.025 + Math.random() * 0.035,
   });
 }
 
@@ -258,7 +262,8 @@ export function tickLetters(time) {
     // Combine
     const x = driftX;
     const y = wave1 + wave2 + driftY + s.hoverY + s.bounceY;
-    const scale = 1 + Math.sin(t * 0.3 + i * 0.7) * 0.012 + s.hoverScale + s.bounceS + bulkHover * 0.03;
+    const breathe = Math.sin(t * seed.breatheSpeed + seed.breathePhase) * seed.breatheAmp;
+    const scale = 1 + breathe + s.hoverScale + s.bounceS + bulkHover * 0.03;
 
     const el = letters[i];
     el.style.transform = `translate(${x}px, ${y}px) scale(${scale}) rotate(${driftR}deg)`;

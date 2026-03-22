@@ -303,7 +303,7 @@ float sceneSDF(vec3 p) {
 
   // Noise displacement: energy-gated — skip expensive noise when quiet
   float noiseGate = pe * 0.85 + pe * pe * 0.15;
-  float noiseAmp = (0.1 + uMid * 0.45) * noiseGate;
+  float noiseAmp = (0.08 + uMid * 0.3) * noiseGate;
   float widthBoost = 1.0 + uStereoWidth * 0.6 * me;
   noiseAmp *= widthBoost;
   float idleBreathe = sin(t * 0.3 * 6.2832) * 0.035 * (1.0 - me);
@@ -481,7 +481,7 @@ const THEMES = [
   { base: hex('#183060'), rim: hex('#90c8ff'), spec: hex('#a8d5ff'), skin: 9 }, // Synaptic Synthesis — Beetle (iridescent chitin)
 ];
 
-const CANVAS_SIZE = Math.min(800, Math.round(window.innerWidth * 0.85));
+const CANVAS_SIZE = Math.min(600, Math.round(window.innerWidth * 0.65));
 
 /* ─── Scene setup ─── */
 export function createMetaballScene(container, getAnalyser, getStereoAnalysers) {
