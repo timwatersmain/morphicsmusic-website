@@ -676,25 +676,30 @@ export async function init() {
 
         if (window.__dotsMerging !== undefined) window.__dotsMerging = true;
 
-        for (let i = 0; i < count; i++) {
-          const distFromCenter = Math.abs(i - center);
-          const maxDist = center;
-          const delay = ((maxDist - distFromCenter) / maxDist) * 0.6;
-          dots[i].style.transitionDelay = `${delay.toFixed(3)}s`;
-          dots[i].style.left = '50%';
-          dots[i].style.transform = 'translate(0, 0) scale(3)';
-        }
-
-        landing.classList.remove('is-intro-mode');
+        // Start metaball fade-in immediately (before dots merge)
         if (window.__onIntroExit) window.__onIntroExit();
+
+        // Short delay to let metaball start appearing, then merge dots
+        setTimeout(() => {
+          for (let i = 0; i < count; i++) {
+            const distFromCenter = Math.abs(i - center);
+            const maxDist = center;
+            const delay = ((maxDist - distFromCenter) / maxDist) * 0.6;
+            dots[i].style.transitionDelay = `${delay.toFixed(3)}s`;
+            dots[i].style.left = '50%';
+            dots[i].style.transform = 'translate(0, 0) scale(3)';
+          }
+
+          landing.classList.remove('is-intro-mode');
+        }, 300);
 
         setTimeout(() => {
           if (fragContainer) fragContainer.classList.add('is-hidden');
-        }, 1400);
+        }, 1800);
 
         setTimeout(() => {
           if (fragContainer) fragContainer.style.display = 'none';
-        }, 2200);
+        }, 2600);
       }
     }
     togglePlay();
