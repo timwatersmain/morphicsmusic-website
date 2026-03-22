@@ -287,19 +287,36 @@ export function tickLetters(time) {
     const scale = 1 + breathe + s.hoverScale + s.bounceS + bulkHover * 0.03;
 
     const el = letters[i];
-    el.style.transform = `translate(${x}px, ${y}px) scale(${scale}) rotate(${driftR}deg)`;
 
-    // Audio-reactive glow per letter with staggered response
+    // Audio-reactive effects per letter
     const g = bulkHover;
-    const letterPhase = Math.sin(t * 0.5 + i * 0.8) * 0.5 + 0.5; // 0-1 stagger
-    const audioG = audioGlow * (0.6 + letterPhase * 0.4) + audioGlowMid * 0.3;
+    const letterPhase = Math.sin(t * 0.5 + i * 0.8) * 0.5 + 0.5;
+    const audioG = audioGlow * (0.4 + letterPhase * 0.3) * 0.5 + audioGlowMid * 0.15;
     const totalGlow = g + audioG;
-    const c = Math.round(200 + totalGlow * 42);
-    const a = (0.72 + totalGlow * 0.16).toFixed(3);
-    const glowRadius = (6 + audioG * 25).toFixed(1);
-    const glowOpacity = (audioG * 0.35 + g * 0.08).toFixed(4);
-    el.style.color = `rgba(${c}, ${c - 10}, ${c - 25}, ${a})`;
+
+    // Audio-reactive letter distortion — each letter warps independently on beats
+    const bassWarp = audioGlow * seed.breatheAmp * 8;
+    const midStretch = audioGlowMid * 0.06;
+    const skewAudio = Math.sin(t * 1.2 + i * 1.5) * audioGlow * 3;
+    const scaleX = 1 + breathe + midStretch * (Math.sin(t * 0.7 + i) * 0.5 + 0.5);
+    const scaleY = 1 + breathe - bassWarp * 0.3 * letterPhase;
+
+    el.style.transform = `translate(${x}px, ${(y + bassWarp * 2 * (letterPhase - 0.5)).toFixed(2)}px) scale(${scaleX.toFixed(4)}, ${scaleY.toFixed(4)}) rotate(${(driftR + skewAudio).toFixed(2)}deg)`;
+
+    // Subtle chromatic shift on bass — letter color temperature shifts
+    const hueShift = audioGlow * 8 * Math.sin(t * 0.3 + i * 0.9);
+    const warmth = 200 + totalGlow * 42 + audioGlow * 15;
+    const c = Math.round(Math.min(255, warmth));
+    const a = (0.72 + totalGlow * 0.1).toFixed(3);
+    const glowRadius = (4 + audioG * 12).toFixed(1);
+    const glowOpacity = (audioG * 0.18 + g * 0.06).toFixed(4);
+
+    // Audio-reactive blur — letters soften slightly on heavy bass
+    const audioBlur = audioGlow * 0.8 * letterPhase;
+
+    el.style.color = `rgba(${c}, ${Math.max(0, c - 10 - Math.round(hueShift))}, ${Math.max(0, c - 25 + Math.round(hueShift * 0.5))}, ${a})`;
     el.style.textShadow = `0 0 6px rgba(0,0,0,0.4), 0 0 20px rgba(0,0,0,0.15), 0 0 ${glowRadius}px rgba(255,255,255,${glowOpacity})`;
+    el.style.filter = audioBlur > 0.05 ? `blur(${audioBlur.toFixed(2)}px)` : '';
   }
 
   // Also animate alt letters during transitions
