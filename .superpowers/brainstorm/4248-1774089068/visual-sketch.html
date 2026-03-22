@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Morphics Landing — Visual Sketch</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0a0a0a; font-family: 'Inter', system-ui, sans-serif; color: #e2e2e2; overflow-x: hidden; }
+
+  .sketch-container {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* L0 - Void */
+  .l0-void {
+    position: absolute;
+    inset: 0;
+    background: #0a0a0a;
+  }
+
+  /* L1 - Tendrils (CSS approximation) */
+  .l1-tendrils {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+  }
+
+  .tendril {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(40px);
+    opacity: 0;
+    animation: tendrilPulse 6s ease-in-out infinite;
+  }
+
+  .tendril-1 {
+    width: 600px; height: 200px;
+    background: radial-gradient(ellipse, rgba(0,255,170,0.25), transparent 70%);
+    top: 20%; left: -5%;
+    transform: rotate(-30deg);
+    animation-delay: 0s;
+  }
+  .tendril-2 {
+    width: 500px; height: 180px;
+    background: radial-gradient(ellipse, rgba(0,200,168,0.2), transparent 70%);
+    top: 10%; right: -5%;
+    transform: rotate(25deg);
+    animation-delay: 1.5s;
+  }
+  .tendril-3 {
+    width: 700px; height: 150px;
+    background: radial-gradient(ellipse, rgba(0,255,170,0.18), transparent 70%);
+    bottom: 25%; left: -10%;
+    transform: rotate(15deg);
+    animation-delay: 3s;
+  }
+  .tendril-4 {
+    width: 550px; height: 220px;
+    background: radial-gradient(ellipse, rgba(68,136,204,0.15), transparent 70%);
+    top: 30%; right: -8%;
+    transform: rotate(-20deg);
+    animation-delay: 2s;
+  }
+  .tendril-5 {
+    width: 400px; height: 300px;
+    background: radial-gradient(ellipse, rgba(136,102,187,0.12), transparent 70%);
+    bottom: 15%; right: 10%;
+    transform: rotate(40deg);
+    animation-delay: 4s;
+  }
+  .tendril-6 {
+    width: 500px; height: 160px;
+    background: radial-gradient(ellipse, rgba(0,255,170,0.15), transparent 70%);
+    top: 55%; left: 5%;
+    transform: rotate(-45deg);
+    animation-delay: 1s;
+  }
+
+  @keyframes tendrilPulse {
+    0%, 100% { opacity: 0.4; transform: rotate(var(--rot, 0deg)) scale(1); }
+    50% { opacity: 0.8; transform: rotate(var(--rot, 0deg)) scale(1.1); }
+  }
+
+  /* L2 - Contour lines */
+  .l2-contours {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .contour-ring {
+    position: absolute;
+    border-radius: 50%;
+    border: 1px solid rgba(0, 204, 168, 0.08);
+    animation: contourBreathe 4s ease-in-out infinite;
+  }
+
+  .contour-ring:nth-child(1) { width: 250px; height: 250px; animation-delay: 0s; }
+  .contour-ring:nth-child(2) { width: 350px; height: 350px; animation-delay: 0.3s; }
+  .contour-ring:nth-child(3) { width: 450px; height: 450px; animation-delay: 0.6s; }
+  .contour-ring:nth-child(4) { width: 560px; height: 560px; animation-delay: 0.9s; }
+  .contour-ring:nth-child(5) { width: 680px; height: 680px; animation-delay: 1.2s; }
+  .contour-ring:nth-child(6) { width: 820px; height: 820px; animation-delay: 1.5s; }
+
+  @keyframes contourBreathe {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.03); opacity: 0.5; }
+  }
+
+  /* L3 - Chrome blob (CSS approximation of 3D sphere) */
+  .l3-blob {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 280px;
+    height: 280px;
+    z-index: 3;
+  }
+
+  .blob-shape {
+    width: 100%;
+    height: 100%;
+    border-radius: 42% 58% 55% 45% / 50% 42% 58% 50%;
+    background:
+      radial-gradient(ellipse at 30% 30%, rgba(220,240,240,0.9), transparent 50%),
+      radial-gradient(ellipse at 70% 60%, rgba(0,204,168,0.4), transparent 50%),
+      radial-gradient(ellipse at 50% 50%, rgba(100,120,130,0.8), transparent 70%),
+      radial-gradient(circle at 40% 35%, rgba(255,255,255,0.6), transparent 30%),
+      linear-gradient(135deg, #2a3a3a, #0a1a1a 40%, #1a2828 60%, #0d1d1d);
+    box-shadow:
+      0 0 60px rgba(0,255,170,0.15),
+      0 0 120px rgba(0,204,168,0.08),
+      inset 0 0 40px rgba(0,0,0,0.4);
+    animation: blobMorph 8s ease-in-out infinite;
+  }
+
+  @keyframes blobMorph {
+    0%, 100% { border-radius: 42% 58% 55% 45% / 50% 42% 58% 50%; transform: scale(1) rotate(0deg); }
+    25% { border-radius: 55% 45% 48% 52% / 42% 55% 45% 58%; transform: scale(1.05) rotate(2deg); }
+    50% { border-radius: 48% 52% 58% 42% / 55% 48% 42% 52%; transform: scale(0.97) rotate(-1deg); }
+    75% { border-radius: 52% 48% 42% 58% / 48% 52% 55% 45%; transform: scale(1.03) rotate(1deg); }
+  }
+
+  /* L4 - Particles */
+  .l4-particles {
+    position: absolute;
+    inset: 0;
+    z-index: 4;
+    pointer-events: none;
+  }
+
+  .particle {
+    position: absolute;
+    width: 2px;
+    height: 2px;
+    background: rgba(208, 232, 232, 0.6);
+    border-radius: 50%;
+    animation: particleFloat 5s ease-in-out infinite;
+  }
+
+  @keyframes particleFloat {
+    0%, 100% { transform: translate(0, 0); opacity: 0.4; }
+    50% { transform: translate(var(--dx, 5px), var(--dy, -5px)); opacity: 0.8; }
+  }
+
+  /* L5 - Track title */
+  .l5-title {
+    position: absolute;
+    top: 22%;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 5;
+    font-family: 'Space Grotesk', monospace, sans-serif;
+    font-size: clamp(2.5rem, 6vw, 5rem);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: #e2e2e2;
+    mix-blend-mode: difference;
+    user-select: none;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  /* L6 - Player controls */
+  .l6-controls {
+    position: absolute;
+    bottom: 18%;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 6;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    padding: 10px 28px;
+    background: rgba(30, 40, 45, 0.6);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-radius: 999px;
+    border: 1px solid rgba(0, 204, 168, 0.08);
+  }
+
+  .ctrl-btn {
+    background: none;
+    border: none;
+    color: rgba(226, 226, 226, 0.7);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    transition: color 0.2s;
+  }
+  .ctrl-btn:hover { color: #00CCA8; }
+  .ctrl-btn.play-btn {
+    color: #e2e2e2;
+    width: 48px;
+    height: 48px;
+  }
+
+  /* L7 - Waveform + mist */
+  .l7-waveform {
+    position: absolute;
+    bottom: 6%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 500px;
+    max-width: 85vw;
+    height: 80px;
+    z-index: 6;
+  }
+
+  .waveform-mist {
+    position: absolute;
+    inset: -30px -60px;
+    background: radial-gradient(ellipse, rgba(10, 38, 38, 0.5), transparent 70%);
+    pointer-events: none;
+  }
+
+  .waveform-canvas {
+    position: relative;
+    width: 100%;
+    height: 100%;
+  }
+
+  .waveform-line {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 2px;
+    top: 40%;
+  }
+
+  .waveform-svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Nav overlay */
+  .nav-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 24px;
+  }
+
+  .nav-wordmark {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #e2e2e2;
+  }
+
+  .nav-links {
+    display: flex;
+    gap: 32px;
+    list-style: none;
+  }
+
+  .nav-links a {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(226, 226, 226, 0.7);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+  .nav-links a:hover { color: #00CCA8; }
+
+  /* Label overlay */
+  .sketch-label {
+    position: fixed;
+    bottom: 12px;
+    right: 16px;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgba(0, 204, 168, 0.3);
+    font-family: monospace;
+    z-index: 200;
+  }
+</style>
+</head>
+<body>
+
+<div class="sketch-container">
+  <!-- L0 -->
+  <div class="l0-void"></div>
+
+  <!-- L1 - Tendrils -->
+  <div class="l1-tendrils">
+    <div class="tendril tendril-1"></div>
+    <div class="tendril tendril-2"></div>
+    <div class="tendril tendril-3"></div>
+    <div class="tendril tendril-4"></div>
+    <div class="tendril tendril-5"></div>
+    <div class="tendril tendril-6"></div>
+  </div>
+
+  <!-- L2 - Contour rings -->
+  <div class="l2-contours">
+    <div class="contour-ring"></div>
+    <div class="contour-ring"></div>
+    <div class="contour-ring"></div>
+    <div class="contour-ring"></div>
+    <div class="contour-ring"></div>
+    <div class="contour-ring"></div>
+  </div>
+
+  <!-- L3 - Chrome blob -->
+  <div class="l3-blob">
+    <div class="blob-shape"></div>
+  </div>
+
+  <!-- L4 - Particles -->
+  <div class="l4-particles" id="particles"></div>
+
+  <!-- L5 - Track title -->
+  <div class="l5-title">001_NULL</div>
+
+  <!-- L6 - Player controls -->
+  <div class="l6-controls">
+    <button class="ctrl-btn" aria-label="Previous">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+    </button>
+    <button class="ctrl-btn play-btn" aria-label="Play">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+    </button>
+    <button class="ctrl-btn" aria-label="Next">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+    </button>
+  </div>
+
+  <!-- L7 - Waveform -->
+  <div class="l7-waveform">
+    <div class="waveform-mist"></div>
+    <div class="waveform-canvas">
+      <svg class="waveform-svg" viewBox="0 0 500 80" preserveAspectRatio="none">
+        <!-- Primary waveform -->
+        <path d="M0,32 Q25,28 50,32 T100,30 T150,35 T200,28 T250,33 T300,27 T350,34 T400,30 T450,32 T500,31"
+              stroke="rgba(0,204,168,0.6)" stroke-width="1.5" fill="none">
+          <animate attributeName="d"
+            values="M0,32 Q25,28 50,32 T100,30 T150,35 T200,28 T250,33 T300,27 T350,34 T400,30 T450,32 T500,31;
+                    M0,30 Q25,35 50,28 T100,34 T150,30 T200,36 T250,28 T300,33 T350,29 T400,35 T450,30 T500,32;
+                    M0,32 Q25,28 50,32 T100,30 T150,35 T200,28 T250,33 T300,27 T350,34 T400,30 T450,32 T500,31"
+            dur="3s" repeatCount="indefinite"/>
+        </path>
+        <!-- Mirrored reflection -->
+        <path d="M0,48 Q25,52 50,48 T100,50 T150,45 T200,52 T250,47 T300,53 T350,46 T400,50 T450,48 T500,49"
+              stroke="rgba(0,204,168,0.2)" stroke-width="1" fill="none">
+          <animate attributeName="d"
+            values="M0,48 Q25,52 50,48 T100,50 T150,45 T200,52 T250,47 T300,53 T350,46 T400,50 T450,48 T500,49;
+                    M0,50 Q25,45 50,52 T100,46 T150,50 T200,44 T250,52 T300,47 T350,51 T400,45 T450,50 T500,48;
+                    M0,48 Q25,52 50,48 T100,50 T150,45 T200,52 T250,47 T300,53 T350,46 T400,50 T450,48 T500,49"
+            dur="3s" repeatCount="indefinite"/>
+        </path>
+        <!-- Gradient fill between -->
+        <defs>
+          <linearGradient id="waveGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="rgba(0,204,168,0.1)"/>
+            <stop offset="50%" stop-color="rgba(0,204,168,0.05)"/>
+            <stop offset="100%" stop-color="rgba(0,204,168,0)"/>
+          </linearGradient>
+        </defs>
+        <rect x="0" y="32" width="500" height="16" fill="url(#waveGrad)" opacity="0.5"/>
+      </svg>
+    </div>
+  </div>
+
+  <!-- Nav -->
+  <nav class="nav-overlay">
+    <span class="nav-wordmark">MORPHICS</span>
+    <ul class="nav-links">
+      <li><a href="#">MUSIC</a></li>
+      <li><a href="#">ABOUT</a></li>
+      <li><a href="#">CONTACT</a></li>
+    </ul>
+  </nav>
+</div>
+
+<div class="sketch-label">CSS sketch — final version uses WebGL shaders</div>
+
+<script>
+  // Generate particles around center
+  const container = document.getElementById('particles');
+  const cx = window.innerWidth / 2;
+  const cy = window.innerHeight / 2;
+
+  for (let i = 0; i < 80; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    // Gaussian-ish distribution around center
+    const angle = Math.random() * Math.PI * 2;
+    const radius = (Math.random() + Math.random() + Math.random()) / 3 * 250;
+    const x = cx + Math.cos(angle) * radius;
+    const y = cy + Math.sin(angle) * radius;
+    p.style.left = x + 'px';
+    p.style.top = y + 'px';
+    p.style.width = (Math.random() * 3 + 1) + 'px';
+    p.style.height = p.style.width;
+    p.style.opacity = Math.random() * 0.5 + 0.2;
+    p.style.setProperty('--dx', (Math.random() - 0.5) * 20 + 'px');
+    p.style.setProperty('--dy', (Math.random() - 0.5) * 20 + 'px');
+    p.style.animationDelay = (Math.random() * 5) + 's';
+    p.style.animationDuration = (3 + Math.random() * 4) + 's';
+    container.appendChild(p);
+  }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,58 @@
+[
+  {
+    "id": "mysterium",
+    "title": "MYSTERIUM",
+    "url": "/assets/tracks/mysterium.mp3",
+    "hidden": false,
+    "duration": 0
+  },
+  {
+    "id": "druid-final",
+    "title": "DRUID",
+    "url": "/assets/tracks/druid-final.mp3",
+    "hidden": false,
+    "duration": 0
+  },
+  {
+    "id": "cicada",
+    "title": "CICADA",
+    "url": "/assets/tracks/cicada.mp3",
+    "hidden": false,
+    "duration": 0
+  },
+  {
+    "id": "seraphic",
+    "title": "SERAPHIC",
+    "url": "/assets/tracks/seraphic.mp3",
+    "hidden": false,
+    "duration": 0
+  },
+  {
+    "id": "rephractal",
+    "title": "REPHRACTAL",
+    "url": "/assets/tracks/rephractal.mp3",
+    "hidden": false,
+    "duration": 0
+  },
+  {
+    "id": "through-prisms",
+    "title": "THROUGH PRISMS",
+    "url": "/assets/tracks/through-prisms.mp3",
+    "hidden": false,
+    "duration": 0
+  },
+  {
+    "id": "mirage",
+    "title": "MIRAGE",
+    "url": "/assets/tracks/mirage.mp3",
+    "hidden": false,
+    "duration": 0
+  },
+  {
+    "id": "synaptic-synthesis",
+    "title": "SYNAPTIC SYNTHESIS",
+    "url": "/assets/tracks/synaptic-synthesis.mp3",
+    "hidden": false,
+    "duration": 0
+  }
+]

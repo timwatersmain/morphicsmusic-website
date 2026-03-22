@@ -1,0 +1,304 @@
+---
+import Base from '../layouts/Base.astro';
+import Player from '../components/Player.astro';
+---
+
+<Base title="MORPHICS" fullscreen>
+  <div class="landing is-intro-mode">
+    <!-- L0: Background -->
+    <div class="bg-gradient"></div>
+
+    <!-- L2: Morphing blob -->
+    <div class="blob-wrap" aria-hidden="true">
+      <div class="blob blob--core"></div>
+      <div class="frag-container" id="frag-container"></div>
+    </div>
+
+    <!-- L4: Film grain overlay -->
+    <div class="grain" aria-hidden="true"></div>
+
+    <!-- L5: Player (title + controls) -->
+    <Player />
+  </div>
+</Base>
+
+<script>
+  import { init, getAnalyser, getStereoAnalysers, tickLetters } from '../scripts/player.js';
+  import { initCSSReactor } from '../scripts/visualizer.js';
+
+  init();
+
+  // Start CSS audio reactor (no contour canvas needed)
+  const cssReactorTick = initCSSReactor(getAnalyser);
+
+  // Three.js metaball scene — loaded dynamically so player works even if it fails
+  const blobWrap = document.querySelector('.blob-wrap');
+  let metaball = null;
+  try {
+    const { createMetaballScene } = await import('../scripts/metaball-scene.js');
+    if (blobWrap) metaball = createMetaballScene(blobWrap, getAnalyser, getStereoAnalysers);
+  } catch (e) {
+    console.error('Metaball scene failed to load:', e);
+  }
+
+  // Palette cycling on prev/next track buttons
+  const prevBtnEl = document.getElementById('player-prev');
+  const nextBtnEl = document.getElementById('player-next');
+  if (metaball) {
+    nextBtnEl?.addEventListener('click', () => metaball.nextTheme());
+    prevBtnEl?.addEventListener('click', () => metaball.prevTheme());
+  }
+
+  // Listen for intro exit to reveal metaball scene
+  window.__onIntroExit = () => {
+    if (metaball) {
+      metaball.show();
+    }
+  };
+
+  // Single unified rAF loop — everything runs here
+  const titleEl = document.getElementById('player-title');
+  let titleBass = 0;
+  const bassData = new Uint8Array(1024);
+
+  // Button drift seeds — unique per button
+  const btnEls = document.querySelectorAll('.ctrl-btn');
+  const btnSeeds = [];
+  const iconSeeds = [];
+  // Cache icon elements once
+  const iconEls = [];
+  for (let i = 0; i < btnEls.length; i++) {
+    btnSeeds.push({
+      px: Math.random() * Math.PI * 2,
+      py: Math.random() * Math.PI * 2,
+      sx: 0.15 + Math.random() * 0.2,
+      sy: 0.12 + Math.random() * 0.18,
+      ax: 1.0 + Math.random() * 1.5,
+      ay: 0.8 + Math.random() * 1.2,
+    });
+    // Fully independent seeds for icon inner wander
+    iconSeeds.push({
+      px: Math.random() * Math.PI * 2,
+      py: Math.random() * Math.PI * 2,
+      sx: 0.2 + Math.random() * 0.25,
+      sy: 0.18 + Math.random() * 0.22,
+      ax: 1.2 + Math.random() * 1.8,
+      ay: 1.0 + Math.random() * 1.5,
+    });
+    iconEls.push(btnEls[i].querySelector('svg') || btnEls[i].querySelector('span'));
+  }
+  // Generate dot array for intro mode
+  const fragContainer = document.getElementById('frag-container');
+  const dotCount = 35;
+  const dotEls = [];
+  const dotSeeds = [];
+  const dotBaseX = []; // px from center
+  if (fragContainer) {
+    const spread = window.innerWidth * 0.8; // span 80% of viewport
+    const half = spread / 2;
+    for (let i = 0; i < dotCount; i++) {
+      const dot = document.createElement('div');
+      dot.classList.add('frag-dot');
+      // Vary size: slightly random 6-12px
+      const size = 6 + Math.random() * 6;
+      dot.style.width = `${size}px`;
+      dot.style.height = `${size}px`;
+      // Position along horizontal line, evenly spaced
+      const x = -half + (i / (dotCount - 1)) * spread;
+      dotBaseX.push(x);
+      dot.style.left = `calc(50% + ${x}px)`;
+      dot.style.marginLeft = `${-size / 2}px`;
+      dot.style.marginTop = `${-size / 2}px`;
+      fragContainer.appendChild(dot);
+      dotEls.push(dot);
+      dotSeeds.push({
+        px: Math.random() * Math.PI * 2,
+        py: Math.random() * Math.PI * 2,
+        sx: 0.1 + Math.random() * 0.15,
+        sy: 0.08 + Math.random() * 0.12,
+        ax: 1.5 + Math.random() * 2,
+        ay: 1.5 + Math.random() * 2.5,
+      });
+    }
+  }
+
+  window.__dotsMerging = false;
+  let dotsVisible = true; // track whether dots are still in intro mode
+  const btnStart = performance.now();
+  let prevTitleScale = '';
+
+  function masterLoop(time) {
+    const bt = (time - btnStart) / 1000;
+
+    // 1. Audio reactor — update CSS custom properties
+    cssReactorTick();
+
+    // 2. Three.js metaball scene (replaces old CSS blob)
+    if (metaball) metaball.tick(time);
+
+    // 3. Title bass pulse — only write DOM when value changes
+    if (titleEl) {
+      const analyser = getAnalyser();
+      if (analyser) {
+        analyser.getByteFrequencyData(bassData);
+        let sum = 0;
+        for (let i = 0; i < 10; i++) sum += bassData[i];
+        titleBass += 0.1 * (sum / (10 * 255) - titleBass);
+      }
+      const scaleStr = (1 + titleBass * 0.012).toFixed(4);
+      if (scaleStr !== prevTitleScale) {
+        titleEl.style.setProperty('--title-scale', scaleStr);
+        prevTitleScale = scaleStr;
+      }
+    }
+
+    // 4. Letter wave + hover + bounce
+    tickLetters(time);
+
+    // 5. Button + icon ambient drift (independent seeds)
+    for (let i = 0; i < btnEls.length; i++) {
+      const s = btnSeeds[i];
+      const x = Math.sin(bt * s.sx + s.px) * s.ax;
+      const y = Math.sin(bt * s.sy + s.py) * s.ay;
+      btnEls[i].style.translate = `${x.toFixed(1)}px ${y.toFixed(1)}px`;
+
+      const icon = iconEls[i];
+      if (icon) {
+        const is = iconSeeds[i];
+        const ix = Math.sin(bt * is.sx + is.px) * is.ax;
+        const iy = Math.sin(bt * is.sy + is.py) * is.ay;
+        icon.style.translate = `${ix.toFixed(1)}px ${iy.toFixed(1)}px`;
+      }
+    }
+
+    // 6. Dot ambient drift (intro mode only — stop updating once hidden)
+    if (dotsVisible && !window.__dotsMerging) {
+      for (let i = 0; i < dotEls.length; i++) {
+        const ds = dotSeeds[i];
+        const dx = Math.sin(bt * ds.sx + ds.px) * ds.ax;
+        const dy = Math.sin(bt * ds.sy + ds.py) * ds.ay;
+        dotEls[i].style.transform = `translate(${dx.toFixed(1)}px, ${dy.toFixed(1)}px)`;
+      }
+    } else if (dotsVisible && window.__dotsMerging) {
+      // Once dots start merging, stop updating them permanently
+      dotsVisible = false;
+    }
+
+    requestAnimationFrame(masterLoop);
+  }
+  requestAnimationFrame(masterLoop);
+
+  // Pause metaball rendering when tab is hidden — saves GPU
+  let metaballWasActive = false;
+  document.addEventListener('visibilitychange', () => {
+    if (metaball) {
+      if (document.hidden) {
+        metaballWasActive = metaball.active;
+        if (metaballWasActive) metaball.hide();
+      } else if (metaballWasActive) {
+        metaball.show();
+      }
+    }
+  });
+</script>
+
+<style>
+  .landing {
+    position: relative;
+    width: 100%;
+    height: 100vh;
+    overflow: hidden;
+    background: #000;
+  }
+
+  .bg-gradient {
+    position: absolute;
+    inset: 0;
+    background: #000;
+    z-index: 0;
+  }
+
+  /* ---- Metaball container — above player title, below controls ---- */
+  .blob-wrap {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 5;
+    pointer-events: none;
+    contain: layout style paint;
+  }
+
+  /* CSS blob hidden — replaced by Three.js metaball scene */
+  .blob--core {
+    display: none;
+  }
+
+  /* ---- Intro mode: hide title, center controls ---- */
+  .landing.is-intro-mode :global(.player-title-wrap) {
+    opacity: 0 !important;
+    pointer-events: none;
+    transition: opacity 1s ease;
+  }
+
+  .landing.is-intro-mode :global(.player-controls) {
+    transform: translateY(calc(-50vh + 50% + 4vh));
+  }
+
+  /* ---- Gooey container — contrast filter fuses overlapping blurred children ---- */
+  .frag-container {
+    position: absolute;
+    inset: 0;
+    z-index: 4;
+    pointer-events: none;
+    filter: contrast(20);
+    background: #000;
+    transition: opacity 0.3s ease 1.2s;
+  }
+
+  .frag-container.is-hidden {
+    opacity: 0;
+  }
+
+  /* ---- Dot fragments — small circles in a line ---- */
+  .frag-dot {
+    position: absolute;
+    top: 50%;
+    border-radius: 50%;
+    background: rgba(220, 216, 210, 0.95);
+    filter: blur(4px);
+    will-change: transform;
+    transition: transform 1.2s cubic-bezier(0.34, 1.2, 0.64, 1),
+                opacity 0.4s ease;
+  }
+
+  .landing:not(.is-intro-mode) .frag-dot {
+    opacity: 0;
+  }
+
+  /* ---- Film grain ---- */
+  .grain {
+    position: absolute;
+    inset: 0;
+    z-index: 4;
+    pointer-events: none;
+    opacity: 0.035;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+    background-size: 160px 160px;
+    animation: grain-drift 0.5s steps(1) infinite;
+  }
+
+  @keyframes grain-drift {
+    0%  { background-position:   0px   0px; }
+    10% { background-position: -20px -30px; }
+    20% { background-position:  30px  10px; }
+    30% { background-position: -15px  25px; }
+    40% { background-position:  25px -20px; }
+    50% { background-position: -30px  15px; }
+    60% { background-position:  10px  30px; }
+    70% { background-position: -25px -10px; }
+    80% { background-position:  20px -25px; }
+    90% { background-position: -10px  20px; }
+  }
+</style>

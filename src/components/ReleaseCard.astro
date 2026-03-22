@@ -1,0 +1,88 @@
+---
+interface Props {
+  title: string;
+  type: string;
+  year: number;
+  art_url: string;
+  links: {
+    spotify?: string;
+    apple_music?: string;
+    soundcloud?: string;
+    youtube?: string;
+  };
+}
+
+const { title, type, year, art_url, links } = Astro.props;
+---
+
+<article class="release-card">
+  <div class="release-art">
+    <img src={art_url} alt={title} loading="lazy" />
+  </div>
+  <div class="release-info">
+    <h3 class="label-lg">{title}</h3>
+    <p class="label-sm release-meta">{type} &middot; {year}</p>
+    <div class="release-links">
+      {links.spotify && (
+        <a href={links.spotify} target="_blank" rel="noopener noreferrer" class="label-sm">Spotify</a>
+      )}
+      {links.apple_music && (
+        <a href={links.apple_music} target="_blank" rel="noopener noreferrer" class="label-sm">Apple Music</a>
+      )}
+      {links.soundcloud && (
+        <a href={links.soundcloud} target="_blank" rel="noopener noreferrer" class="label-sm">SoundCloud</a>
+      )}
+      {links.youtube && (
+        <a href={links.youtube} target="_blank" rel="noopener noreferrer" class="label-sm">YouTube</a>
+      )}
+    </div>
+  </div>
+</article>
+
+<style>
+  .release-card {
+    background: var(--surface-container-high);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    transition: background 0.2s;
+  }
+
+  .release-card:hover {
+    background: var(--surface-container-highest);
+  }
+
+  .release-art img {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+  }
+
+  .release-info {
+    padding: var(--space-4);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .release-meta {
+    color: var(--on-surface);
+    opacity: 0.5;
+  }
+
+  .release-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    margin-top: var(--space-2);
+  }
+
+  .release-links a {
+    color: var(--primary);
+    opacity: 0.8;
+    transition: opacity 0.2s;
+  }
+
+  .release-links a:hover {
+    opacity: 1;
+  }
+</style>

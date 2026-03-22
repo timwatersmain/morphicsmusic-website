@@ -1,0 +1,133 @@
+<h2>Bringing the Morphics Landing to Life</h2>
+<p class="subtitle">Let's break down the mockup into compositable layers and choose how to render each one</p>
+
+<div class="section">
+  <h3>Layer Breakdown from Your Mockup</h3>
+  <p class="subtitle">Back-to-front compositing order</p>
+</div>
+
+<div style="display:grid; grid-template-columns: 1fr; gap: 16px; margin-bottom: 32px;">
+
+  <!-- Layer visualization -->
+  <div style="background: #1a1a2e; border-radius: 12px; padding: 24px; border: 1px solid #333;">
+    <div style="font-family: monospace; font-size: 13px; color: #888; margin-bottom: 16px;">LAYER STACK (back → front)</div>
+
+    <div style="display: flex; flex-direction: column; gap: 8px;">
+      <div style="background: #0a0a0a; padding: 12px 16px; border-radius: 8px; border-left: 3px solid #333; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <span style="color: #666; font-family: monospace; font-size: 11px;">L0</span>
+          <span style="color: #ccc; margin-left: 12px; font-weight: 600;">VOID</span>
+          <span style="color: #666; margin-left: 8px; font-size: 13px;">— Pure black canvas</span>
+        </div>
+        <span style="color: #555; font-size: 12px; font-family: monospace;">CSS background</span>
+      </div>
+
+      <div style="background: linear-gradient(135deg, #0a1a1a, #0d2626); padding: 12px 16px; border-radius: 8px; border-left: 3px solid #0fa; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <span style="color: #0fa; font-family: monospace; font-size: 11px;">L1</span>
+          <span style="color: #ccc; margin-left: 12px; font-weight: 600;">FLUID TENDRILS</span>
+          <span style="color: #888; margin-left: 8px; font-size: 13px;">— Teal bioluminescent veins radiating outward</span>
+        </div>
+        <span style="color: #0fa; font-size: 12px; font-family: monospace;">WebGL shader</span>
+      </div>
+
+      <div style="background: #111; padding: 12px 16px; border-radius: 8px; border-left: 3px solid #445; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <span style="color: #668; font-family: monospace; font-size: 11px;">L2</span>
+          <span style="color: #ccc; margin-left: 12px; font-weight: 600;">CONTOUR LINES</span>
+          <span style="color: #888; margin-left: 8px; font-size: 13px;">— Topographic rings behind the blob</span>
+        </div>
+        <span style="color: #668; font-size: 12px; font-family: monospace;">SVG / CSS</span>
+      </div>
+
+      <div style="background: linear-gradient(135deg, #1a2020, #1a2828); padding: 12px 16px; border-radius: 8px; border-left: 3px solid #4dd; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <span style="color: #4dd; font-family: monospace; font-size: 11px;">L3</span>
+          <span style="color: #ccc; margin-left: 12px; font-weight: 600;">CHROME BLOB</span>
+          <span style="color: #888; margin-left: 8px; font-size: 13px;">— 3D morphing organic glass form (hero element)</span>
+        </div>
+        <span style="color: #4dd; font-size: 12px; font-family: monospace;">Three.js 3D mesh</span>
+      </div>
+
+      <div style="background: #111; padding: 12px 16px; border-radius: 8px; border-left: 3px solid #aaa; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <span style="color: #aaa; font-family: monospace; font-size: 11px;">L4</span>
+          <span style="color: #ccc; margin-left: 12px; font-weight: 600;">PARTICLE DUST</span>
+          <span style="color: #888; margin-left: 8px; font-size: 13px;">— White particles swirling around blob</span>
+        </div>
+        <span style="color: #aaa; font-size: 12px; font-family: monospace;">Three.js Points</span>
+      </div>
+
+      <div style="background: #111; padding: 12px 16px; border-radius: 8px; border-left: 3px solid #e8d5c0; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <span style="color: #e8d5c0; font-family: monospace; font-size: 11px;">L5</span>
+          <span style="color: #ccc; margin-left: 12px; font-weight: 600;">TRACK TITLE</span>
+          <span style="color: #888; margin-left: 8px; font-size: 13px;">— "001_NULL" large monospace, blend-mode: difference</span>
+        </div>
+        <span style="color: #e8d5c0; font-size: 12px; font-family: monospace;">HTML text</span>
+      </div>
+
+      <div style="background: #111; padding: 12px 16px; border-radius: 8px; border-left: 3px solid #888; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <span style="color: #888; font-family: monospace; font-size: 11px;">L6</span>
+          <span style="color: #ccc; margin-left: 12px; font-weight: 600;">PLAYER CONTROLS</span>
+          <span style="color: #888; margin-left: 8px; font-size: 13px;">— Glassmorphic pill: repeat / prev / play / next / volume</span>
+        </div>
+        <span style="color: #888; font-size: 12px; font-family: monospace;">HTML + glass CSS</span>
+      </div>
+
+      <div style="background: linear-gradient(135deg, #111, #1a1a1a); padding: 12px 16px; border-radius: 8px; border-left: 3px solid #4a8; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <span style="color: #4a8; font-family: monospace; font-size: 11px;">L7</span>
+          <span style="color: #ccc; margin-left: 12px; font-weight: 600;">WAVEFORM + MIST</span>
+          <span style="color: #888; margin-left: 8px; font-size: 13px;">— Dual-line waveform with atmospheric fog</span>
+        </div>
+        <span style="color: #4a8; font-size: 12px; font-family: monospace;">Canvas 2D</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<h3>First question: The Chrome Blob (L3)</h3>
+<p class="subtitle">This is the hardest layer — the hero 3D shape. How should we approach it?</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Full 3D Mesh — IcoSphere + Displacement</h3>
+      <p>Build a real 3D icosahedron sphere in Three.js with audio-reactive vertex displacement, environment/matcap shading for the chrome look, and Perlin noise morphing. Most faithful to mockup. <strong>Highest visual fidelity, moderate GPU cost.</strong></p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul><li>True 3D volume and lighting</li><li>Smooth organic morphing</li><li>Audio drives vertex displacement directly</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>More complex shader work</li><li>Needs matcap/environment texture</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Enhanced 2D Shader — Raymarched SDF Blob</h3>
+      <p>Keep the current flat-plane approach but replace the fbm shader with a raymarched signed-distance-field blob. Fakes 3D volume entirely in the fragment shader. Can look incredible but is more GPU intensive.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul><li>No mesh geometry needed</li><li>Can produce very organic shapes</li><li>Single shader pass</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Heavy on fragment shader (mobile risk)</li><li>Harder to control exact shape</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Hybrid — Static Image/Video Base + Shader Overlay</h3>
+      <p>Use a pre-rendered blob image or short loop video as the base, then overlay audio-reactive shader effects (glow, distortion, color shift) on top. Lightest on GPU, most predictable visual result.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul><li>Exact control over look</li><li>Lightest GPU usage</li><li>Could use AI-generated/Blender renders</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Less dynamic morphing</li><li>Pre-rendered asset dependency</li></ul></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<p class="subtitle" style="margin-top: 24px; text-align: center; color: #888;">My recommendation: <strong>Option A</strong> — it gives the most authentic morphing blob feel and you already have Three.js + audio analysis wired up. The infrastructure is there.</p>

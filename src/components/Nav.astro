@@ -1,0 +1,403 @@
+---
+const currentPath = Astro.url.pathname;
+const links = [
+  { label: 'SONICS', href: '/music' },
+  { label: 'ARCHIVE', href: '/about' },
+  { label: 'LABS', href: '/contact' },
+  { label: 'VOID', href: '/void' },
+];
+const wordmark = 'MORPHICS'.split('');
+---
+
+<nav class="nav">
+  <a href="/" class="nav-wordmark" id="nav-wordmark">
+    {wordmark.map((ch, i) => (
+      <span class="wm-letter" data-i={i}>{ch}</span>
+    ))}
+  </a>
+
+  <ul class="nav-links">
+    {links.map(link => (
+      <li>
+        <a
+          href={link.href}
+          class:list={['nav-link', { active: currentPath === link.href || currentPath === link.href + '/' }]}
+        >
+          {link.label}
+        </a>
+      </li>
+    ))}
+  </ul>
+
+  <button class="nav-settings" aria-label="Settings">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 00-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
+    </svg>
+  </button>
+</nav>
+
+<script>
+  // ── Morphing wordmark: fade waves, morph distortion, glitch bursts ──
+  const letters = document.querySelectorAll('#nav-wordmark .wm-letter');
+  const CHARS = 'MORPHICS';
+  const GLITCH_CHARS = 'M0RPH1C5ΩΞΔ█▓░╳╬◊∞∅⌬⟐⊗⊘⋈';
+
+  if (letters.length) {
+    const N = letters.length;
+
+    // Per-letter phase offsets (for wave-like coherence, not random independence)
+    const phases = [];
+    for (let i = 0; i < N; i++) {
+      phases.push({
+        basePhase: (i / N) * Math.PI * 2,           // evenly spaced wave
+        jitter: (Math.random() - 0.5) * 0.4,        // slight per-letter offset
+        blurPhase: (i / N) * Math.PI * 1.5 + Math.random() * 0.3,
+      });
+    }
+
+    // ── Fade wave: smooth opacity sweep across letters ──
+    // Multiple overlapping slow waves create organic fade patterns
+    const fadeWaves = [
+      { speed: 0.35, wavelength: 1.2, amp: 0.22 },
+      { speed: 0.18, wavelength: 2.5, amp: 0.15 },
+      { speed: 0.08, wavelength: 0.7, amp: 0.10 },
+    ];
+
+    // ── Morph wave: scale/skew distortion that ripples through ──
+    const morphWaves = [
+      { speed: 0.25, wavelength: 1.8, scaleAmp: 0.06, skewAmp: 2.0 },
+      { speed: 0.12, wavelength: 3.0, scaleAmp: 0.03, skewAmp: 1.2 },
+    ];
+
+    // ── Blur morph: letters softly blur and sharpen in waves ──
+    const blurWave = { speed: 0.15, wavelength: 2.0, amp: 1.2 };
+
+    // ── Glitch system — sharp, brief bursts ──
+    let glitchActive = false;
+    let glitchEnd = 0;
+    let glitchLetters = [];
+    let glitchType = 0;
+    let charSwapped = false;
+
+    function scheduleGlitch() {
+      const delay = 3000 + Math.random() * 5000;
+      setTimeout(() => {
+        glitchActive = true;
+        glitchType = Math.floor(Math.random() * 5);
+        glitchEnd = performance.now() + 40 + Math.random() * 200;
+        // Glitch affects a contiguous run of letters (more cohesive)
+        const start = Math.floor(Math.random() * N);
+        const count = 1 + Math.floor(Math.random() * 3);
+        glitchLetters = [];
+        for (let g = 0; g < count; g++) {
+          glitchLetters.push((start + g) % N);
+        }
+        scheduleGlitch();
+      }, delay);
+    }
+    scheduleGlitch();
+
+    // ── Full-word fade events: entire word ghosts out and back ──
+    let fullFadeTime = -1;
+    let fullFadeDur = 0;
+    function scheduleFullFade() {
+      const delay = 12000 + Math.random() * 18000;
+      setTimeout(() => {
+        fullFadeTime = performance.now();
+        fullFadeDur = 1800 + Math.random() * 1200;
+        scheduleFullFade();
+      }, delay);
+    }
+    scheduleFullFade();
+
+    // ── Chromatic sweep: chromatic aberration sweeps across ──
+    let chromSweepTime = -1;
+    let chromSweepDur = 0;
+    let chromSweepDir = 1;
+    function scheduleChromSweep() {
+      const delay = 8000 + Math.random() * 12000;
+      setTimeout(() => {
+        chromSweepTime = performance.now();
+        chromSweepDur = 600 + Math.random() * 500;
+        chromSweepDir = Math.random() > 0.5 ? 1 : -1;
+        scheduleChromSweep();
+      }, delay);
+    }
+    scheduleChromSweep();
+
+    // ── Sequential fade-in: letters materialize one by one ──
+    let seqFadeTime = -1;
+    let seqFadeSpeed = 0;
+    let seqFadeDir = 1;
+    function scheduleSeqFade() {
+      const delay = 15000 + Math.random() * 20000;
+      setTimeout(() => {
+        seqFadeTime = performance.now();
+        seqFadeSpeed = 80 + Math.random() * 60;
+        seqFadeDir = Math.random() > 0.5 ? 1 : -1;
+        scheduleSeqFade();
+      }, delay);
+    }
+    scheduleSeqFade();
+
+    // Hover state
+    let hovered = false;
+    const wmEl = document.getElementById('nav-wordmark');
+    wmEl?.addEventListener('mouseenter', () => { hovered = true; });
+    wmEl?.addEventListener('mouseleave', () => { hovered = false; });
+
+    function tickWordmark(now) {
+      const t = now / 1000;
+
+      // Glitch expiry
+      if (glitchActive && now > glitchEnd) {
+        glitchActive = false;
+        if (charSwapped) {
+          for (let i = 0; i < N; i++) letters[i].textContent = CHARS[i];
+          charSwapped = false;
+        }
+      }
+
+      // Full fade progress (0→1→0 sine envelope)
+      let fullFadeFactor = 0;
+      if (fullFadeTime > 0) {
+        const p = (now - fullFadeTime) / fullFadeDur;
+        if (p > 1) { fullFadeTime = -1; }
+        else { fullFadeFactor = Math.sin(p * Math.PI) * 0.7; }
+      }
+
+      // Chromatic sweep progress
+      let chromSweepT = -1;
+      if (chromSweepTime > 0) {
+        chromSweepT = (now - chromSweepTime) / chromSweepDur;
+        if (chromSweepT > 1) { chromSweepTime = -1; chromSweepT = -1; }
+      }
+
+      // Sequential fade progress
+      let seqFadeActive = seqFadeTime > 0;
+      if (seqFadeActive) {
+        const totalDur = N * seqFadeSpeed + 500;
+        if (now - seqFadeTime > totalDur) { seqFadeTime = -1; seqFadeActive = false; }
+      }
+
+      for (let i = 0; i < N; i++) {
+        const p = phases[i];
+        const el = letters[i];
+        const normPos = i / (N - 1); // 0..1 position in word
+
+        // ── Fade waves: flowing opacity ──
+        let opacity = 0.72;
+        for (const fw of fadeWaves) {
+          opacity += Math.sin(t * fw.speed + p.basePhase * fw.wavelength + p.jitter) * fw.amp;
+        }
+
+        // Full-word fade
+        opacity -= fullFadeFactor;
+
+        // Sequential fade: letters briefly dim then brighten in sequence
+        if (seqFadeActive) {
+          const elapsed = now - seqFadeTime;
+          const idx = seqFadeDir > 0 ? i : (N - 1 - i);
+          const letterStart = idx * seqFadeSpeed;
+          const lt = (elapsed - letterStart) / 400;
+          if (lt > 0 && lt < 1) {
+            // Dip down then brighten
+            const wave = Math.sin(lt * Math.PI);
+            opacity = opacity * (1 - wave * 0.5) + wave * 0.35;
+          }
+        }
+
+        opacity = Math.max(0.05, Math.min(hovered ? opacity + 0.18 : opacity, 1));
+
+        // ── Morph waves: scale + skew distortion ──
+        let scaleX = 1;
+        let scaleY = 1;
+        let skew = 0;
+        for (const mw of morphWaves) {
+          const wave = Math.sin(t * mw.speed + p.basePhase * mw.wavelength + p.jitter);
+          scaleX += wave * mw.scaleAmp;
+          scaleY -= wave * mw.scaleAmp * 0.5;
+          skew += wave * mw.skewAmp;
+        }
+
+        // ── Blur morph: letters phase between sharp and soft ──
+        const blurRaw = Math.sin(t * blurWave.speed + p.blurPhase * blurWave.wavelength);
+        let blurVal = Math.max(0, blurRaw * blurWave.amp - 0.3);
+        // During full fade, add more blur
+        blurVal += fullFadeFactor * 2.5;
+
+        // ── Glow: subtle ambient glow that follows fade waves ──
+        const glowStr = 4 + (1 - opacity) * 8 + (hovered ? 6 : 0);
+
+        // ── Chromatic sweep ──
+        let chrShift = 0;
+        if (chromSweepT >= 0) {
+          const sweepPos = chromSweepDir > 0 ? chromSweepT : (1 - chromSweepT);
+          const dist = Math.abs(sweepPos - normPos);
+          if (dist < 0.2) {
+            chrShift = (1 - dist / 0.2) * 2.5;
+          }
+        }
+
+        // ── Glitch override ──
+        if (glitchActive && glitchLetters.includes(i)) {
+          if (glitchType === 0) {
+            // Chromatic split + jitter
+            const off = 1.5 + Math.random() * 3;
+            const jx = (Math.random() - 0.5) * 4;
+            el.style.transform = `translateX(${jx.toFixed(1)}px) scaleX(${(0.85 + Math.random() * 0.3).toFixed(3)})`;
+            el.style.opacity = String((0.6 + Math.random() * 0.4).toFixed(2));
+            el.style.filter = 'none';
+            el.style.textShadow = `${off.toFixed(1)}px 0 0 rgba(255,60,60,0.7), ${(-off).toFixed(1)}px 0 0 rgba(60,180,255,0.7), 0 ${(off * 0.4).toFixed(1)}px 0 rgba(60,255,120,0.3)`;
+          } else if (glitchType === 1) {
+            // Character swap + fade
+            el.textContent = GLITCH_CHARS[Math.floor(Math.random() * GLITCH_CHARS.length)];
+            charSwapped = true;
+            el.style.transform = `scaleY(${(0.8 + Math.random() * 0.4).toFixed(3)})`;
+            el.style.opacity = String((0.3 + Math.random() * 0.5).toFixed(2));
+            el.style.filter = `blur(${(Math.random() * 1.5).toFixed(2)}px)`;
+            el.style.textShadow = `0 0 10px rgba(200, 210, 220, 0.4)`;
+          } else if (glitchType === 2) {
+            // Flicker
+            el.style.transform = `scaleX(${scaleX.toFixed(4)}) scaleY(${scaleY.toFixed(4)})`;
+            el.style.opacity = String(Math.random() > 0.4 ? 0 : 1);
+            el.style.filter = 'none';
+            el.style.textShadow = `0 0 ${(10 + Math.random() * 12).toFixed(0)}px rgba(220, 225, 230, 0.5)`;
+          } else if (glitchType === 3) {
+            // Horizontal tear
+            const tearX = (Math.random() - 0.5) * 8;
+            el.style.transform = `translateX(${tearX.toFixed(1)}px) scaleX(${(0.7 + Math.random() * 0.5).toFixed(3)})`;
+            el.style.opacity = String((0.5 + Math.random() * 0.5).toFixed(2));
+            el.style.filter = `blur(${(Math.random() * 0.6).toFixed(2)}px)`;
+            el.style.textShadow = `${tearX.toFixed(1)}px 0 3px rgba(200, 210, 220, 0.3)`;
+          } else {
+            // Full vanish + snap back
+            el.style.transform = 'scaleY(0.1)';
+            el.style.opacity = '0';
+            el.style.filter = 'blur(3px)';
+            el.style.textShadow = 'none';
+          }
+          continue;
+        }
+
+        // ── Apply styles (no positional drift — letters stay in place) ──
+        el.style.transform = `scaleX(${scaleX.toFixed(4)}) scaleY(${scaleY.toFixed(4)}) skewX(${skew.toFixed(2)}deg)`;
+        el.style.opacity = String(opacity.toFixed(3));
+
+        // Filter
+        let filterParts = [];
+        if (blurVal > 0.05) filterParts.push(`blur(${blurVal.toFixed(2)}px)`);
+        el.style.filter = filterParts.length ? filterParts.join(' ') : 'none';
+
+        // Text shadow
+        let shadow = `0 0 ${glowStr.toFixed(1)}px rgba(200, 210, 220, 0.22)`;
+        if (chrShift > 0.1) {
+          shadow += `, ${chrShift.toFixed(2)}px 0 0 rgba(255,100,80,${(chrShift * 0.12).toFixed(3)}), ${(-chrShift).toFixed(2)}px 0 0 rgba(80,160,255,${(chrShift * 0.12).toFixed(3)})`;
+        }
+        el.style.textShadow = shadow;
+      }
+
+      requestAnimationFrame(tickWordmark);
+    }
+
+    requestAnimationFrame(tickWordmark);
+  }
+</script>
+
+<style>
+  .nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px var(--space-6);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0.0) 60%),
+      rgba(12, 14, 16, 0.45);
+    backdrop-filter: blur(20px) saturate(1.5);
+    -webkit-backdrop-filter: blur(20px) saturate(1.5);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    transition: background 0.4s ease;
+  }
+
+  .nav:hover {
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.09) 0%, rgba(255, 255, 255, 0.0) 60%),
+      rgba(18, 20, 24, 0.55);
+    border-top-color: rgba(255, 255, 255, 0.13);
+    border-bottom-color: rgba(255, 255, 255, 0.08);
+  }
+
+  .nav-wordmark {
+    font-family: var(--font-display);
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: rgba(200, 196, 190, 0.75);
+    text-decoration: none;
+    display: flex;
+    gap: 0.5px;
+  }
+
+  .wm-letter {
+    display: inline-block;
+    will-change: transform, opacity, filter;
+    transition: none;
+  }
+
+  .nav-links {
+    display: flex;
+    gap: 40px;
+    list-style: none;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  .nav-link {
+    font-family: var(--font-display);
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: rgba(180, 178, 172, 0.6);
+    text-decoration: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    transform: scale(1);
+    transition: color 0.5s ease, transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94), text-shadow 0.5s ease, background 0.5s ease;
+  }
+
+  .nav-link:hover {
+    color: rgba(240, 238, 232, 1);
+    transform: scale(1.25);
+    text-shadow: 0 0 12px rgba(200, 210, 220, 0.18);
+  }
+
+  .nav-link.active {
+    color: rgba(240, 238, 232, 0.95);
+    text-shadow: 0 0 8px rgba(200, 210, 220, 0.12);
+  }
+
+  .nav-settings {
+    color: rgba(180, 178, 172, 0.5);
+    transition: color 0.3s ease;
+    padding: var(--space-2);
+  }
+
+  .nav-settings:hover {
+    color: rgba(220, 216, 210, 0.85);
+  }
+
+  @media (max-width: 768px) {
+    .nav-links {
+      display: none;
+    }
+  }
+</style>

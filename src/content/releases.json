@@ -1,0 +1,28 @@
+[
+  {
+    "id": "r001",
+    "title": "NULL SPACE",
+    "type": "Album",
+    "year": 2026,
+    "art_url": "/assets/releases/placeholder.webp",
+    "links": {
+      "spotify": "#",
+      "apple_music": "#",
+      "soundcloud": "#",
+      "youtube": "#"
+    }
+  },
+  {
+    "id": "r002",
+    "title": "CHROMATIC DECAY",
+    "type": "Single",
+    "year": 2025,
+    "art_url": "/assets/releases/placeholder.webp",
+    "links": {
+      "spotify": "#",
+      "apple_music": "#",
+      "soundcloud": "#",
+      "youtube": "#"
+    }
+  }
+]

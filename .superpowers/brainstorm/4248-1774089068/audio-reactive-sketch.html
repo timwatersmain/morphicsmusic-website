@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Morphics — Audio Reactive Sketch</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0a0a0a; font-family: 'Inter', system-ui, sans-serif; color: #e2e2e2; overflow: hidden; }
+
+  .sketch-container {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* L0 - Void */
+  .l0-void {
+    position: absolute;
+    inset: 0;
+    background: #0a0a0a;
+  }
+
+  /* L1 - Tendrils */
+  .l1-tendrils {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+  }
+
+  .tendril {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(40px);
+    transition: opacity 0.15s, transform 0.3s ease-out;
+  }
+
+  .tendril-1 {
+    width: 600px; height: 200px;
+    background: radial-gradient(ellipse, rgba(0,255,170,0.3), transparent 70%);
+    top: 20%; left: -5%;
+    transform: rotate(-30deg);
+  }
+  .tendril-2 {
+    width: 500px; height: 180px;
+    background: radial-gradient(ellipse, rgba(0,200,168,0.25), transparent 70%);
+    top: 10%; right: -5%;
+    transform: rotate(25deg);
+  }
+  .tendril-3 {
+    width: 700px; height: 150px;
+    background: radial-gradient(ellipse, rgba(0,255,170,0.22), transparent 70%);
+    bottom: 25%; left: -10%;
+    transform: rotate(15deg);
+  }
+  .tendril-4 {
+    width: 550px; height: 220px;
+    background: radial-gradient(ellipse, rgba(68,136,204,0.2), transparent 70%);
+    top: 30%; right: -8%;
+    transform: rotate(-20deg);
+  }
+  .tendril-5 {
+    width: 400px; height: 300px;
+    background: radial-gradient(ellipse, rgba(136,102,187,0.15), transparent 70%);
+    bottom: 15%; right: 10%;
+    transform: rotate(40deg);
+  }
+  .tendril-6 {
+    width: 500px; height: 160px;
+    background: radial-gradient(ellipse, rgba(0,255,170,0.2), transparent 70%);
+    top: 55%; left: 5%;
+    transform: rotate(-45deg);
+  }
+  .tendril-7 {
+    width: 450px; height: 250px;
+    background: radial-gradient(ellipse, rgba(68,136,204,0.15), transparent 70%);
+    bottom: 35%; left: 15%;
+    transform: rotate(30deg);
+  }
+  .tendril-8 {
+    width: 380px; height: 190px;
+    background: radial-gradient(ellipse, rgba(136,102,187,0.12), transparent 70%);
+    top: 45%; right: 15%;
+    transform: rotate(-35deg);
+  }
+
+  /* L2 - Contour lines */
+  .l2-contours {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+  }
+
+  .contour-ring {
+    position: absolute;
+    border-radius: 50%;
+    border: 1px solid rgba(0, 204, 168, 0.06);
+    transition: transform 0.2s ease-out, border-color 0.2s;
+  }
+
+  .contour-ring:nth-child(1) { width: 250px; height: 250px; }
+  .contour-ring:nth-child(2) { width: 350px; height: 350px; }
+  .contour-ring:nth-child(3) { width: 450px; height: 450px; }
+  .contour-ring:nth-child(4) { width: 560px; height: 560px; }
+  .contour-ring:nth-child(5) { width: 680px; height: 680px; }
+  .contour-ring:nth-child(6) { width: 820px; height: 820px; }
+
+  /* L3 - Chrome blob */
+  .l3-blob {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 280px;
+    height: 280px;
+    z-index: 3;
+    transition: width 0.15s ease-out, height 0.15s ease-out;
+  }
+
+  .blob-shape {
+    width: 100%;
+    height: 100%;
+    border-radius: 42% 58% 55% 45% / 50% 42% 58% 50%;
+    background:
+      radial-gradient(ellipse at 30% 30%, rgba(220,240,240,0.9), transparent 50%),
+      radial-gradient(ellipse at 70% 60%, rgba(0,204,168,0.4), transparent 50%),
+      radial-gradient(ellipse at 50% 50%, rgba(100,120,130,0.8), transparent 70%),
+      radial-gradient(circle at 40% 35%, rgba(255,255,255,0.6), transparent 30%),
+      linear-gradient(135deg, #2a3a3a, #0a1a1a 40%, #1a2828 60%, #0d1d1d);
+    box-shadow:
+      0 0 60px rgba(0,255,170,0.15),
+      0 0 120px rgba(0,204,168,0.08),
+      inset 0 0 40px rgba(0,0,0,0.4);
+    transition: border-radius 0.25s ease-out, box-shadow 0.15s ease-out;
+  }
+
+  /* L4 - Particles */
+  .l4-particles {
+    position: absolute;
+    inset: 0;
+    z-index: 4;
+    pointer-events: none;
+  }
+
+  .particle {
+    position: absolute;
+    background: rgba(208, 232, 232, 0.6);
+    border-radius: 50%;
+    transition: transform 0.1s linear;
+  }
+
+  /* L5 - Track title */
+  .l5-title {
+    position: absolute;
+    top: 22%;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 5;
+    font-family: 'Space Grotesk', monospace, sans-serif;
+    font-size: clamp(2.5rem, 6vw, 5rem);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: #e2e2e2;
+    mix-blend-mode: difference;
+    user-select: none;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  /* L6 - Player controls */
+  .l6-controls {
+    position: absolute;
+    bottom: 12%;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 6;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    padding: 10px 28px;
+    background: rgba(30, 40, 45, 0.6);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-radius: 999px;
+    border: 1px solid rgba(0, 204, 168, 0.08);
+  }
+
+  .ctrl-btn {
+    background: none;
+    border: none;
+    color: rgba(226, 226, 226, 0.7);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    transition: color 0.2s;
+  }
+  .ctrl-btn:hover { color: #00CCA8; }
+  .ctrl-btn.play-btn {
+    color: #e2e2e2;
+    width: 48px;
+    height: 48px;
+  }
+  .ctrl-btn.play-btn.playing { color: #00CCA8; }
+
+  /* Nav */
+  .nav-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 24px;
+  }
+
+  .nav-wordmark {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #e2e2e2;
+  }
+
+  .nav-links {
+    display: flex;
+    gap: 32px;
+    list-style: none;
+  }
+
+  .nav-links a {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(226, 226, 226, 0.7);
+    text-decoration: none;
+  }
+
+  .sketch-label {
+    position: fixed;
+    bottom: 12px;
+    right: 16px;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgba(0, 204, 168, 0.3);
+    font-family: monospace;
+    z-index: 200;
+  }
+
+  .loading-hint {
+    position: fixed;
+    bottom: 12px;
+    left: 16px;
+    font-size: 11px;
+    color: rgba(0, 204, 168, 0.5);
+    font-family: monospace;
+    z-index: 200;
+    transition: opacity 0.3s;
+  }
+</style>
+</head>
+<body>
+
+<div class="sketch-container">
+  <div class="l0-void"></div>
+
+  <div class="l1-tendrils">
+    <div class="tendril tendril-1"></div>
+    <div class="tendril tendril-2"></div>
+    <div class="tendril tendril-3"></div>
+    <div class="tendril tendril-4"></div>
+    <div class="tendril tendril-5"></div>
+    <div class="tendril tendril-6"></div>
+    <div class="tendril tendril-7"></div>
+    <div class="tendril tendril-8"></div>
+  </div>
+
+  <div class="l2-contours">
+    <div class="contour-ring"></div>
+    <div class="contour-ring"></div>
+    <div class="contour-ring"></div>
+    <div class="contour-ring"></div>
+    <div class="contour-ring"></div>
+    <div class="contour-ring"></div>
+  </div>
+
+  <div class="l3-blob">
+    <div class="blob-shape" id="blob"></div>
+  </div>
+
+  <div class="l4-particles" id="particles"></div>
+
+  <div class="l5-title" id="track-title">MYSTERIUM</div>
+
+  <div class="l6-controls">
+    <button class="ctrl-btn" aria-label="Previous">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+    </button>
+    <button class="ctrl-btn play-btn" id="play-btn" aria-label="Play">
+      <svg class="play-icon" width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+      <svg class="pause-icon" width="28" height="28" viewBox="0 0 24 24" fill="currentColor" style="display:none"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+    </button>
+    <button class="ctrl-btn" aria-label="Next">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+    </button>
+  </div>
+
+  <nav class="nav-overlay">
+    <span class="nav-wordmark">MORPHICS</span>
+    <ul class="nav-links">
+      <li><a href="#">MUSIC</a></li>
+      <li><a href="#">ABOUT</a></li>
+      <li><a href="#">CONTACT</a></li>
+    </ul>
+  </nav>
+</div>
+
+<div class="sketch-label">Audio-reactive CSS sketch — press play</div>
+<div class="loading-hint" id="hint">Press play to hear MYSTERIUM</div>
+
+<script>
+  // ---- Audio setup ----
+  const audioEl = new Audio();
+  audioEl.crossOrigin = 'anonymous';
+  audioEl.src = 'http://localhost:4321/assets/tracks/mysterium.wav';
+  audioEl.preload = 'auto';
+
+  let audioCtx, analyser, source;
+  let isPlaying = false;
+  const playBtn = document.getElementById('play-btn');
+  const playIcon = playBtn.querySelector('.play-icon');
+  const pauseIcon = playBtn.querySelector('.pause-icon');
+  const hint = document.getElementById('hint');
+
+  function ensureAudio() {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 2048;
+      source = audioCtx.createMediaElementSource(audioEl);
+      source.connect(analyser);
+      analyser.connect(audioCtx.destination);
+    }
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+  }
+
+  playBtn.addEventListener('click', async () => {
+    ensureAudio();
+    if (isPlaying) {
+      audioEl.pause();
+      isPlaying = false;
+      playIcon.style.display = '';
+      pauseIcon.style.display = 'none';
+      playBtn.classList.remove('playing');
+    } else {
+      try {
+        await audioEl.play();
+        isPlaying = true;
+        playIcon.style.display = 'none';
+        pauseIcon.style.display = '';
+        playBtn.classList.add('playing');
+        hint.style.opacity = '0';
+      } catch(e) {
+        console.warn('Playback failed:', e);
+      }
+    }
+  });
+
+  // ---- Frequency analysis ----
+  const EMA = 0.15;
+  const ema = { bass: 0, mid: 0, high: 0 };
+
+  function readBands() {
+    if (!analyser) return { bass: 0, mid: 0, high: 0 };
+    const data = new Uint8Array(analyser.frequencyBinCount);
+    analyser.getByteFrequencyData(data);
+    let bass = 0, mid = 0, high = 0;
+    for (let i = 0; i < 10; i++) bass += data[i];
+    for (let i = 10; i < 93; i++) mid += data[i];
+    for (let i = 93; i < 930; i++) high += data[i];
+    const raw = {
+      bass: bass / (10 * 255),
+      mid: mid / (83 * 255),
+      high: high / (837 * 255),
+    };
+    ema.bass = ema.bass * (1 - EMA) + raw.bass * EMA;
+    ema.mid = ema.mid * (1 - EMA) + raw.mid * EMA;
+    ema.high = ema.high * (1 - EMA) + raw.high * EMA;
+    return ema;
+  }
+
+  // ---- Particles ----
+  const particleContainer = document.getElementById('particles');
+  const cx = window.innerWidth / 2;
+  const cy = window.innerHeight / 2;
+  const particles = [];
+
+  for (let i = 0; i < 100; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    const angle = Math.random() * Math.PI * 2;
+    const radius = (Math.random() + Math.random() + Math.random()) / 3 * 220;
+    const x = cx + Math.cos(angle) * radius;
+    const y = cy + Math.sin(angle) * radius;
+    const size = Math.random() * 3 + 1;
+    p.style.left = x + 'px';
+    p.style.top = y + 'px';
+    p.style.width = size + 'px';
+    p.style.height = size + 'px';
+    p.style.opacity = Math.random() * 0.4 + 0.2;
+    particleContainer.appendChild(p);
+    particles.push({
+      el: p,
+      homeX: x, homeY: y,
+      x, y,
+      vx: 0, vy: 0,
+      size,
+      baseOpacity: parseFloat(p.style.opacity),
+    });
+  }
+
+  // ---- DOM refs ----
+  const blob = document.getElementById('blob');
+  const blobContainer = document.querySelector('.l3-blob');
+  const tendrils = document.querySelectorAll('.tendril');
+  const contourRings = document.querySelectorAll('.contour-ring');
+
+  // Store base rotations for tendrils
+  const tendrilBaseRotations = [-30, 25, 15, -20, 40, -45, 30, -35];
+  const tendrilBaseScales = tendrils.length;
+
+  // ---- Morph shapes for blob ----
+  const blobShapes = [
+    '42% 58% 55% 45% / 50% 42% 58% 50%',
+    '55% 45% 48% 52% / 42% 55% 45% 58%',
+    '48% 52% 58% 42% / 55% 48% 42% 52%',
+    '52% 48% 42% 58% / 48% 52% 55% 45%',
+    '45% 55% 52% 48% / 58% 45% 50% 55%',
+    '58% 42% 45% 55% / 45% 58% 52% 48%',
+  ];
+  let morphIndex = 0;
+  let morphTime = 0;
+
+  // ---- Animation loop ----
+  let lastTime = 0;
+
+  function animate(timestamp) {
+    requestAnimationFrame(animate);
+    const dt = Math.min((timestamp - lastTime) / 1000, 0.05);
+    lastTime = timestamp;
+
+    const { bass, mid, high } = readBands();
+
+    // -- Blob: scale with bass, morph shape --
+    const blobScale = 280 + bass * 120;
+    blobContainer.style.width = blobScale + 'px';
+    blobContainer.style.height = blobScale + 'px';
+
+    morphTime += dt;
+    if (morphTime > 0.3) {
+      morphTime = 0;
+      morphIndex = (morphIndex + 1) % blobShapes.length;
+    }
+    // Interpolate border-radius isn't possible with CSS, so just swap
+    const nextShape = blobShapes[(morphIndex + Math.floor(bass * 3)) % blobShapes.length];
+    blob.style.borderRadius = nextShape;
+
+    // Blob glow with bass
+    const glowIntensity = 60 + bass * 100;
+    const glowSpread = 120 + bass * 180;
+    blob.style.boxShadow = `
+      0 0 ${glowIntensity}px rgba(0,255,170,${0.1 + bass * 0.3}),
+      0 0 ${glowSpread}px rgba(0,204,168,${0.05 + bass * 0.15}),
+      inset 0 0 40px rgba(0,0,0,0.4)
+    `;
+
+    // -- Tendrils: opacity and scale with bass + high --
+    tendrils.forEach((t, i) => {
+      const phaseOffset = i * 0.7;
+      const pulse = Math.sin(timestamp / 1000 + phaseOffset) * 0.5 + 0.5;
+      const baseOpacity = 0.3 + pulse * 0.2;
+      const audioBoost = bass * 0.5 + high * 0.3;
+      t.style.opacity = Math.min(baseOpacity + audioBoost, 1.0);
+
+      const baseScale = 1 + pulse * 0.05;
+      const scaleBoost = bass * 0.15;
+      const rot = tendrilBaseRotations[i] + high * 5 * Math.sin(timestamp / 2000 + i);
+      t.style.transform = `rotate(${rot}deg) scale(${baseScale + scaleBoost})`;
+    });
+
+    // -- Contour rings: breathe with bass --
+    contourRings.forEach((ring, i) => {
+      const delay = i * 0.15;
+      const breathe = 1 + bass * 0.08 * Math.sin(timestamp / 600 + delay * 5);
+      ring.style.transform = `scale(${breathe})`;
+      ring.style.borderColor = `rgba(0, 204, 168, ${0.04 + bass * 0.12})`;
+    });
+
+    // -- Particles: scatter with mid, jitter --
+    particles.forEach((p, i) => {
+      // Scatter impulse
+      const dx = p.x - cx;
+      const dy = p.y - cy;
+      const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+      p.vx += (dx / dist) * mid * 1.5;
+      p.vy += (dy / dist) * mid * 1.5;
+
+      // Spring back
+      p.vx += (p.homeX - p.x) * 0.02;
+      p.vy += (p.homeY - p.y) * 0.02;
+
+      // Jitter
+      p.vx += (Math.random() - 0.5) * 0.3;
+      p.vy += (Math.random() - 0.5) * 0.3;
+
+      // Damping
+      p.vx *= 0.92;
+      p.vy *= 0.92;
+
+      p.x += p.vx;
+      p.y += p.vy;
+
+      p.el.style.transform = `translate(${p.x - p.homeX}px, ${p.y - p.homeY}px)`;
+      p.el.style.opacity = p.baseOpacity + mid * 0.4;
+    });
+  }
+
+  requestAnimationFrame(animate);
+</script>
+
+</body>
+</html>

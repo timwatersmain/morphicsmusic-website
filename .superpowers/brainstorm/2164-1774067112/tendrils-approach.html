@@ -1,0 +1,40 @@
+<h2>Layer 1: Teal Fluid Tendrils</h2>
+<p class="subtitle">The organic bioluminescent veins radiating from center — how should we render them?</p>
+
+<div style="background: #0a0a0a; border-radius: 12px; padding: 24px; margin-bottom: 24px; border: 1px solid #1a3030;">
+  <div style="font-family: monospace; font-size: 12px; color: #0fa; margin-bottom: 8px;">FROM YOUR MOCKUP</div>
+  <p style="color: #999; font-size: 14px; line-height: 1.6;">
+    Long flowing teal/cyan tendrils that look like smoke or bioluminescent fluid — they radiate from the center blob outward to the edges, curving organically. They have depth (some in front, some behind the blob). They should react to audio — pulsing, breathing, shifting with the music.
+  </p>
+</div>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Shader-Based — Evolved FBM Tendrils</h3>
+      <p>Modify your existing fbm shader to produce tendril-like shapes instead of the current chrome surface. Use domain warping with directional bias to create flowing vein patterns. Change the color ramp from chrome to teal/cyan. Audio drives warp intensity and flow speed.</p>
+      <p style="color: #0fa; font-size: 13px; margin-top: 8px;">Builds directly on your existing shader code. Smooth, infinite, no geometry needed.</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Particle Trails — GPU Particle System</h3>
+      <p>Thousands of tiny particles following flow-field paths outward from center, rendered as trails/lines. Creates a more organic, fibrous look. Each particle strand = one tendril. Audio modulates flow speed and trail length.</p>
+      <p style="color: #4dd; font-size: 13px; margin-top: 8px;">More dynamic and unpredictable. Higher particle count but each is simple.</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Separate Shader Layer — Dedicated Tendril Plane</h3>
+      <p>Add a second full-screen plane behind the blob with its own shader specifically designed for flowing tendrils. Uses a different noise function (Worley/Voronoi) to create vein-like structures. Completely independent from the blob rendering.</p>
+      <p style="color: #888; font-size: 13px; margin-top: 8px;">Clean separation of concerns. Can tune tendril look without affecting blob.</p>
+    </div>
+  </div>
+</div>
+
+<p class="subtitle" style="margin-top: 24px; text-align: center; color: #888;">My recommendation: <strong>Option C</strong> — a dedicated tendril plane gives you independent control over the tendrils vs blob, and your scene already composites layers via the EffectComposer. Cleanest architecture for the layer-based approach you described.</p>

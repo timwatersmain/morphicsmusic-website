@@ -10,11 +10,22 @@ let audio = null;
 let audioCtx = null;
 let analyser = null;
 let source = null;
+let analyserL = null;
+let analyserR = null;
+let splitter = null;
 let animationId = null;
 let isPlaying = false;
 
 // DOM references (set in init)
-let titleEl, playBtn, prevBtn, nextBtn, canvas, ctx;
+let titleEl, titleAltEl, playBtn, prevBtn, nextBtn, canvas, ctx;
+let isMorphing = false;
+let morphFadeOutTimer = null;
+let morphFadeInTimer = null;
+
+// Cached letter elements — updated whenever wrapLetters is called
+let cachedLetters = [];
+let cachedAltLetters = []; // letters on titleAltEl during transitions
+const startTime = performance.now();
 
 function shuffle(arr) {
   const a = [...arr];
@@ -25,25 +36,334 @@ function shuffle(arr) {
   return a;
 }
 
-function updateTitle() {
-  if (titleEl && tracks[currentIndex]) {
-    titleEl.textContent = tracks[currentIndex].title;
+let isFirstReveal = true;
+
+// Wrap text into individual letter spans
+// fadeIn: true = letters start invisible and fade in with random timing
+function wrapLetters(el, text, fadeIn = false) {
+  el.innerHTML = '';
+  el.setAttribute('data-text', text);
+  const spans = [];
+  for (let ci = 0; ci < text.length; ci++) {
+    const ch = text[ci];
+    const span = document.createElement('span');
+    span.classList.add('title-letter');
+    span.textContent = ch === ' ' ? '\u00A0' : ch;
+    // Random z-index so overlapping letters stack naturally
+    span.style.zIndex = Math.floor(Math.random() * text.length);
+    span.style.position = 'relative';
+    if (fadeIn) {
+      span.style.opacity = '0';
+    }
+    el.appendChild(span);
+    spans.push(span);
   }
+  // Re-cache and immediately apply wave positions
+  if (el === titleEl) {
+    cachedLetters = spans;
+    applyWaveToLetters(cachedLetters, performance.now());
+  } else if (el === titleAltEl) {
+    cachedAltLetters = spans;
+    applyWaveToLetters(cachedAltLetters, performance.now());
+  }
+  // Trigger per-letter fade-in after a frame so the browser registers opacity:0 first
+  if (fadeIn) {
+    const slow = isFirstReveal;
+    if (isFirstReveal) isFirstReveal = false;
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        for (let i = 0; i < spans.length; i++) {
+          const dur = slow ? (4.5 + Math.random() * 3.0) : (0.8 + Math.random() * 0.6);
+          const del = slow ? (1.0 + Math.random() * 2.5) : (0.1 + Math.random() * 0.35);
+          spans[i].style.transition = `opacity ${dur}s ease ${del}s`;
+          spans[i].style.opacity = '1';
+        }
+      });
+    });
+  }
+}
+
+// Apply wave transforms to a set of letters at a given time
+function applyWaveToLetters(letters, time) {
+  if (!letters.length) return;
+  const t = (time - startTime) / 1000;
+  for (let i = 0; i < letters.length && i < MAX; i++) {
+    const seed = letterSeeds[i];
+    const wave1 = Math.sin(t * 0.8 + i * 0.6) * 1.2;
+    const wave2 = Math.sin(t * 0.5 + i * 0.9 + 2.0) * 0.7;
+    const driftX = Math.sin(t * seed.sx + seed.px) * seed.ax;
+    const driftY = Math.sin(t * seed.sy + seed.py) * seed.ay;
+    const driftR = Math.sin(t * seed.sr + seed.pr) * seed.ar;
+    const x = driftX;
+    const y = wave1 + wave2 + driftY;
+    const scale = 1 + Math.sin(t * 0.3 + i * 0.7) * 0.012;
+    letters[i].style.transform = `translate(${x}px, ${y}px) scale(${scale}) rotate(${driftR}deg)`;
+  }
+}
+
+// All letter animation state — unified in one rAF loop, no CSS transitions
+let isHovering = false;
+
+// Letter hover/wave state
+const MAX = 30;
+const letterState = [];
+const letterSeeds = [];
+for (let i = 0; i < MAX; i++) {
+  letterState.push({
+    hoverTargetScale: 0, hoverTargetY: 0, hoverTargetGlow: 0,
+    hoverScale: 0, hoverY: 0, hoverGlow: 0,
+    bounceVelY: 0, bounceY: 0,
+    bounceVelS: 0, bounceS: 0,
+  });
+  letterSeeds.push({
+    px: Math.random() * Math.PI * 2,
+    py: Math.random() * Math.PI * 2,
+    pr: Math.random() * Math.PI * 2,
+    sx: 0.4 + Math.random() * 0.5,
+    sy: 0.35 + Math.random() * 0.4,
+    sr: 0.3 + Math.random() * 0.4,
+    ax: 0.6 + Math.random() * 0.8,
+    ay: 0.4 + Math.random() * 0.6,
+    ar: 2 + Math.random() ** 2 * 10,  // rotation amplitude 2-12 degrees, skewed toward lower values
+  });
+}
+
+// Mousemove: store cursor position, compute hover in the rAF loop instead
+let cursorX = 0, cursorY = 0, cursorActive = false;
+let bulkHoverTarget = 0, bulkHover = 0;
+
+function initLetterHover() {
+  const wrap = titleEl?.parentElement;
+  if (!wrap) return;
+
+  wrap.addEventListener('mouseenter', () => {
+    isHovering = true;
+    cursorActive = true;
+    bulkHoverTarget = 1;
+  });
+
+  wrap.addEventListener('mousemove', (e) => {
+    isHovering = true;
+    cursorActive = true;
+    cursorX = e.clientX;
+    cursorY = e.clientY;
+  });
+
+  wrap.addEventListener('mouseleave', (e) => {
+    isHovering = false;
+    cursorActive = false;
+
+    bulkHoverTarget = 0;
+
+    // Zero out hover targets so they lerp back smoothly
+    for (let i = 0; i < MAX; i++) {
+      letterState[i].hoverTargetScale = 0;
+      letterState[i].hoverTargetY = 0;
+      letterState[i].hoverTargetGlow = 0;
+    }
+
+    // Trigger bounce on nearby letters — use cached positions
+    const letters = cachedLetters;
+    if (!letters.length) return;
+
+    // Use offsetLeft for position (no forced layout)
+    let closestIdx = 0;
+    let closestDist = Infinity;
+    for (let i = 0; i < letters.length; i++) {
+      const cx = letters[i].offsetLeft + letters[i].offsetWidth / 2;
+      const d = Math.abs(e.clientX - wrap.getBoundingClientRect().left - cx);
+      if (d < closestDist) { closestDist = d; closestIdx = i; }
+    }
+
+    const radius = 2 + Math.floor(Math.random() * 3); // 2-4 letters affected
+    for (let i = 0; i < letters.length && i < MAX; i++) {
+      const indexDist = Math.abs(i - closestIdx);
+      if (indexDist > radius) continue;
+      const strength = 1 - indexDist / (radius + 1);
+      const randY = 0.15 + Math.random() * 0.25;      // 0.15-0.4 impulse range
+      const randS = 0.001 + Math.random() * 0.002;    // varied scale squish
+      const direction = Math.random() > 0.3 ? -1 : 1; // mostly up, sometimes down
+      letterState[i].bounceVelY = direction * randY * strength;
+      letterState[i].bounceVelS = randS * strength;
+    }
+  });
+}
+
+// Single master animation tick — called from index.astro's unified loop
+// (startTime declared at top of module)
+const lerpSpeed = 0.45;
+const springStiff = 0.08;
+const springDamp = 0.88;
+
+export function tickLetters(time) {
+  const letters = cachedLetters;
+  if (!letters.length) return;
+
+  // Smooth bulk hover scale for all letters
+  // Quick onset, very slow smooth fade out
+  const bulkLerp = bulkHoverTarget > bulkHover ? 0.3 : 0.06;
+  bulkHover += (bulkHoverTarget - bulkHover) * bulkLerp;
+
+  const t = (time - startTime) / 1000;
+
+  // Compute hover targets from cursor position (replaces per-letter getBoundingClientRect)
+  if (cursorActive && isHovering) {
+    const wrap = titleEl?.parentElement;
+    if (wrap) {
+      const wrapRect = wrap.getBoundingClientRect();
+      for (let i = 0; i < letters.length && i < MAX; i++) {
+        const letter = letters[i];
+        const cx = wrapRect.left + letter.offsetLeft + letter.offsetWidth / 2;
+        const cy = wrapRect.top + letter.offsetTop + letter.offsetHeight / 2;
+        const dist = Math.sqrt((cursorX - cx) ** 2 + (cursorY - cy) ** 2);
+        const proximity = Math.max(0, 1 - dist / 100);
+        letterState[i].hoverTargetScale = 0.042 * proximity;
+        letterState[i].hoverTargetY = -0.6 * proximity;
+        letterState[i].hoverTargetGlow = proximity;
+      }
+    }
+  }
+
+  for (let i = 0; i < letters.length && i < MAX; i++) {
+    const s = letterState[i];
+    const seed = letterSeeds[i];
+
+    // Lerp hover
+    s.hoverScale += (s.hoverTargetScale - s.hoverScale) * lerpSpeed;
+    s.hoverY += (s.hoverTargetY - s.hoverY) * lerpSpeed;
+    s.hoverGlow += (s.hoverTargetGlow - s.hoverGlow) * lerpSpeed;
+
+    // Spring bounce
+    s.bounceVelY += -springStiff * s.bounceY;
+    s.bounceVelY *= springDamp;
+    s.bounceY += s.bounceVelY;
+    s.bounceVelS += -springStiff * s.bounceS;
+    s.bounceVelS *= springDamp;
+    s.bounceS += s.bounceVelS;
+
+    if (Math.abs(s.bounceY) < 0.001 && Math.abs(s.bounceVelY) < 0.001) {
+      s.bounceY = 0; s.bounceVelY = 0;
+    }
+    if (Math.abs(s.bounceS) < 0.0001 && Math.abs(s.bounceVelS) < 0.0001) {
+      s.bounceS = 0; s.bounceVelS = 0;
+    }
+
+    // Ambient wave
+    const wave1 = Math.sin(t * 0.8 + i * 0.6) * 1.2;
+    const wave2 = Math.sin(t * 0.5 + i * 0.9 + 2.0) * 0.7;
+    const driftX = Math.sin(t * seed.sx + seed.px) * seed.ax;
+    const driftY = Math.sin(t * seed.sy + seed.py) * seed.ay;
+    const driftR = Math.sin(t * seed.sr + seed.pr) * seed.ar;
+
+    // Combine
+    const x = driftX;
+    const y = wave1 + wave2 + driftY + s.hoverY + s.bounceY;
+    const scale = 1 + Math.sin(t * 0.3 + i * 0.7) * 0.012 + s.hoverScale + s.bounceS + bulkHover * 0.03;
+
+    const el = letters[i];
+    el.style.transform = `translate(${x}px, ${y}px) scale(${scale}) rotate(${driftR}deg)`;
+
+    // Uniform glow: always apply with bulkHover blended in (no threshold snap)
+    const g = bulkHover;
+    const c = Math.round(200 + g * 42);
+    const a = (0.72 + g * 0.16).toFixed(3);
+    const glowA = (g * 0.08).toFixed(4);
+    el.style.color = `rgba(${c}, ${c - 10}, ${c - 25}, ${a})`;
+    el.style.textShadow = `0 0 6px rgba(0,0,0,0.4), 0 0 20px rgba(0,0,0,0.15), 0 0 10px rgba(255,255,255,${glowA})`;
+  }
+
+  // Also animate alt letters during transitions
+  if (cachedAltLetters.length) {
+    applyWaveToLetters(cachedAltLetters, time);
+  }
+}
+
+function updateTitle() {
+  if (!titleEl || !tracks[currentIndex]) return;
+
+  // First load — fade in per-letter
+  if (!titleAltEl || !titleEl.textContent || titleEl.textContent === 'MORPHICS') {
+    wrapLetters(titleEl, tracks[currentIndex].title, true);
+    return;
+  }
+
+  // Cancel any in-progress morph so rapid skips always show the correct title
+  if (isMorphing) {
+    clearTimeout(morphFadeOutTimer);
+    clearTimeout(morphFadeInTimer);
+    titleEl.classList.remove('is-morphing');
+    cachedAltLetters = [];
+    titleAltEl.innerHTML = '';
+    titleAltEl.style.opacity = '';
+    isMorphing = false;
+  }
+
+  isMorphing = true;
+  const newTitle = tracks[currentIndex].title;
+
+  // Step 1: kill breathe animation
+  titleEl.classList.add('is-morphing');
+
+  // Step 2: per-letter fade out with random timing
+  const oldLetters = cachedLetters;
+  for (let i = 0; i < oldLetters.length; i++) {
+    const dur = 0.5 + Math.random() * 0.4; // 0.5–0.9s
+    const del = 0.03 + Math.random() * 0.2; // 0.03–0.23s
+    oldLetters[i].style.transition = `opacity ${dur}s ease ${del}s`;
+    oldLetters[i].style.opacity = '0';
+  }
+
+  // Step 3: after fade-out completes, fade in new text per-letter
+  morphFadeOutTimer = setTimeout(() => {
+    // Guard: if another morph cancelled us, bail
+    if (tracks[currentIndex].title !== newTitle) return;
+
+    titleAltEl.style.opacity = '0.88';
+    wrapLetters(titleAltEl, newTitle, true);
+
+    morphFadeInTimer = setTimeout(() => {
+      if (tracks[currentIndex].title !== newTitle) return;
+
+      wrapLetters(titleEl, newTitle, false);
+      titleEl.classList.remove('is-morphing');
+      cachedAltLetters = [];
+      titleAltEl.innerHTML = '';
+      titleAltEl.style.opacity = '';
+      isMorphing = false;
+    }, 1600);
+  }, 1000);
 }
 
 function updatePlayButton() {
   if (playBtn) {
     playBtn.setAttribute('aria-label', isPlaying ? 'Pause' : 'Play');
-    playBtn.querySelector('.play-icon').style.display = isPlaying ? 'none' : 'block';
-    playBtn.querySelector('.pause-icon').style.display = isPlaying ? 'block' : 'none';
+    const pi = playBtn._playIcon || playBtn.querySelector('.play-icon');
+    const pa = playBtn._pauseIcon || playBtn.querySelector('.pause-icon');
+    if (pi) pi.style.display = isPlaying ? 'none' : 'block';
+    if (pa) pa.style.display = isPlaying ? 'block' : 'none';
   }
+}
+
+// Blob track pulse — shrink then slowly grow back
+let blobTrackScale = 1;
+let blobTrackTarget = 1;
+function pulseBlob() {
+  blobTrackScale = 0.93;
+  blobTrackTarget = 1;
+}
+export function tickBlobPulse() {
+  // Slow lerp back to 1
+  blobTrackScale += 0.003 * (blobTrackTarget - blobTrackScale);
+  return blobTrackScale;
 }
 
 function loadTrack(index) {
   if (!audio || !tracks[index]) return;
+  const isFirst = currentIndex === 0 && !audio.src;
   currentIndex = index;
   audio.src = tracks[index].url;
   updateTitle();
+  if (!isFirst) pulseBlob();
 }
 
 function ensureAudioContext() {
@@ -54,6 +374,16 @@ function ensureAudioContext() {
     source = audioCtx.createMediaElementSource(audio);
     source.connect(analyser);
     analyser.connect(audioCtx.destination);
+
+    // Stereo split for L/R analysis
+    splitter = audioCtx.createChannelSplitter(2);
+    analyserL = audioCtx.createAnalyser();
+    analyserR = audioCtx.createAnalyser();
+    analyserL.fftSize = 1024;
+    analyserR.fftSize = 1024;
+    source.connect(splitter);
+    splitter.connect(analyserL, 0);
+    splitter.connect(analyserR, 1);
   }
   if (audioCtx.state === 'suspended') {
     audioCtx.resume();
@@ -63,12 +393,12 @@ function ensureAudioContext() {
 async function play() {
   if (!audio || !tracks.length) return;
   ensureAudioContext();
-  resizeCanvas();
+  if (canvas) resizeCanvas();
   try {
     await audio.play();
     isPlaying = true;
     updatePlayButton();
-    drawWaveform();
+    if (canvas) drawWaveform();
   } catch (e) {
     console.warn('Playback failed:', e);
   }
@@ -105,6 +435,7 @@ function prev() {
   if (isPlaying) play();
 }
 
+let waveformBuffer = null;
 function drawWaveform() {
   if (!analyser || !canvas || !ctx) return;
   if (animationId) {
@@ -113,26 +444,32 @@ function drawWaveform() {
   }
 
   const bufferLength = analyser.frequencyBinCount;
-  const dataArray = new Uint8Array(bufferLength);
+  if (!waveformBuffer || waveformBuffer.length !== bufferLength) {
+    waveformBuffer = new Uint8Array(bufferLength);
+  }
+  const dataArray = waveformBuffer;
+
+  const dpr = window.devicePixelRatio || 1;
+  const width = canvas.width;
+  const height = canvas.height;
+  const cssHeight = height / dpr;
+  const primaryY = cssHeight * 0.4;
+  const reflectY = cssHeight * 0.6;
+  const amplitude = cssHeight * 0.25;
+  const sliceWidth = (width / dpr) / bufferLength;
+
+  // Pre-compute gradient once
+  const grad = ctx.createLinearGradient(0, primaryY, 0, reflectY);
+  grad.addColorStop(0, 'rgba(0, 204, 168, 0.08)');
+  grad.addColorStop(0.5, 'rgba(0, 204, 168, 0.03)');
+  grad.addColorStop(1, 'rgba(0, 204, 168, 0)');
 
   function draw() {
     animationId = requestAnimationFrame(draw);
     analyser.getByteTimeDomainData(dataArray);
 
-    const width = canvas.width;
-    const height = canvas.height;
-    const dpr = window.devicePixelRatio || 1;
-    const cssHeight = height / dpr;
-
     ctx.clearRect(0, 0, width, height);
 
-    const primaryY = cssHeight * 0.4;   // primary line at 40% height
-    const reflectY = cssHeight * 0.6;   // reflection at 60% height
-    const amplitude = cssHeight * 0.25; // waveform amplitude
-
-    const sliceWidth = (width / dpr) / bufferLength;
-
-    // --- Primary waveform ---
     ctx.lineWidth = 1.5;
     ctx.strokeStyle = 'rgba(0, 204, 168, 0.6)';
     ctx.beginPath();
@@ -146,7 +483,6 @@ function drawWaveform() {
     }
     ctx.stroke();
 
-    // --- Mirrored reflection ---
     ctx.lineWidth = 1;
     ctx.strokeStyle = 'rgba(0, 204, 168, 0.3)';
     ctx.beginPath();
@@ -160,11 +496,6 @@ function drawWaveform() {
     }
     ctx.stroke();
 
-    // --- Gradient fill between lines ---
-    const grad = ctx.createLinearGradient(0, primaryY, 0, reflectY);
-    grad.addColorStop(0, 'rgba(0, 204, 168, 0.08)');
-    grad.addColorStop(0.5, 'rgba(0, 204, 168, 0.03)');
-    grad.addColorStop(1, 'rgba(0, 204, 168, 0)');
     ctx.fillStyle = grad;
     ctx.fillRect(0, primaryY, width / dpr, reflectY - primaryY);
   }
@@ -182,26 +513,30 @@ function resizeCanvas() {
 }
 
 export async function init() {
-  // Get DOM elements
   titleEl = document.getElementById('player-title');
+  titleAltEl = document.getElementById('player-title-alt');
   playBtn = document.getElementById('player-play');
   prevBtn = document.getElementById('player-prev');
   nextBtn = document.getElementById('player-next');
-  canvas = document.getElementById('player-waveform');
-
-  if (!titleEl || !playBtn || !canvas) {
+  if (!titleEl || !playBtn) {
     console.warn('Player elements not found');
     return;
   }
+  // Cache icon elements to avoid querySelector per play/pause toggle
+  const playIconEl = playBtn.querySelector('.play-icon');
+  const pauseIconEl = playBtn.querySelector('.pause-icon');
+  if (playIconEl && pauseIconEl) {
+    playBtn._playIcon = playIconEl;
+    playBtn._pauseIcon = pauseIconEl;
+  }
 
-  ctx = canvas.getContext('2d');
+  canvas = document.getElementById('player-waveform');
+  if (canvas) ctx = canvas.getContext('2d');
 
-  // Create audio element
   audio = new Audio();
   audio.crossOrigin = 'anonymous';
   audio.preload = 'metadata';
 
-  // Fetch and shuffle tracks
   try {
     const res = await fetch('/content/tracks.json');
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -218,22 +553,199 @@ export async function init() {
     return;
   }
 
-  // Load first track (paused)
+  wrapLetters(titleEl, 'MORPHICS');
   loadTrack(0);
+  initLetterHover();
 
-  // Wire controls
-  playBtn.addEventListener('click', togglePlay);
+  // Intro: first click expands controls, then normal play/pause
+  const controlsEl = document.querySelector('.player-controls');
+  let introPlayed = false;
+
+  playBtn.addEventListener('click', () => {
+    if (!introPlayed && controlsEl) {
+      introPlayed = true;
+
+      // Get play button center for animation origin
+      const btnRect = playBtn.getBoundingClientRect();
+      const cx = btnRect.left + btnRect.width / 2;
+      const cy = btnRect.top + btnRect.height / 2;
+
+      // Capture final button positions BEFORE hiding them
+      // Temporarily show the normal layout to measure
+      controlsEl.classList.remove('is-intro');
+      playBtn.classList.remove('intro-rising', 'intro-hovering', 'leave-ripple');
+      const targets = controlsEl.querySelectorAll(':scope > .ctrl-btn, :scope > .volume-wrap');
+      const targetPositions = [];
+      for (const t of targets) {
+        const r = t.getBoundingClientRect();
+        targetPositions.push({ x: r.left + r.width / 2 - 20, y: r.top + r.height / 2 - 20 });
+      }
+
+      // Now hide everything for the animation
+      controlsEl.classList.add('is-transitioning');
+
+      // Phase 1: Pop — play button inflates then bursts
+      const popAnim = playBtn.animate([
+        { transform: 'scale(1)', opacity: 1 },
+        { transform: 'scale(1.35)', opacity: 1, offset: 0.3 },
+        { transform: 'scale(1.5)', opacity: 0.4, offset: 0.6 },
+        { transform: 'scale(2)', opacity: 0, offset: 1.0 },
+      ], { duration: 400, easing: 'ease-out', fill: 'forwards' });
+      popAnim.onfinish = () => {
+        popAnim.cancel();  // Remove fill: forwards so CSS takes over
+        playBtn.classList.add('is-popped');
+      };
+
+      // Phase 2: Create 5 orbs that burst outward in a ring
+      const orbs = [];
+      const ringRadius = 60;
+      const angleStart = -Math.PI / 2;
+
+      for (let i = 0; i < 5; i++) {
+        const orb = document.createElement('div');
+        orb.className = 'pop-orb';
+        // Start at center (invisible)
+        orb.style.left = (cx - 20) + 'px';
+        orb.style.top = (cy - 20) + 'px';
+        orb.style.transform = 'scale(0)';
+        orb.style.opacity = '0';
+        document.body.appendChild(orb);
+        orbs.push(orb);
+      }
+
+      // After pop, burst orbs outward into a circle
+      setTimeout(() => {
+        for (let i = 0; i < 5; i++) {
+          const angle = angleStart + (i / 5) * Math.PI * 2;
+          const ox = cx - 20 + Math.cos(angle) * ringRadius;
+          const oy = cy - 20 + Math.sin(angle) * ringRadius;
+          orbs[i].style.opacity = '1';
+          orbs[i].style.transform = 'scale(1)';
+          orbs[i].style.left = ox + 'px';
+          orbs[i].style.top = oy + 'px';
+        }
+      }, 350);
+
+      // Phase 3: Orbs flow into a line, each heading to its target button
+      setTimeout(() => {
+        // Order: play (2) lands first, then outward
+        const order = [2, 1, 3, 0, 4];
+        order.forEach((targetIdx, seqIdx) => {
+          const orb = orbs[seqIdx];
+          const target = targets[targetIdx];
+          const pos = targetPositions[targetIdx];
+          if (!orb || !target || !pos) return;
+
+          setTimeout(() => {
+            orb.style.left = pos.x + 'px';
+            orb.style.top = pos.y + 'px';
+            orb.style.transform = 'scale(0.8)';
+
+            // When orb arrives, reveal real button and remove orb
+            setTimeout(() => {
+              target.classList.add('is-revealed');
+              orb.style.opacity = '0';
+              orb.style.transform = 'scale(0)';
+              setTimeout(() => orb.remove(), 300);
+            }, 550);
+          }, seqIdx * 100);
+        });
+
+        // Clean up after all landed
+        setTimeout(() => {
+          controlsEl.classList.remove('is-transitioning');
+          targets.forEach(t => t.classList.remove('is-revealed'));
+          playBtn.classList.remove('is-popped');
+        }, 5 * 100 + 900);
+      }, 900);
+
+      // Merge dot array into blob
+      const landing = document.querySelector('.landing');
+      if (landing) {
+        const dots = landing.querySelectorAll('.frag-dot');
+        const fragContainer = landing.querySelector('.frag-container');
+        const count = dots.length;
+        const center = Math.floor(count / 2);
+
+        if (window.__dotsMerging !== undefined) window.__dotsMerging = true;
+
+        for (let i = 0; i < count; i++) {
+          const distFromCenter = Math.abs(i - center);
+          const maxDist = center;
+          const delay = ((maxDist - distFromCenter) / maxDist) * 0.6;
+          dots[i].style.transitionDelay = `${delay.toFixed(3)}s`;
+          dots[i].style.left = '50%';
+          dots[i].style.transform = 'translate(0, 0) scale(3)';
+        }
+
+        landing.classList.remove('is-intro-mode');
+        if (window.__onIntroExit) window.__onIntroExit();
+
+        setTimeout(() => {
+          if (fragContainer) fragContainer.classList.add('is-hidden');
+        }, 1400);
+
+        setTimeout(() => {
+          if (fragContainer) fragContainer.style.display = 'none';
+        }, 2200);
+      }
+    }
+    togglePlay();
+  });
+
+  // Intro hover: smooth rise on enter, ripple burst on leave
+  playBtn.addEventListener('mouseenter', () => {
+    if (!controlsEl?.classList.contains('is-intro')) return;
+    playBtn.classList.remove('leave-ripple');
+    playBtn.classList.remove('intro-hovering');
+    playBtn.classList.add('intro-rising');
+    const onRise = (e) => {
+      if (e.animationName !== 'intro-rise') return;
+      playBtn.removeEventListener('animationend', onRise);
+      playBtn.classList.remove('intro-rising');
+      playBtn.classList.add('intro-hovering');
+    };
+    playBtn.addEventListener('animationend', onRise);
+  });
+
+  playBtn.addEventListener('mouseleave', () => {
+    if (!controlsEl?.classList.contains('is-intro')) return;
+    playBtn.classList.remove('intro-rising');
+    playBtn.classList.remove('intro-hovering');
+    playBtn.classList.add('leave-ripple');
+    const onEnd = (e) => {
+      if (e.animationName !== 'leave-burst') return;
+      playBtn.removeEventListener('animationend', onEnd);
+      playBtn.classList.remove('leave-ripple');
+      // Force-restart the continuous pulse from the beginning
+      playBtn.style.animation = 'none';
+      playBtn.offsetHeight; // trigger reflow
+      playBtn.style.animation = '';
+    };
+    playBtn.addEventListener('animationend', onEnd);
+  });
+
   prevBtn?.addEventListener('click', prev);
   nextBtn?.addEventListener('click', next);
-
-  // Auto-advance on track end
   audio.addEventListener('ended', next);
 
-  // Resize canvas
+  // Volume slider
+  const volumeRange = document.getElementById('volume-range');
+  if (volumeRange) {
+    audio.volume = volumeRange.value / 100;
+    volumeRange.addEventListener('input', () => {
+      audio.volume = volumeRange.value / 100;
+    });
+  }
+
   resizeCanvas();
   window.addEventListener('resize', resizeCanvas);
 }
 
 export function getAnalyser() {
   return analyser;
+}
+
+export function getStereoAnalysers() {
+  return analyserL ? { left: analyserL, right: analyserR } : null;
 }

@@ -1,0 +1,56 @@
+---
+import Base from '../layouts/Base.astro';
+import ReleaseCard from '../components/ReleaseCard.astro';
+import releases from '../content/releases.json';
+---
+
+<Base title="MORPHICS — Music">
+  <section class="music-page">
+    <header class="music-header">
+      <h1 class="display-md">THE SOUND OF ABSENCE</h1>
+      <p class="body-lg music-subtitle">Releases &middot; Discography</p>
+    </header>
+
+    <div class="releases-grid">
+      {releases.map(release => (
+        <ReleaseCard {...release} />
+      ))}
+    </div>
+  </section>
+</Base>
+
+<style>
+  .music-page {
+    padding: calc(var(--space-16) + 3rem) var(--space-6) var(--space-16);
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .music-header {
+    margin-bottom: var(--space-12);
+  }
+
+  .music-subtitle {
+    color: var(--on-surface);
+    opacity: 0.5;
+    margin-top: var(--space-2);
+  }
+
+  .releases-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-6);
+  }
+
+  @media (max-width: 768px) {
+    .releases-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (max-width: 480px) {
+    .releases-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

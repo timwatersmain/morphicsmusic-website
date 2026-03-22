@@ -1,0 +1,96 @@
+---
+import Base from '../layouts/Base.astro';
+
+const socials = [
+  { name: 'YouTube', url: 'https://youtube.com/@morphicsmusic' },
+  { name: 'Instagram', url: 'https://instagram.com/morphicsmusic' },
+  { name: 'TikTok', url: 'https://tiktok.com/@morphicsmusic' },
+  { name: 'SoundCloud', url: 'https://soundcloud.com/morphicsmusic' },
+  { name: 'Spotify', url: 'https://open.spotify.com/artist/morphicsmusic' },
+  { name: 'Apple Music', url: 'https://music.apple.com/artist/morphicsmusic' },
+];
+---
+
+<Base title="MORPHICS — Contact">
+  <section class="contact-page">
+    <h1 class="display-md">CONTACT</h1>
+
+    <div class="contact-content">
+      <div class="contact-section">
+        <span class="label-sm contact-label">BOOKING & PRESS</span>
+        <a href="mailto:hello@morphicsmusic.com" class="title-lg contact-email">
+          hello@morphicsmusic.com
+        </a>
+      </div>
+
+      <div class="contact-section">
+        <span class="label-sm contact-label">ELSEWHERE</span>
+        <ul class="contact-socials">
+          {socials.map(s => (
+            <li>
+              <a href={s.url} target="_blank" rel="noopener noreferrer" class="body-lg contact-social-link">
+                {s.name}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .contact-page {
+    padding: calc(var(--space-16) + 3rem) var(--space-6) var(--space-16);
+    max-width: 800px;
+    margin: 0 auto;
+    min-height: calc(100vh - 8rem);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: var(--space-12);
+  }
+
+  .contact-content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-12);
+  }
+
+  .contact-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .contact-label {
+    color: var(--primary);
+    opacity: 0.8;
+  }
+
+  .contact-email {
+    color: var(--on-surface);
+    transition: color 0.2s;
+  }
+
+  .contact-email:hover {
+    color: var(--primary);
+  }
+
+  .contact-socials {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .contact-social-link {
+    color: var(--on-surface);
+    opacity: 0.7;
+    transition: opacity 0.2s, color 0.2s;
+  }
+
+  .contact-social-link:hover {
+    opacity: 1;
+    color: var(--primary);
+  }
+</style>

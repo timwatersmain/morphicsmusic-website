@@ -1,0 +1,4 @@
+{"type":"server-started","port":54165,"host":"127.0.0.1","url_host":"localhost","url":"http://localhost:54165","screen_dir":"/Users/morphics/Desktop/MorphicsBrain/website/.superpowers/brainstorm/4248-1774089068"}
+{"type":"screen-added","file":"/Users/morphics/Desktop/MorphicsBrain/website/.superpowers/brainstorm/4248-1774089068/visual-sketch.html"}
+{"type":"screen-added","file":"/Users/morphics/Desktop/MorphicsBrain/website/.superpowers/brainstorm/4248-1774089068/audio-reactive-sketch.html"}
+{"type":"server-stopped","reason":"idle timeout"}

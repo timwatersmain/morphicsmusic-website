@@ -1,0 +1,182 @@
+---
+import Base from '../layouts/Base.astro';
+import ReleaseCard from '../components/ReleaseCard.astro';
+import releases from '../content/releases.json';
+
+const featured = releases.slice(0, 3);
+---
+
+<Base title="MORPHICS — About">
+  <!-- Hero Section -->
+  <section class="about-hero">
+    <div class="about-hero-bg">
+      <img src="/assets/chrome-blob-about.webp" alt="" aria-hidden="true" />
+    </div>
+    <div class="about-hero-content">
+      <h1 class="display-lg">MORPHICS</h1>
+      <p class="headline-md about-tagline">PROCESS DISSONANCE</p>
+    </div>
+  </section>
+
+  <!-- Featured Releases Section -->
+  <section class="about-releases">
+    <h2 class="headline-lg">THE SOUND OF ABSENCE</h2>
+    <div class="about-releases-grid">
+      {featured.map(release => (
+        <ReleaseCard {...release} />
+      ))}
+    </div>
+  </section>
+
+  <!-- Bio Section -->
+  <section class="about-bio">
+    <div class="about-bio-inner">
+      <div class="about-bio-label">
+        <span class="label-sm">THE GEOMETRY OF NOISE</span>
+      </div>
+      <div class="about-bio-text">
+        <p class="body-lg">
+          Morphics creates abstract audiovisual art and experimental electronic music.
+          The work explores the intersection of organic chemistry and digital synthesis,
+          using macro photography of liquid chemical reactions as the foundation for
+          visual content.
+        </p>
+        <p class="body-lg">
+          Each piece begins with a physical process — pigments dissolving, oils separating,
+          crystals forming — captured at extreme magnification. These textures become the
+          raw material for visual compositions that mirror the sonic landscapes of the music.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA Section -->
+  <section class="about-cta">
+    <h2 class="headline-lg">ENTER THE VOID</h2>
+    <div class="about-cta-buttons">
+      <a href="/music" class="btn-primary">EXPLORE MUSIC</a>
+      <a href="/contact" class="btn-secondary">GET IN TOUCH</a>
+    </div>
+  </section>
+</Base>
+
+<style>
+  /* Hero */
+  .about-hero {
+    position: relative;
+    height: 80vh;
+    min-height: 500px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  .about-hero-bg {
+    position: absolute;
+    inset: 0;
+  }
+
+  .about-hero-bg img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0.5;
+  }
+
+  .about-hero-content {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    mix-blend-mode: difference;
+  }
+
+  .about-tagline {
+    margin-top: var(--space-4);
+    opacity: 0.7;
+  }
+
+  /* Featured Releases */
+  .about-releases {
+    padding: var(--space-16) var(--space-6);
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .about-releases-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-6);
+    margin-top: var(--space-8);
+  }
+
+  @media (max-width: 768px) {
+    .about-releases-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (max-width: 480px) {
+    .about-releases-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* Bio */
+  .about-bio {
+    padding: var(--space-20) var(--space-6);
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .about-bio-inner {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: var(--space-12);
+    align-items: start;
+  }
+
+  .about-bio-label {
+    color: var(--primary);
+    opacity: 0.8;
+    padding-top: var(--space-2);
+  }
+
+  .about-bio-text {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+    color: var(--on-surface);
+    opacity: 0.85;
+  }
+
+  /* CTA */
+  .about-cta {
+    padding: var(--space-20) var(--space-6);
+    text-align: center;
+    background: var(--surface-container-low);
+  }
+
+  .about-cta-buttons {
+    display: flex;
+    gap: var(--space-4);
+    justify-content: center;
+    margin-top: var(--space-8);
+  }
+
+  @media (max-width: 768px) {
+    .about-bio-inner {
+      grid-template-columns: 1fr;
+      gap: var(--space-6);
+    }
+
+    .about-cta-buttons {
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .about-hero {
+      height: 60vh;
+    }
+  }
+</style>
