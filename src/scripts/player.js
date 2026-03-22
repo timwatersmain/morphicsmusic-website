@@ -207,6 +207,7 @@ const springDamp = 0.88;
 const glowFreqData = new Uint8Array(256);
 let audioGlow = 0;
 let audioGlowMid = 0;
+let audioEnergy = 0;  // smoothed overall energy 0-1, drives movement intensity
 
 export function tickLetters(time) {
   const letters = cachedLetters;
@@ -226,6 +227,12 @@ export function tickLetters(time) {
     const midRate = midNorm > audioGlowMid ? 0.25 : 0.04;
     audioGlow += (bassNorm - audioGlow) * bassRate;
     audioGlowMid += (midNorm - audioGlowMid) * midRate;
+    // Overall energy — average across full spectrum, very smooth
+    let totalSum = 0;
+    for (let b = 0; b < 128; b++) totalSum += glowFreqData[b];
+    const rawEnergy = totalSum / (128 * 255);
+    const energyRate = rawEnergy > audioEnergy ? 0.08 : 0.015;
+    audioEnergy += (rawEnergy - audioEnergy) * energyRate;
   }
 
   // Smooth bulk hover scale for all letters
@@ -277,18 +284,21 @@ export function tickLetters(time) {
       s.bounceS = 0; s.bounceVelS = 0;
     }
 
-    // Ambient wave — slightly boosted
-    const wave1 = Math.sin(t * 0.8 + i * 0.6) * 1.6;
-    const wave2 = Math.sin(t * 0.5 + i * 0.9 + 2.0) * 1.0;
-    const driftX = Math.sin(t * seed.sx + seed.px) * seed.ax;
-    const driftY = Math.sin(t * seed.sy + seed.py) * seed.ay;
-    const driftR = Math.sin(t * seed.sr + seed.pr) * seed.ar;
+    // Movement intensity scales with audio energy — 0.3 at silence, 1.0 at full
+    const intensity = 0.3 + audioEnergy * 2.5; // caps naturally since audioEnergy rarely exceeds ~0.3
+
+    // Ambient wave — scaled by audio intensity
+    const wave1 = Math.sin(t * 0.8 + i * 0.6) * 1.6 * intensity;
+    const wave2 = Math.sin(t * 0.5 + i * 0.9 + 2.0) * 1.0 * intensity;
+    const driftX = Math.sin(t * seed.sx + seed.px) * seed.ax * intensity;
+    const driftY = Math.sin(t * seed.sy + seed.py) * seed.ay * intensity;
+    const driftR = Math.sin(t * seed.sr + seed.pr) * seed.ar; // rotation NOT scaled
 
     // Combine
     const x = driftX;
-    const y = wave1 + wave2 + driftY + s.hoverY + s.bounceY;
-    const breathe = Math.sin(t * seed.breatheSpeed + seed.breathePhase) * seed.breatheAmp;
-    const scale = 1 + breathe + s.hoverScale + s.bounceS + bulkHover * 0.03;
+    const y = wave1 + wave2 + driftY + s.bounceY;
+    const breathe = Math.sin(t * seed.breatheSpeed + seed.breathePhase) * seed.breatheAmp * intensity;
+    const scale = 1 + breathe + s.bounceS;
 
     const el = letters[i];
 
