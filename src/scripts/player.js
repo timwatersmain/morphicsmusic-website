@@ -589,13 +589,15 @@ export async function init() {
       // Now hide everything for the animation
       controlsEl.classList.add('is-transitioning');
 
-      // Phase 1: Pop — play button inflates then bursts
+      // Phase 1: Pop — play button inflates outward then bursts
       const popAnim = playBtn.animate([
-        { transform: 'scale(1)', opacity: 1 },
-        { transform: 'scale(1.35)', opacity: 1, offset: 0.3 },
-        { transform: 'scale(1.5)', opacity: 0.4, offset: 0.6 },
-        { transform: 'scale(2)', opacity: 0, offset: 1.0 },
-      ], { duration: 400, easing: 'ease-out', fill: 'forwards' });
+        { transform: 'scale(1)', opacity: 1, filter: 'brightness(1)' },
+        { transform: 'scale(1.15)', opacity: 1, filter: 'brightness(1.2)', offset: 0.15 },
+        { transform: 'scale(1.5)', opacity: 1, filter: 'brightness(1.5)', offset: 0.4 },
+        { transform: 'scale(1.8) rotate(3deg)', opacity: 0.7, filter: 'brightness(1.3)', offset: 0.6 },
+        { transform: 'scale(2.2) rotate(-2deg)', opacity: 0.3, filter: 'brightness(1)', offset: 0.8 },
+        { transform: 'scale(2.8)', opacity: 0, filter: 'brightness(0.8)', offset: 1.0 },
+      ], { duration: 600, easing: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)', fill: 'forwards' });
       popAnim.onfinish = () => {
         popAnim.cancel();  // Remove fill: forwards so CSS takes over
         playBtn.classList.add('is-popped');
