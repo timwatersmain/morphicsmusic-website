@@ -232,8 +232,11 @@ import Player from '../components/Player.astro';
     align-items: center;
     justify-content: center;
     z-index: 7;
-    pointer-events: none;
+    pointer-events: none !important;
     contain: layout style paint;
+  }
+  .blob-wrap * {
+    pointer-events: none !important;
   }
 
   /* CSS blob hidden — replaced by Three.js metaball scene */
@@ -267,7 +270,7 @@ import Player from '../components/Player.astro';
     position: absolute;
     inset: 0;
     z-index: 4;
-    pointer-events: none;
+    pointer-events: none !important;
     filter: contrast(20);
     background: #000;
     transition: opacity 0.3s ease 1.2s;
@@ -298,7 +301,7 @@ import Player from '../components/Player.astro';
     position: absolute;
     inset: 0;
     z-index: 4;
-    pointer-events: none;
+    pointer-events: none !important;
     opacity: 0.035;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
     background-size: 160px 160px;
