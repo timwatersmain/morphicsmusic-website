@@ -249,7 +249,9 @@ import Player from '../components/Player.astro';
   }
 
   .landing.is-intro-mode :global(.player) {
-    z-index: 8;
+    position: relative;
+    z-index: 10;
+    pointer-events: auto;
   }
 
   .landing.is-intro-mode :global(.player-controls) {
