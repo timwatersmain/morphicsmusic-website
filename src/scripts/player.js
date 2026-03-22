@@ -589,15 +589,16 @@ export async function init() {
       // Now hide everything for the animation
       controlsEl.classList.add('is-transitioning');
 
-      // Phase 1: Quick squeeze then vanish — button disappears as particles spawn
+      // Phase 1: Bubble pop — squeeze then burst
       const popAnim = playBtn.animate([
         { transform: 'scale(1)', opacity: 1 },
-        { transform: 'scale(0.88)', opacity: 1, offset: 0.15 },
-        { transform: 'scale(1.1)', opacity: 0, offset: 0.4 },
-        { transform: 'scale(1.1)', opacity: 0, offset: 1.0 },
-      ], { duration: 300, easing: 'ease-out', fill: 'forwards' });
+        { transform: 'scale(0.85)', opacity: 1, offset: 0.2 },
+        { transform: 'scale(1.15)', opacity: 0.8, offset: 0.4 },
+        { transform: 'scale(1.4)', opacity: 0, offset: 0.7 },
+        { transform: 'scale(1.4)', opacity: 0, offset: 1.0 },
+      ], { duration: 500, easing: 'ease-out', fill: 'forwards' });
 
-      // Phase 1b: Spawn 12 particles that explode outward from button center
+      // Spawn 12 particles that trail outward from button center
       const popRect = playBtn.getBoundingClientRect();
       const pcx = popRect.left + popRect.width / 2;
       const pcy = popRect.top + popRect.height / 2;
@@ -607,9 +608,9 @@ export async function init() {
       document.body.appendChild(particleContainer);
 
       for (let p = 0; p < particleCount; p++) {
-        const angle = (p / particleCount) * Math.PI * 2 + (Math.random() - 0.5) * 0.4;
-        const dist = 80 + Math.random() * 120;
-        const size = 4 + Math.random() * 8;
+        const angle = (p / particleCount) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
+        const dist = 150 + Math.random() * 200;
+        const size = 3 + Math.random() * 7;
         const particle = document.createElement('div');
         particle.style.cssText = `
           position:absolute;
@@ -617,96 +618,57 @@ export async function init() {
           width:${size}px;height:${size}px;
           border-radius:50%;
           background:rgba(235,230,222,0.9);
-          box-shadow:0 0 8px rgba(255,255,255,0.4);
+          box-shadow:0 0 10px rgba(255,255,255,0.5);
           transform:translate(-50%,-50%) scale(1);
-          transition:none;
           pointer-events:none;
         `;
         particleContainer.appendChild(particle);
 
-        // Animate each particle outward
         const tx = Math.cos(angle) * dist;
         const ty = Math.sin(angle) * dist;
-        const dur = 600 + Math.random() * 400;
+        const dur = 1200 + Math.random() * 800;
 
         particle.animate([
-          { transform: 'translate(-50%,-50%) scale(1)', opacity: 0.9 },
-          { transform: `translate(calc(-50% + ${tx}px), calc(-50% + ${ty}px)) scale(0.3)`, opacity: 0 },
-        ], { duration: dur, easing: 'cubic-bezier(0.16, 1, 0.3, 1)', fill: 'forwards' });
+          { transform: 'translate(-50%,-50%) scale(1)', opacity: 0.9, offset: 0 },
+          { transform: `translate(calc(-50% + ${tx * 0.4}px), calc(-50% + ${ty * 0.4}px)) scale(0.8)`, opacity: 0.7, offset: 0.3 },
+          { transform: `translate(calc(-50% + ${tx}px), calc(-50% + ${ty}px)) scale(0.1)`, opacity: 0, offset: 1.0 },
+        ], { duration: dur, easing: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)', fill: 'forwards' });
       }
 
-      // Clean up particles after animation
-      setTimeout(() => {
-        particleContainer.remove();
-      }, 1200);
+      setTimeout(() => particleContainer.remove(), 2200);
 
       popAnim.onfinish = () => {
         popAnim.cancel();
         playBtn.classList.add('is-popped');
       };
 
-      // Phase 2: Create 5 orbs that burst outward in a ring
-      const orbs = [];
-      const ringRadius = 60;
-      const angleStart = -Math.PI / 2;
-
-      for (let i = 0; i < 5; i++) {
-        const orb = document.createElement('div');
-        orb.className = 'pop-orb';
-        // Start at center (invisible)
-        orb.style.left = (cx - 20) + 'px';
-        orb.style.top = (cy - 20) + 'px';
-        orb.style.transform = 'scale(0)';
-        orb.style.opacity = '0';
-        document.body.appendChild(orb);
-        orbs.push(orb);
-      }
-
-      // After pop, burst orbs outward into a circle
+      // Phase 2: Simple fade in of all controls
       setTimeout(() => {
-        for (let i = 0; i < 5; i++) {
-          const angle = angleStart + (i / 5) * Math.PI * 2;
-          const ox = cx - 20 + Math.cos(angle) * ringRadius;
-          const oy = cy - 20 + Math.sin(angle) * ringRadius;
-          orbs[i].style.opacity = '1';
-          orbs[i].style.transform = 'scale(1)';
-          orbs[i].style.left = ox + 'px';
-          orbs[i].style.top = oy + 'px';
-        }
-      }, 350);
-
-      // Phase 3: Orbs flow into a line, each heading to its target button
-      setTimeout(() => {
-        // Order: play (2) lands first, then outward
-        const order = [2, 1, 3, 0, 4];
-        order.forEach((targetIdx, seqIdx) => {
-          const orb = orbs[seqIdx];
-          const target = targets[targetIdx];
-          const pos = targetPositions[targetIdx];
-          if (!orb || !target || !pos) return;
-
-          setTimeout(() => {
-            orb.style.left = pos.x + 'px';
-            orb.style.top = pos.y + 'px';
-            orb.style.transform = 'scale(0.8)';
-
-            // When orb arrives, reveal real button and remove orb
-            setTimeout(() => {
-              target.classList.add('is-revealed');
-              orb.style.opacity = '0';
-              orb.style.transform = 'scale(0)';
-              setTimeout(() => orb.remove(), 300);
-            }, 550);
-          }, seqIdx * 100);
+        controlsEl.classList.remove('is-transitioning');
+        targets.forEach(t => {
+          t.style.opacity = '0';
+          t.style.transform = 'scale(0.9)';
+          t.style.transition = 'opacity 2s ease, transform 2s ease';
+          requestAnimationFrame(() => {
+            t.style.opacity = '1';
+            t.style.transform = 'scale(1)';
+          });
+        });
+        playBtn.classList.remove('is-popped');
+        playBtn.style.opacity = '0';
+        playBtn.style.transform = 'scale(0.9)';
+        playBtn.style.transition = 'opacity 2s ease, transform 2s ease';
+        requestAnimationFrame(() => {
+          playBtn.style.opacity = '1';
+          playBtn.style.transform = 'scale(1)';
         });
 
-        // Clean up after all landed
+        // Clean up inline styles after fade completes
         setTimeout(() => {
-          controlsEl.classList.remove('is-transitioning');
-          targets.forEach(t => t.classList.remove('is-revealed'));
-          playBtn.classList.remove('is-popped');
-        }, 5 * 100 + 900);
-      }, 900);
+          targets.forEach(t => { t.style.transition = ''; t.style.opacity = ''; t.style.transform = ''; });
+          playBtn.style.transition = ''; playBtn.style.opacity = ''; playBtn.style.transform = '';
+        }, 2200);
+      }, 1200);
 
       // Merge dot array into blob
       const landing = document.querySelector('.landing');
