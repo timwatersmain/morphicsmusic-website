@@ -575,19 +575,14 @@ export async function init() {
       const cx = btnRect.left + btnRect.width / 2;
       const cy = btnRect.top + btnRect.height / 2;
 
-      // Capture final button positions BEFORE hiding them
-      // Temporarily show the normal layout to measure
+      // Hide all controls for fade-in later
       controlsEl.classList.remove('is-intro');
       playBtn.classList.remove('intro-rising', 'intro-hovering', 'leave-ripple');
       const targets = controlsEl.querySelectorAll(':scope > .ctrl-btn, :scope > .volume-wrap');
-      const targetPositions = [];
-      for (const t of targets) {
-        const r = t.getBoundingClientRect();
-        targetPositions.push({ x: r.left + r.width / 2 - 20, y: r.top + r.height / 2 - 20 });
-      }
 
-      // Now hide everything for the animation
-      controlsEl.classList.add('is-transitioning');
+      // Hide everything immediately
+      targets.forEach(t => { t.style.opacity = '0'; });
+      playBtn.style.opacity = '0';
 
       // Phase 1: Bubble pop — squeeze then burst
       const popAnim = playBtn.animate([
@@ -642,32 +637,19 @@ export async function init() {
         playBtn.classList.add('is-popped');
       };
 
-      // Phase 2: Simple fade in of all controls
+      // Phase 2: Fade in all controls from black
       setTimeout(() => {
-        controlsEl.classList.remove('is-transitioning');
-        targets.forEach(t => {
-          t.style.opacity = '0';
-          t.style.transform = 'scale(0.9)';
-          t.style.transition = 'opacity 2s ease, transform 2s ease';
-          requestAnimationFrame(() => {
-            t.style.opacity = '1';
-            t.style.transform = 'scale(1)';
-          });
-        });
         playBtn.classList.remove('is-popped');
-        playBtn.style.opacity = '0';
-        playBtn.style.transform = 'scale(0.9)';
-        playBtn.style.transition = 'opacity 2s ease, transform 2s ease';
-        requestAnimationFrame(() => {
-          playBtn.style.opacity = '1';
-          playBtn.style.transform = 'scale(1)';
+        const allBtns = [...targets, playBtn];
+        allBtns.forEach(t => {
+          t.style.transition = 'opacity 2.5s ease';
+          t.style.opacity = '1';
         });
 
         // Clean up inline styles after fade completes
         setTimeout(() => {
-          targets.forEach(t => { t.style.transition = ''; t.style.opacity = ''; t.style.transform = ''; });
-          playBtn.style.transition = ''; playBtn.style.opacity = ''; playBtn.style.transform = '';
-        }, 2200);
+          allBtns.forEach(t => { t.style.transition = ''; t.style.opacity = ''; });
+        }, 2800);
       }, 1200);
 
       // Merge dot array into blob

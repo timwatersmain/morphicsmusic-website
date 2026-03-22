@@ -885,6 +885,9 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
   let lastTime = 0;
   let smoothLevel = 0.55;
   const MIN_SCALE = 0.55;
+  let growProgress = 0;       // 0 → 1 over 30 seconds
+  let showTime = 0;           // timestamp when show() was called
+  const GROW_DURATION = 30;   // seconds
 
   function tick(time) {
     if (!active) return;
@@ -1066,7 +1069,12 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
       const rate = raw > smoothLevel ? 0.12 : 0.03;
       smoothLevel += rate * (raw - smoothLevel);
     }
-    const scale = MIN_SCALE + smoothLevel * (1.0 - MIN_SCALE);
+    // Grow from tiny to full over 30 seconds on first show
+    if (showTime > 0 && growProgress < 1) {
+      growProgress = Math.min(1, (time / 1000 - showTime) / GROW_DURATION);
+    }
+    const growScale = 0.1 + growProgress * 0.9; // 0.1 → 1.0
+    const scale = (MIN_SCALE + smoothLevel * (1.0 - MIN_SCALE)) * growScale;
     canvas.style.transform = `translate(-50%, -50%) scale(${scale.toFixed(4)})`;
 
     // Color palette transition
@@ -1105,6 +1113,7 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
   function show() {
     active = true;
     canvas.style.opacity = '1';
+    if (showTime === 0) showTime = performance.now() / 1000;
   }
 
   function hide() {
