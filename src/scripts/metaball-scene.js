@@ -298,27 +298,28 @@ float sceneSDF(vec3 p) {
   float me = uMasterEnergy;
   float pe = uPeakEnergy;
 
-  // Blend K: mostly unified at silence → defined forms at full energy
-  float blendK = mix(0.85, 0.3, me) + bass * 0.8 * me;
+  // Blend K: keep smooth blending — never go too sharp to avoid holes
+  float blendK = mix(0.85, 0.55, me) + bass * 0.4 * me;
 
-  // Noise displacement: energy-gated — skip expensive noise when quiet
+  // Noise displacement: energy-gated — gentler to prevent surface holes
   float noiseGate = pe * 0.85 + pe * pe * 0.15;
-  float noiseAmp = (0.08 + uMid * 0.3) * noiseGate;
-  float widthBoost = 1.0 + uStereoWidth * 0.6 * me;
+  float noiseAmp = (0.06 + uMid * 0.2) * noiseGate;
+  float widthBoost = 1.0 + uStereoWidth * 0.4 * me;
   noiseAmp *= widthBoost;
   float idleBreathe = sin(t * 0.3 * 6.2832) * 0.035 * (1.0 - me);
-  float n1 = snoise(p * 1.5 + t * 0.25);
+  // Use lower frequency noise for smoother surface undulation
+  float n1 = snoise(p * 1.2 + t * 0.2);
   vec3 warp = vec3(
     n1,
-    snoise(p * 1.5 + t * 0.25 + 100.0),
-    snoise(p * 1.5 + t * 0.25 + 200.0)
+    snoise(p * 1.2 + t * 0.2 + 100.0),
+    snoise(p * 1.2 + t * 0.2 + 200.0)
   ) * noiseAmp;
   vec3 wp = p + warp;
 
   float d = 1e10;
   for (int i = 0; i < NUM_BALLS; i++) {
     vec3 center = ballPos(i, t, bass, me);
-    float radius = ballRadius(i);
+    float radius = ballRadius(i) * 1.1; // slightly larger balls to fill gaps
     d = smin(d, length(wp - center) - radius, blendK);
   }
 
@@ -406,8 +407,8 @@ void main() {
     vec3 light2Dir = normalize(vec3(-0.8, -0.3, 0.6));
     float diff1 = max(dot(n, light1Dir), 0.0);
     float diff2 = max(dot(n, light2Dir), 0.0) * 0.3;
-    float shadow = softShadow(p + n * 0.01, light1Dir, 0.02, 4.0, 8.0);
-    diff1 *= shadow;
+    float shadow = softShadow(p + n * 0.02, light1Dir, 0.05, 3.0, 4.0);
+    diff1 *= mix(shadow, 1.0, 0.5); // soften shadow — never fully dark
 
     // Evaluate blended skin
     vec3 skinA = evalSkin(uSkinFrom, p, n);
@@ -444,7 +445,7 @@ void main() {
     // Kick color warmth: tint specular toward rim color during slow envelope
     vec3 warmSpec = mix(specColor, uRimColor, uKickGlowSlow * 0.25);
 
-    float ambient = 0.30;
+    float ambient = 0.40;
 
     // Core luminance: radial glow from center during kick
     float distFromCenter = length(p.xy);
