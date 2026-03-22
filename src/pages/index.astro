@@ -243,7 +243,10 @@ import Player from '../components/Player.astro';
   }
 
   .landing.is-intro-mode :global(.player-controls) {
-    transform: translateY(calc(-50vh + 50% + 4vh));
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
   }
 
   /* ---- Gooey container — contrast filter fuses overlapping blurred children ---- */
