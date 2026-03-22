@@ -140,11 +140,36 @@ const wordmark = 'MORPHICS'.split('');
     }
     scheduleSeqFade();
 
-    // Hover state
+    // Hover state + mouse position for morph effect
     let hovered = false;
+    let hoverMouseX = 0;
     const wmEl = document.getElementById('nav-wordmark');
-    wmEl?.addEventListener('mouseenter', () => { hovered = true; });
-    wmEl?.addEventListener('mouseleave', () => { hovered = false; });
+    const MORPH_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789ΩΞΔ∞∅⊗◊⟐⌬アカサタナハマヤラワ█▓░╳╬';
+    const hoverMorphEnd = new Array(N).fill(0);   // per-letter: when morph ends
+    const hoverMorphType = new Array(N).fill(0);   // variation type per letter
+    let letterRects = [];
+
+    function updateLetterRects() {
+      letterRects = [];
+      for (let i = 0; i < N; i++) {
+        const r = letters[i].getBoundingClientRect();
+        letterRects.push(r.left + r.width / 2);
+      }
+    }
+
+    wmEl?.addEventListener('mouseenter', (e) => {
+      hovered = true;
+      hoverMouseX = e.clientX;
+      updateLetterRects();
+    });
+    wmEl?.addEventListener('mousemove', (e) => { hoverMouseX = e.clientX; });
+    wmEl?.addEventListener('mouseleave', () => {
+      hovered = false;
+      for (let i = 0; i < N; i++) {
+        hoverMorphEnd[i] = 0;
+        letters[i].textContent = CHARS[i];
+      }
+    });
 
     function tickWordmark(now) {
       const t = now / 1000;
@@ -280,6 +305,44 @@ const wordmark = 'MORPHICS'.split('');
           continue;
         }
 
+        // ── Hover morph: letters near cursor roll through random glyphs ──
+        if (hovered && letterRects.length === N) {
+          const dist = Math.abs(hoverMouseX - letterRects[i]);
+          if (dist < 35) {
+            // Trigger or extend morph for this letter
+            if (hoverMorphEnd[i] < now) {
+              hoverMorphEnd[i] = now + 250 + Math.random() * 350;
+              hoverMorphType[i] = Math.floor(Math.random() * 4);
+            }
+          }
+        }
+
+        if (hoverMorphEnd[i] > now) {
+          // Active morph — pick variation based on type
+          const morphT = (hoverMorphEnd[i] - now) / 600;
+          if (hoverMorphType[i] === 0) {
+            // Rapid character roll
+            el.textContent = MORPH_CHARS[Math.floor(Math.random() * MORPH_CHARS.length)];
+          } else if (hoverMorphType[i] === 1) {
+            // Roll with scale pulse
+            el.textContent = MORPH_CHARS[Math.floor(Math.random() * MORPH_CHARS.length)];
+            scaleX *= 1 + morphT * 0.3;
+            scaleY *= 1 - morphT * 0.15;
+          } else if (hoverMorphType[i] === 2) {
+            // Roll with skew warp
+            el.textContent = MORPH_CHARS[Math.floor(Math.random() * MORPH_CHARS.length)];
+            skew += morphT * 12 * (i % 2 === 0 ? 1 : -1);
+          } else {
+            // Roll with blur dissolve
+            el.textContent = MORPH_CHARS[Math.floor(Math.random() * MORPH_CHARS.length)];
+            blurVal += morphT * 2;
+            opacity *= 0.6 + (1 - morphT) * 0.4;
+          }
+        } else if (!glitchActive || !glitchLetters.includes(i)) {
+          // Reset to original when not morphing or glitching
+          el.textContent = CHARS[i];
+        }
+
         // ── Apply styles (no positional drift — letters stay in place) ──
         el.style.transform = `scaleX(${scaleX.toFixed(4)}) scaleY(${scaleY.toFixed(4)}) skewX(${skew.toFixed(2)}deg)`;
         el.style.opacity = String(opacity.toFixed(3));
@@ -303,62 +366,6 @@ const wordmark = 'MORPHICS'.split('');
     requestAnimationFrame(tickWordmark);
   }
 
-  // ── Hover morph — letters near cursor roll through random glyphs then settle back ──
-  const MORPH_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789ΩΞΔ∞∅⊗◊⟐⌬アカサタナハマヤラワ';
-  const wmEl = document.getElementById('nav-wordmark');
-  const morphTimers = new Array(N).fill(0); // per-letter: timestamp when morph ends
-  const morphIntervals = new Array(N).fill(null); // per-letter scramble interval
-
-  if (wmEl && letters.length) {
-    wmEl.addEventListener('mousemove', (e) => {
-      const rect = wmEl.getBoundingClientRect();
-      const mouseX = e.clientX;
-
-      for (let i = 0; i < N; i++) {
-        const letterRect = letters[i].getBoundingClientRect();
-        const letterCx = letterRect.left + letterRect.width / 2;
-        const dist = Math.abs(mouseX - letterCx);
-
-        // Trigger morph for letters within 30px of cursor
-        if (dist < 30) {
-          const now = performance.now();
-          const morphDuration = 300 + Math.random() * 400; // 300-700ms roll
-
-          // Don't re-trigger if already morphing
-          if (morphTimers[i] > now) continue;
-          morphTimers[i] = now + morphDuration;
-
-          // Start scrambling this letter
-          const scramble = () => {
-            if (performance.now() > morphTimers[i]) {
-              // Settle back to original
-              letters[i].textContent = CHARS[i];
-              clearInterval(morphIntervals[i]);
-              morphIntervals[i] = null;
-              return;
-            }
-            letters[i].textContent = MORPH_CHARS[Math.floor(Math.random() * MORPH_CHARS.length)];
-          };
-
-          if (!morphIntervals[i]) {
-            morphIntervals[i] = setInterval(scramble, 35);
-          }
-        }
-      }
-    });
-
-    // Reset all letters when mouse leaves
-    wmEl.addEventListener('mouseleave', () => {
-      for (let i = 0; i < N; i++) {
-        if (morphIntervals[i]) {
-          clearInterval(morphIntervals[i]);
-          morphIntervals[i] = null;
-        }
-        letters[i].textContent = CHARS[i];
-        morphTimers[i] = 0;
-      }
-    });
-  }
 </script>
 
 <style>
