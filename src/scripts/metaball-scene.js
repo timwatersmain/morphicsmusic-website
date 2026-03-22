@@ -497,7 +497,9 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
     pointer-events: none;
     z-index: 1;
   `;
-  const trailCtx = trailCanvas.getContext('2d');
+  const trailCtx = trailCanvas.getContext('2d', { alpha: true });
+  // Ensure completely transparent start
+  trailCtx.clearRect(0, 0, trailCanvas.width, trailCanvas.height);
 
   // Pulse ring container — sits behind the metaball
   const pulseContainer = document.createElement('div');

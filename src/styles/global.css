@@ -78,7 +78,7 @@ html {
 
 body {
   font-family: var(--font-body);
-  background-color: var(--surface);
+  background-color: #000;
   color: var(--on-surface);
   line-height: 1.6;
   min-height: 100vh;
