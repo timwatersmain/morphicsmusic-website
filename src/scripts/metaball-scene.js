@@ -304,8 +304,7 @@ float sceneSDF(vec3 p) {
   // Noise displacement: energy-gated — gentler to prevent surface holes
   float noiseGate = pe * 0.85 + pe * pe * 0.15;
   float noiseAmp = (0.06 + uMid * 0.2) * noiseGate;
-  float widthBoost = 1.0 + uStereoWidth * 0.4 * me;
-  noiseAmp *= widthBoost;
+  noiseAmp *= 1.0 + me * 0.3;
   float idleBreathe = sin(t * 0.3 * 6.2832) * 0.035 * (1.0 - me);
   // Use lower frequency noise for smoother surface undulation
   float n1 = snoise(p * 1.2 + t * 0.2);
@@ -323,24 +322,6 @@ float sceneSDF(vec3 p) {
     d = smin(d, length(wp - center) - radius, blendK);
   }
 
-  // Pan protrusion: localized bulge on the panned side
-  // Creates a tendril/mutation that reaches outward, not a whole-body shift
-  float absPan = abs(uPan);
-  float panStr = absPan * me;
-  if (panStr > 0.01) {
-    float panDir = sign(uPan);
-    // Protrusion center: offset to the panned side
-    vec3 bulgeCenter = vec3(panDir * (0.8 + absPan * 0.6),
-                            sin(t * 0.7) * 0.2,
-                            cos(t * 0.5) * 0.15);
-    // Elongated ellipsoid stretching outward on X
-    vec3 diff = p - bulgeCenter;
-    diff.x *= 0.4;  // stretch along X (make it reach far)
-    float bulgeD = length(diff) - 0.35 * panStr;
-    // Organic surface noise on the protrusion
-    bulgeD += snoise(p * 3.0 + t * 0.3) * 0.08 * panStr;
-    d = smin(d, bulgeD, 0.5);
-  }
 
   // Kick: no SDF shape change — glow only
   // Idle breathing offset
@@ -723,11 +704,12 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
     ema.high += 0.2  * (raw.high - ema.high);
   }
 
-  // ── Stereo analysis state ──
-  const stereoFreqL = new Uint8Array(512);
-  const stereoFreqR = new Uint8Array(512);
-  let stereoWidth = 0;    // 0 = mono, 1 = fully wide
-  let panPosition = 0;    // -1 = full left, +1 = full right
+  // ── Energy surge state — sustained high energy triggers horizontal drift ──
+  let sustainedEnergy = 0;       // smoothed sustained energy level
+  let energySurgeDir = 0;        // -1 or 1, current drift direction
+  let energySurgeDrift = 0;      // current horizontal offset in px
+  let lastSurgeTime = 0;         // when last surge direction change happened
+  let surgeThreshold = 0.45;     // energy level to trigger a surge
 
   // ── Volume gate state ──
   let masterEnergy = 0;   // slow-lerp pow(rms, 2.8)
@@ -946,36 +928,22 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
       currentRMS = 0;
     }
 
-    // ── Stereo analysis: width + pan ──
-    const stereo = getStereoAnalysers ? getStereoAnalysers() : null;
-    if (stereo && hasAudio) {
-      stereo.left.getByteFrequencyData(stereoFreqL);
-      stereo.right.getByteFrequencyData(stereoFreqR);
-      let sumL = 0, sumR = 0, sumDiff = 0;
-      for (let i = 0; i < stereoFreqL.length; i++) {
-        const l = stereoFreqL[i] / 255;
-        const r = stereoFreqR[i] / 255;
-        sumL += l * l;
-        sumR += r * r;
-        const diff = l - r;
-        sumDiff += diff * diff;
-      }
-      const energyL = Math.sqrt(sumL / stereoFreqL.length);
-      const energyR = Math.sqrt(sumR / stereoFreqR.length);
-      const totalEnergy = energyL + energyR;
-      // Width: RMS of L-R difference normalized — 0=mono, 1=wide
-      const rawWidth = Math.sqrt(sumDiff / stereoFreqL.length);
-      const targetWidth = Math.min(rawWidth * 3.0, 1.0);
-      stereoWidth += 0.15 * (targetWidth - stereoWidth);
-      // Pan: balance between L and R energy — -1 full left, +1 full right
-      const rawPan = totalEnergy > 0.01 ? (energyR - energyL) / totalEnergy : 0;
-      panPosition += 0.2 * (rawPan - panPosition);
-    } else {
-      stereoWidth *= 0.95;
-      panPosition *= 0.9;
+    // ── Energy surge: sustained full spectrum triggers horizontal drift ──
+    // Slow-moving average of overall energy — detects sustained loud sections
+    const surgeRate = masterEnergy > sustainedEnergy ? 0.04 : 0.02;
+    sustainedEnergy += surgeRate * (masterEnergy - sustainedEnergy);
+
+    // When sustained energy exceeds threshold, pick a new drift direction
+    if (sustainedEnergy > surgeThreshold && time - lastSurgeTime > 3000) {
+      lastSurgeTime = time;
+      energySurgeDir = Math.random() > 0.5 ? 1 : -1;
+      // Vary threshold slightly so surges aren't predictable
+      surgeThreshold = 0.35 + Math.random() * 0.2;
     }
-    uniforms.uStereoWidth.value = stereoWidth;
-    uniforms.uPan.value = panPosition;
+
+    // Smooth drift toward target position
+    const targetDrift = sustainedEnergy > 0.3 ? energySurgeDir * sustainedEnergy * 60 : 0;
+    energySurgeDrift += (targetDrift - energySurgeDrift) * 0.02; // very smooth
 
     // ── Kick detection — spectral flux + BPM-predictive gating ──
     if (analyserRef) {
@@ -1095,8 +1063,9 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
     }
     const growScale = 0.1 + growProgress * 0.9; // 0.1 → 1.0
     const scale = (MIN_SCALE + smoothLevel * (1.0 - MIN_SCALE)) * growScale;
-    canvas.style.transform = `translate(-50%, -50%) scale(${scale.toFixed(4)})`;
-    trailCanvas.style.transform = `translate(-50%, -50%) scale(${(scale * 1.05).toFixed(4)})`;
+    const driftX = energySurgeDrift.toFixed(1);
+    canvas.style.transform = `translate(calc(-50% + ${driftX}px), -50%) scale(${scale.toFixed(4)})`;
+    trailCanvas.style.transform = `translate(calc(-50% + ${driftX}px), -50%) scale(${(scale * 1.05).toFixed(4)})`;
 
     // Color palette transition
     if (colorT < 1) {
