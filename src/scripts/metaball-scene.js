@@ -501,14 +501,22 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
   // Ensure completely transparent start
   trailCtx.clearRect(0, 0, trailCanvas.width, trailCanvas.height);
 
-  // Pulse ring container — sits behind the metaball
-  const pulseContainer = document.createElement('div');
-  pulseContainer.style.cssText = `
-    position: absolute; inset: 0;
-    pointer-events: none; z-index: 0;
-    overflow: visible;
+  // Nebula pulse canvas — renders gaseous ring behind the metaball
+  const pulseCanvas = document.createElement('canvas');
+  const PULSE_SIZE = Math.min(window.innerWidth, window.innerHeight);
+  pulseCanvas.width = PULSE_SIZE;
+  pulseCanvas.height = PULSE_SIZE;
+  pulseCanvas.style.cssText = `
+    position: absolute;
+    top: 50%; left: 50%;
+    width: ${PULSE_SIZE}px; height: ${PULSE_SIZE}px;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    z-index: 0;
+    mix-blend-mode: screen;
   `;
-  container.appendChild(pulseContainer);
+  const pulseCtx = pulseCanvas.getContext('2d');
+  container.appendChild(pulseCanvas);
   container.appendChild(trailCanvas);
   container.appendChild(canvas);
 
@@ -519,120 +527,103 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
   let nextPulseTime = 0;
   let pulseCount = 0;
 
+  // Active pulse rings being animated
+  const activePulses = [];
+
   function firePulse() {
     const base = uniforms.uBaseColor.value;
     const rim = uniforms.uRimColor.value;
-    const toRGB = (c, a) => `rgba(${Math.round(c.r*255)},${Math.round(c.g*255)},${Math.round(c.b*255)},${a})`;
+    const r1 = Math.round(rim.r * 255), g1 = Math.round(rim.g * 255), b1 = Math.round(rim.b * 255);
+    const r2 = Math.round(base.r * 255), g2 = Math.round(base.g * 255), b2 = Math.round(base.b * 255);
 
-    // Create a ring element — donut shape that expands outward
-    const ring = document.createElement('div');
-    const ringSize = 60;
-    const rotation = Math.random() * 360;
-
-    ring.style.cssText = `
-      position: absolute;
-      top: 50%; left: 50%;
-      width: ${ringSize}px; height: ${ringSize}px;
-      border-radius: 50%;
-      transform: translate(-50%, -50%) scale(1) rotate(${rotation}deg);
-      opacity: 1;
-      pointer-events: none;
-      border: 12px solid ${toRGB(rim, 0.6)};
-      box-shadow:
-        0 0 20px ${toRGB(rim, 0.4)},
-        0 0 60px ${toRGB(base, 0.25)},
-        inset 0 0 20px ${toRGB(rim, 0.3)};
-      background: transparent;
-      mix-blend-mode: screen;
-      filter: blur(3px);
-    `;
-    pulseContainer.appendChild(ring);
-
-    // Animate: expand outward while rotating, border thins, fades
-    ring.animate([
-      {
-        transform: `translate(-50%, -50%) scale(1) rotate(${rotation}deg)`,
-        opacity: 0.8,
-        borderWidth: '12px',
-        filter: 'blur(3px)',
-      },
-      {
-        transform: `translate(-50%, -50%) scale(4) rotate(${rotation + 30}deg)`,
-        opacity: 0.6,
-        borderWidth: '8px',
-        filter: 'blur(5px)',
-        offset: 0.2,
-      },
-      {
-        transform: `translate(-50%, -50%) scale(12) rotate(${rotation + 60}deg)`,
-        opacity: 0.35,
-        borderWidth: '5px',
-        filter: 'blur(10px)',
-        offset: 0.45,
-      },
-      {
-        transform: `translate(-50%, -50%) scale(25) rotate(${rotation + 90}deg)`,
-        opacity: 0.12,
-        borderWidth: '3px',
-        filter: 'blur(18px)',
-        offset: 0.7,
-      },
-      {
-        transform: `translate(-50%, -50%) scale(40) rotate(${rotation + 110}deg)`,
-        opacity: 0,
-        borderWidth: '1px',
-        filter: 'blur(25px)',
-      },
-    ], {
-      duration: 3500,
-      easing: 'cubic-bezier(0.16, 1, 0.3, 1)',
-      fill: 'forwards',
-    });
-
-    // Add a second slightly offset ring for depth
-    const ring2 = ring.cloneNode();
-    ring2.style.borderColor = toRGB(base, 0.4);
-    ring2.style.boxShadow = `
-      0 0 15px ${toRGB(base, 0.3)},
-      0 0 50px ${toRGB(rim, 0.15)}
-    `;
-    ring2.style.width = `${ringSize + 10}px`;
-    ring2.style.height = `${ringSize + 10}px`;
-    ring2.style.filter = 'blur(5px)';
-    pulseContainer.appendChild(ring2);
-
-    const rot2 = rotation + 180;
-    ring2.animate([
-      {
-        transform: `translate(-50%, -50%) scale(0.8) rotate(${rot2}deg)`,
-        opacity: 0.5,
-        borderWidth: '10px',
-        filter: 'blur(5px)',
-      },
-      {
-        transform: `translate(-50%, -50%) scale(10) rotate(${rot2 - 40}deg)`,
-        opacity: 0.25,
-        borderWidth: '4px',
-        filter: 'blur(12px)',
-        offset: 0.4,
-      },
-      {
-        transform: `translate(-50%, -50%) scale(35) rotate(${rot2 - 80}deg)`,
-        opacity: 0,
-        borderWidth: '1px',
-        filter: 'blur(22px)',
-      },
-    ], {
+    // Create ~40 gas blobs arranged in a rough ring
+    const blobCount = 40;
+    const pulse = {
+      startTime: performance.now(),
       duration: 4000,
-      easing: 'cubic-bezier(0.16, 1, 0.3, 1)',
-      fill: 'forwards',
-    });
+      blobs: [],
+      r1, g1, b1, r2, g2, b2,
+    };
 
-    // Cleanup
-    setTimeout(() => {
-      ring.remove();
-      ring2.remove();
-    }, 4200);
+    for (let i = 0; i < blobCount; i++) {
+      const angle = (i / blobCount) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
+      const radiusOffset = (Math.random() - 0.5) * 0.3; // irregularity
+      const size = 8 + Math.random() * 16;
+      const brightness = 0.4 + Math.random() * 0.6;
+      const useRim = Math.random() > 0.4; // mix of rim and base colors
+      const rotSpeed = (Math.random() - 0.5) * 0.3; // slight per-blob angular drift
+
+      pulse.blobs.push({ angle, radiusOffset, size, brightness, useRim, rotSpeed });
+    }
+
+    // Add a few bright hotspots
+    for (let h = 0; h < 6; h++) {
+      const angle = Math.random() * Math.PI * 2;
+      pulse.blobs.push({
+        angle,
+        radiusOffset: (Math.random() - 0.5) * 0.15,
+        size: 20 + Math.random() * 25,
+        brightness: 0.8 + Math.random() * 0.2,
+        useRim: true,
+        rotSpeed: (Math.random() - 0.5) * 0.2,
+        isHotspot: true,
+      });
+    }
+
+    activePulses.push(pulse);
+  }
+
+  function tickPulses() {
+    pulseCtx.clearRect(0, 0, PULSE_SIZE, PULSE_SIZE);
+    const cx = PULSE_SIZE / 2;
+    const cy = PULSE_SIZE / 2;
+    const now = performance.now();
+
+    for (let p = activePulses.length - 1; p >= 0; p--) {
+      const pulse = activePulses[p];
+      const elapsed = now - pulse.startTime;
+      const t = elapsed / pulse.duration;
+
+      if (t > 1) {
+        activePulses.splice(p, 1);
+        continue;
+      }
+
+      // Ring expands: starts at ~30px radius, grows to fill canvas
+      const maxRadius = PULSE_SIZE * 0.45;
+      const ringRadius = 30 + t * maxRadius;
+      // Fade: peak at 0.15, fade out after
+      const fadeIn = Math.min(t / 0.1, 1);
+      const fadeOut = t > 0.3 ? Math.max(0, 1 - (t - 0.3) / 0.7) : 1;
+      const globalAlpha = fadeIn * fadeOut;
+
+      for (const blob of pulse.blobs) {
+        const angle = blob.angle + t * blob.rotSpeed * Math.PI;
+        const r = ringRadius * (1 + blob.radiusOffset);
+        const bx = cx + Math.cos(angle) * r;
+        const by = cy + Math.sin(angle) * r;
+
+        // Size grows slightly as ring expands, then shrinks
+        const sizeScale = blob.isHotspot ? (1 + t * 1.5) : (0.8 + t * 0.8);
+        const blobSize = blob.size * sizeScale * (1 - t * 0.3);
+
+        const cr = blob.useRim ? pulse.r1 : pulse.r2;
+        const cg = blob.useRim ? pulse.g1 : pulse.g2;
+        const cb = blob.useRim ? pulse.b1 : pulse.b2;
+
+        // Soft radial gradient per blob
+        const grad = pulseCtx.createRadialGradient(bx, by, 0, bx, by, blobSize);
+        const a = globalAlpha * blob.brightness;
+        grad.addColorStop(0, `rgba(${cr},${cg},${cb},${(a * 0.8).toFixed(3)})`);
+        grad.addColorStop(0.4, `rgba(${cr},${cg},${cb},${(a * 0.4).toFixed(3)})`);
+        grad.addColorStop(1, `rgba(${cr},${cg},${cb},0)`);
+
+        pulseCtx.fillStyle = grad;
+        pulseCtx.beginPath();
+        pulseCtx.arc(bx, by, blobSize, 0, Math.PI * 2);
+        pulseCtx.fill();
+      }
+    }
   }
 
   const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
@@ -1263,6 +1254,9 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
     trailCtx.globalAlpha = 0.3;
     trailCtx.drawImage(canvas, 0, 0, trailCanvas.width, trailCanvas.height);
     trailCtx.globalAlpha = 1;
+
+    // Tick nebula pulse rings
+    if (activePulses.length) tickPulses();
   }
 
   function show() {
