@@ -499,21 +499,14 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
   `;
   const trailCtx = trailCanvas.getContext('2d');
 
-  // Radial pulse element — sits behind everything, expands outward
-  const pulseEl = document.createElement('div');
-  pulseEl.style.cssText = `
-    position: absolute;
-    top: 50%; left: 50%;
-    width: 20px; height: 20px;
-    border-radius: 50%;
-    transform: translate(-50%, -50%) scale(0);
-    opacity: 0;
-    pointer-events: none;
-    z-index: 0;
-    transition: none;
-    mix-blend-mode: screen;
+  // Pulse ring container — sits behind the metaball
+  const pulseContainer = document.createElement('div');
+  pulseContainer.style.cssText = `
+    position: absolute; inset: 0;
+    pointer-events: none; z-index: 0;
+    overflow: visible;
   `;
-  container.appendChild(pulseEl);
+  container.appendChild(pulseContainer);
   container.appendChild(trailCanvas);
   container.appendChild(canvas);
 
@@ -525,38 +518,119 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
   let pulseCount = 0;
 
   function firePulse() {
-    // Get current glob colors from the shader uniforms
     const base = uniforms.uBaseColor.value;
     const rim = uniforms.uRimColor.value;
     const toRGB = (c, a) => `rgba(${Math.round(c.r*255)},${Math.round(c.g*255)},${Math.round(c.b*255)},${a})`;
 
-    // Psychedelic plasma gradient — translucent layers of the glob's own color
-    const core = toRGB(rim, 0.5);
-    const mid = toRGB(base, 0.3);
-    const outer = toRGB(rim, 0.15);
+    // Create a ring element — donut shape that expands outward
+    const ring = document.createElement('div');
+    const ringSize = 60;
+    const rotation = Math.random() * 360;
 
-    pulseEl.style.background = `
-      radial-gradient(circle, ${core} 0%, ${mid} 15%, ${outer} 35%, transparent 60%),
-      radial-gradient(ellipse 120% 80% at 45% 55%, ${toRGB(rim, 0.2)} 0%, transparent 50%),
-      radial-gradient(ellipse 80% 120% at 55% 45%, ${toRGB(base, 0.15)} 0%, transparent 50%)
+    ring.style.cssText = `
+      position: absolute;
+      top: 50%; left: 50%;
+      width: ${ringSize}px; height: ${ringSize}px;
+      border-radius: 50%;
+      transform: translate(-50%, -50%) scale(1) rotate(${rotation}deg);
+      opacity: 1;
+      pointer-events: none;
+      border: 12px solid ${toRGB(rim, 0.6)};
+      box-shadow:
+        0 0 20px ${toRGB(rim, 0.4)},
+        0 0 60px ${toRGB(base, 0.25)},
+        inset 0 0 20px ${toRGB(rim, 0.3)};
+      background: transparent;
+      mix-blend-mode: screen;
+      filter: blur(3px);
     `;
-    pulseEl.style.mixBlendMode = 'screen';
-    pulseEl.style.transform = 'translate(-50%, -50%) scale(0)';
-    pulseEl.style.opacity = '1';
+    pulseContainer.appendChild(ring);
 
-    pulseEl.offsetHeight;
-
-    pulseEl.animate([
-      { transform: 'translate(-50%, -50%) scale(0)', opacity: 0.9, filter: 'blur(0px) brightness(1.5)' },
-      { transform: 'translate(-50%, -50%) scale(15)', opacity: 0.7, filter: 'blur(2px) brightness(1.3)', offset: 0.1 },
-      { transform: 'translate(-50%, -50%) scale(60)', opacity: 0.45, filter: 'blur(8px) brightness(1.1)', offset: 0.3 },
-      { transform: 'translate(-50%, -50%) scale(150)', opacity: 0.15, filter: 'blur(20px) brightness(1.0)', offset: 0.6 },
-      { transform: 'translate(-50%, -50%) scale(280)', opacity: 0, filter: 'blur(30px) brightness(0.8)' },
+    // Animate: expand outward while rotating, border thins, fades
+    ring.animate([
+      {
+        transform: `translate(-50%, -50%) scale(1) rotate(${rotation}deg)`,
+        opacity: 0.8,
+        borderWidth: '12px',
+        filter: 'blur(3px)',
+      },
+      {
+        transform: `translate(-50%, -50%) scale(4) rotate(${rotation + 30}deg)`,
+        opacity: 0.6,
+        borderWidth: '8px',
+        filter: 'blur(5px)',
+        offset: 0.2,
+      },
+      {
+        transform: `translate(-50%, -50%) scale(12) rotate(${rotation + 60}deg)`,
+        opacity: 0.35,
+        borderWidth: '5px',
+        filter: 'blur(10px)',
+        offset: 0.45,
+      },
+      {
+        transform: `translate(-50%, -50%) scale(25) rotate(${rotation + 90}deg)`,
+        opacity: 0.12,
+        borderWidth: '3px',
+        filter: 'blur(18px)',
+        offset: 0.7,
+      },
+      {
+        transform: `translate(-50%, -50%) scale(40) rotate(${rotation + 110}deg)`,
+        opacity: 0,
+        borderWidth: '1px',
+        filter: 'blur(25px)',
+      },
     ], {
-      duration: 3000,
+      duration: 3500,
       easing: 'cubic-bezier(0.16, 1, 0.3, 1)',
       fill: 'forwards',
     });
+
+    // Add a second slightly offset ring for depth
+    const ring2 = ring.cloneNode();
+    ring2.style.borderColor = toRGB(base, 0.4);
+    ring2.style.boxShadow = `
+      0 0 15px ${toRGB(base, 0.3)},
+      0 0 50px ${toRGB(rim, 0.15)}
+    `;
+    ring2.style.width = `${ringSize + 10}px`;
+    ring2.style.height = `${ringSize + 10}px`;
+    ring2.style.filter = 'blur(5px)';
+    pulseContainer.appendChild(ring2);
+
+    const rot2 = rotation + 180;
+    ring2.animate([
+      {
+        transform: `translate(-50%, -50%) scale(0.8) rotate(${rot2}deg)`,
+        opacity: 0.5,
+        borderWidth: '10px',
+        filter: 'blur(5px)',
+      },
+      {
+        transform: `translate(-50%, -50%) scale(10) rotate(${rot2 - 40}deg)`,
+        opacity: 0.25,
+        borderWidth: '4px',
+        filter: 'blur(12px)',
+        offset: 0.4,
+      },
+      {
+        transform: `translate(-50%, -50%) scale(35) rotate(${rot2 - 80}deg)`,
+        opacity: 0,
+        borderWidth: '1px',
+        filter: 'blur(22px)',
+      },
+    ], {
+      duration: 4000,
+      easing: 'cubic-bezier(0.16, 1, 0.3, 1)',
+      fill: 'forwards',
+    });
+
+    // Cleanup
+    setTimeout(() => {
+      ring.remove();
+      ring2.remove();
+    }, 4200);
   }
 
   const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
