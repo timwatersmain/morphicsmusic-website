@@ -100,7 +100,7 @@ function applyWaveToLetters(letters, time) {
     const scale = 1 + breathe;
     letters[i].style.transform = `translate(${x}px, ${y}px) scale(${scale}) rotate(${driftR}deg)`;
     // Set initial color/opacity to match the tick loop's resting state — prevents bright flash
-    letters[i].style.color = 'rgba(200, 190, 175, 0.72)';
+    letters[i].style.color = 'rgba(220, 210, 195, 0.82)';
     letters[i].style.textShadow = '0 0 6px rgba(0,0,0,0.4), 0 0 20px rgba(0,0,0,0.15)';
   }
 }
@@ -123,11 +123,11 @@ for (let i = 0; i < MAX; i++) {
     px: Math.random() * Math.PI * 2,
     py: Math.random() * Math.PI * 2,
     pr: Math.random() * Math.PI * 2,
-    sx: 0.4 + Math.random() * 0.5,
-    sy: 0.35 + Math.random() * 0.4,
+    sx: 0.5 + Math.random() * 0.6,
+    sy: 0.45 + Math.random() * 0.5,
     sr: 0.3 + Math.random() * 0.4,
-    ax: 0.6 + Math.random() * 0.8,
-    ay: 0.4 + Math.random() * 0.6,
+    ax: 0.9 + Math.random() * 1.1,
+    ay: 0.6 + Math.random() * 0.9,
     ar: 2 + Math.random() ** 2 * 10,
     // Per-letter breathing
     breatheSpeed: 0.15 + Math.random() * 0.25,
@@ -277,9 +277,9 @@ export function tickLetters(time) {
       s.bounceS = 0; s.bounceVelS = 0;
     }
 
-    // Ambient wave
-    const wave1 = Math.sin(t * 0.8 + i * 0.6) * 1.2;
-    const wave2 = Math.sin(t * 0.5 + i * 0.9 + 2.0) * 0.7;
+    // Ambient wave — slightly boosted
+    const wave1 = Math.sin(t * 0.8 + i * 0.6) * 1.6;
+    const wave2 = Math.sin(t * 0.5 + i * 0.9 + 2.0) * 1.0;
     const driftX = Math.sin(t * seed.sx + seed.px) * seed.ax;
     const driftY = Math.sin(t * seed.sy + seed.py) * seed.ay;
     const driftR = Math.sin(t * seed.sr + seed.pr) * seed.ar;
@@ -292,13 +292,11 @@ export function tickLetters(time) {
 
     const el = letters[i];
 
-    // Audio-reactive effects per letter
-    const g = bulkHover;
+    // Audio-reactive effects per letter (no hover)
     const letterPhase = Math.sin(t * 0.5 + i * 0.8) * 0.5 + 0.5;
     const audioG = audioGlow * (0.4 + letterPhase * 0.3) * 0.5 + audioGlowMid * 0.15;
-    const totalGlow = g + audioG;
 
-    // Audio-reactive letter distortion — each letter warps independently on beats
+    // Audio-reactive letter distortion
     const bassWarp = audioGlow * seed.breatheAmp * 8;
     const midStretch = audioGlowMid * 0.06;
     const skewAudio = Math.sin(t * 1.2 + i * 1.5) * audioGlow * 3;
@@ -307,15 +305,15 @@ export function tickLetters(time) {
 
     el.style.transform = `translate(${x}px, ${(y + bassWarp * 2 * (letterPhase - 0.5)).toFixed(2)}px) scale(${scaleX.toFixed(4)}, ${scaleY.toFixed(4)}) rotate(${(driftR + skewAudio).toFixed(2)}deg)`;
 
-    // Subtle chromatic shift on bass — letter color temperature shifts
+    // Brighter base color — no hover influence
     const hueShift = audioGlow * 8 * Math.sin(t * 0.3 + i * 0.9);
-    const warmth = 200 + totalGlow * 42 + audioGlow * 15;
+    const warmth = 220 + audioG * 30 + audioGlow * 15;
     const c = Math.round(Math.min(255, warmth));
-    const a = (0.72 + totalGlow * 0.1).toFixed(3);
+    const a = (0.82 + audioG * 0.1).toFixed(3);
     const glowRadius = (4 + audioG * 12).toFixed(1);
-    const glowOpacity = (audioG * 0.18 + g * 0.06).toFixed(4);
+    const glowOpacity = (audioG * 0.18).toFixed(4);
 
-    // Audio-reactive blur — letters soften slightly on heavy bass
+    // Audio-reactive blur
     const audioBlur = audioGlow * 0.8 * letterPhase;
 
     el.style.color = `rgba(${c}, ${Math.max(0, c - 10 - Math.round(hueShift))}, ${Math.max(0, c - 25 + Math.round(hueShift * 0.5))}, ${a})`;
