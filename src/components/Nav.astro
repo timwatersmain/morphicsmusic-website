@@ -303,44 +303,59 @@ const wordmark = 'MORPHICS'.split('');
     requestAnimationFrame(tickWordmark);
   }
 
-  // ── Matrix hover sparks — abstract glyphs burst from cursor on wordmark ──
-  const MATRIX_GLYPHS = 'アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン01∞∅⊗◊△▽⟐⌬';
+  // ── Hover morph — letters near cursor roll through random glyphs then settle back ──
+  const MORPH_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789ΩΞΔ∞∅⊗◊⟐⌬アカサタナハマヤラワ';
   const wmEl = document.getElementById('nav-wordmark');
-  let lastSparkTime = 0;
+  const morphTimers = new Array(N).fill(0); // per-letter: timestamp when morph ends
+  const morphIntervals = new Array(N).fill(null); // per-letter scramble interval
 
-  if (wmEl) {
+  if (wmEl && letters.length) {
     wmEl.addEventListener('mousemove', (e) => {
-      const now = performance.now();
-      if (now - lastSparkTime < 60) return; // throttle
-      lastSparkTime = now;
+      const rect = wmEl.getBoundingClientRect();
+      const mouseX = e.clientX;
 
-      const count = 2 + Math.floor(Math.random() * 3);
-      for (let s = 0; s < count; s++) {
-        const spark = document.createElement('span');
-        spark.className = 'matrix-spark';
-        spark.textContent = MATRIX_GLYPHS[Math.floor(Math.random() * MATRIX_GLYPHS.length)];
+      for (let i = 0; i < N; i++) {
+        const letterRect = letters[i].getBoundingClientRect();
+        const letterCx = letterRect.left + letterRect.width / 2;
+        const dist = Math.abs(mouseX - letterCx);
 
-        // Position near cursor within wordmark
-        const rect = wmEl.getBoundingClientRect();
-        const localX = e.clientX - rect.left + (Math.random() - 0.5) * 20;
-        const localY = e.clientY - rect.top + (Math.random() - 0.5) * 10;
-        spark.style.left = localX + 'px';
-        spark.style.top = localY + 'px';
+        // Trigger morph for letters within 30px of cursor
+        if (dist < 30) {
+          const now = performance.now();
+          const morphDuration = 300 + Math.random() * 400; // 300-700ms roll
 
-        // Random drift direction
-        const dx = (Math.random() - 0.5) * 40;
-        const dy = -10 - Math.random() * 30;
-        const rot = (Math.random() - 0.5) * 90;
-        const dur = 400 + Math.random() * 500;
+          // Don't re-trigger if already morphing
+          if (morphTimers[i] > now) continue;
+          morphTimers[i] = now + morphDuration;
 
-        wmEl.appendChild(spark);
+          // Start scrambling this letter
+          const scramble = () => {
+            if (performance.now() > morphTimers[i]) {
+              // Settle back to original
+              letters[i].textContent = CHARS[i];
+              clearInterval(morphIntervals[i]);
+              morphIntervals[i] = null;
+              return;
+            }
+            letters[i].textContent = MORPH_CHARS[Math.floor(Math.random() * MORPH_CHARS.length)];
+          };
 
-        spark.animate([
-          { transform: 'translate(0,0) rotate(0deg) scale(1)', opacity: 0.8 },
-          { transform: `translate(${dx}px,${dy}px) rotate(${rot}deg) scale(0.3)`, opacity: 0 },
-        ], { duration: dur, easing: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)', fill: 'forwards' });
+          if (!morphIntervals[i]) {
+            morphIntervals[i] = setInterval(scramble, 35);
+          }
+        }
+      }
+    });
 
-        setTimeout(() => spark.remove(), dur + 50);
+    // Reset all letters when mouse leaves
+    wmEl.addEventListener('mouseleave', () => {
+      for (let i = 0; i < N; i++) {
+        if (morphIntervals[i]) {
+          clearInterval(morphIntervals[i]);
+          morphIntervals[i] = null;
+        }
+        letters[i].textContent = CHARS[i];
+        morphTimers[i] = 0;
       }
     });
   }
@@ -385,18 +400,6 @@ const wordmark = 'MORPHICS'.split('');
     text-decoration: none;
     display: flex;
     gap: 0.5px;
-    position: relative;
-    overflow: visible;
-  }
-
-  .matrix-spark {
-    position: absolute;
-    font-family: monospace;
-    font-size: 10px;
-    color: rgba(200, 210, 220, 0.8);
-    pointer-events: none;
-    text-shadow: 0 0 4px rgba(200, 210, 220, 0.4);
-    z-index: 10;
   }
 
   .wm-letter {
