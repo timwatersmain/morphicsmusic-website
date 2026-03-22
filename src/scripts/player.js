@@ -199,9 +199,30 @@ const lerpSpeed = 0.45;
 const springStiff = 0.08;
 const springDamp = 0.88;
 
+// Audio glow state
+const glowFreqData = new Uint8Array(256);
+let audioGlow = 0;
+let audioGlowMid = 0;
+
 export function tickLetters(time) {
   const letters = cachedLetters;
   if (!letters.length) return;
+
+  // Sample audio for reactive glow
+  if (analyser) {
+    analyser.getByteFrequencyData(glowFreqData);
+    // Bass: bins 2-8, Mid: bins 10-30
+    let bassSum = 0, midSum = 0;
+    for (let b = 2; b < 8; b++) bassSum += glowFreqData[b];
+    for (let b = 10; b < 30; b++) midSum += glowFreqData[b];
+    const bassNorm = bassSum / (6 * 255);
+    const midNorm = midSum / (20 * 255);
+    // Smooth with fast attack, slow release
+    const bassRate = bassNorm > audioGlow ? 0.3 : 0.05;
+    const midRate = midNorm > audioGlowMid ? 0.25 : 0.04;
+    audioGlow += (bassNorm - audioGlow) * bassRate;
+    audioGlowMid += (midNorm - audioGlowMid) * midRate;
+  }
 
   // Smooth bulk hover scale for all letters
   // Quick onset, very slow smooth fade out
@@ -268,13 +289,17 @@ export function tickLetters(time) {
     const el = letters[i];
     el.style.transform = `translate(${x}px, ${y}px) scale(${scale}) rotate(${driftR}deg)`;
 
-    // Uniform glow: always apply with bulkHover blended in (no threshold snap)
+    // Audio-reactive glow per letter with staggered response
     const g = bulkHover;
-    const c = Math.round(200 + g * 42);
-    const a = (0.72 + g * 0.16).toFixed(3);
-    const glowA = (g * 0.08).toFixed(4);
+    const letterPhase = Math.sin(t * 0.5 + i * 0.8) * 0.5 + 0.5; // 0-1 stagger
+    const audioG = audioGlow * (0.6 + letterPhase * 0.4) + audioGlowMid * 0.3;
+    const totalGlow = g + audioG;
+    const c = Math.round(200 + totalGlow * 42);
+    const a = (0.72 + totalGlow * 0.16).toFixed(3);
+    const glowRadius = (6 + audioG * 25).toFixed(1);
+    const glowOpacity = (audioG * 0.35 + g * 0.08).toFixed(4);
     el.style.color = `rgba(${c}, ${c - 10}, ${c - 25}, ${a})`;
-    el.style.textShadow = `0 0 6px rgba(0,0,0,0.4), 0 0 20px rgba(0,0,0,0.15), 0 0 10px rgba(255,255,255,${glowA})`;
+    el.style.textShadow = `0 0 6px rgba(0,0,0,0.4), 0 0 20px rgba(0,0,0,0.15), 0 0 ${glowRadius}px rgba(255,255,255,${glowOpacity})`;
   }
 
   // Also animate alt letters during transitions
