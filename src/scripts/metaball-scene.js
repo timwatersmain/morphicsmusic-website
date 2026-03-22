@@ -496,7 +496,7 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
     top: 50%; left: 50%;
     transform: translate(-50%, -50%);
     opacity: 0;
-    transition: opacity 1.2s ease;
+    transition: opacity 2.5s ease;
     pointer-events: none;
   `;
   container.appendChild(canvas);

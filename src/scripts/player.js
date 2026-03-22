@@ -589,14 +589,15 @@ export async function init() {
       // Now hide everything for the animation
       controlsEl.classList.add('is-transitioning');
 
-      // Phase 1: Bubble pop — quick squeeze inward then burst outward and vanish
+      // Phase 1: Smooth outward explosion from center
       const popAnim = playBtn.animate([
-        { transform: 'scale(1)', opacity: 1 },
-        { transform: 'scale(0.85)', opacity: 1, offset: 0.12 },
-        { transform: 'scale(1.6)', opacity: 0.6, offset: 0.3 },
-        { transform: 'scale(0)', opacity: 0, offset: 0.5 },
-        { transform: 'scale(0)', opacity: 0, offset: 1.0 },
-      ], { duration: 350, easing: 'cubic-bezier(0.22, 1, 0.36, 1)', fill: 'forwards' });
+        { transform: 'scale(1)', opacity: 1, filter: 'brightness(1)' },
+        { transform: 'scale(0.92)', opacity: 1, filter: 'brightness(1.1)', offset: 0.1 },
+        { transform: 'scale(1.3)', opacity: 1, filter: 'brightness(1.4)', offset: 0.35 },
+        { transform: 'scale(2.0)', opacity: 0.8, filter: 'brightness(1.6)', offset: 0.55 },
+        { transform: 'scale(3.5)', opacity: 0.4, filter: 'brightness(1.2)', offset: 0.75 },
+        { transform: 'scale(5.0)', opacity: 0, filter: 'brightness(0.8)', offset: 1.0 },
+      ], { duration: 800, easing: 'cubic-bezier(0.16, 1, 0.3, 1)', fill: 'forwards' });
       popAnim.onfinish = () => {
         popAnim.cancel();  // Remove fill: forwards so CSS takes over
         playBtn.classList.add('is-popped');
@@ -681,7 +682,7 @@ export async function init() {
           dots[i].style.opacity = '0';
         }
 
-        // After bubble pops, hold black briefly then fade in player
+        // After pop, hold black then fade in player
         setTimeout(() => {
           if (fragContainer) {
             fragContainer.classList.add('is-hidden');
