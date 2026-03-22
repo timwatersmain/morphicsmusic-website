@@ -1130,10 +1130,12 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
     }
 
     // Trail: fade previous frame then composite current frame on top
-    trailCtx.globalAlpha = 0.08;
+    trailCtx.globalCompositeOperation = 'destination-out';
+    trailCtx.globalAlpha = 0.12;
     trailCtx.fillStyle = '#000';
     trailCtx.fillRect(0, 0, trailCanvas.width, trailCanvas.height);
-    trailCtx.globalAlpha = 0.35;
+    trailCtx.globalCompositeOperation = 'source-over';
+    trailCtx.globalAlpha = 0.3;
     trailCtx.drawImage(canvas, 0, 0, trailCanvas.width, trailCanvas.height);
     trailCtx.globalAlpha = 1;
   }

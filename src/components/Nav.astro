@@ -302,6 +302,48 @@ const wordmark = 'MORPHICS'.split('');
 
     requestAnimationFrame(tickWordmark);
   }
+
+  // ── Matrix hover sparks — abstract glyphs burst from cursor on wordmark ──
+  const MATRIX_GLYPHS = 'アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン01∞∅⊗◊△▽⟐⌬';
+  const wmEl = document.getElementById('nav-wordmark');
+  let lastSparkTime = 0;
+
+  if (wmEl) {
+    wmEl.addEventListener('mousemove', (e) => {
+      const now = performance.now();
+      if (now - lastSparkTime < 60) return; // throttle
+      lastSparkTime = now;
+
+      const count = 2 + Math.floor(Math.random() * 3);
+      for (let s = 0; s < count; s++) {
+        const spark = document.createElement('span');
+        spark.className = 'matrix-spark';
+        spark.textContent = MATRIX_GLYPHS[Math.floor(Math.random() * MATRIX_GLYPHS.length)];
+
+        // Position near cursor within wordmark
+        const rect = wmEl.getBoundingClientRect();
+        const localX = e.clientX - rect.left + (Math.random() - 0.5) * 20;
+        const localY = e.clientY - rect.top + (Math.random() - 0.5) * 10;
+        spark.style.left = localX + 'px';
+        spark.style.top = localY + 'px';
+
+        // Random drift direction
+        const dx = (Math.random() - 0.5) * 40;
+        const dy = -10 - Math.random() * 30;
+        const rot = (Math.random() - 0.5) * 90;
+        const dur = 400 + Math.random() * 500;
+
+        wmEl.appendChild(spark);
+
+        spark.animate([
+          { transform: 'translate(0,0) rotate(0deg) scale(1)', opacity: 0.8 },
+          { transform: `translate(${dx}px,${dy}px) rotate(${rot}deg) scale(0.3)`, opacity: 0 },
+        ], { duration: dur, easing: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)', fill: 'forwards' });
+
+        setTimeout(() => spark.remove(), dur + 50);
+      }
+    });
+  }
 </script>
 
 <style>
@@ -343,6 +385,18 @@ const wordmark = 'MORPHICS'.split('');
     text-decoration: none;
     display: flex;
     gap: 0.5px;
+    position: relative;
+    overflow: visible;
+  }
+
+  .matrix-spark {
+    position: absolute;
+    font-family: monospace;
+    font-size: 10px;
+    color: rgba(200, 210, 220, 0.8);
+    pointer-events: none;
+    text-shadow: 0 0 4px rgba(200, 210, 220, 0.4);
+    z-index: 10;
   }
 
   .wm-letter {
