@@ -437,18 +437,18 @@ void main() {
     float rimBase = mix(0.3, 1.0, me);
     float fresnelIntensity = (0.15 + uHigh * 0.6) * rimBase;
     // Kick rim bloom: strong fresnel boost
-    float kickRimBoost = uKickGlow * fresnel * 1.5;
+    float kickRimBoost = uKickGlow * fresnel * 0.6;
     fresnelIntensity += kickRimBoost;
     vec3 fresnelColor = mix(uRimColor, specColor, 0.4);
 
     // Kick color warmth: tint specular toward rim color during slow envelope
-    vec3 warmSpec = mix(specColor, uRimColor, uKickGlowSlow * 0.5);
+    vec3 warmSpec = mix(specColor, uRimColor, uKickGlowSlow * 0.25);
 
     float ambient = 0.30;
 
     // Core luminance: radial glow from center during kick
     float distFromCenter = length(p.xy);
-    float coreGlow = uKickGlow * exp(-distFromCenter * 1.0) * 1.2;
+    float coreGlow = uKickGlow * exp(-distFromCenter * 1.0) * 0.5;
 
     col = baseColor * (ambient + diff1 * 1.0 + diff2 * 0.45 + coreGlow)
         + warmSpec * (spec1 + spec2)
@@ -498,7 +498,26 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
     opacity: 0;
     transition: opacity 2.5s ease;
     pointer-events: none;
+    z-index: 2;
   `;
+
+  // Trail canvas — sits behind the main canvas, captures fading afterimages
+  const trailCanvas = document.createElement('canvas');
+  trailCanvas.width = CANVAS_SIZE * Math.min(window.devicePixelRatio, 2);
+  trailCanvas.height = trailCanvas.width;
+  trailCanvas.style.cssText = `
+    position: absolute;
+    top: 50%; left: 50%;
+    width: ${CANVAS_SIZE}px; height: ${CANVAS_SIZE}px;
+    transform: translate(-50%, -50%);
+    opacity: 0;
+    transition: opacity 2.5s ease;
+    pointer-events: none;
+    z-index: 1;
+  `;
+  const trailCtx = trailCanvas.getContext('2d');
+
+  container.appendChild(trailCanvas);
   container.appendChild(canvas);
 
   const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
@@ -1043,8 +1062,8 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
     // Shaped kick glow envelopes — instant attack, exponential decay
     if (kickTriggerTime >= 0) {
       const t = (time - kickTriggerTime) / 1000;  // seconds since trigger
-      kickGlow = Math.exp(-t * 6.0);        // fast decay ~170ms
-      kickGlowSlow = Math.exp(-t * 2.5);    // slow lingering warmth ~400ms
+      kickGlow = Math.exp(-t * 8.0) * 0.5;    // faster decay, half intensity
+      kickGlowSlow = Math.exp(-t * 3.5) * 0.4;  // gentler lingering warmth
       // Gate by masterEnergy so silent = no glow
       kickGlow *= masterEnergy;
       kickGlowSlow *= masterEnergy;
@@ -1076,6 +1095,7 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
     const growScale = 0.1 + growProgress * 0.9; // 0.1 → 1.0
     const scale = (MIN_SCALE + smoothLevel * (1.0 - MIN_SCALE)) * growScale;
     canvas.style.transform = `translate(-50%, -50%) scale(${scale.toFixed(4)})`;
+    trailCanvas.style.transform = `translate(-50%, -50%) scale(${(scale * 1.05).toFixed(4)})`;
 
     // Color palette transition
     if (colorT < 1) {
@@ -1108,17 +1128,27 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
       renderer.render(particleScene, particleCam);
       renderer.autoClear = true;
     }
+
+    // Trail: fade previous frame then composite current frame on top
+    trailCtx.globalAlpha = 0.08;
+    trailCtx.fillStyle = '#000';
+    trailCtx.fillRect(0, 0, trailCanvas.width, trailCanvas.height);
+    trailCtx.globalAlpha = 0.35;
+    trailCtx.drawImage(canvas, 0, 0, trailCanvas.width, trailCanvas.height);
+    trailCtx.globalAlpha = 1;
   }
 
   function show() {
     active = true;
     canvas.style.opacity = '1';
+    trailCanvas.style.opacity = '1';
     if (showTime === 0) showTime = performance.now() / 1000;
   }
 
   function hide() {
     active = false;
     canvas.style.opacity = '0';
+    trailCanvas.style.opacity = '0';
   }
 
   return { tick, show, hide, canvas, nextTheme, prevTheme, get active() { return active; } };
