@@ -526,52 +526,103 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
   let lastKickHeard = 0;
   let nextPulseTime = 0;
   let pulseCount = 0;
+  let lastSnarePulseTime = 0;
+  let lastHighPulseTime = 0;
+  let lastSurgePulseTime = 0;
+  let lastDropPulseTime = 0;
 
   // Active pulse rings being animated
   const activePulses = [];
 
-  function firePulse() {
+  function getColors() {
     const base = uniforms.uBaseColor.value;
     const rim = uniforms.uRimColor.value;
-    const r1 = Math.round(rim.r * 255), g1 = Math.round(rim.g * 255), b1 = Math.round(rim.b * 255);
-    const r2 = Math.round(base.r * 255), g2 = Math.round(base.g * 255), b2 = Math.round(base.b * 255);
-
-    // Create ~40 gas blobs arranged in a rough ring
-    const blobCount = 40;
-    const pulse = {
-      startTime: performance.now(),
-      duration: 4000,
-      blobs: [],
-      r1, g1, b1, r2, g2, b2,
+    return {
+      r1: Math.round(rim.r * 255), g1: Math.round(rim.g * 255), b1: Math.round(rim.b * 255),
+      r2: Math.round(base.r * 255), g2: Math.round(base.g * 255), b2: Math.round(base.b * 255),
     };
+  }
 
-    for (let i = 0; i < blobCount; i++) {
-      const angle = (i / blobCount) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
-      const radiusOffset = (Math.random() - 0.5) * 0.3; // irregularity
-      const size = 8 + Math.random() * 16;
-      const brightness = 0.4 + Math.random() * 0.6;
-      const useRim = Math.random() > 0.4; // mix of rim and base colors
-      const rotSpeed = (Math.random() - 0.5) * 0.3; // slight per-blob angular drift
-
-      pulse.blobs.push({ angle, radiusOffset, size, brightness, useRim, rotSpeed });
-    }
-
-    // Add a few bright hotspots
-    for (let h = 0; h < 6; h++) {
-      const angle = Math.random() * Math.PI * 2;
+  // ── TYPE 1: Nebula Gas Ring — triggered every 8 bars by kick BPM ──
+  function fireNebulaRing() {
+    const c = getColors();
+    const pulse = { type: 'nebula', startTime: performance.now(), duration: 4000, blobs: [], ...c };
+    for (let i = 0; i < 40; i++) {
       pulse.blobs.push({
-        angle,
+        angle: (i / 40) * Math.PI * 2 + (Math.random() - 0.5) * 0.5,
+        radiusOffset: (Math.random() - 0.5) * 0.3,
+        size: 8 + Math.random() * 16,
+        brightness: 0.4 + Math.random() * 0.6,
+        useRim: Math.random() > 0.4,
+        rotSpeed: (Math.random() - 0.5) * 0.3,
+      });
+    }
+    for (let h = 0; h < 6; h++) {
+      pulse.blobs.push({
+        angle: Math.random() * Math.PI * 2,
         radiusOffset: (Math.random() - 0.5) * 0.15,
         size: 20 + Math.random() * 25,
         brightness: 0.8 + Math.random() * 0.2,
-        useRim: true,
-        rotSpeed: (Math.random() - 0.5) * 0.2,
-        isHotspot: true,
+        useRim: true, rotSpeed: (Math.random() - 0.5) * 0.2, isHotspot: true,
       });
     }
-
     activePulses.push(pulse);
   }
+
+  // ── TYPE 2: Shockwave — sharp thin ring, triggered by snare hits ──
+  function fireShockwave() {
+    const c = getColors();
+    const pulse = { type: 'shockwave', startTime: performance.now(), duration: 1800, ...c };
+    activePulses.push(pulse);
+  }
+
+  // ── TYPE 3: Aurora Wisps — flowing ribbons, triggered by sustained high frequencies ──
+  function fireAuroraWisps() {
+    const c = getColors();
+    const pulse = { type: 'aurora', startTime: performance.now(), duration: 5000, wisps: [], ...c };
+    const wispCount = 8 + Math.floor(Math.random() * 5);
+    for (let i = 0; i < wispCount; i++) {
+      pulse.wisps.push({
+        angle: (i / wispCount) * Math.PI * 2 + (Math.random() - 0.5) * 0.6,
+        width: 3 + Math.random() * 6,
+        length: 30 + Math.random() * 50,
+        brightness: 0.3 + Math.random() * 0.5,
+        useRim: Math.random() > 0.3,
+        speed: 0.8 + Math.random() * 0.5,
+        waveAmp: 10 + Math.random() * 20,
+        waveFreq: 2 + Math.random() * 3,
+        phase: Math.random() * Math.PI * 2,
+      });
+    }
+    activePulses.push(pulse);
+  }
+
+  // ── TYPE 4: Stardust Scatter — tiny particles explode outward, triggered by energy surges ──
+  function fireStardust() {
+    const c = getColors();
+    const pulse = { type: 'stardust', startTime: performance.now(), duration: 3000, particles: [], ...c };
+    for (let i = 0; i < 80; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      pulse.particles.push({
+        angle,
+        speed: 0.5 + Math.random() * 1.5,
+        size: 1 + Math.random() * 4,
+        brightness: 0.3 + Math.random() * 0.7,
+        useRim: Math.random() > 0.5,
+        wobble: (Math.random() - 0.5) * 2,
+      });
+    }
+    activePulses.push(pulse);
+  }
+
+  // ── TYPE 5: Plasma Bloom — soft growing glow, triggered by energy drop (silence after loud) ──
+  function firePlasmaBloom() {
+    const c = getColors();
+    const pulse = { type: 'bloom', startTime: performance.now(), duration: 6000, ...c };
+    activePulses.push(pulse);
+  }
+
+  function firePulse() { fireNebulaRing(); }
 
   function tickPulses() {
     pulseCtx.clearRect(0, 0, PULSE_SIZE, PULSE_SIZE);
@@ -583,45 +634,110 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
       const pulse = activePulses[p];
       const elapsed = now - pulse.startTime;
       const t = elapsed / pulse.duration;
+      if (t > 1) { activePulses.splice(p, 1); continue; }
 
-      if (t > 1) {
-        activePulses.splice(p, 1);
-        continue;
-      }
+      const fadeIn = Math.min(t / 0.08, 1);
+      const fadeOut = t > 0.25 ? Math.max(0, 1 - (t - 0.25) / 0.75) : 1;
+      const alpha = fadeIn * fadeOut;
 
-      // Ring expands: starts at ~30px radius, grows to fill canvas
-      const maxRadius = PULSE_SIZE * 0.45;
-      const ringRadius = 30 + t * maxRadius;
-      // Fade: peak at 0.15, fade out after
-      const fadeIn = Math.min(t / 0.1, 1);
-      const fadeOut = t > 0.3 ? Math.max(0, 1 - (t - 0.3) / 0.7) : 1;
-      const globalAlpha = fadeIn * fadeOut;
+      if (pulse.type === 'nebula') {
+        const maxR = PULSE_SIZE * 0.45;
+        const ringR = 30 + t * maxR;
+        for (const b of pulse.blobs) {
+          const ang = b.angle + t * b.rotSpeed * Math.PI;
+          const r = ringR * (1 + b.radiusOffset);
+          const bx = cx + Math.cos(ang) * r, by = cy + Math.sin(ang) * r;
+          const sz = b.size * (b.isHotspot ? 1 + t * 1.5 : 0.8 + t * 0.8) * (1 - t * 0.3);
+          const cr = b.useRim ? pulse.r1 : pulse.r2, cg = b.useRim ? pulse.g1 : pulse.g2, cb = b.useRim ? pulse.b1 : pulse.b2;
+          const a = alpha * b.brightness;
+          const grad = pulseCtx.createRadialGradient(bx, by, 0, bx, by, sz);
+          grad.addColorStop(0, `rgba(${cr},${cg},${cb},${(a * 0.8).toFixed(3)})`);
+          grad.addColorStop(0.4, `rgba(${cr},${cg},${cb},${(a * 0.4).toFixed(3)})`);
+          grad.addColorStop(1, `rgba(${cr},${cg},${cb},0)`);
+          pulseCtx.fillStyle = grad;
+          pulseCtx.beginPath(); pulseCtx.arc(bx, by, sz, 0, Math.PI * 2); pulseCtx.fill();
+        }
 
-      for (const blob of pulse.blobs) {
-        const angle = blob.angle + t * blob.rotSpeed * Math.PI;
-        const r = ringRadius * (1 + blob.radiusOffset);
-        const bx = cx + Math.cos(angle) * r;
-        const by = cy + Math.sin(angle) * r;
+      } else if (pulse.type === 'shockwave') {
+        // Sharp thin ring expanding fast
+        const maxR = PULSE_SIZE * 0.5;
+        const ringR = 20 + t * t * maxR; // accelerating
+        const thickness = 3 + (1 - t) * 8;
+        const a = alpha * 0.7;
+        pulseCtx.strokeStyle = `rgba(${pulse.r1},${pulse.g1},${pulse.b1},${a.toFixed(3)})`;
+        pulseCtx.lineWidth = thickness;
+        pulseCtx.shadowColor = `rgba(${pulse.r1},${pulse.g1},${pulse.b1},${(a * 0.6).toFixed(3)})`;
+        pulseCtx.shadowBlur = 15 + t * 25;
+        pulseCtx.beginPath(); pulseCtx.arc(cx, cy, ringR, 0, Math.PI * 2); pulseCtx.stroke();
+        // Inner softer ring
+        pulseCtx.strokeStyle = `rgba(${pulse.r2},${pulse.g2},${pulse.b2},${(a * 0.4).toFixed(3)})`;
+        pulseCtx.lineWidth = thickness * 0.5;
+        pulseCtx.shadowBlur = 25 + t * 15;
+        pulseCtx.beginPath(); pulseCtx.arc(cx, cy, ringR * 0.85, 0, Math.PI * 2); pulseCtx.stroke();
+        pulseCtx.shadowBlur = 0;
 
-        // Size grows slightly as ring expands, then shrinks
-        const sizeScale = blob.isHotspot ? (1 + t * 1.5) : (0.8 + t * 0.8);
-        const blobSize = blob.size * sizeScale * (1 - t * 0.3);
+      } else if (pulse.type === 'aurora') {
+        // Flowing ribbon wisps expanding outward
+        const maxR = PULSE_SIZE * 0.4;
+        const baseR = 40 + t * maxR;
+        for (const w of pulse.wisps) {
+          const cr = w.useRim ? pulse.r1 : pulse.r2, cg = w.useRim ? pulse.g1 : pulse.g2, cb = w.useRim ? pulse.b1 : pulse.b2;
+          const a = alpha * w.brightness;
+          pulseCtx.strokeStyle = `rgba(${cr},${cg},${cb},${(a * 0.5).toFixed(3)})`;
+          pulseCtx.lineWidth = w.width * (1 + t * 0.5);
+          pulseCtx.shadowColor = `rgba(${cr},${cg},${cb},${(a * 0.3).toFixed(3)})`;
+          pulseCtx.shadowBlur = 12 + t * 20;
+          pulseCtx.lineCap = 'round';
+          pulseCtx.beginPath();
+          const steps = 20;
+          for (let s = 0; s <= steps; s++) {
+            const frac = s / steps;
+            const ang = w.angle + frac * (w.length / 100) * Math.PI;
+            const wobble = Math.sin(frac * w.waveFreq * Math.PI + t * w.speed * 8 + w.phase) * w.waveAmp * (0.5 + t);
+            const r = baseR * w.speed + wobble;
+            const px = cx + Math.cos(ang) * r, py = cy + Math.sin(ang) * r;
+            if (s === 0) pulseCtx.moveTo(px, py); else pulseCtx.lineTo(px, py);
+          }
+          pulseCtx.stroke();
+        }
+        pulseCtx.shadowBlur = 0;
 
-        const cr = blob.useRim ? pulse.r1 : pulse.r2;
-        const cg = blob.useRim ? pulse.g1 : pulse.g2;
-        const cb = blob.useRim ? pulse.b1 : pulse.b2;
+      } else if (pulse.type === 'stardust') {
+        // Tiny particles scattering outward
+        const maxR = PULSE_SIZE * 0.45;
+        for (const pt of pulse.particles) {
+          const r = 10 + t * maxR * pt.speed;
+          const wobbleAng = pt.angle + Math.sin(t * 5 + pt.wobble) * 0.1;
+          const px = cx + Math.cos(wobbleAng) * r, py = cy + Math.sin(wobbleAng) * r;
+          const sz = pt.size * (1 - t * 0.5);
+          const cr = pt.useRim ? pulse.r1 : pulse.r2, cg = pt.useRim ? pulse.g1 : pulse.g2, cb = pt.useRim ? pulse.b1 : pulse.b2;
+          const a = alpha * pt.brightness * (1 - t * 0.3);
+          pulseCtx.fillStyle = `rgba(${cr},${cg},${cb},${a.toFixed(3)})`;
+          pulseCtx.shadowColor = `rgba(${cr},${cg},${cb},${(a * 0.5).toFixed(3)})`;
+          pulseCtx.shadowBlur = 4 + sz;
+          pulseCtx.beginPath(); pulseCtx.arc(px, py, sz, 0, Math.PI * 2); pulseCtx.fill();
+        }
+        pulseCtx.shadowBlur = 0;
 
-        // Soft radial gradient per blob
-        const grad = pulseCtx.createRadialGradient(bx, by, 0, bx, by, blobSize);
-        const a = globalAlpha * blob.brightness;
-        grad.addColorStop(0, `rgba(${cr},${cg},${cb},${(a * 0.8).toFixed(3)})`);
-        grad.addColorStop(0.4, `rgba(${cr},${cg},${cb},${(a * 0.4).toFixed(3)})`);
-        grad.addColorStop(1, `rgba(${cr},${cg},${cb},0)`);
-
-        pulseCtx.fillStyle = grad;
-        pulseCtx.beginPath();
-        pulseCtx.arc(bx, by, blobSize, 0, Math.PI * 2);
-        pulseCtx.fill();
+      } else if (pulse.type === 'bloom') {
+        // Soft growing glow — multiple layered circles
+        const maxR = PULSE_SIZE * 0.35;
+        const easeT = t < 0.3 ? (t / 0.3) : 1;
+        const bloomR = easeT * maxR;
+        const fadeBloom = t > 0.2 ? Math.max(0, 1 - (t - 0.2) / 0.8) : 1;
+        for (let layer = 0; layer < 4; layer++) {
+          const lr = bloomR * (0.3 + layer * 0.25);
+          const la = fadeBloom * (0.25 - layer * 0.05);
+          const cr = layer % 2 === 0 ? pulse.r1 : pulse.r2;
+          const cg = layer % 2 === 0 ? pulse.g1 : pulse.g2;
+          const cb = layer % 2 === 0 ? pulse.b1 : pulse.b2;
+          const grad = pulseCtx.createRadialGradient(cx, cy, 0, cx, cy, lr);
+          grad.addColorStop(0, `rgba(${cr},${cg},${cb},${la.toFixed(3)})`);
+          grad.addColorStop(0.5, `rgba(${cr},${cg},${cb},${(la * 0.5).toFixed(3)})`);
+          grad.addColorStop(1, `rgba(${cr},${cg},${cb},0)`);
+          pulseCtx.fillStyle = grad;
+          pulseCtx.beginPath(); pulseCtx.arc(cx, cy, lr, 0, Math.PI * 2); pulseCtx.fill();
+        }
       }
     }
   }
@@ -1061,8 +1177,33 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
     if (sustainedEnergy > surgeThreshold && time - lastSurgeTime > 3000) {
       lastSurgeTime = time;
       energySurgeDir = Math.random() > 0.5 ? 1 : -1;
-      // Vary threshold slightly so surges aren't predictable
       surgeThreshold = 0.35 + Math.random() * 0.2;
+
+      // TYPE 4: Stardust on energy surge (max every 5s)
+      if (time - lastSurgePulseTime > 5000) {
+        lastSurgePulseTime = time;
+        fireStardust();
+      }
+    }
+
+    // TYPE 3: Aurora wisps on sustained high frequencies (max every 8s)
+    if (analyserRef && time - lastHighPulseTime > 8000) {
+      let highSum = 0;
+      for (let i = 60; i < 120; i++) highSum += freqData[i];
+      const highLevel = highSum / (60 * 255);
+      if (highLevel > 0.25 && masterEnergy > 0.2) {
+        lastHighPulseTime = time;
+        fireAuroraWisps();
+      }
+    }
+
+    // TYPE 5: Plasma bloom when energy drops suddenly (loud → quiet transition)
+    if (sustainedEnergy < 0.1 && masterEnergy < 0.05 && time - lastDropPulseTime > 10000) {
+      // Only fire if we were loud recently (within last 3s)
+      if (lastSurgeTime > 0 && time - lastSurgeTime < 3000) {
+        lastDropPulseTime = time;
+        firePlasmaBloom();
+      }
     }
 
     // Smooth drift toward target position
@@ -1171,6 +1312,11 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
       if (aboveSnare && aboveSnareFast && snareCooled && masterEnergy > 0.1) {
         lastSnareTime = time;
         spawnBurst(uniforms.uRimColor.value);
+        // TYPE 2: Shockwave on snare (max every 800ms)
+        if (time - lastSnarePulseTime > 800) {
+          lastSnarePulseTime = time;
+          fireShockwave();
+        }
       }
     }
 
