@@ -499,8 +499,61 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
   `;
   const trailCtx = trailCanvas.getContext('2d');
 
+  // Radial pulse element — sits behind everything, expands outward
+  const pulseEl = document.createElement('div');
+  pulseEl.style.cssText = `
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 0;
+    transition: none;
+  `;
+  container.appendChild(pulseEl);
   container.appendChild(trailCanvas);
   container.appendChild(canvas);
+
+  // Pulse state
+  let pulseActive = false;
+  let firstKickTime = 0;
+  let lastKickHeard = 0;
+  let nextPulseTime = 0;
+  let pulseCount = 0;
+
+  function firePulse(colorIdx) {
+    // Pick color from current theme
+    const colors = [
+      'rgba(0, 204, 168, 0.4)',   // teal
+      'rgba(68, 136, 204, 0.35)', // blue
+      'rgba(136, 102, 187, 0.3)', // purple
+      'rgba(255, 180, 100, 0.3)', // warm
+      'rgba(100, 220, 255, 0.35)', // cyan
+    ];
+    const color = colors[colorIdx % colors.length];
+    const color2 = colors[(colorIdx + 2) % colors.length];
+
+    pulseEl.style.background = `radial-gradient(circle, ${color} 0%, ${color2} 30%, transparent 70%)`;
+    pulseEl.style.transform = 'translate(-50%, -50%) scale(0)';
+    pulseEl.style.opacity = '1';
+
+    // Force reflow
+    pulseEl.offsetHeight;
+
+    const anim = pulseEl.animate([
+      { transform: 'translate(-50%, -50%) scale(0)', opacity: 0.8 },
+      { transform: 'translate(-50%, -50%) scale(20)', opacity: 0.6, offset: 0.15 },
+      { transform: 'translate(-50%, -50%) scale(80)', opacity: 0.3, offset: 0.4 },
+      { transform: 'translate(-50%, -50%) scale(200)', opacity: 0.05, offset: 0.8 },
+      { transform: 'translate(-50%, -50%) scale(250)', opacity: 0 },
+    ], {
+      duration: 2500,
+      easing: 'cubic-bezier(0.16, 1, 0.3, 1)',
+      fill: 'forwards',
+    });
+  }
 
   const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
   const scene = new THREE.Scene();
@@ -995,9 +1048,31 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
       if (aboveSlowThresh && aboveFastThresh && cooledDown && energy > 0.001) {
         kickTriggerTime = time;
         lastKickTime = time;
+        lastKickHeard = time;
         updateBPM(time);
-        const bpm = detectedBeatMs > 0 ? (60000 / detectedBeatMs).toFixed(1) : '?';
-        console.log('KICK flux:', normFlux.toFixed(4), 'bpm:', bpm, 'conf:', bpmConfidence.toFixed(2), 'loud:', integratedLoudness.toFixed(3));
+
+        // Schedule 8-bar pulse on first kick or when BPM is established
+        if (!pulseActive && detectedBeatMs > 0 && bpmConfidence > 0.3) {
+          pulseActive = true;
+          firstKickTime = time;
+          // 8 bars = 32 beats
+          const eightBarMs = detectedBeatMs * 32;
+          nextPulseTime = time; // fire immediately on first detection
+        }
+      }
+
+      // Fire scheduled pulse
+      if (pulseActive && time >= nextPulseTime) {
+        const eightBarMs = detectedBeatMs > 0 ? detectedBeatMs * 32 : 8000;
+        firePulse(pulseCount);
+        pulseCount++;
+        nextPulseTime = time + eightBarMs;
+      }
+
+      // Stop pulsing if no kick heard for 3 seconds
+      if (pulseActive && time - lastKickHeard > 3000) {
+        pulseActive = false;
+        pulseCount = 0;
       }
     }
 
