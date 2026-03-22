@@ -504,13 +504,14 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
   pulseEl.style.cssText = `
     position: absolute;
     top: 50%; left: 50%;
-    width: 10px; height: 10px;
+    width: 20px; height: 20px;
     border-radius: 50%;
     transform: translate(-50%, -50%) scale(0);
     opacity: 0;
     pointer-events: none;
     z-index: 0;
     transition: none;
+    mix-blend-mode: screen;
   `;
   container.appendChild(pulseEl);
   container.appendChild(trailCanvas);
@@ -523,33 +524,36 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
   let nextPulseTime = 0;
   let pulseCount = 0;
 
-  function firePulse(colorIdx) {
-    // Pick color from current theme
-    const colors = [
-      'rgba(0, 204, 168, 0.4)',   // teal
-      'rgba(68, 136, 204, 0.35)', // blue
-      'rgba(136, 102, 187, 0.3)', // purple
-      'rgba(255, 180, 100, 0.3)', // warm
-      'rgba(100, 220, 255, 0.35)', // cyan
-    ];
-    const color = colors[colorIdx % colors.length];
-    const color2 = colors[(colorIdx + 2) % colors.length];
+  function firePulse() {
+    // Get current glob colors from the shader uniforms
+    const base = uniforms.uBaseColor.value;
+    const rim = uniforms.uRimColor.value;
+    const toRGB = (c, a) => `rgba(${Math.round(c.r*255)},${Math.round(c.g*255)},${Math.round(c.b*255)},${a})`;
 
-    pulseEl.style.background = `radial-gradient(circle, ${color} 0%, ${color2} 30%, transparent 70%)`;
+    // Psychedelic plasma gradient — translucent layers of the glob's own color
+    const core = toRGB(rim, 0.5);
+    const mid = toRGB(base, 0.3);
+    const outer = toRGB(rim, 0.15);
+
+    pulseEl.style.background = `
+      radial-gradient(circle, ${core} 0%, ${mid} 15%, ${outer} 35%, transparent 60%),
+      radial-gradient(ellipse 120% 80% at 45% 55%, ${toRGB(rim, 0.2)} 0%, transparent 50%),
+      radial-gradient(ellipse 80% 120% at 55% 45%, ${toRGB(base, 0.15)} 0%, transparent 50%)
+    `;
+    pulseEl.style.mixBlendMode = 'screen';
     pulseEl.style.transform = 'translate(-50%, -50%) scale(0)';
     pulseEl.style.opacity = '1';
 
-    // Force reflow
     pulseEl.offsetHeight;
 
-    const anim = pulseEl.animate([
-      { transform: 'translate(-50%, -50%) scale(0)', opacity: 0.8 },
-      { transform: 'translate(-50%, -50%) scale(20)', opacity: 0.6, offset: 0.15 },
-      { transform: 'translate(-50%, -50%) scale(80)', opacity: 0.3, offset: 0.4 },
-      { transform: 'translate(-50%, -50%) scale(200)', opacity: 0.05, offset: 0.8 },
-      { transform: 'translate(-50%, -50%) scale(250)', opacity: 0 },
+    pulseEl.animate([
+      { transform: 'translate(-50%, -50%) scale(0)', opacity: 0.9, filter: 'blur(0px) brightness(1.5)' },
+      { transform: 'translate(-50%, -50%) scale(15)', opacity: 0.7, filter: 'blur(2px) brightness(1.3)', offset: 0.1 },
+      { transform: 'translate(-50%, -50%) scale(60)', opacity: 0.45, filter: 'blur(8px) brightness(1.1)', offset: 0.3 },
+      { transform: 'translate(-50%, -50%) scale(150)', opacity: 0.15, filter: 'blur(20px) brightness(1.0)', offset: 0.6 },
+      { transform: 'translate(-50%, -50%) scale(280)', opacity: 0, filter: 'blur(30px) brightness(0.8)' },
     ], {
-      duration: 2500,
+      duration: 3000,
       easing: 'cubic-bezier(0.16, 1, 0.3, 1)',
       fill: 'forwards',
     });
@@ -1064,7 +1068,7 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
       // Fire scheduled pulse
       if (pulseActive && time >= nextPulseTime) {
         const eightBarMs = detectedBeatMs > 0 ? detectedBeatMs * 32 : 8000;
-        firePulse(pulseCount);
+        firePulse();
         pulseCount++;
         nextPulseTime = time + eightBarMs;
       }
