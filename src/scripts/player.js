@@ -722,17 +722,23 @@ export async function init() {
           dots[i].style.opacity = '0';
         }
 
-        // After pop, hold black then fade in player
+        // Start metaball behind the frag container so it's ready
+        if (window.__onIntroExit) window.__onIntroExit();
+
+        // After pop, smoothly fade out the black overlay
         setTimeout(() => {
           if (fragContainer) {
-            fragContainer.classList.add('is-hidden');
-            fragContainer.style.display = 'none';
+            fragContainer.style.filter = 'none';
+            fragContainer.style.transition = 'opacity 2.5s ease';
+            fragContainer.style.opacity = '0';
           }
           landing.classList.remove('is-intro-mode');
-
-          // Start metaball + player fade in from black
-          if (window.__onIntroExit) window.__onIntroExit();
         }, 600);
+
+        // Remove frag container after fade completes
+        setTimeout(() => {
+          if (fragContainer) fragContainer.style.display = 'none';
+        }, 3500);
 
       }
     }
