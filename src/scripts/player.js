@@ -791,10 +791,14 @@ export async function init() {
     playBtn.addEventListener('animationend', onEnd);
   });
 
-  // Intro: play button reaches toward cursor
-  let introMouseX = 0, introMouseY = 0;
-  let introReachX = 0, introReachY = 0;
-  let introScaleX = 1, introScaleY = 1;
+  // Intro: play button grows a tendril/bulge toward cursor via clip-path/border-radius
+  let introMouseX = window.innerWidth / 2;
+  let introMouseY = window.innerHeight / 2;
+
+  // Smoothed radii — 8 values for border-radius (4 corners x 2 axes)
+  const baseR = 50; // base circle %
+  const radii = new Float32Array(8).fill(baseR);
+  const targetRadii = new Float32Array(8).fill(baseR);
 
   document.addEventListener('mousemove', (e) => {
     introMouseX = e.clientX;
@@ -803,6 +807,9 @@ export async function init() {
 
   function tickIntroReach() {
     if (!controlsEl?.classList.contains('is-intro')) {
+      // Reset to circle
+      playBtn.style.borderRadius = '';
+      playBtn.style.translate = '';
       requestAnimationFrame(tickIntroReach);
       return;
     }
@@ -810,41 +817,72 @@ export async function init() {
     const btnRect = playBtn.getBoundingClientRect();
     const btnCx = btnRect.left + btnRect.width / 2;
     const btnCy = btnRect.top + btnRect.height / 2;
+    const btnR = btnRect.width / 2;
 
     const dx = introMouseX - btnCx;
     const dy = introMouseY - btnCy;
     const dist = Math.sqrt(dx * dx + dy * dy);
 
-    // Normalize direction
-    const nx = dist > 1 ? dx / dist : 0;
-    const ny = dist > 1 ? dy / dist : 0;
-
-    // Reach strength — stronger when closer, max reach at ~200px, dies off beyond ~600px
-    const maxReach = 25; // px translation
+    // Reach strength — quadratic, stronger when closer
     let reachStr = 0;
-    if (dist < 600) {
+    if (dist > 10 && dist < 600) {
       reachStr = Math.max(0, 1 - dist / 600);
-      reachStr = reachStr * reachStr; // quadratic — much stronger close up
+      reachStr = reachStr * reachStr * 0.7;
     }
 
-    const targetX = nx * maxReach * reachStr;
-    const targetY = ny * maxReach * reachStr;
+    // Determine which side cursor is on
+    // top-left=0, top-right=1, bottom-right=2, bottom-left=3
+    const isRight = dx > 0;
+    const isBottom = dy > 0;
 
-    // Stretch along the direction toward cursor
-    const stretchAmount = reachStr * 0.2; // up to 20% stretch
-    const angle = Math.atan2(dy, dx);
-    const targetScaleX = 1 + Math.abs(Math.cos(angle)) * stretchAmount;
-    const targetScaleY = 1 + Math.abs(Math.sin(angle)) * stretchAmount;
+    // Reset all targets to base circle
+    for (let r = 0; r < 8; r++) targetRadii[r] = baseR;
 
-    // Smooth lerp
-    introReachX += (targetX - introReachX) * 0.06;
-    introReachY += (targetY - introReachY) * 0.06;
-    introScaleX += (targetScaleX - introScaleX) * 0.06;
-    introScaleY += (targetScaleY - introScaleY) * 0.06;
+    if (reachStr > 0.01) {
+      // Compute directional bulge — reduce border-radius on the side facing cursor
+      // This makes that side extend outward like a pseudopod
+      const bulge = reachStr * 35; // up to 35% reduction from 50%
 
-    // Apply — combine with existing CSS animations
-    playBtn.style.translate = `${introReachX.toFixed(1)}px ${introReachY.toFixed(1)}px`;
-    playBtn.style.scale = `${introScaleX.toFixed(4)} ${introScaleY.toFixed(4)}`;
+      if (isRight && isBottom) {
+        // Cursor is bottom-right — bulge bottom-right corner
+        targetRadii[4] = baseR - bulge;  // bottom-right horizontal
+        targetRadii[5] = baseR - bulge;  // bottom-right vertical
+        targetRadii[2] = baseR - bulge * 0.5; // top-right gets partial
+        targetRadii[6] = baseR - bulge * 0.5; // bottom-left gets partial
+      } else if (isRight && !isBottom) {
+        // Cursor is top-right
+        targetRadii[2] = baseR - bulge;
+        targetRadii[3] = baseR - bulge;
+        targetRadii[4] = baseR - bulge * 0.5;
+        targetRadii[0] = baseR - bulge * 0.5;
+      } else if (!isRight && isBottom) {
+        // Cursor is bottom-left
+        targetRadii[6] = baseR - bulge;
+        targetRadii[7] = baseR - bulge;
+        targetRadii[4] = baseR - bulge * 0.5;
+        targetRadii[0] = baseR - bulge * 0.5;
+      } else {
+        // Cursor is top-left
+        targetRadii[0] = baseR - bulge;
+        targetRadii[1] = baseR - bulge;
+        targetRadii[2] = baseR - bulge * 0.5;
+        targetRadii[6] = baseR - bulge * 0.5;
+      }
+
+      // Opposite side gets slightly rounder (pulled back)
+      if (isRight) { targetRadii[0] += bulge * 0.15; targetRadii[6] += bulge * 0.15; }
+      else { targetRadii[2] += bulge * 0.15; targetRadii[4] += bulge * 0.15; }
+    }
+
+    // Smooth lerp all radii
+    for (let r = 0; r < 8; r++) {
+      radii[r] += (targetRadii[r] - radii[r]) * 0.04;
+    }
+
+    // Apply as CSS border-radius
+    // Format: TL-h TR-h BR-h BL-h / TL-v TR-v BR-v BL-v
+    const r = radii;
+    playBtn.style.borderRadius = `${r[0].toFixed(1)}% ${r[2].toFixed(1)}% ${r[4].toFixed(1)}% ${r[6].toFixed(1)}% / ${r[1].toFixed(1)}% ${r[3].toFixed(1)}% ${r[5].toFixed(1)}% ${r[7].toFixed(1)}%`;
 
     requestAnimationFrame(tickIntroReach);
   }
