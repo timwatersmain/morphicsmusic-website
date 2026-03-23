@@ -858,12 +858,11 @@ export async function init() {
 
       let r = baseR;
 
-      // Hover wobble — subtle organic flowing
+      // Hover wobble — subtle organic flowing (size independent of wobble now)
       if (isHoveringBtn) {
         r += Math.sin(theta * 3 + now * 1.0) * baseR * 0.035;
         r += Math.sin(theta * 5 - now * 0.7) * baseR * 0.018;
         r += Math.sin(theta * 2 + now * 0.4) * baseR * 0.025;
-        r *= 1.05;
       }
 
       // Reach bulge — only when not hovering
@@ -890,14 +889,24 @@ export async function init() {
     playBtn.style.margin = `-${maxExtend}px`;
     playBtn.style.clipPath = `polygon(${points.join(',')})`;
 
-    // Hover glow — outer glow + brightness via filter
-    if (isHoveringBtn) {
-      playBtn.style.filter = 'drop-shadow(0 0 12px rgba(255,255,255,0.15)) drop-shadow(0 0 30px rgba(255,255,255,0.06)) brightness(1.2)';
-      playBtn.style.background = 'rgba(255, 255, 255, 0.16)';
+    // Distance-based size: closer = larger, farther = smaller
+    // Proximity 1 = on top, 0 = far away
+    const proximity = Math.max(0, 1 - dist / 700);
+    const sizeScale = 0.75 + proximity * 0.35; // 0.75 at far → 1.1 at close
+    playBtn.style.transform = `scale(${sizeScale.toFixed(4)})`;
+
+    // Distance-based brightness and glow: closer = brighter
+    const brightness = 0.85 + proximity * 0.4; // 0.85 at far → 1.25 at close
+    const bgAlpha = (0.08 + proximity * 0.1).toFixed(3); // 0.08 at far → 0.18 at close
+    const glowStr = proximity * 0.2; // glow only visible when close
+    const glowOuter = proximity * 0.08;
+
+    if (glowStr > 0.01) {
+      playBtn.style.filter = `drop-shadow(0 0 ${(12 * proximity).toFixed(0)}px rgba(255,255,255,${glowStr.toFixed(3)})) drop-shadow(0 0 ${(30 * proximity).toFixed(0)}px rgba(255,255,255,${glowOuter.toFixed(3)})) brightness(${brightness.toFixed(3)})`;
     } else {
-      playBtn.style.filter = '';
-      playBtn.style.background = '';
+      playBtn.style.filter = `brightness(${brightness.toFixed(3)})`;
     }
+    playBtn.style.background = `rgba(255, 255, 255, ${bgAlpha})`;
 
     requestAnimationFrame(tickIntroReach);
   }
