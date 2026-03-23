@@ -791,25 +791,67 @@ export async function init() {
     playBtn.addEventListener('animationend', onEnd);
   });
 
-  // Intro: play button grows a tendril/bulge toward cursor via clip-path/border-radius
+  // Intro: play button morphs a smooth teardrop bulge toward cursor
   let introMouseX = window.innerWidth / 2;
   let introMouseY = window.innerHeight / 2;
+  let smoothAngle = 0;
+  let smoothReach = 0;
 
-  // Smoothed radii — 8 values for border-radius (4 corners x 2 axes)
-  const baseR = 50; // base circle %
-  const radii = new Float32Array(8).fill(baseR);
-  const targetRadii = new Float32Array(8).fill(baseR);
+  // Create SVG clip-path for organic blob shape
+  const svgNS = 'http://www.w3.org/2000/svg';
+  const clipSvg = document.createElementNS(svgNS, 'svg');
+  clipSvg.setAttribute('width', '0');
+  clipSvg.setAttribute('height', '0');
+  clipSvg.style.position = 'absolute';
+  const clipDefs = document.createElementNS(svgNS, 'defs');
+  const clipPath = document.createElementNS(svgNS, 'clipPath');
+  clipPath.id = 'intro-blob-clip';
+  clipPath.setAttribute('clipPathUnits', 'objectBoundingBox');
+  const clipPathEl = document.createElementNS(svgNS, 'path');
+  clipPath.appendChild(clipPathEl);
+  clipDefs.appendChild(clipPath);
+  clipSvg.appendChild(clipDefs);
+  document.body.appendChild(clipSvg);
 
   document.addEventListener('mousemove', (e) => {
     introMouseX = e.clientX;
     introMouseY = e.clientY;
   });
 
+  function buildBlobPath(angle, reach) {
+    // Generate a circle with a smooth bulge in one direction
+    // Uses polar coordinates — radius = 0.5 + bulge in direction of angle
+    const cx = 0.5, cy = 0.5;
+    const points = 64;
+    let d = '';
+    for (let i = 0; i <= points; i++) {
+      const theta = (i / points) * Math.PI * 2;
+      // Base circle radius (in 0-1 clipPath space)
+      let r = 0.48;
+
+      // Bulge: cosine falloff centered on the target angle
+      const angleDiff = theta - angle;
+      // Wrap to -PI..PI
+      let diff = ((angleDiff + Math.PI) % (Math.PI * 2)) - Math.PI;
+      if (diff < -Math.PI) diff += Math.PI * 2;
+
+      // Smooth teardrop: narrow bulge (cos^3 gives a pointed shape)
+      const cosD = Math.cos(diff * 0.7);
+      if (cosD > 0) {
+        r += reach * cosD * cosD * cosD * 0.35;
+      }
+
+      const px = cx + Math.cos(theta) * r;
+      const py = cy + Math.sin(theta) * r;
+      d += (i === 0 ? 'M' : 'L') + px.toFixed(4) + ',' + py.toFixed(4);
+    }
+    return d + 'Z';
+  }
+
   function tickIntroReach() {
     if (!controlsEl?.classList.contains('is-intro')) {
-      // Reset to circle
+      playBtn.style.clipPath = '';
       playBtn.style.borderRadius = '';
-      playBtn.style.translate = '';
       requestAnimationFrame(tickIntroReach);
       return;
     }
@@ -817,72 +859,36 @@ export async function init() {
     const btnRect = playBtn.getBoundingClientRect();
     const btnCx = btnRect.left + btnRect.width / 2;
     const btnCy = btnRect.top + btnRect.height / 2;
-    const btnR = btnRect.width / 2;
 
     const dx = introMouseX - btnCx;
     const dy = introMouseY - btnCy;
     const dist = Math.sqrt(dx * dx + dy * dy);
+    const targetAngle = Math.atan2(dy, dx);
 
     // Reach strength — quadratic, stronger when closer
-    let reachStr = 0;
-    if (dist > 10 && dist < 600) {
-      reachStr = Math.max(0, 1 - dist / 600);
-      reachStr = reachStr * reachStr * 0.7;
+    let targetReach = 0;
+    if (dist > 10 && dist < 700) {
+      targetReach = Math.max(0, 1 - dist / 700);
+      targetReach = targetReach * targetReach;
     }
 
-    // Determine which side cursor is on
-    // top-left=0, top-right=1, bottom-right=2, bottom-left=3
-    const isRight = dx > 0;
-    const isBottom = dy > 0;
+    // Smooth angle and reach
+    // Angle needs circular interpolation
+    let angleDiff = targetAngle - smoothAngle;
+    if (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+    if (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+    smoothAngle += angleDiff * 0.05;
+    smoothReach += (targetReach - smoothReach) * 0.04;
 
-    // Reset all targets to base circle
-    for (let r = 0; r < 8; r++) targetRadii[r] = baseR;
-
-    if (reachStr > 0.01) {
-      // Compute directional bulge — reduce border-radius on the side facing cursor
-      // This makes that side extend outward like a pseudopod
-      const bulge = reachStr * 35; // up to 35% reduction from 50%
-
-      if (isRight && isBottom) {
-        // Cursor is bottom-right — bulge bottom-right corner
-        targetRadii[4] = baseR - bulge;  // bottom-right horizontal
-        targetRadii[5] = baseR - bulge;  // bottom-right vertical
-        targetRadii[2] = baseR - bulge * 0.5; // top-right gets partial
-        targetRadii[6] = baseR - bulge * 0.5; // bottom-left gets partial
-      } else if (isRight && !isBottom) {
-        // Cursor is top-right
-        targetRadii[2] = baseR - bulge;
-        targetRadii[3] = baseR - bulge;
-        targetRadii[4] = baseR - bulge * 0.5;
-        targetRadii[0] = baseR - bulge * 0.5;
-      } else if (!isRight && isBottom) {
-        // Cursor is bottom-left
-        targetRadii[6] = baseR - bulge;
-        targetRadii[7] = baseR - bulge;
-        targetRadii[4] = baseR - bulge * 0.5;
-        targetRadii[0] = baseR - bulge * 0.5;
-      } else {
-        // Cursor is top-left
-        targetRadii[0] = baseR - bulge;
-        targetRadii[1] = baseR - bulge;
-        targetRadii[2] = baseR - bulge * 0.5;
-        targetRadii[6] = baseR - bulge * 0.5;
-      }
-
-      // Opposite side gets slightly rounder (pulled back)
-      if (isRight) { targetRadii[0] += bulge * 0.15; targetRadii[6] += bulge * 0.15; }
-      else { targetRadii[2] += bulge * 0.15; targetRadii[4] += bulge * 0.15; }
+    if (smoothReach > 0.01) {
+      const pathD = buildBlobPath(smoothAngle, smoothReach);
+      clipPathEl.setAttribute('d', pathD);
+      playBtn.style.clipPath = 'url(#intro-blob-clip)';
+      playBtn.style.borderRadius = '0';
+    } else {
+      playBtn.style.clipPath = '';
+      playBtn.style.borderRadius = '';
     }
-
-    // Smooth lerp all radii
-    for (let r = 0; r < 8; r++) {
-      radii[r] += (targetRadii[r] - radii[r]) * 0.04;
-    }
-
-    // Apply as CSS border-radius
-    // Format: TL-h TR-h BR-h BL-h / TL-v TR-v BR-v BL-v
-    const r = radii;
-    playBtn.style.borderRadius = `${r[0].toFixed(1)}% ${r[2].toFixed(1)}% ${r[4].toFixed(1)}% ${r[6].toFixed(1)}% / ${r[1].toFixed(1)}% ${r[3].toFixed(1)}% ${r[5].toFixed(1)}% ${r[7].toFixed(1)}%`;
 
     requestAnimationFrame(tickIntroReach);
   }
