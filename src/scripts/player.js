@@ -899,19 +899,18 @@ export async function init() {
     const sizeScale = 0.75 + proximity * 0.35;
     playBtn.style.transform = `scale(${sizeScale.toFixed(4)})`;
 
-    // Greyscale only — no hue. Dark when far, bright when close
+    // Pure white at varying opacity — no grey tones, no hue
     if (isHoveringBtn) {
-      // Instant highlight on hover
-      playBtn.style.background = 'rgba(180, 180, 180, 0.22)';
-      playBtn.style.filter = 'drop-shadow(0 0 12px rgba(200,200,200,0.2)) drop-shadow(0 0 30px rgba(200,200,200,0.08))';
+      playBtn.style.background = 'rgba(255, 255, 255, 0.22)';
+      playBtn.style.filter = 'drop-shadow(0 0 12px rgba(255,255,255,0.2)) drop-shadow(0 0 30px rgba(255,255,255,0.08))';
     } else {
-      const grey = Math.round(120 + proximity * 80); // 120 far → 200 close
-      const alpha = (0.08 + proximity * 0.08).toFixed(3);
-      playBtn.style.background = `rgba(${grey}, ${grey}, ${grey}, ${alpha})`;
+      // White only — opacity scales from 0.10 (far) to 0.16 (close)
+      const alpha = (0.10 + proximity * 0.06).toFixed(3);
+      playBtn.style.background = `rgba(255, 255, 255, ${alpha})`;
 
-      const glowStr = proximity * 0.15;
+      const glowStr = proximity * 0.12;
       if (glowStr > 0.01) {
-        playBtn.style.filter = `drop-shadow(0 0 ${(10 * proximity).toFixed(0)}px rgba(200,200,200,${glowStr.toFixed(3)}))`;
+        playBtn.style.filter = `drop-shadow(0 0 ${(10 * proximity).toFixed(0)}px rgba(255,255,255,${glowStr.toFixed(3)}))`;
       } else {
         playBtn.style.filter = '';
       }
