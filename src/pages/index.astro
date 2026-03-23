@@ -91,6 +91,10 @@ import Player from '../components/Player.astro';
     });
     iconEls.push(btnEls[i].querySelector('svg') || btnEls[i].querySelector('span'));
   }
+  // Button drift enabled flag — disabled during intro fade
+  let btnDriftEnabled = false;
+  window.__enableBtnDrift = () => { btnDriftEnabled = true; };
+
   // Generate dot array for intro mode
   const fragContainer = document.getElementById('frag-container');
   const dotCount = 35;
@@ -159,8 +163,8 @@ import Player from '../components/Player.astro';
     // 4. Letter wave + hover + bounce
     tickLetters(time);
 
-    // 5. Button + icon ambient drift (independent seeds)
-    for (let i = 0; i < btnEls.length; i++) {
+    // 5. Button + icon ambient drift (only after intro fade completes)
+    if (btnDriftEnabled) for (let i = 0; i < btnEls.length; i++) {
       const s = btnSeeds[i];
       const x = Math.sin(bt * s.sx + s.px) * s.ax;
       const y = Math.sin(bt * s.sy + s.py) * s.ay;

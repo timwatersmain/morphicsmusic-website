@@ -558,34 +558,79 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
   `;
   const pulseCtx = pulseCanvas.getContext('2d');
   container.appendChild(pulseCanvas);
-  // Horizontal lens flare — full width, centered on glob
-  const flareEl = document.createElement('div');
-  flareEl.style.cssText = `
+  // Horizontal lens flare — animated plasma canvas
+  const flareCanvas = document.createElement('canvas');
+  const FLARE_W = window.innerWidth;
+  const FLARE_H = 40;
+  flareCanvas.width = FLARE_W;
+  flareCanvas.height = FLARE_H;
+  flareCanvas.style.cssText = `
     position: absolute;
     top: 50%; left: 0;
-    width: 100%; height: 3px;
+    width: ${FLARE_W}px; height: ${FLARE_H}px;
     transform: translateY(-50%);
     pointer-events: none;
     z-index: 1;
     opacity: 0;
     transition: opacity 2.5s ease;
-    background: linear-gradient(90deg,
-      transparent 0%,
-      rgba(200,210,220,0.03) 10%,
-      rgba(200,210,220,0.08) 25%,
-      rgba(200,210,220,0.2) 40%,
-      rgba(255,255,255,0.35) 50%,
-      rgba(200,210,220,0.2) 60%,
-      rgba(200,210,220,0.08) 75%,
-      rgba(200,210,220,0.03) 90%,
-      transparent 100%
-    );
-    box-shadow:
-      0 0 8px rgba(200,210,220,0.15),
-      0 0 30px rgba(200,210,220,0.08),
-      0 0 60px rgba(200,210,220,0.04);
-    filter: blur(1px);
+    mix-blend-mode: screen;
   `;
+  const flareCtx = flareCanvas.getContext('2d');
+  const flareEl = flareCanvas; // alias for show/hide
+
+  function tickFlare(time) {
+    flareCtx.clearRect(0, 0, FLARE_W, FLARE_H);
+    const t = time / 1000;
+    const midY = FLARE_H / 2;
+    const base = uniforms.uBaseColor.value;
+    const rim = uniforms.uRimColor.value;
+
+    // Main bright core line
+    const coreGrad = flareCtx.createLinearGradient(0, 0, FLARE_W, 0);
+    coreGrad.addColorStop(0, 'rgba(255,255,255,0)');
+    coreGrad.addColorStop(0.15, `rgba(${Math.round(rim.r*255)},${Math.round(rim.g*255)},${Math.round(rim.b*255)},0.1)`);
+    coreGrad.addColorStop(0.35, `rgba(255,255,255,0.3)`);
+    coreGrad.addColorStop(0.5, `rgba(255,255,255,0.6)`);
+    coreGrad.addColorStop(0.65, `rgba(255,255,255,0.3)`);
+    coreGrad.addColorStop(0.85, `rgba(${Math.round(rim.r*255)},${Math.round(rim.g*255)},${Math.round(rim.b*255)},0.1)`);
+    coreGrad.addColorStop(1, 'rgba(255,255,255,0)');
+    flareCtx.fillStyle = coreGrad;
+    flareCtx.fillRect(0, midY - 1, FLARE_W, 2);
+
+    // Soft glow band
+    const glowGrad = flareCtx.createLinearGradient(0, 0, FLARE_W, 0);
+    glowGrad.addColorStop(0, 'transparent');
+    glowGrad.addColorStop(0.2, `rgba(${Math.round(rim.r*255)},${Math.round(rim.g*255)},${Math.round(rim.b*255)},0.06)`);
+    glowGrad.addColorStop(0.5, `rgba(${Math.round(rim.r*255)},${Math.round(rim.g*255)},${Math.round(rim.b*255)},0.15)`);
+    glowGrad.addColorStop(0.8, `rgba(${Math.round(rim.r*255)},${Math.round(rim.g*255)},${Math.round(rim.b*255)},0.06)`);
+    glowGrad.addColorStop(1, 'transparent');
+    flareCtx.fillStyle = glowGrad;
+    flareCtx.fillRect(0, midY - 10, FLARE_W, 20);
+
+    // Animated plasma nodes — slow electricity crawling along the flare
+    const nodeCount = 12;
+    for (let n = 0; n < nodeCount; n++) {
+      // Each node drifts horizontally with sine wave
+      const baseX = (n / nodeCount) * FLARE_W;
+      const nx = baseX + Math.sin(t * 0.3 + n * 1.7) * 40 + Math.sin(t * 0.7 + n * 2.3) * 20;
+      const ny = midY + Math.sin(t * 0.5 + n * 1.3) * 3;
+      const nodeSize = 6 + Math.sin(t * 0.4 + n * 0.9) * 4;
+      const nodeAlpha = 0.15 + Math.sin(t * 0.25 + n * 1.1) * 0.1;
+
+      const cr = Math.round(rim.r * 200 + 55);
+      const cg = Math.round(rim.g * 200 + 55);
+      const cb = Math.round(rim.b * 200 + 55);
+
+      const nodeGrad = flareCtx.createRadialGradient(nx, ny, 0, nx, ny, nodeSize);
+      nodeGrad.addColorStop(0, `rgba(255,255,255,${(nodeAlpha * 1.5).toFixed(3)})`);
+      nodeGrad.addColorStop(0.3, `rgba(${cr},${cg},${cb},${nodeAlpha.toFixed(3)})`);
+      nodeGrad.addColorStop(1, `rgba(${cr},${cg},${cb},0)`);
+      flareCtx.fillStyle = nodeGrad;
+      flareCtx.beginPath();
+      flareCtx.arc(nx, ny, nodeSize, 0, Math.PI * 2);
+      flareCtx.fill();
+    }
+  }
 
   container.appendChild(shadowEl);
   container.appendChild(flareEl);
@@ -1548,6 +1593,9 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
       renderer.render(particleScene, particleCam);
       renderer.autoClear = true;
     }
+
+    // Animate lens flare
+    tickFlare(time);
 
     // Clear pulse canvas, then draw wanderers + pulses
     pulseCtx.clearRect(0, 0, PULSE_W, PULSE_H);

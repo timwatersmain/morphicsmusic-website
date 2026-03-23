@@ -708,13 +708,14 @@ export async function init() {
             t.style.opacity = '1';
           });
 
-          // Clean up inline styles after fade completes
+          // Clean up inline styles and enable drift after fade completes
           setTimeout(() => {
             allBtns.forEach(t => {
               t.style.transition = '';
               t.style.opacity = '';
               t.style.animation = '';
             });
+            if (window.__enableBtnDrift) window.__enableBtnDrift();
           }, 2800);
         });
       }, 800);
