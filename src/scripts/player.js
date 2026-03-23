@@ -899,6 +899,13 @@ export async function init() {
     const sizeScale = 0.75 + proximity * 0.35;
     playBtn.style.transform = `scale(${sizeScale.toFixed(4)})`;
 
+    // Toggle ripple animations on hover
+    if (isHoveringBtn) {
+      playBtn.classList.add('is-hover-active');
+    } else {
+      playBtn.classList.remove('is-hover-active');
+    }
+
     // Pure white at varying opacity — no grey tones, no hue
     if (isHoveringBtn) {
       playBtn.style.background = 'rgba(255, 255, 255, 0.22)';
