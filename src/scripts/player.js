@@ -827,9 +827,11 @@ export async function init() {
     const targetAngle = Math.atan2(dy, dx);
 
     // Inverted reach: extends when cursor is far, retracts when close
+    // Don't reach toward nav bar (top ~50px of screen)
     const isHoveringBtn = dist < 80;
+    const cursorInNav = introMouseY < 55;
     let targetReach = 0;
-    if (dist > 80 && dist < 700) {
+    if (!cursorInNav && dist > 80 && dist < 700) {
       targetReach = Math.min((dist - 80) / 500, 1) * 0.8;
     }
 
