@@ -858,12 +858,12 @@ export async function init() {
 
       let r = baseR;
 
-      // Hover wobble — organic flowing shape when cursor is on the button
+      // Hover wobble — subtle organic flowing
       if (isHoveringBtn) {
-        r += Math.sin(theta * 3 + now * 1.2) * baseR * 0.06;
-        r += Math.sin(theta * 5 - now * 0.8) * baseR * 0.03;
-        r += Math.sin(theta * 2 + now * 0.5) * baseR * 0.04;
-        r *= 1.08; // slightly larger when hovering
+        r += Math.sin(theta * 3 + now * 1.0) * baseR * 0.035;
+        r += Math.sin(theta * 5 - now * 0.7) * baseR * 0.018;
+        r += Math.sin(theta * 2 + now * 0.4) * baseR * 0.025;
+        r *= 1.05;
       }
 
       // Reach bulge — only when not hovering
@@ -889,6 +889,15 @@ export async function init() {
     playBtn.style.height = totalSize + 'px';
     playBtn.style.margin = `-${maxExtend}px`;
     playBtn.style.clipPath = `polygon(${points.join(',')})`;
+
+    // Hover glow — outer glow + brightness via filter
+    if (isHoveringBtn) {
+      playBtn.style.filter = 'drop-shadow(0 0 12px rgba(255,255,255,0.15)) drop-shadow(0 0 30px rgba(255,255,255,0.06)) brightness(1.2)';
+      playBtn.style.background = 'rgba(255, 255, 255, 0.16)';
+    } else {
+      playBtn.style.filter = '';
+      playBtn.style.background = '';
+    }
 
     requestAnimationFrame(tickIntroReach);
   }
