@@ -830,12 +830,12 @@ export async function init() {
       targetReach = Math.min((dist - 80) / 500, 1) * 0.8;
     }
 
-    // Smooth interpolation
+    // Smooth interpolation — fast tracking
     let angleDiff = targetAngle - smoothAngle;
     if (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
     if (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
-    smoothAngle += angleDiff * 0.05;
-    smoothReach += (targetReach - smoothReach) * 0.04;
+    smoothAngle += angleDiff * 0.18;
+    smoothReach += (targetReach - smoothReach) * 0.15;
 
     // Make the button element larger to have room for the bulge
     const maxExtend = introBaseSize * 0.9; // max extra reach in px
