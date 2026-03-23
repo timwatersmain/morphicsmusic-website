@@ -791,25 +791,14 @@ export async function init() {
     playBtn.addEventListener('animationend', onEnd);
   });
 
-  // Intro: play button extends a smooth teardrop toward cursor
+  // Intro: play button itself morphs shape toward cursor via polygon clip-path
   let introMouseX = window.innerWidth / 2;
   let introMouseY = window.innerHeight / 2;
   let smoothAngle = 0;
   let smoothReach = 0;
 
-  // Canvas overlay that draws the extending blob behind the button
-  const reachCanvas = document.createElement('canvas');
-  const RC_SIZE = 500;
-  reachCanvas.width = RC_SIZE;
-  reachCanvas.height = RC_SIZE;
-  reachCanvas.style.cssText = `
-    position: fixed;
-    pointer-events: none;
-    z-index: 9997;
-    width: ${RC_SIZE}px; height: ${RC_SIZE}px;
-  `;
-  document.body.appendChild(reachCanvas);
-  const rctx = reachCanvas.getContext('2d');
+  // Make button large enough to contain the extension — actual visible shape controlled by clip-path
+  const introBaseSize = 150; // CSS size of intro .ctrl-play
 
   document.addEventListener('mousemove', (e) => {
     introMouseX = e.clientX;
@@ -818,33 +807,27 @@ export async function init() {
 
   function tickIntroReach() {
     if (!controlsEl?.classList.contains('is-intro')) {
-      reachCanvas.style.display = 'none';
+      playBtn.style.clipPath = '';
+      playBtn.style.width = '';
+      playBtn.style.height = '';
+      playBtn.style.margin = '';
       requestAnimationFrame(tickIntroReach);
       return;
     }
-    reachCanvas.style.display = '';
 
     const btnRect = playBtn.getBoundingClientRect();
     const btnCx = btnRect.left + btnRect.width / 2;
     const btnCy = btnRect.top + btnRect.height / 2;
-    const btnR = btnRect.width / 2;
-
-    // Position canvas centered on button
-    reachCanvas.style.left = (btnCx - RC_SIZE / 2) + 'px';
-    reachCanvas.style.top = (btnCy - RC_SIZE / 2) + 'px';
 
     const dx = introMouseX - btnCx;
     const dy = introMouseY - btnCy;
     const dist = Math.sqrt(dx * dx + dy * dy);
     const targetAngle = Math.atan2(dy, dx);
 
-    // Reach strength — inverted: bigger when cursor is far, shrinks as cursor approaches
+    // Inverted reach: extends when cursor is far, retracts when close
     let targetReach = 0;
     if (dist > 80 && dist < 700) {
-      targetReach = Math.min((dist - 80) / 500, 1);
-      targetReach = targetReach * 0.8;
-    } else if (dist <= 80) {
-      targetReach = 0; // fully retracted when hovering close
+      targetReach = Math.min((dist - 80) / 500, 1) * 0.8;
     }
 
     // Smooth interpolation
@@ -854,50 +837,39 @@ export async function init() {
     smoothAngle += angleDiff * 0.05;
     smoothReach += (targetReach - smoothReach) * 0.04;
 
-    rctx.clearRect(0, 0, RC_SIZE, RC_SIZE);
+    // Make the button element larger to have room for the bulge
+    const maxExtend = introBaseSize * 0.9; // max extra reach in px
+    const totalSize = introBaseSize + maxExtend * 2;
+    const halfSize = totalSize / 2;
+    const baseR = introBaseSize / 2; // circle radius in the larger element
+    const peakDist = smoothReach * baseR * 1.8;
+    const bulgeWidth = 1.2;
 
-    const ccx = RC_SIZE / 2;
-    const ccy = RC_SIZE / 2;
+    // Build polygon clip-path in % coordinates
+    const steps = 64;
+    let points = [];
+    for (let i = 0; i < steps; i++) {
+      const theta = (i / steps) * Math.PI * 2;
+      let r = baseR;
 
-    if (smoothReach > 0.01) {
-      const peakDist = smoothReach * btnR * 1.8;
-      const bulgeWidth = 1.2;
-
-      // Draw the full blob shape
-      rctx.fillStyle = 'rgba(255, 255, 255, 0.14)';
-
-      // First: draw the full blob shape including circle + bulge
-      rctx.beginPath();
-      const steps = 80;
-      for (let i = 0; i <= steps; i++) {
-        const theta = (i / steps) * Math.PI * 2;
-        let r = btnR;
-        let diff = theta - smoothAngle;
-        if (diff > Math.PI) diff -= Math.PI * 2;
-        if (diff < -Math.PI) diff += Math.PI * 2;
-        if (Math.abs(diff) < bulgeWidth) {
-          const t = 1 - Math.abs(diff) / bulgeWidth;
-          const sineT = Math.sin(t * Math.PI / 2);
-          r += peakDist * sineT * sineT;
-        }
-        const px = ccx + Math.cos(theta) * r;
-        const py = ccy + Math.sin(theta) * r;
-        if (i === 0) rctx.moveTo(px, py); else rctx.lineTo(px, py);
+      let diff = theta - smoothAngle;
+      if (diff > Math.PI) diff -= Math.PI * 2;
+      if (diff < -Math.PI) diff += Math.PI * 2;
+      if (Math.abs(diff) < bulgeWidth) {
+        const t = 1 - Math.abs(diff) / bulgeWidth;
+        const sineT = Math.sin(t * Math.PI / 2);
+        r += peakDist * sineT * sineT;
       }
-      rctx.closePath();
 
-      // Cut out the button circle so only the extension is visible
-      // This prevents the double-layer overlap
-      rctx.moveTo(ccx + btnR, ccy);
-      for (let i = steps; i >= 0; i--) {
-        const theta = (i / steps) * Math.PI * 2;
-        const px = ccx + Math.cos(theta) * (btnR - 1);
-        const py = ccy + Math.sin(theta) * (btnR - 1);
-        rctx.lineTo(px, py);
-      }
-      rctx.closePath();
-      rctx.fill();
+      const px = ((halfSize + Math.cos(theta) * r) / totalSize * 100).toFixed(2);
+      const py = ((halfSize + Math.sin(theta) * r) / totalSize * 100).toFixed(2);
+      points.push(`${px}% ${py}%`);
     }
+
+    playBtn.style.width = totalSize + 'px';
+    playBtn.style.height = totalSize + 'px';
+    playBtn.style.margin = `-${maxExtend}px`;
+    playBtn.style.clipPath = `polygon(${points.join(',')})`;
 
     requestAnimationFrame(tickIntroReach);
   }
