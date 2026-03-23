@@ -630,16 +630,11 @@ export async function init() {
       const cx = btnRect.left + btnRect.width / 2;
       const cy = btnRect.top + btnRect.height / 2;
 
-      // Hide all controls for fade-in later
-      controlsEl.classList.remove('is-intro');
-      playBtn.classList.remove('intro-rising', 'intro-hovering', 'leave-ripple');
-      const targets = controlsEl.querySelectorAll(':scope > .ctrl-btn, :scope > .volume-wrap');
+      // Phase 1: Bubble pop — squeeze then burst (while still in intro mode)
+      const popRect = playBtn.getBoundingClientRect();
+      const pcx = popRect.left + popRect.width / 2;
+      const pcy = popRect.top + popRect.height / 2;
 
-      // Hide everything immediately
-      targets.forEach(t => { t.style.opacity = '0'; });
-      playBtn.style.opacity = '0';
-
-      // Phase 1: Bubble pop — squeeze then burst
       const popAnim = playBtn.animate([
         { transform: 'scale(1)', opacity: 1 },
         { transform: 'scale(0.85)', opacity: 1, offset: 0.2 },
@@ -648,10 +643,7 @@ export async function init() {
         { transform: 'scale(1.4)', opacity: 0, offset: 1.0 },
       ], { duration: 500, easing: 'ease-out', fill: 'forwards' });
 
-      // Spawn 12 particles that trail outward from button center
-      const popRect = playBtn.getBoundingClientRect();
-      const pcx = popRect.left + popRect.width / 2;
-      const pcy = popRect.top + popRect.height / 2;
+      // Spawn 12 particles
       const particleCount = 12;
       const particleContainer = document.createElement('div');
       particleContainer.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;';
@@ -687,25 +679,45 @@ export async function init() {
 
       setTimeout(() => particleContainer.remove(), 2200);
 
-      popAnim.onfinish = () => {
-        popAnim.cancel();
-        playBtn.classList.add('is-popped');
-      };
-
-      // Phase 2: Fade in all controls from black
+      // Phase 2: After pop, switch to player mode with all buttons hidden, then fade in
       setTimeout(() => {
-        playBtn.classList.remove('is-popped');
-        const allBtns = [...targets, playBtn];
-        allBtns.forEach(t => {
-          t.style.transition = 'opacity 2.5s ease';
-          t.style.opacity = '1';
-        });
+        // Get all controls BEFORE switching layout
+        const targets = controlsEl.querySelectorAll(':scope > .ctrl-btn, :scope > .volume-wrap');
 
-        // Clean up inline styles after fade completes
-        setTimeout(() => {
-          allBtns.forEach(t => { t.style.transition = ''; t.style.opacity = ''; });
-        }, 2800);
-      }, 1200);
+        // Hide everything with opacity FIRST
+        targets.forEach(t => {
+          t.style.opacity = '0';
+          t.style.animation = 'none'; // kill CSS morph animations during fade
+        });
+        playBtn.style.opacity = '0';
+        playBtn.style.animation = 'none';
+
+        // NOW switch layout — buttons are invisible so no flash
+        popAnim.cancel();
+        controlsEl.classList.remove('is-intro');
+        playBtn.classList.remove('intro-rising', 'intro-hovering', 'leave-ripple', 'is-popped');
+
+        // Force layout recalc so buttons are in final positions
+        controlsEl.offsetHeight;
+
+        // Fade in all controls in place — no movement, just opacity
+        requestAnimationFrame(() => {
+          const allBtns = [...targets, playBtn];
+          allBtns.forEach(t => {
+            t.style.transition = 'opacity 2.5s ease';
+            t.style.opacity = '1';
+          });
+
+          // Clean up inline styles after fade completes
+          setTimeout(() => {
+            allBtns.forEach(t => {
+              t.style.transition = '';
+              t.style.opacity = '';
+              t.style.animation = '';
+            });
+          }, 2800);
+        });
+      }, 800);
 
       // Merge dot array into blob
       const landing = document.querySelector('.landing');
