@@ -667,8 +667,27 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
         const maxR = maxDim * 0.55;
         const ringR = 20 + t * t * maxR;
         const a = alpha * 0.7;
-        // Glow width grows as ring expands
         const glowWidth = (20 + t * 60) * glowGrow;
+
+        // Trail: fading glow tunnel from center to current ring position
+        const trailSteps = 8;
+        for (let tr = 0; tr < trailSteps; tr++) {
+          const trailT = tr / trailSteps;
+          const trailR = ringR * trailT;
+          const trailA = a * 0.08 * (1 - trailT * 0.5) * (1 - t * 0.5); // brighter near center, fades with time
+          const trailWidth = glowWidth * (0.3 + trailT * 0.7);
+          const tInner = Math.max(0, trailR - trailWidth * 0.3);
+          const tOuter = trailR + trailWidth * 0.6;
+          const tGrad = pulseCtx.createRadialGradient(cx, cy, tInner, cx, cy, tOuter);
+          tGrad.addColorStop(0, `rgba(${pulse.r2},${pulse.g2},${pulse.b2},0)`);
+          tGrad.addColorStop(0.4, `rgba(${pulse.r1},${pulse.g1},${pulse.b1},${trailA.toFixed(4)})`);
+          tGrad.addColorStop(0.6, `rgba(${pulse.r2},${pulse.g2},${pulse.b2},${(trailA * 0.5).toFixed(4)})`);
+          tGrad.addColorStop(1, `rgba(${pulse.r2},${pulse.g2},${pulse.b2},0)`);
+          pulseCtx.fillStyle = tGrad;
+          pulseCtx.beginPath(); pulseCtx.arc(cx, cy, tOuter, 0, Math.PI * 2); pulseCtx.fill();
+        }
+
+        // Main ring — leading edge
         const innerR = Math.max(0, ringR - glowWidth * 0.4);
         const outerR = ringR + glowWidth;
         const grad = pulseCtx.createRadialGradient(cx, cy, innerR, cx, cy, outerR);
