@@ -825,6 +825,7 @@ export async function init() {
     const targetAngle = Math.atan2(dy, dx);
 
     // Inverted reach: extends when cursor is far, retracts when close
+    const isHoveringBtn = dist < 80;
     let targetReach = 0;
     if (dist > 80 && dist < 700) {
       targetReach = Math.min((dist - 80) / 500, 1) * 0.8;
@@ -849,6 +850,7 @@ export async function init() {
     // Normalize smoothAngle to 0..2PI for consistent diff calculation
     const normAngle = ((smoothAngle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
 
+    const now = performance.now() / 1000;
     const steps = 128;
     let points = [];
     for (let i = 0; i < steps; i++) {
@@ -856,16 +858,26 @@ export async function init() {
 
       let r = baseR;
 
-      // Angular distance — always shortest path
-      let diff = theta - normAngle;
-      if (diff > Math.PI) diff -= Math.PI * 2;
-      if (diff < -Math.PI) diff += Math.PI * 2;
-      const absDiff = Math.abs(diff);
+      // Hover wobble — organic flowing shape when cursor is on the button
+      if (isHoveringBtn) {
+        r += Math.sin(theta * 3 + now * 1.2) * baseR * 0.06;
+        r += Math.sin(theta * 5 - now * 0.8) * baseR * 0.03;
+        r += Math.sin(theta * 2 + now * 0.5) * baseR * 0.04;
+        r *= 1.08; // slightly larger when hovering
+      }
 
-      if (absDiff < bulgeWidth) {
-        const t = 1 - absDiff / bulgeWidth;
-        const sineT = Math.sin(t * Math.PI / 2);
-        r += peakDist * sineT * sineT * sineT;
+      // Reach bulge — only when not hovering
+      if (!isHoveringBtn) {
+        let diff = theta - normAngle;
+        if (diff > Math.PI) diff -= Math.PI * 2;
+        if (diff < -Math.PI) diff += Math.PI * 2;
+        const absDiff = Math.abs(diff);
+
+        if (absDiff < bulgeWidth) {
+          const t = 1 - absDiff / bulgeWidth;
+          const sineT = Math.sin(t * Math.PI / 2);
+          r += peakDist * sineT * sineT * sineT;
+        }
       }
 
       const px = ((halfSize + Math.cos(theta) * r) / totalSize * 100).toFixed(2);
