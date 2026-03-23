@@ -824,29 +824,8 @@ export async function init() {
   }
   document.body.appendChild(rippleContainer);
 
-  let ripplesRunning = false;
-  let rippleStartTime = 0;
-
-  function tickRipples() {
-    if (!ripplesRunning) return;
-    const elapsed = (performance.now() - rippleStartTime) / 1000;
-    const rings = rippleContainer.querySelectorAll('.intro-ripple-ring');
-    for (let i = 0; i < rings.length; i++) {
-      const delay = i * 0.4;
-      const cycleLen = 2.5;
-      const t = ((elapsed - delay) % cycleLen) / cycleLen;
-      if (t < 0 || elapsed < delay) {
-        rings[i].style.opacity = '0';
-        continue;
-      }
-      const scale = 1 + t * 4;
-      const opacity = t < 0.1 ? t / 0.1 * 0.3 : 0.3 * (1 - (t - 0.1) / 0.9);
-      rings[i].style.transform = `translate(-50%, -50%) scale(${scale.toFixed(3)})`;
-      rings[i].style.opacity = Math.max(0, opacity).toFixed(3);
-      rings[i].style.borderColor = `rgba(255,255,255,${(opacity * 0.8).toFixed(3)})`;
-    }
-    requestAnimationFrame(tickRipples);
-  }
+  let hoverBurstRunning = false;
+  let lastBurstTime = 0;
 
   document.addEventListener('mousemove', (e) => {
     introMouseX = e.clientX;
@@ -960,19 +939,40 @@ export async function init() {
       playBtn.style.background = 'rgba(255, 255, 255, 0.22)';
       playBtn.style.filter = 'drop-shadow(0 0 12px rgba(255,255,255,0.2)) drop-shadow(0 0 30px rgba(255,255,255,0.08))';
 
-      // Start ripples if not already running
-      if (!ripplesRunning) {
-        ripplesRunning = true;
-        rippleStartTime = performance.now();
-        rippleContainer.style.display = '';
-        tickRipples();
+      // Spawn burst rings occasionally while hovering
+      hoverBurstRunning = true;
+      const now = performance.now();
+      if (now - lastBurstTime > 800 + Math.random() * 1200) {
+        lastBurstTime = now;
+        // Create a ring that expands from button center to fill screen
+        const ring = document.createElement('div');
+        const size = Math.max(window.innerWidth, window.innerHeight) * 2.5;
+        ring.style.cssText = `
+          position: fixed;
+          left: ${btnCx}px; top: ${btnCy}px;
+          width: ${size}px; height: ${size}px;
+          margin-left: ${-size/2}px; margin-top: ${-size/2}px;
+          border-radius: 50%;
+          border: 2px solid rgba(255,255,255,0.25);
+          box-shadow: 0 0 15px rgba(255,255,255,0.08), inset 0 0 15px rgba(255,255,255,0.04);
+          pointer-events: none;
+          z-index: 9995;
+          transform: scale(0);
+          opacity: 1;
+        `;
+        document.body.appendChild(ring);
+
+        ring.animate([
+          { transform: 'scale(0)', opacity: 0.5, borderWidth: '3px' },
+          { transform: 'scale(0.15)', opacity: 0.35, borderWidth: '2px', offset: 0.2 },
+          { transform: 'scale(0.5)', opacity: 0.2, borderWidth: '1.5px', offset: 0.5 },
+          { transform: 'scale(1)', opacity: 0, borderWidth: '1px' },
+        ], { duration: 2500, easing: 'cubic-bezier(0.16, 1, 0.3, 1)', fill: 'forwards' });
+
+        setTimeout(() => ring.remove(), 2600);
       }
     } else {
-      // Stop ripples
-      if (ripplesRunning) {
-        ripplesRunning = false;
-        rippleContainer.style.display = 'none';
-      }
+      hoverBurstRunning = false;
       // White only — opacity scales from 0.12 (far) to 0.16 (close)
       const alpha = (0.12 + proximity * 0.04).toFixed(3);
       playBtn.style.background = `rgba(255, 255, 255, ${alpha})`;
