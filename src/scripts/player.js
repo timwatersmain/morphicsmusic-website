@@ -807,6 +807,7 @@ export async function init() {
     pointer-events: none;
     z-index: 9998;
     width: ${RC_SIZE}px; height: ${RC_SIZE}px;
+    mix-blend-mode: normal;
   `;
   document.body.appendChild(reachCanvas);
   const rctx = reachCanvas.getContext('2d');
@@ -865,7 +866,9 @@ export async function init() {
       const peakDist = smoothReach * btnR * 1.8;
       const bulgeWidth = 1.2; // radians wide (about 70 degrees each side)
 
-      rctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
+      // Match button's current background color
+      const btnBg = getComputedStyle(playBtn).backgroundColor;
+      rctx.fillStyle = btnBg || 'rgba(255, 255, 255, 0.12)';
       rctx.beginPath();
 
       const steps = 80;
@@ -898,6 +901,12 @@ export async function init() {
 
       rctx.closePath();
       rctx.fill();
+
+      // Add subtle inner glow to match button's box-shadow
+      rctx.shadowColor = 'rgba(255,255,255,0.08)';
+      rctx.shadowBlur = 4;
+      rctx.fill();
+      rctx.shadowBlur = 0;
     }
 
     requestAnimationFrame(tickIntroReach);
