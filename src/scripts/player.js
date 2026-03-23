@@ -891,25 +891,21 @@ export async function init() {
 
     // Distance-based size: closer = larger, farther = smaller
     const proximity = Math.max(0, 1 - dist / 700);
-    const sizeScale = 0.75 + proximity * 0.35;
+    const sizeScale = 0.75 + proximity * 0.35; // 0.75 at far → 1.1 at close
     playBtn.style.transform = `scale(${sizeScale.toFixed(4)})`;
 
-    // Greyscale color: dark grey at far → bright white at closest
-    // Far (proximity 0): rgb(40,40,40) → Close (proximity 1): rgb(255,255,255)
-    const grey = Math.round(40 + proximity * 215);
-    const bgAlpha = (0.1 + proximity * 0.9).toFixed(3);
-    playBtn.style.background = `rgb(${grey},${grey},${grey})`;
-    playBtn.style.opacity = bgAlpha;
-
-    // Glow scales with proximity — greyscale only
-    const glowStr = proximity * 0.25;
-    const glowOuter = proximity * 0.1;
+    // Distance-based brightness and glow: closer = brighter
+    const brightness = 0.85 + proximity * 0.4; // 0.85 at far → 1.25 at close
+    const bgAlpha = (0.08 + proximity * 0.1).toFixed(3); // 0.08 at far → 0.18 at close
+    const glowStr = proximity * 0.2;
+    const glowOuter = proximity * 0.08;
 
     if (glowStr > 0.01) {
-      playBtn.style.filter = `drop-shadow(0 0 ${(14 * proximity).toFixed(0)}px rgba(${grey},${grey},${grey},${glowStr.toFixed(3)})) drop-shadow(0 0 ${(35 * proximity).toFixed(0)}px rgba(${grey},${grey},${grey},${glowOuter.toFixed(3)}))`;
+      playBtn.style.filter = `drop-shadow(0 0 ${(12 * proximity).toFixed(0)}px rgba(255,255,255,${glowStr.toFixed(3)})) drop-shadow(0 0 ${(30 * proximity).toFixed(0)}px rgba(255,255,255,${glowOuter.toFixed(3)})) brightness(${brightness.toFixed(3)})`;
     } else {
-      playBtn.style.filter = '';
+      playBtn.style.filter = `brightness(${brightness.toFixed(3)})`;
     }
+    playBtn.style.background = `rgba(255, 255, 255, ${bgAlpha})`;
 
     requestAnimationFrame(tickIntroReach);
   }
