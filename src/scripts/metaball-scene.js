@@ -326,22 +326,27 @@ float sceneSDF(vec3 p) {
   }
 
 
-  // Amoeba tendrils — thin elongated shapes that extend outward
+  // Amoeba tendrils — long reaching shapes with breakaway pieces
   if (uTendrilStr > 0.01) {
     float ts = uTendrilStr;
     float phase = uTendrilPhase;
     float mi = uMorphIntensity;
 
-    // 4 tendrils at different angles, each with organic motion
-    for (int ti = 0; ti < 4; ti++) {
-      float baseAngle = phase + float(ti) * 1.5708 + sin(t * 0.2 + float(ti)) * 0.5;
-      float tendrilLen = (0.5 + mi * 1.5) * ts;
+    // 5 tendrils at different angles, reaching far out
+    for (int ti = 0; ti < 5; ti++) {
+      float baseAngle = phase + float(ti) * 1.2566 + sin(t * 0.15 + float(ti) * 1.3) * 0.7;
+      float tendrilLen = (1.2 + mi * 2.5) * ts;
 
-      // Tendril direction
-      vec3 dir = vec3(cos(baseAngle), sin(baseAngle) * 0.7, sin(baseAngle + t * 0.3) * 0.3);
+      // Tendril direction — more variation in 3D
+      vec3 dir = vec3(
+        cos(baseAngle),
+        sin(baseAngle) * 0.8 + sin(t * 0.2 + float(ti) * 2.0) * 0.3,
+        sin(baseAngle * 0.7 + t * 0.25) * 0.4
+      );
+      dir = normalize(dir);
 
       // Capsule: elongated along direction
-      vec3 a = dir * 0.2;
+      vec3 a = dir * 0.15;
       vec3 b = dir * tendrilLen;
 
       // Point-to-segment distance for capsule SDF
@@ -350,19 +355,46 @@ float sceneSDF(vec3 p) {
       float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
       vec3 closest = a + ba * h;
 
-      // Thickness tapers from base to tip
-      float thickness = mix(0.25, 0.06, h) * ts;
+      // Thickness tapers from thick base to very thin tip
+      float thickness = mix(0.28, 0.03, h * h) * ts;
 
-      // Add organic wobble along the tendril
-      float wobble = snoise(p * 2.0 + t * 0.4 + float(ti) * 50.0) * 0.08 * ts;
+      // Organic wobble — more pronounced along the tendril
+      float wobble = snoise(p * 1.8 + t * 0.35 + float(ti) * 50.0) * 0.12 * ts * (0.5 + h);
       float tendrilD = length(p - closest) - thickness + wobble;
 
-      d = smin(d, tendrilD, 0.4 + (1.0 - ts) * 0.3);
+      d = smin(d, tendrilD, 0.35 + (1.0 - ts) * 0.25);
+
+      // Breakaway blobs — detached pieces near the tip that drift away
+      float breakDist = tendrilLen * (0.7 + sin(t * 0.3 + float(ti) * 1.7) * 0.2);
+      vec3 breakPos = dir * breakDist + vec3(
+        sin(t * 0.4 + float(ti) * 3.0) * 0.3,
+        cos(t * 0.35 + float(ti) * 2.5) * 0.25,
+        sin(t * 0.5 + float(ti) * 1.8) * 0.2
+      ) * ts * mi;
+      float breakRadius = 0.08 + 0.06 * sin(t * 0.5 + float(ti) * 2.0);
+      breakRadius *= ts * mi;
+      if (breakRadius > 0.02) {
+        float breakD = length(p - breakPos) - breakRadius;
+        d = smin(d, breakD, 0.3);
+      }
+
+      // Second smaller breakaway further out
+      vec3 breakPos2 = dir * (breakDist * 1.3) + vec3(
+        cos(t * 0.3 + float(ti) * 4.0) * 0.4,
+        sin(t * 0.45 + float(ti) * 3.2) * 0.3,
+        cos(t * 0.55 + float(ti) * 2.1) * 0.2
+      ) * ts * mi;
+      float breakRadius2 = 0.05 + 0.04 * sin(t * 0.6 + float(ti) * 1.5);
+      breakRadius2 *= ts * mi;
+      if (breakRadius2 > 0.015) {
+        float breakD2 = length(p - breakPos2) - breakRadius2;
+        d = smin(d, breakD2, 0.25);
+      }
     }
 
-    // Extra bizarre morph: distort the whole SDF with additional noise when intensity is high
-    if (mi > 0.3) {
-      float bizarreNoise = snoise(p * 0.8 + t * 0.15) * mi * 0.15;
+    // Bizarre morph distortion
+    if (mi > 0.2) {
+      float bizarreNoise = snoise(p * 0.7 + t * 0.12) * mi * 0.2;
       d += bizarreNoise;
     }
   }
