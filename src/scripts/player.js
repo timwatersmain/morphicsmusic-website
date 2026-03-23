@@ -889,23 +889,33 @@ export async function init() {
     playBtn.style.margin = `-${maxExtend}px`;
     playBtn.style.clipPath = `polygon(${points.join(',')})`;
 
-    // Distance-based size: closer = larger, farther = smaller
-    const proximity = Math.max(0, 1 - dist / 700);
-    const sizeScale = 0.75 + proximity * 0.35; // 0.75 at far → 1.1 at close
+    // Smoothed proximity for size/color — prevents jumpy transitions
+    const rawProximity = Math.max(0, 1 - dist / 700);
+    if (typeof tickIntroReach._smoothProx === 'undefined') tickIntroReach._smoothProx = rawProximity;
+    tickIntroReach._smoothProx += (rawProximity - tickIntroReach._smoothProx) * 0.08;
+    const proximity = tickIntroReach._smoothProx;
+
+    // Distance-based size
+    const sizeScale = 0.75 + proximity * 0.35;
     playBtn.style.transform = `scale(${sizeScale.toFixed(4)})`;
 
-    // Distance-based brightness and glow: closer = brighter
-    const brightness = 0.85 + proximity * 0.4; // 0.85 at far → 1.25 at close
-    const bgAlpha = (0.08 + proximity * 0.1).toFixed(3); // 0.08 at far → 0.18 at close
-    const glowStr = proximity * 0.2;
-    const glowOuter = proximity * 0.08;
-
-    if (glowStr > 0.01) {
-      playBtn.style.filter = `drop-shadow(0 0 ${(12 * proximity).toFixed(0)}px rgba(255,255,255,${glowStr.toFixed(3)})) drop-shadow(0 0 ${(30 * proximity).toFixed(0)}px rgba(255,255,255,${glowOuter.toFixed(3)})) brightness(${brightness.toFixed(3)})`;
+    // Greyscale only — no hue. Dark when far, bright when close
+    if (isHoveringBtn) {
+      // Instant highlight on hover
+      playBtn.style.background = 'rgba(180, 180, 180, 0.22)';
+      playBtn.style.filter = 'drop-shadow(0 0 12px rgba(200,200,200,0.2)) drop-shadow(0 0 30px rgba(200,200,200,0.08))';
     } else {
-      playBtn.style.filter = `brightness(${brightness.toFixed(3)})`;
+      const grey = Math.round(120 + proximity * 80); // 120 far → 200 close
+      const alpha = (0.08 + proximity * 0.08).toFixed(3);
+      playBtn.style.background = `rgba(${grey}, ${grey}, ${grey}, ${alpha})`;
+
+      const glowStr = proximity * 0.15;
+      if (glowStr > 0.01) {
+        playBtn.style.filter = `drop-shadow(0 0 ${(10 * proximity).toFixed(0)}px rgba(200,200,200,${glowStr.toFixed(3)}))`;
+      } else {
+        playBtn.style.filter = '';
+      }
     }
-    playBtn.style.background = `rgba(255, 255, 255, ${bgAlpha})`;
 
     requestAnimationFrame(tickIntroReach);
   }
