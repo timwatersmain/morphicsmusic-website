@@ -800,31 +800,7 @@ export async function init() {
   // Make button large enough to contain the extension — actual visible shape controlled by clip-path
   const introBaseSize = 150; // CSS size of intro .ctrl-play
 
-  // Ripple container — separate from button so clip-path doesn't hide them
-  const rippleContainer = document.createElement('div');
-  rippleContainer.style.cssText = `
-    position: fixed;
-    pointer-events: none;
-    z-index: 9996;
-    display: none;
-  `;
-  // Create 5 ripple rings
-  for (let r = 0; r < 5; r++) {
-    const ring = document.createElement('div');
-    ring.className = 'intro-ripple-ring';
-    ring.style.cssText = `
-      position: absolute;
-      border-radius: 50%;
-      border: 1px solid rgba(255,255,255,0.2);
-      transform: translate(-50%, -50%) scale(1);
-      opacity: 0;
-      left: 50%; top: 50%;
-    `;
-    rippleContainer.appendChild(ring);
-  }
-  document.body.appendChild(rippleContainer);
 
-  let hoverBurstFired = false;
 
   document.addEventListener('mousemove', (e) => {
     introMouseX = e.clientX;
@@ -927,58 +903,12 @@ export async function init() {
     playBtn.style.transform = `scale(${sizeScale.toFixed(4)})`;
 
 
-    // Position ripple container centered on button
-    const rippleSize = 400;
-    rippleContainer.style.left = (btnCx - rippleSize / 2) + 'px';
-    rippleContainer.style.top = (btnCy - rippleSize / 2) + 'px';
-    rippleContainer.style.width = rippleSize + 'px';
-    rippleContainer.style.height = rippleSize + 'px';
-
     // Pure white at varying opacity — no grey tones, no hue
     if (isHoveringBtn) {
       playBtn.style.background = 'rgba(255, 255, 255, 0.22)';
       playBtn.style.filter = 'drop-shadow(0 0 12px rgba(255,255,255,0.2)) drop-shadow(0 0 30px rgba(255,255,255,0.08))';
 
-      // One big burst on first hover entry
-      if (!hoverBurstFired) {
-        hoverBurstFired = true;
-        const size = Math.max(window.innerWidth, window.innerHeight) * 2.5;
-        const burstCount = 5;
-        for (let b = 0; b < burstCount; b++) {
-          setTimeout(() => {
-            const ring = document.createElement('div');
-            const thickness = 8 - b * 1.2;
-            ring.style.cssText = `
-              position: fixed;
-              left: ${btnCx}px; top: ${btnCy}px;
-              width: ${size}px; height: ${size}px;
-              margin-left: ${-size/2}px; margin-top: ${-size/2}px;
-              border-radius: 50%;
-              border: ${thickness}px solid rgba(255,255,255,0.4);
-              box-shadow: 0 0 30px rgba(255,255,255,0.15), 0 0 80px rgba(255,255,255,0.05), inset 0 0 20px rgba(255,255,255,0.08);
-              pointer-events: none;
-              z-index: 99999;
-              transform: scale(0);
-              opacity: 1;
-            `;
-            document.body.appendChild(ring);
-
-            ring.animate([
-              { transform: 'scale(0)', opacity: 0.7, borderWidth: thickness + 'px' },
-              { transform: 'scale(0.06)', opacity: 0.55, borderWidth: (thickness * 0.85) + 'px', offset: 0.1 },
-              { transform: 'scale(0.2)', opacity: 0.35, borderWidth: (thickness * 0.65) + 'px', offset: 0.3 },
-              { transform: 'scale(0.45)', opacity: 0.18, borderWidth: (thickness * 0.4) + 'px', offset: 0.5 },
-              { transform: 'scale(0.7)', opacity: 0.07, borderWidth: '1.5px', offset: 0.75 },
-              { transform: 'scale(1)', opacity: 0, borderWidth: '0.5px' },
-            ], { duration: 4500 + b * 300, easing: 'cubic-bezier(0.08, 0.82, 0.17, 1)', fill: 'forwards' });
-
-            setTimeout(() => ring.remove(), 6000);
-          }, b * 400);
-        }
-      }
     } else {
-      // Reset so next hover triggers another burst
-      hoverBurstFired = false;
       // White only — opacity scales from 0.12 (far) to 0.16 (close)
       const alpha = (0.12 + proximity * 0.04).toFixed(3);
       playBtn.style.background = `rgba(255, 255, 255, ${alpha})`;
