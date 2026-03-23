@@ -953,21 +953,22 @@ export async function init() {
           width: ${size}px; height: ${size}px;
           margin-left: ${-size/2}px; margin-top: ${-size/2}px;
           border-radius: 50%;
-          border: 2px solid rgba(255,255,255,0.25);
-          box-shadow: 0 0 15px rgba(255,255,255,0.08), inset 0 0 15px rgba(255,255,255,0.04);
+          border: 3px solid rgba(255,255,255,0.6);
+          box-shadow: 0 0 25px rgba(255,255,255,0.3), 0 0 60px rgba(255,255,255,0.1), inset 0 0 20px rgba(255,255,255,0.15);
           pointer-events: none;
-          z-index: 9995;
+          z-index: 99999;
           transform: scale(0);
           opacity: 1;
         `;
         document.body.appendChild(ring);
 
         ring.animate([
-          { transform: 'scale(0)', opacity: 0.5, borderWidth: '3px' },
-          { transform: 'scale(0.15)', opacity: 0.35, borderWidth: '2px', offset: 0.2 },
-          { transform: 'scale(0.5)', opacity: 0.2, borderWidth: '1.5px', offset: 0.5 },
+          { transform: 'scale(0)', opacity: 0.9, borderWidth: '4px' },
+          { transform: 'scale(0.1)', opacity: 0.7, borderWidth: '3px', offset: 0.15 },
+          { transform: 'scale(0.3)', opacity: 0.45, borderWidth: '2.5px', offset: 0.35 },
+          { transform: 'scale(0.6)', opacity: 0.25, borderWidth: '2px', offset: 0.6 },
           { transform: 'scale(1)', opacity: 0, borderWidth: '1px' },
-        ], { duration: 2500, easing: 'cubic-bezier(0.16, 1, 0.3, 1)', fill: 'forwards' });
+        ], { duration: 3000, easing: 'cubic-bezier(0.16, 1, 0.3, 1)', fill: 'forwards' });
 
         setTimeout(() => ring.remove(), 2600);
       }
