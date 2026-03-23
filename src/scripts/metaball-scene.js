@@ -38,6 +38,8 @@ uniform float uKickGlowSlow;
 uniform float uTendrilStr;    // 0-1 how extended tendrils are
 uniform float uTendrilPhase;  // rotation phase for tendril directions
 uniform float uMorphIntensity; // 0-1 how bizarre the overall shape gets
+uniform float uFormBreak;     // 0-1 brief radical shape changes
+uniform float uFormType;      // 0-3 which form to morph into
 uniform float uStereoWidth;
 uniform float uPan;
 
@@ -259,55 +261,65 @@ vec3 evalSkin(int id, vec3 p, vec3 n) {
 vec3 ballPos(int i, float t, float bass, float me) {
   float fi = float(i);
   float mi = uMorphIntensity;
+  float fb = uFormBreak;
+  float ft = uFormType;
 
-  // Center ball: gentle drift, but warps at high intensity
+  // Normal orbital position
+  vec3 normalPos;
   if (i == 0) {
-    vec3 base = vec3(
-      sin(t * 0.15) * 0.08,
-      sin(t * 0.12 + 0.5) * 0.08,
-      sin(t * 0.1 + 1.0) * 0.08
-    );
-    // At high intensity, center ball stretches and squashes
-    if (mi > 0.4) {
-      float warpStr = (mi - 0.4) * 1.67; // 0-1 over 0.4-1.0
-      base.x += sin(t * 0.4) * warpStr * 0.3;
-      base.y += cos(t * 0.35) * warpStr * 0.25;
+    normalPos = vec3(sin(t * 0.15) * 0.08, sin(t * 0.12 + 0.5) * 0.08, sin(t * 0.1 + 1.0) * 0.08);
+  } else {
+    float speed = 0.15 + me * 0.85;
+    float angle = fi * 1.047 + t * (0.18 + fi * 0.04) * speed;
+    float spread = me;
+    float r = (0.65 + sin(t * 0.25 * speed + fi * 1.7) * 0.2) * spread;
+    float xPos = cos(angle) * r + cos(angle) * bass * 0.55;
+    float yBase = sin(t * 0.3 * speed + fi * 2.1) * 0.45 * spread;
+    float yReactive = sin(t * 0.5 * speed + fi * 1.3) * bass + cos(t * 0.2 * speed + fi) * bass * 0.6;
+    float zPos = sin(angle) * r * 0.5;
+    normalPos = vec3(xPos, yBase + yReactive, zPos);
+    normalPos = mix(vec3(0.0), normalPos, me);
+  }
+
+  // Form break — radical shape shifts triggered by events
+  if (fb > 0.05) {
+    vec3 formPos;
+
+    if (ft < 1.0) {
+      // NOODLE: all balls line up vertically — tall thin column
+      float ySlot = (fi - 3.0) * 0.4 * fb;
+      float xWobble = sin(t * 0.5 + fi * 1.5) * 0.15 * fb;
+      formPos = vec3(xWobble, ySlot, 0.0);
+
+    } else if (ft < 2.0) {
+      // SNAKE: balls arrange in a sine wave horizontally
+      float xSlot = (fi - 3.0) * 0.35 * fb;
+      float ySnake = sin(xSlot * 3.0 + t * 0.6) * 0.5 * fb;
+      float zSnake = cos(xSlot * 2.0 + t * 0.4) * 0.2 * fb;
+      formPos = vec3(xSlot, ySnake, zSnake);
+
+    } else if (ft < 3.0) {
+      // FLAT DISC: all balls spread in XZ plane, flattened
+      float discAngle = fi * 0.9 + t * 0.2;
+      float discR = (0.3 + fi * 0.12) * fb;
+      formPos = vec3(cos(discAngle) * discR, sin(t * 0.3 + fi) * 0.05, sin(discAngle) * discR);
+
+    } else {
+      // STAR BURST: balls explode outward in random directions then retract
+      float burstAngle = fi * 1.3 + sin(t * 0.15 + fi * 2.0) * 0.5;
+      float burstR = (0.8 + sin(t * 0.4 + fi * 1.7) * 0.4) * fb;
+      formPos = vec3(
+        cos(burstAngle) * burstR,
+        sin(burstAngle * 0.7 + t * 0.25) * burstR * 0.6,
+        sin(burstAngle) * burstR * 0.4
+      );
     }
-    return base;
-  }
-  // Speed: 15% at silence → 100% at full energy
-  float speed = 0.15 + me * 0.85;
-  float angle = fi * 1.047 + t * (0.18 + fi * 0.04) * speed;
-  // Orbital radius: gentle curve — some spread at moderate energy, full at loud
-  float spread = me;
-  float r = (0.65 + sin(t * 0.25 * speed + fi * 1.7) * 0.2) * spread;
-  float bassX = bass * 0.55;
-  float bassY = bass * 1.0;
-  // Orbital position
-  float xPos = cos(angle) * r + cos(angle) * bassX;
-  float yBase = sin(t * 0.3 * speed + fi * 2.1) * 0.45 * spread;
-  float yReactive = sin(t * 0.5 * speed + fi * 1.3) * bassY + cos(t * 0.2 * speed + fi) * bassY * 0.6;
-  float zPos = sin(angle) * r * 0.5 + cos(angle + t * 0.1 * speed) * r * 0.2;
 
-  // High intensity: balls fling outward dramatically, orbits destabilize
-  if (mi > 0.3) {
-    float chaos = (mi - 0.3) * 1.43; // 0-1 over 0.3-1.0
-    // Radial explosion — balls push outward
-    r += chaos * 0.8 * sin(t * 0.3 + fi * 2.0);
-    // Vertical chaos — wild Y movement
-    yBase += sin(t * 0.7 + fi * 3.1) * chaos * 0.6;
-    yReactive += cos(t * 0.9 + fi * 1.7) * chaos * 0.5;
-    // Flatten/stretch — squash Z, extend X
-    xPos *= 1.0 + chaos * 0.4 * sin(t * 0.25 + fi);
-    zPos *= 1.0 - chaos * 0.3;
-    // Irregular angular speed bursts
-    float burstAngle = angle + sin(t * 0.5 + fi * 2.5) * chaos * 1.5;
-    xPos += cos(burstAngle) * chaos * 0.4;
+    // Smoothly blend between normal and form-break position
+    normalPos = mix(normalPos, formPos, fb);
   }
 
-  // Lerp between center (perfect sphere) and orbital position
-  vec3 orbitPos = vec3(xPos, yBase + yReactive, zPos);
-  return mix(vec3(0.0), orbitPos, me);
+  return normalPos;
 }
 
 float ballRadius(int i) {
@@ -320,18 +332,35 @@ float ballRadius(int i) {
   else if (i == 5) base = 0.40;
   else base = 0.33;
 
-  // At high morph intensity, radii pulse and distort
+  // Morph intensity — radii distort
   float mi = uMorphIntensity;
   if (mi > 0.3) {
     float chaos = (mi - 0.3) * 1.43;
     float fi = float(i);
-    // Some balls swell, others shrink — creates asymmetric forms
     float swell = sin(uTime * 0.4 + fi * 2.3) * chaos * 0.3;
-    // Periodic radical size changes
     float radical = sin(uTime * 0.2 + fi * 1.7) > 0.7 ? chaos * 0.25 : 0.0;
     base += swell + radical;
-    base = max(base, 0.1); // never collapse to nothing
   }
+
+  // Form break — shrink radii for noodle/slender shapes
+  float fb = uFormBreak;
+  if (fb > 0.05) {
+    float ft = uFormType;
+    float fi = float(i);
+    if (ft < 1.0) {
+      // Noodle: small uniform balls for thin column
+      base = mix(base, 0.2, fb);
+    } else if (ft < 2.0) {
+      // Snake: varying sizes along the wave
+      base = mix(base, 0.15 + sin(fi * 1.5) * 0.08, fb);
+    } else if (ft < 3.0) {
+      // Disc: flatten — smaller radii
+      base = mix(base, 0.25, fb);
+    }
+    // Star burst keeps original radii
+  }
+
+  base = max(base, 0.08);
   return base;
 }
 
@@ -1048,6 +1077,8 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
     uTendrilStr:       { value: 0 },
     uTendrilPhase:     { value: 0 },
     uMorphIntensity:   { value: 0 },
+    uFormBreak:        { value: 0 },
+    uFormType:         { value: 0 },
   };
 
   const material = new THREE.ShaderMaterial({
@@ -1510,6 +1541,21 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
       }
       const morphRate = targetMorph > uniforms.uMorphIntensity.value ? 0.05 : 0.012;
       uniforms.uMorphIntensity.value += (targetMorph - uniforms.uMorphIntensity.value) * morphRate;
+
+      // Form break — triggered randomly by high energy/volume spikes
+      // Quick snap on, slow fade back to sphere
+      if (uniforms.uFormBreak.value < 0.05) {
+        // Can trigger a new form break
+        const triggerChance = masterEnergy > 0.4 ? (masterEnergy - 0.4) * 0.008 : 0;
+        if (Math.random() < triggerChance) {
+          uniforms.uFormBreak.value = 0.7 + Math.random() * 0.3; // snap to 0.7-1.0
+          uniforms.uFormType.value = Math.floor(Math.random() * 4); // random form
+        }
+      } else {
+        // Slowly decay back to sphere
+        uniforms.uFormBreak.value *= 0.992; // ~3-4 seconds to fade
+        if (uniforms.uFormBreak.value < 0.03) uniforms.uFormBreak.value = 0;
+      }
     }
 
     // Master level → canvas scale
