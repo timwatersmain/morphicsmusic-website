@@ -587,39 +587,39 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
 
 
 
-  // ── TYPE 3: Solar Flare — large asymmetric gas clouds erupting outward ──
+  // ── TYPE 3: Solar Flare — slow drifting gas clouds ──
   function fireSolarFlare() {
     const c = getColors();
-    const pulse = { type: 'flare', startTime: performance.now(), duration: 5000, clouds: [], ...c };
-    const cloudCount = 5 + Math.floor(Math.random() * 4);
+    const pulse = { type: 'flare', startTime: performance.now(), duration: 12000, clouds: [], ...c };
+    const cloudCount = 3 + Math.floor(Math.random() * 3);
     for (let i = 0; i < cloudCount; i++) {
       const baseAngle = Math.random() * Math.PI * 2;
       pulse.clouds.push({
         angle: baseAngle,
         spread: 0.3 + Math.random() * 0.5,
-        size: 60 + Math.random() * 100,
-        brightness: 0.5 + Math.random() * 0.5,
+        size: 50 + Math.random() * 80,
+        brightness: 0.3 + Math.random() * 0.4,
         useRim: Math.random() > 0.3,
-        speed: 0.6 + Math.random() * 0.8,
-        drift: (Math.random() - 0.5) * 0.4,
+        speed: 0.3 + Math.random() * 0.5,
+        drift: (Math.random() - 0.5) * 0.3,
       });
     }
     activePulses.push(pulse);
   }
 
-  // ── TYPE 4: Stardust Scatter — tiny particles explode outward, triggered by energy surges ──
+  // ── TYPE 4: Stardust — slow drifting particles, long lifespan ──
   function fireStardust() {
     const c = getColors();
-    const pulse = { type: 'stardust', startTime: performance.now(), duration: 3000, particles: [], ...c };
-    for (let i = 0; i < 80; i++) {
+    const pulse = { type: 'stardust', startTime: performance.now(), duration: 8000, particles: [], ...c };
+    for (let i = 0; i < 30; i++) {
       const angle = Math.random() * Math.PI * 2;
       pulse.particles.push({
         angle,
-        speed: 0.5 + Math.random() * 1.5,
-        size: 1 + Math.random() * 4,
-        brightness: 0.3 + Math.random() * 0.7,
+        speed: 0.2 + Math.random() * 0.6,
+        size: 2 + Math.random() * 5,
+        brightness: 0.2 + Math.random() * 0.4,
         useRim: Math.random() > 0.5,
-        wobble: (Math.random() - 0.5) * 2,
+        wobble: (Math.random() - 0.5) * 1.5,
       });
     }
     activePulses.push(pulse);
@@ -628,7 +628,7 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
   // ── TYPE 5: Plasma Bloom — soft growing glow, triggered by energy drop (silence after loud) ──
   function firePlasmaBloom() {
     const c = getColors();
-    const pulse = { type: 'bloom', startTime: performance.now(), duration: 10000, ...c };
+    const pulse = { type: 'bloom', startTime: performance.now(), duration: 14000, ...c };
     activePulses.push(pulse);
   }
 
@@ -636,23 +636,23 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
 
   // ── Wandering ambient lights — always-on drifting glows ──
   const wanderers = [];
-  const MAX_WANDERERS = 12;
+  const MAX_WANDERERS = 5;
   for (let w = 0; w < MAX_WANDERERS; w++) {
     wanderers.push({
       x: Math.random() * PULSE_W,
       y: Math.random() * PULSE_H,
-      vx: (Math.random() - 0.5) * 0.5,
-      vy: (Math.random() - 0.5) * 0.5,
-      size: 30 + Math.random() * 90,
+      vx: (Math.random() - 0.5) * 0.15,
+      vy: (Math.random() - 0.5) * 0.15,
+      size: 50 + Math.random() * 70,
       brightness: 0,
       targetBrightness: 0,
       useRim: Math.random() > 0.4,
       phaseX: Math.random() * Math.PI * 2,
       phaseY: Math.random() * Math.PI * 2,
-      speedX: 0.15 + Math.random() * 0.25,
-      speedY: 0.12 + Math.random() * 0.2,
+      speedX: 0.06 + Math.random() * 0.08,
+      speedY: 0.05 + Math.random() * 0.07,
       fadeTimer: Math.random() * 10000,
-      fadeDur: 3000 + Math.random() * 5000,
+      fadeDur: 6000 + Math.random() * 10000,
     });
   }
 
@@ -660,35 +660,35 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
     const c = getColors();
     const t = now / 1000;
     for (const w of wanderers) {
-      // Center gravity — gently pull toward center
-      const centerPullX = (PULSE_W / 2 - w.x) * 0.0003;
-      const centerPullY = (PULSE_H / 2 - w.y) * 0.0003;
+      // Gentle center gravity
+      const centerPullX = (PULSE_W / 2 - w.x) * 0.0001;
+      const centerPullY = (PULSE_H / 2 - w.y) * 0.0001;
       w.vx += centerPullX;
       w.vy += centerPullY;
 
-      // Smooth drift with sine wander — more movement
-      w.x += Math.sin(t * w.speedX + w.phaseX) * 0.8 + w.vx;
-      w.y += Math.sin(t * w.speedY + w.phaseY) * 0.7 + w.vy;
+      // Very slow drift
+      w.x += Math.sin(t * w.speedX + w.phaseX) * 0.3 + w.vx;
+      w.y += Math.sin(t * w.speedY + w.phaseY) * 0.25 + w.vy;
 
-      // Bounce off edges
-      if (w.x < 20) { w.x = 20; w.vx = Math.abs(w.vx) + Math.random() * 0.3; w.targetBrightness = 0.15 + Math.random() * 0.2; }
-      if (w.x > PULSE_W - 20) { w.x = PULSE_W - 20; w.vx = -Math.abs(w.vx) - Math.random() * 0.3; w.targetBrightness = 0.15 + Math.random() * 0.2; }
-      if (w.y < 20) { w.y = 20; w.vy = Math.abs(w.vy) + Math.random() * 0.2; w.targetBrightness = 0.12 + Math.random() * 0.15; }
-      if (w.y > PULSE_H - 20) { w.y = PULSE_H - 20; w.vy = -Math.abs(w.vy) - Math.random() * 0.2; w.targetBrightness = 0.12 + Math.random() * 0.15; }
+      // Soft bounce off edges
+      if (w.x < 30) { w.x = 30; w.vx = Math.abs(w.vx) + 0.05; }
+      if (w.x > PULSE_W - 30) { w.x = PULSE_W - 30; w.vx = -Math.abs(w.vx) - 0.05; }
+      if (w.y < 30) { w.y = 30; w.vy = Math.abs(w.vy) + 0.04; }
+      if (w.y > PULSE_H - 30) { w.y = PULSE_H - 30; w.vy = -Math.abs(w.vy) - 0.04; }
 
-      // Velocity damping
-      w.vx *= 0.995;
-      w.vy *= 0.995;
+      // Slow velocity damping
+      w.vx *= 0.998;
+      w.vy *= 0.998;
 
-      // Random fade in/out cycle
+      // Very slow fade in/out
       w.fadeTimer += 16;
       if (w.fadeTimer > w.fadeDur) {
         w.fadeTimer = 0;
-        w.fadeDur = 4000 + Math.random() * 8000;
-        w.targetBrightness = 0.08 + Math.random() * 0.22;
+        w.fadeDur = 8000 + Math.random() * 15000;
+        w.targetBrightness = 0.03 + Math.random() * 0.1;
         w.useRim = Math.random() > 0.4;
       }
-      w.brightness += (w.targetBrightness - w.brightness) * 0.01;
+      w.brightness += (w.targetBrightness - w.brightness) * 0.004;
 
       if (w.brightness < 0.01) continue;
 
@@ -720,9 +720,9 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
       const t = elapsed / pulse.duration;
       if (t > 1) { activePulses.splice(p, 1); continue; }
 
-      const fadeIn = Math.min(t / 0.1, 1);
-      const fadeOut = t > 0.2 ? Math.max(0, 1 - (t - 0.2) / 0.8) : 1;
-      const alpha = fadeIn * fadeOut * 0.45; // global brightness reduction
+      const fadeIn = Math.min(t / 0.2, 1); // slow fade in
+      const fadeOut = t > 0.3 ? Math.max(0, 1 - (t - 0.3) / 0.7) : 1; // long fade out
+      const alpha = fadeIn * fadeOut * 0.35; // subtle brightness
 
       // Glow expansion factor — glow grows as pulse travels outward
       const glowGrow = 1 + t * 2; // 1x at center → 3x at edge
