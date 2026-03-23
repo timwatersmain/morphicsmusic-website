@@ -846,22 +846,23 @@ export async function init() {
     // Bulge width narrows as reach increases — very thin tip when far
     const bulgeWidth = 1.0 - smoothReach * 0.65; // 1.0 at no reach → 0.48 at max reach
 
-    // More points for smoothness, extra density near the bulge
+    // Normalize smoothAngle to 0..2PI for consistent diff calculation
+    const normAngle = ((smoothAngle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+
     const steps = 128;
     let points = [];
     for (let i = 0; i < steps; i++) {
       const theta = (i / steps) * Math.PI * 2;
 
-      // Always start with full base circle radius
       let r = baseR;
 
-      let diff = theta - smoothAngle;
+      // Angular distance — always shortest path
+      let diff = theta - normAngle;
       if (diff > Math.PI) diff -= Math.PI * 2;
       if (diff < -Math.PI) diff += Math.PI * 2;
       const absDiff = Math.abs(diff);
 
       if (absDiff < bulgeWidth) {
-        // Smooth sine³ ramp — even smoother than sin² at the edges
         const t = 1 - absDiff / bulgeWidth;
         const sineT = Math.sin(t * Math.PI / 2);
         r += peakDist * sineT * sineT * sineT;
