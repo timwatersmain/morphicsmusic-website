@@ -177,7 +177,52 @@ import Player from '../components/Player.astro';
       }
     }
 
-    // 6. Dot ambient drift (intro mode only — stop updating once hidden)
+    // 6. Glob collision — distort text and buttons when glob overlaps them
+    if (metaball && metaball.active) {
+      const glob = metaball.getGlobBounds();
+      // Check title letters
+      const titleLetters = document.querySelectorAll('#player-title .title-letter');
+      for (let i = 0; i < titleLetters.length; i++) {
+        const el = titleLetters[i];
+        const rect = el.getBoundingClientRect();
+        const elCx = rect.left + rect.width / 2;
+        const elCy = rect.top + rect.height / 2;
+        const dist = Math.sqrt((elCx - glob.cx) ** 2 + (elCy - glob.cy) ** 2);
+        const overlap = Math.max(0, 1 - dist / (glob.radius * 1.2));
+
+        if (overlap > 0.05) {
+          const warp = overlap * overlap; // quadratic for smooth edge
+          el.style.filter = `blur(${(warp * 4).toFixed(1)}px) brightness(${(1 + warp * 0.8).toFixed(2)})`;
+          el.style.opacity = (1 - warp * 0.6).toFixed(3);
+          const skewAmt = (Math.sin(bt * 3 + i * 1.5) * warp * 15).toFixed(1);
+          const scaleWarp = (1 + Math.sin(bt * 5 + i * 2) * warp * 0.3).toFixed(3);
+          // Prepend warp transform (existing transform is set by tickLetters)
+          el.dataset.globWarp = `skewX(${skewAmt}deg) scaleY(${scaleWarp})`;
+        } else {
+          el.style.filter = '';
+          el.dataset.globWarp = '';
+        }
+      }
+      // Check buttons
+      for (let i = 0; i < btnEls.length; i++) {
+        const rect = btnEls[i].getBoundingClientRect();
+        const elCx = rect.left + rect.width / 2;
+        const elCy = rect.top + rect.height / 2;
+        const dist = Math.sqrt((elCx - glob.cx) ** 2 + (elCy - glob.cy) ** 2);
+        const overlap = Math.max(0, 1 - dist / (glob.radius * 1.1));
+
+        if (overlap > 0.05) {
+          const warp = overlap * overlap;
+          btnEls[i].style.filter = `blur(${(warp * 3).toFixed(1)}px) brightness(${(1 + warp * 0.5).toFixed(2)})`;
+          btnEls[i].style.opacity = (1 - warp * 0.5).toFixed(3);
+        } else {
+          btnEls[i].style.filter = '';
+          btnEls[i].style.opacity = '';
+        }
+      }
+    }
+
+    // 7. Dot ambient drift (intro mode only — stop updating once hidden)
     if (dotsVisible && !window.__dotsMerging) {
       for (let i = 0; i < dotEls.length; i++) {
         const ds = dotSeeds[i];

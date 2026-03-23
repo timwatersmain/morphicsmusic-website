@@ -585,12 +585,6 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
     activePulses.push(pulse);
   }
 
-  // ── TYPE 2: Shockwave — sharp thin ring, triggered by snare hits ──
-  function fireShockwave() {
-    const c = getColors();
-    const pulse = { type: 'shockwave', startTime: performance.now(), duration: 2800, ...c };
-    activePulses.push(pulse);
-  }
 
   // ── TYPE 3: Solar Flare — large asymmetric gas clouds erupting outward ──
   function fireSolarFlare() {
@@ -741,44 +735,6 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
           pulseCtx.fillStyle = grad;
           pulseCtx.beginPath(); pulseCtx.arc(bx, by, sz, 0, Math.PI * 2); pulseCtx.fill();
         }
-
-      } else if (pulse.type === 'shockwave') {
-        const maxR = maxDim * 0.75;
-        const ringR = 20 + t * t * maxR;
-        const a = alpha * 0.7;
-        const glowWidth = (20 + t * 60) * glowGrow;
-
-        // Trail: fading glow tunnel from center to current ring position
-        const trailSteps = 8;
-        for (let tr = 0; tr < trailSteps; tr++) {
-          const trailT = tr / trailSteps;
-          const trailR = ringR * trailT;
-          const trailA = a * 0.08 * (1 - trailT * 0.5) * (1 - t * 0.5); // brighter near center, fades with time
-          const trailWidth = glowWidth * (0.3 + trailT * 0.7);
-          const tInner = Math.max(0, trailR - trailWidth * 0.3);
-          const tOuter = trailR + trailWidth * 0.6;
-          const tGrad = pulseCtx.createRadialGradient(cx, cy, tInner, cx, cy, tOuter);
-          tGrad.addColorStop(0, `rgba(${pulse.r2},${pulse.g2},${pulse.b2},0)`);
-          tGrad.addColorStop(0.4, `rgba(${pulse.r1},${pulse.g1},${pulse.b1},${trailA.toFixed(4)})`);
-          tGrad.addColorStop(0.6, `rgba(${pulse.r2},${pulse.g2},${pulse.b2},${(trailA * 0.5).toFixed(4)})`);
-          tGrad.addColorStop(1, `rgba(${pulse.r2},${pulse.g2},${pulse.b2},0)`);
-          pulseCtx.fillStyle = tGrad;
-          pulseCtx.beginPath(); pulseCtx.arc(cx, cy, tOuter, 0, Math.PI * 2); pulseCtx.fill();
-        }
-
-        // Main ring — leading edge
-        const innerR = Math.max(0, ringR - glowWidth * 0.4);
-        const outerR = ringR + glowWidth;
-        const grad = pulseCtx.createRadialGradient(cx, cy, innerR, cx, cy, outerR);
-        grad.addColorStop(0, `rgba(${pulse.r1},${pulse.g1},${pulse.b1},0)`);
-        grad.addColorStop(0.25, `rgba(${pulse.r1},${pulse.g1},${pulse.b1},${(a * 0.12).toFixed(3)})`);
-        grad.addColorStop(0.4, `rgba(${pulse.r1},${pulse.g1},${pulse.b1},${(a * 0.5).toFixed(3)})`);
-        grad.addColorStop(0.5, `rgba(255,255,255,${(a * 0.4).toFixed(3)})`);
-        grad.addColorStop(0.6, `rgba(${pulse.r1},${pulse.g1},${pulse.b1},${(a * 0.5).toFixed(3)})`);
-        grad.addColorStop(0.75, `rgba(${pulse.r2},${pulse.g2},${pulse.b2},${(a * 0.1).toFixed(3)})`);
-        grad.addColorStop(1, `rgba(${pulse.r2},${pulse.g2},${pulse.b2},0)`);
-        pulseCtx.fillStyle = grad;
-        pulseCtx.beginPath(); pulseCtx.arc(cx, cy, outerR, 0, Math.PI * 2); pulseCtx.fill();
 
       } else if (pulse.type === 'flare') {
         const maxR = maxDim * 0.5;
@@ -1419,11 +1375,6 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
       if (aboveSnare && aboveSnareFast && snareCooled && masterEnergy > 0.1) {
         lastSnareTime = time;
         spawnBurst(uniforms.uRimColor.value);
-        // TYPE 2: Shockwave on snare (max every 3s — less frequent)
-        if (time - lastSnarePulseTime > 3000) {
-          lastSnarePulseTime = time;
-          fireShockwave();
-        }
       }
     }
 
@@ -1463,6 +1414,8 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
     const growScale = 0.1 + growProgress * 0.9; // 0.1 → 1.0
     const scale = (MIN_SCALE + smoothLevel * (1.0 - MIN_SCALE)) * growScale;
     const driftX = energySurgeDrift.toFixed(1);
+    currentScale = scale;
+    currentDriftX = parseFloat(driftX);
     canvas.style.transform = `translate(calc(-50% + ${driftX}px), -50%) scale(${scale.toFixed(4)})`;
     trailCanvas.style.transform = `translate(calc(-50% + ${driftX}px), -50%) scale(${(scale * 1.05).toFixed(4)})`;
     shadowEl.style.transform = `translate(calc(-50% + ${driftX}px), -50%) scale(${(scale * 1.1).toFixed(4)})`;
@@ -1530,5 +1483,17 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
     shadowEl.style.opacity = '0';
   }
 
-  return { tick, show, hide, canvas, nextTheme, prevTheme, get active() { return active; } };
+  // Expose glob screen bounds for collision detection
+  let currentScale = 0;
+  let currentDriftX = 0;
+  function getGlobBounds() {
+    const rect = canvas.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    // Approximate visible glob radius (canvas is square, glob fills ~60% of it)
+    const radius = (rect.width * 0.3) * currentScale;
+    return { cx, cy, radius };
+  }
+
+  return { tick, show, hide, canvas, nextTheme, prevTheme, getGlobBounds, get active() { return active; } };
 }

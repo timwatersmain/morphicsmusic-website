@@ -313,7 +313,8 @@ export function tickLetters(time) {
     const scaleX = 1 + breathe + midStretch * (Math.sin(t * 0.7 + i) * 0.5 + 0.5);
     const scaleY = 1 + breathe - bassWarp * 0.3 * letterPhase;
 
-    el.style.transform = `translate(${x}px, ${(y + bassWarp * 2 * (letterPhase - 0.5)).toFixed(2)}px) scale(${scaleX.toFixed(4)}, ${scaleY.toFixed(4)}) rotate(${(driftR + skewAudio).toFixed(2)}deg)`;
+    const globWarp = el.dataset.globWarp || '';
+    el.style.transform = `translate(${x}px, ${(y + bassWarp * 2 * (letterPhase - 0.5)).toFixed(2)}px) scale(${scaleX.toFixed(4)}, ${scaleY.toFixed(4)}) rotate(${(driftR + skewAudio).toFixed(2)}deg) ${globWarp}`;
 
     // Brighter base color — no hover influence
     const hueShift = audioGlow * 8 * Math.sin(t * 0.3 + i * 0.9);
