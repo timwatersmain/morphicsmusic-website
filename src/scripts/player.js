@@ -843,23 +843,28 @@ export async function init() {
     const halfSize = totalSize / 2;
     const baseR = introBaseSize / 2; // circle radius in the larger element
     const peakDist = smoothReach * baseR * 1.8;
-    // Bulge width narrows as reach increases — thin tendril when far, wide when close
-    const bulgeWidth = 1.2 - smoothReach * 0.7; // 1.2 at no reach → 0.64 at max reach
+    // Bulge width narrows as reach increases — very thin tip when far
+    const bulgeWidth = 1.0 - smoothReach * 0.65; // 1.0 at no reach → 0.48 at max reach
 
-    // Build polygon clip-path in % coordinates
-    const steps = 64;
+    // More points for smoothness, extra density near the bulge
+    const steps = 128;
     let points = [];
     for (let i = 0; i < steps; i++) {
       const theta = (i / steps) * Math.PI * 2;
+
+      // Always start with full base circle radius
       let r = baseR;
 
       let diff = theta - smoothAngle;
       if (diff > Math.PI) diff -= Math.PI * 2;
       if (diff < -Math.PI) diff += Math.PI * 2;
-      if (Math.abs(diff) < bulgeWidth) {
-        const t = 1 - Math.abs(diff) / bulgeWidth;
+      const absDiff = Math.abs(diff);
+
+      if (absDiff < bulgeWidth) {
+        // Smooth sine³ ramp — even smoother than sin² at the edges
+        const t = 1 - absDiff / bulgeWidth;
         const sineT = Math.sin(t * Math.PI / 2);
-        r += peakDist * sineT * sineT;
+        r += peakDist * sineT * sineT * sineT;
       }
 
       const px = ((halfSize + Math.cos(theta) * r) / totalSize * 100).toFixed(2);
