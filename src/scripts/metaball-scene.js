@@ -1403,27 +1403,28 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
       }
       const midHighLevel = midHighSum / (50 * 255);
 
-      // Tendril strength — scales with energy, impossible below 0.1, unlikely at low levels
-      // Probability curve: quiet = rare brief flickers, loud = sustained extensions
+      // Tendril strength — much more likely, random intensity variation
       let targetTendril = 0;
-      if (midHighLevel > 0.1) {
-        // Scaled likelihood: 0.1-0.2 = subtle, 0.2-0.35 = moderate, 0.35+ = strong
-        const energy01 = Math.min((midHighLevel - 0.1) / 0.4, 1); // 0-1 normalized
-        targetTendril = energy01 * energy01 * 0.7; // quadratic — gentle at low, strong at high
+      if (midHighLevel > 0.06) {
+        const energy01 = Math.min((midHighLevel - 0.06) / 0.3, 1);
+        // Random intensity multiplier — sometimes strong, sometimes subtle
+        const randomIntensity = 0.4 + Math.sin(time * 0.0003) * 0.3 + Math.sin(time * 0.00071) * 0.2;
+        targetTendril = energy01 * energy01 * 0.85 * Math.max(0.2, randomIntensity);
       }
-      const tendrilRate = targetTendril > uniforms.uTendrilStr.value ? 0.015 : 0.005;
+      const tendrilRate = targetTendril > uniforms.uTendrilStr.value ? 0.025 : 0.008;
       uniforms.uTendrilStr.value += (targetTendril - uniforms.uTendrilStr.value) * tendrilRate;
 
       // Phase slowly rotates — tendrils sweep around
-      uniforms.uTendrilPhase.value += dt * 0.1 * (1 + masterEnergy * 0.5);
+      uniforms.uTendrilPhase.value += dt * 0.12 * (1 + masterEnergy * 0.7);
 
-      // Morph intensity — scales with energy, needs at least moderate level
+      // Morph intensity — more frequent, random intensity
       let targetMorph = 0;
-      if (masterEnergy > 0.15) {
-        const morphEnergy = Math.min((masterEnergy - 0.15) / 0.5, 1);
-        targetMorph = morphEnergy * morphEnergy * 0.6 * (0.3 + ema.bass * 0.7);
+      if (masterEnergy > 0.1) {
+        const morphEnergy = Math.min((masterEnergy - 0.1) / 0.35, 1);
+        const morphRandom = 0.3 + Math.sin(time * 0.00047) * 0.35 + Math.sin(time * 0.00089) * 0.25;
+        targetMorph = morphEnergy * 0.7 * Math.max(0.15, morphRandom) * (0.4 + ema.bass * 0.6);
       }
-      const morphRate = targetMorph > uniforms.uMorphIntensity.value ? 0.02 : 0.006;
+      const morphRate = targetMorph > uniforms.uMorphIntensity.value ? 0.03 : 0.008;
       uniforms.uMorphIntensity.value += (targetMorph - uniforms.uMorphIntensity.value) * morphRate;
     }
 
