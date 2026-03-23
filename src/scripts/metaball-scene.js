@@ -483,6 +483,21 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
     z-index: 2;
   `;
 
+  // Shadow behind glob — always visible, creates depth separation
+  const shadowEl = document.createElement('div');
+  shadowEl.style.cssText = `
+    position: absolute;
+    top: 50%; left: 50%;
+    width: ${CANVAS_SIZE * 1.4}px; height: ${CANVAS_SIZE * 1.4}px;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.6) 25%, rgba(0,0,0,0.2) 50%, transparent 70%);
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0;
+    transition: opacity 2.5s ease;
+  `;
+
   // Trail canvas — sits behind the main canvas, captures fading afterimages
   const trailCanvas = document.createElement('canvas');
   trailCanvas.width = CANVAS_SIZE * Math.min(window.devicePixelRatio, 2);
@@ -517,6 +532,7 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
   `;
   const pulseCtx = pulseCanvas.getContext('2d');
   container.appendChild(pulseCanvas);
+  container.appendChild(shadowEl);
   container.appendChild(trailCanvas);
   container.appendChild(canvas);
 
@@ -1386,6 +1402,7 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
     const driftX = energySurgeDrift.toFixed(1);
     canvas.style.transform = `translate(calc(-50% + ${driftX}px), -50%) scale(${scale.toFixed(4)})`;
     trailCanvas.style.transform = `translate(calc(-50% + ${driftX}px), -50%) scale(${(scale * 1.05).toFixed(4)})`;
+    shadowEl.style.transform = `translate(calc(-50% + ${driftX}px), -50%) scale(${(scale * 1.1).toFixed(4)})`;
 
     // Color palette transition
     if (colorT < 1) {
@@ -1437,6 +1454,7 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
     active = true;
     canvas.style.opacity = '1';
     trailCanvas.style.opacity = '1';
+    shadowEl.style.opacity = '1';
     if (showTime === 0) showTime = performance.now() / 1000;
   }
 
@@ -1444,6 +1462,7 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
     active = false;
     canvas.style.opacity = '0';
     trailCanvas.style.opacity = '0';
+    shadowEl.style.opacity = '0';
   }
 
   return { tick, show, hide, canvas, nextTheme, prevTheme, get active() { return active; } };
