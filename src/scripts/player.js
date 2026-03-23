@@ -942,24 +942,24 @@ export async function init() {
       // Spawn burst rings occasionally while hovering
       hoverBurstRunning = true;
       const now = performance.now();
-      if (now - lastBurstTime > 600 + Math.random() * 800) {
+      if (now - lastBurstTime > 2000 + Math.random() * 2000) {
         lastBurstTime = now;
-        // Spawn 3-5 rings as a burst
-        const burstCount = 3 + Math.floor(Math.random() * 3);
+        // Spawn 3-4 rings as a slow hypnotic burst
+        const burstCount = 3 + Math.floor(Math.random() * 2);
         for (let b = 0; b < burstCount; b++) {
-          const delay = b * 120;
+          const delay = b * 500; // slow stagger
           setTimeout(() => {
             const ring = document.createElement('div');
             const size = Math.max(window.innerWidth, window.innerHeight) * 2.5;
-            const thickness = 6 + Math.random() * 6; // 6-12px thick
+            const thickness = 4 + Math.random() * 5;
             ring.style.cssText = `
               position: fixed;
               left: ${btnCx}px; top: ${btnCy}px;
               width: ${size}px; height: ${size}px;
               margin-left: ${-size/2}px; margin-top: ${-size/2}px;
               border-radius: 50%;
-              border: ${thickness}px solid rgba(255,255,255,0.5);
-              box-shadow: 0 0 20px rgba(255,255,255,0.2), inset 0 0 15px rgba(255,255,255,0.1);
+              border: ${thickness}px solid rgba(255,255,255,0.35);
+              box-shadow: 0 0 20px rgba(255,255,255,0.12), inset 0 0 15px rgba(255,255,255,0.06);
               pointer-events: none;
               z-index: 99999;
               transform: scale(0);
@@ -968,15 +968,16 @@ export async function init() {
             document.body.appendChild(ring);
 
             ring.animate([
-              { transform: 'scale(0)', opacity: 0.8, borderWidth: thickness + 'px' },
-              { transform: 'scale(0.08)', opacity: 0.6, borderWidth: (thickness * 0.8) + 'px', offset: 0.1 },
-              { transform: 'scale(0.25)', opacity: 0.35, borderWidth: (thickness * 0.5) + 'px', offset: 0.3 },
-              { transform: 'scale(0.5)', opacity: 0.15, borderWidth: (thickness * 0.3) + 'px', offset: 0.55 },
-              { transform: 'scale(0.8)', opacity: 0.05, borderWidth: '1px', offset: 0.8 },
+              { transform: 'scale(0)', opacity: 0.6, borderWidth: thickness + 'px' },
+              { transform: 'scale(0.05)', opacity: 0.5, borderWidth: (thickness * 0.9) + 'px', offset: 0.08 },
+              { transform: 'scale(0.15)', opacity: 0.35, borderWidth: (thickness * 0.7) + 'px', offset: 0.25 },
+              { transform: 'scale(0.35)', opacity: 0.2, borderWidth: (thickness * 0.5) + 'px', offset: 0.45 },
+              { transform: 'scale(0.6)', opacity: 0.1, borderWidth: (thickness * 0.3) + 'px', offset: 0.65 },
+              { transform: 'scale(0.85)', opacity: 0.03, borderWidth: '1px', offset: 0.85 },
               { transform: 'scale(1)', opacity: 0, borderWidth: '0.5px' },
-            ], { duration: 2800 + Math.random() * 600, easing: 'cubic-bezier(0.16, 1, 0.3, 1)', fill: 'forwards' });
+            ], { duration: 5000 + Math.random() * 1500, easing: 'cubic-bezier(0.08, 0.82, 0.17, 1)', fill: 'forwards' });
 
-            setTimeout(() => ring.remove(), 3500);
+            setTimeout(() => ring.remove(), 7000);
           }, delay);
         }
       }
