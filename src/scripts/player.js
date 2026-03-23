@@ -800,6 +800,54 @@ export async function init() {
   // Make button large enough to contain the extension — actual visible shape controlled by clip-path
   const introBaseSize = 150; // CSS size of intro .ctrl-play
 
+  // Ripple container — separate from button so clip-path doesn't hide them
+  const rippleContainer = document.createElement('div');
+  rippleContainer.style.cssText = `
+    position: fixed;
+    pointer-events: none;
+    z-index: 9996;
+    display: none;
+  `;
+  // Create 5 ripple rings
+  for (let r = 0; r < 5; r++) {
+    const ring = document.createElement('div');
+    ring.className = 'intro-ripple-ring';
+    ring.style.cssText = `
+      position: absolute;
+      border-radius: 50%;
+      border: 1px solid rgba(255,255,255,0.2);
+      transform: translate(-50%, -50%) scale(1);
+      opacity: 0;
+      left: 50%; top: 50%;
+    `;
+    rippleContainer.appendChild(ring);
+  }
+  document.body.appendChild(rippleContainer);
+
+  let ripplesRunning = false;
+  let rippleStartTime = 0;
+
+  function tickRipples() {
+    if (!ripplesRunning) return;
+    const elapsed = (performance.now() - rippleStartTime) / 1000;
+    const rings = rippleContainer.querySelectorAll('.intro-ripple-ring');
+    for (let i = 0; i < rings.length; i++) {
+      const delay = i * 0.4;
+      const cycleLen = 2.5;
+      const t = ((elapsed - delay) % cycleLen) / cycleLen;
+      if (t < 0 || elapsed < delay) {
+        rings[i].style.opacity = '0';
+        continue;
+      }
+      const scale = 1 + t * 4;
+      const opacity = t < 0.1 ? t / 0.1 * 0.3 : 0.3 * (1 - (t - 0.1) / 0.9);
+      rings[i].style.transform = `translate(-50%, -50%) scale(${scale.toFixed(3)})`;
+      rings[i].style.opacity = Math.max(0, opacity).toFixed(3);
+      rings[i].style.borderColor = `rgba(255,255,255,${(opacity * 0.8).toFixed(3)})`;
+    }
+    requestAnimationFrame(tickRipples);
+  }
+
   document.addEventListener('mousemove', (e) => {
     introMouseX = e.clientX;
     introMouseY = e.clientY;
@@ -900,17 +948,31 @@ export async function init() {
     playBtn.style.transform = `scale(${sizeScale.toFixed(4)})`;
 
 
+    // Position ripple container centered on button
+    const rippleSize = 400;
+    rippleContainer.style.left = (btnCx - rippleSize / 2) + 'px';
+    rippleContainer.style.top = (btnCy - rippleSize / 2) + 'px';
+    rippleContainer.style.width = rippleSize + 'px';
+    rippleContainer.style.height = rippleSize + 'px';
+
     // Pure white at varying opacity — no grey tones, no hue
     if (isHoveringBtn) {
-      // Pulsing glow — oscillates in hover mode
-      const pulseT = performance.now() / 1000;
-      const pulse1 = 0.15 + Math.sin(pulseT * 2.0) * 0.08;
-      const pulse2 = 0.06 + Math.sin(pulseT * 1.3 + 1.0) * 0.04;
-      const pulseSize1 = 12 + Math.sin(pulseT * 1.8) * 6;
-      const pulseSize2 = 30 + Math.sin(pulseT * 1.2 + 0.5) * 12;
       playBtn.style.background = 'rgba(255, 255, 255, 0.22)';
-      playBtn.style.filter = `drop-shadow(0 0 ${pulseSize1.toFixed(0)}px rgba(255,255,255,${pulse1.toFixed(3)})) drop-shadow(0 0 ${pulseSize2.toFixed(0)}px rgba(255,255,255,${pulse2.toFixed(3)}))`;
+      playBtn.style.filter = 'drop-shadow(0 0 12px rgba(255,255,255,0.2)) drop-shadow(0 0 30px rgba(255,255,255,0.08))';
+
+      // Start ripples if not already running
+      if (!ripplesRunning) {
+        ripplesRunning = true;
+        rippleStartTime = performance.now();
+        rippleContainer.style.display = '';
+        tickRipples();
+      }
     } else {
+      // Stop ripples
+      if (ripplesRunning) {
+        ripplesRunning = false;
+        rippleContainer.style.display = 'none';
+      }
       // White only — opacity scales from 0.12 (far) to 0.16 (close)
       const alpha = (0.12 + proximity * 0.04).toFixed(3);
       playBtn.style.background = `rgba(255, 255, 255, ${alpha})`;
