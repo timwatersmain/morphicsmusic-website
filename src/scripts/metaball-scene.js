@@ -1403,28 +1403,27 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
       }
       const midHighLevel = midHighSum / (50 * 255);
 
-      // Tendril strength — much more likely, random intensity variation
+      // Tendril strength — very frequent, always some movement when audio plays
       let targetTendril = 0;
-      if (midHighLevel > 0.06) {
-        const energy01 = Math.min((midHighLevel - 0.06) / 0.3, 1);
-        // Random intensity multiplier — sometimes strong, sometimes subtle
-        const randomIntensity = 0.4 + Math.sin(time * 0.0003) * 0.3 + Math.sin(time * 0.00071) * 0.2;
-        targetTendril = energy01 * energy01 * 0.85 * Math.max(0.2, randomIntensity);
+      if (midHighLevel > 0.03) {
+        const energy01 = Math.min((midHighLevel - 0.03) / 0.2, 1);
+        const randomIntensity = 0.5 + Math.sin(time * 0.0003) * 0.25 + Math.sin(time * 0.00071) * 0.2;
+        targetTendril = energy01 * 0.95 * Math.max(0.3, randomIntensity);
       }
-      const tendrilRate = targetTendril > uniforms.uTendrilStr.value ? 0.025 : 0.008;
+      const tendrilRate = targetTendril > uniforms.uTendrilStr.value ? 0.04 : 0.012;
       uniforms.uTendrilStr.value += (targetTendril - uniforms.uTendrilStr.value) * tendrilRate;
 
-      // Phase slowly rotates — tendrils sweep around
-      uniforms.uTendrilPhase.value += dt * 0.12 * (1 + masterEnergy * 0.7);
+      // Phase rotates — tendrils sweep around
+      uniforms.uTendrilPhase.value += dt * 0.15 * (1 + masterEnergy);
 
-      // Morph intensity — more frequent, random intensity
+      // Morph intensity — very responsive, always morphing when audio plays
       let targetMorph = 0;
-      if (masterEnergy > 0.1) {
-        const morphEnergy = Math.min((masterEnergy - 0.1) / 0.35, 1);
-        const morphRandom = 0.3 + Math.sin(time * 0.00047) * 0.35 + Math.sin(time * 0.00089) * 0.25;
-        targetMorph = morphEnergy * 0.7 * Math.max(0.15, morphRandom) * (0.4 + ema.bass * 0.6);
+      if (masterEnergy > 0.05) {
+        const morphEnergy = Math.min((masterEnergy - 0.05) / 0.25, 1);
+        const morphRandom = 0.4 + Math.sin(time * 0.00047) * 0.3 + Math.sin(time * 0.00089) * 0.2;
+        targetMorph = morphEnergy * 0.8 * Math.max(0.25, morphRandom) * (0.5 + ema.bass * 0.5);
       }
-      const morphRate = targetMorph > uniforms.uMorphIntensity.value ? 0.03 : 0.008;
+      const morphRate = targetMorph > uniforms.uMorphIntensity.value ? 0.05 : 0.012;
       uniforms.uMorphIntensity.value += (targetMorph - uniforms.uMorphIntensity.value) * morphRate;
     }
 
