@@ -558,7 +558,37 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
   `;
   const pulseCtx = pulseCanvas.getContext('2d');
   container.appendChild(pulseCanvas);
+  // Horizontal lens flare — full width, centered on glob
+  const flareEl = document.createElement('div');
+  flareEl.style.cssText = `
+    position: absolute;
+    top: 50%; left: 0;
+    width: 100%; height: 3px;
+    transform: translateY(-50%);
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0;
+    transition: opacity 2.5s ease;
+    background: linear-gradient(90deg,
+      transparent 0%,
+      rgba(200,210,220,0.03) 10%,
+      rgba(200,210,220,0.08) 25%,
+      rgba(200,210,220,0.2) 40%,
+      rgba(255,255,255,0.35) 50%,
+      rgba(200,210,220,0.2) 60%,
+      rgba(200,210,220,0.08) 75%,
+      rgba(200,210,220,0.03) 90%,
+      transparent 100%
+    );
+    box-shadow:
+      0 0 8px rgba(200,210,220,0.15),
+      0 0 30px rgba(200,210,220,0.08),
+      0 0 60px rgba(200,210,220,0.04);
+    filter: blur(1px);
+  `;
+
   container.appendChild(shadowEl);
+  container.appendChild(flareEl);
   container.appendChild(canvas);
 
   // Pulse state
@@ -1485,6 +1515,7 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
     currentDriftX = parseFloat(driftX);
     canvas.style.transform = `translate(calc(-50% + ${driftX}px), -50%) scale(${scale.toFixed(4)})`;
     shadowEl.style.transform = `translate(calc(-50% + ${driftX}px), -50%) scale(${(scale * 1.1).toFixed(4)})`;
+    flareEl.style.transform = `translateY(-50%)`;
 
     // Color palette transition
     if (colorT < 1) {
@@ -1528,6 +1559,7 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
     active = true;
     canvas.style.opacity = '1';
     shadowEl.style.opacity = '1';
+    flareEl.style.opacity = '1';
     if (showTime === 0) showTime = performance.now() / 1000;
   }
 
@@ -1535,6 +1567,7 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
     active = false;
     canvas.style.opacity = '0';
     shadowEl.style.opacity = '0';
+    flareEl.style.opacity = '0';
   }
 
   // Expose glob screen bounds for collision detection
