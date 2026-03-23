@@ -805,9 +805,8 @@ export async function init() {
   reachCanvas.style.cssText = `
     position: fixed;
     pointer-events: none;
-    z-index: 9998;
+    z-index: 9997;
     width: ${RC_SIZE}px; height: ${RC_SIZE}px;
-    mix-blend-mode: normal;
   `;
   document.body.appendChild(reachCanvas);
   const rctx = reachCanvas.getContext('2d');
@@ -861,51 +860,43 @@ export async function init() {
     const ccy = RC_SIZE / 2;
 
     if (smoothReach > 0.01) {
-      // Draw entire shape as one smooth polar curve — circle with sine-wave bulge
-      // The bulge is a smooth half-sine: rises from circle, peaks, returns to circle
       const peakDist = smoothReach * btnR * 1.8;
-      const bulgeWidth = 1.2; // radians wide (about 70 degrees each side)
+      const bulgeWidth = 1.2;
 
-      // Match button's background — slightly brighter to blend seamlessly
-      rctx.fillStyle = 'rgba(255, 255, 255, 0.16)';
+      // Draw the full blob shape
+      rctx.fillStyle = 'rgba(255, 255, 255, 0.14)';
+
+      // First: draw the full blob shape including circle + bulge
       rctx.beginPath();
-
       const steps = 80;
       for (let i = 0; i <= steps; i++) {
         const theta = (i / steps) * Math.PI * 2;
-
-        // Base radius = circle
         let r = btnR;
-
-        // Angular distance from the reach direction
         let diff = theta - smoothAngle;
-        // Wrap to -PI..PI
         if (diff > Math.PI) diff -= Math.PI * 2;
         if (diff < -Math.PI) diff += Math.PI * 2;
-
-        // Smooth half-sine bulge: only on the side facing cursor
         if (Math.abs(diff) < bulgeWidth) {
-          // Sine wave: 0 at edges, 1 at peak — smooth slope up and down
-          const t = 1 - Math.abs(diff) / bulgeWidth; // 0 at edge, 1 at center
-          const sineT = Math.sin(t * Math.PI / 2); // smooth sine ramp
-          r += peakDist * sineT * sineT; // squared for smoother falloff
+          const t = 1 - Math.abs(diff) / bulgeWidth;
+          const sineT = Math.sin(t * Math.PI / 2);
+          r += peakDist * sineT * sineT;
         }
-
         const px = ccx + Math.cos(theta) * r;
         const py = ccy + Math.sin(theta) * r;
-
-        if (i === 0) rctx.moveTo(px, py);
-        else rctx.lineTo(px, py);
+        if (i === 0) rctx.moveTo(px, py); else rctx.lineTo(px, py);
       }
+      rctx.closePath();
 
+      // Cut out the button circle so only the extension is visible
+      // This prevents the double-layer overlap
+      rctx.moveTo(ccx + btnR, ccy);
+      for (let i = steps; i >= 0; i--) {
+        const theta = (i / steps) * Math.PI * 2;
+        const px = ccx + Math.cos(theta) * (btnR - 1);
+        const py = ccy + Math.sin(theta) * (btnR - 1);
+        rctx.lineTo(px, py);
+      }
       rctx.closePath();
       rctx.fill();
-
-      // Add subtle inner glow to match button's box-shadow
-      rctx.shadowColor = 'rgba(255,255,255,0.08)';
-      rctx.shadowBlur = 4;
-      rctx.fill();
-      rctx.shadowBlur = 0;
     }
 
     requestAnimationFrame(tickIntroReach);
