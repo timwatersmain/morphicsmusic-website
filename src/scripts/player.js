@@ -866,9 +866,8 @@ export async function init() {
       const peakDist = smoothReach * btnR * 1.8;
       const bulgeWidth = 1.2; // radians wide (about 70 degrees each side)
 
-      // Match button's current background color
-      const btnBg = getComputedStyle(playBtn).backgroundColor;
-      rctx.fillStyle = btnBg || 'rgba(255, 255, 255, 0.12)';
+      // Match button's background — slightly brighter to blend seamlessly
+      rctx.fillStyle = 'rgba(255, 255, 255, 0.16)';
       rctx.beginPath();
 
       const steps = 80;
