@@ -588,7 +588,7 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
   // ── TYPE 2: Shockwave — sharp thin ring, triggered by snare hits ──
   function fireShockwave() {
     const c = getColors();
-    const pulse = { type: 'shockwave', startTime: performance.now(), duration: 1800, ...c };
+    const pulse = { type: 'shockwave', startTime: performance.now(), duration: 2800, ...c };
     activePulses.push(pulse);
   }
 
@@ -639,8 +639,71 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
 
   function firePulse() { fireNebulaRing(); }
 
+  // ── Wandering ambient lights — always-on drifting glows ──
+  const wanderers = [];
+  const MAX_WANDERERS = 6;
+  for (let w = 0; w < MAX_WANDERERS; w++) {
+    wanderers.push({
+      x: Math.random() * PULSE_W,
+      y: Math.random() * PULSE_H,
+      vx: (Math.random() - 0.5) * 0.3,
+      vy: (Math.random() - 0.5) * 0.3,
+      size: 40 + Math.random() * 80,
+      brightness: 0,
+      targetBrightness: 0,
+      useRim: Math.random() > 0.5,
+      phaseX: Math.random() * Math.PI * 2,
+      phaseY: Math.random() * Math.PI * 2,
+      speedX: 0.1 + Math.random() * 0.15,
+      speedY: 0.08 + Math.random() * 0.12,
+      fadeTimer: Math.random() * 10000,
+      fadeDur: 3000 + Math.random() * 5000,
+    });
+  }
+
+  function tickWanderers(now) {
+    const c = getColors();
+    const t = now / 1000;
+    for (const w of wanderers) {
+      // Smooth drift with sine wander
+      w.x += Math.sin(t * w.speedX + w.phaseX) * 0.5 + w.vx;
+      w.y += Math.sin(t * w.speedY + w.phaseY) * 0.4 + w.vy;
+
+      // Wrap around edges
+      if (w.x < -100) w.x = PULSE_W + 50;
+      if (w.x > PULSE_W + 100) w.x = -50;
+      if (w.y < -100) w.y = PULSE_H + 50;
+      if (w.y > PULSE_H + 100) w.y = -50;
+
+      // Random fade in/out cycle
+      w.fadeTimer += 16;
+      if (w.fadeTimer > w.fadeDur) {
+        w.fadeTimer = 0;
+        w.fadeDur = 3000 + Math.random() * 6000;
+        w.targetBrightness = Math.random() * 0.2;
+        w.useRim = Math.random() > 0.5;
+      }
+      w.brightness += (w.targetBrightness - w.brightness) * 0.01;
+
+      if (w.brightness < 0.01) continue;
+
+      const cr = w.useRim ? c.r1 : c.r2;
+      const cg = w.useRim ? c.g1 : c.g2;
+      const cb = w.useRim ? c.b1 : c.b2;
+      const sz = w.size * (1 + Math.sin(t * 0.3 + w.phaseX) * 0.3);
+      const a = w.brightness;
+
+      const grad = pulseCtx.createRadialGradient(w.x, w.y, 0, w.x, w.y, sz);
+      grad.addColorStop(0, `rgba(${cr},${cg},${cb},${(a * 0.4).toFixed(3)})`);
+      grad.addColorStop(0.3, `rgba(${cr},${cg},${cb},${(a * 0.2).toFixed(3)})`);
+      grad.addColorStop(0.7, `rgba(${cr},${cg},${cb},${(a * 0.05).toFixed(3)})`);
+      grad.addColorStop(1, `rgba(${cr},${cg},${cb},0)`);
+      pulseCtx.fillStyle = grad;
+      pulseCtx.beginPath(); pulseCtx.arc(w.x, w.y, sz, 0, Math.PI * 2); pulseCtx.fill();
+    }
+  }
+
   function tickPulses() {
-    pulseCtx.clearRect(0, 0, PULSE_W, PULSE_H);
     const cx = PULSE_W / 2;
     const cy = PULSE_H / 2;
     const maxDim = Math.max(PULSE_W, PULSE_H);
@@ -680,7 +743,7 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
         }
 
       } else if (pulse.type === 'shockwave') {
-        const maxR = maxDim * 0.55;
+        const maxR = maxDim * 0.75;
         const ringR = 20 + t * t * maxR;
         const a = alpha * 0.7;
         const glowWidth = (20 + t * 60) * glowGrow;
@@ -1356,8 +1419,8 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
       if (aboveSnare && aboveSnareFast && snareCooled && masterEnergy > 0.1) {
         lastSnareTime = time;
         spawnBurst(uniforms.uRimColor.value);
-        // TYPE 2: Shockwave on snare (max every 800ms)
-        if (time - lastSnarePulseTime > 800) {
+        // TYPE 2: Shockwave on snare (max every 3s — less frequent)
+        if (time - lastSnarePulseTime > 3000) {
           lastSnarePulseTime = time;
           fireShockwave();
         }
@@ -1446,7 +1509,9 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
     trailCtx.drawImage(canvas, 0, 0, trailCanvas.width, trailCanvas.height);
     trailCtx.globalAlpha = 1;
 
-    // Tick nebula pulse rings
+    // Clear pulse canvas, then draw wanderers + pulses
+    pulseCtx.clearRect(0, 0, PULSE_W, PULSE_H);
+    tickWanderers(time);
     if (activePulses.length) tickPulses();
   }
 
