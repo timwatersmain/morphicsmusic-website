@@ -541,23 +541,6 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
     transition: opacity 2.5s ease;
   `;
 
-  // Trail canvas — sits behind the main canvas, captures fading afterimages
-  const trailCanvas = document.createElement('canvas');
-  trailCanvas.width = CANVAS_SIZE * Math.min(window.devicePixelRatio, 2);
-  trailCanvas.height = trailCanvas.width;
-  trailCanvas.style.cssText = `
-    position: absolute;
-    top: 50%; left: 50%;
-    width: ${CANVAS_SIZE}px; height: ${CANVAS_SIZE}px;
-    transform: translate(-50%, -50%);
-    opacity: 0;
-    transition: opacity 2.5s ease;
-    pointer-events: none;
-    z-index: 1;
-  `;
-  const trailCtx = trailCanvas.getContext('2d', { alpha: true });
-  // Ensure completely transparent start
-  trailCtx.clearRect(0, 0, trailCanvas.width, trailCanvas.height);
 
   // Nebula pulse canvas — renders gaseous ring behind the metaball
   const pulseCanvas = document.createElement('canvas');
@@ -576,7 +559,6 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
   const pulseCtx = pulseCanvas.getContext('2d');
   container.appendChild(pulseCanvas);
   container.appendChild(shadowEl);
-  container.appendChild(trailCanvas);
   container.appendChild(canvas);
 
   // Pulse state
@@ -1460,17 +1442,17 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
       }
       const midHighLevel = midHighSum / (50 * 255);
 
-      // Smooth tendril strength — extends on sustained mid-high content
-      const targetTendril = midHighLevel > 0.2 ? Math.min(midHighLevel * 2, 1) : 0;
-      const tendrilRate = targetTendril > uniforms.uTendrilStr.value ? 0.03 : 0.008;
+      // Smooth tendril strength — only on high sustained mid-high content
+      const targetTendril = midHighLevel > 0.35 ? Math.min((midHighLevel - 0.35) * 2.5, 0.7) : 0;
+      const tendrilRate = targetTendril > uniforms.uTendrilStr.value ? 0.015 : 0.005;
       uniforms.uTendrilStr.value += (targetTendril - uniforms.uTendrilStr.value) * tendrilRate;
 
       // Phase slowly rotates — tendrils sweep around
-      uniforms.uTendrilPhase.value += dt * 0.15 * (1 + masterEnergy);
+      uniforms.uTendrilPhase.value += dt * 0.1 * (1 + masterEnergy * 0.5);
 
-      // Morph intensity — high when bass is punchy and energy is high
-      const targetMorph = masterEnergy > 0.3 ? Math.min((masterEnergy - 0.3) * 3, 1) * (0.5 + ema.bass) : 0;
-      const morphRate = targetMorph > uniforms.uMorphIntensity.value ? 0.04 : 0.01;
+      // Morph intensity — only on very heavy sections
+      const targetMorph = masterEnergy > 0.45 ? Math.min((masterEnergy - 0.45) * 2.5, 0.6) * ema.bass : 0;
+      const morphRate = targetMorph > uniforms.uMorphIntensity.value ? 0.02 : 0.006;
       uniforms.uMorphIntensity.value += (targetMorph - uniforms.uMorphIntensity.value) * morphRate;
     }
 
@@ -1492,7 +1474,6 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
     currentScale = scale;
     currentDriftX = parseFloat(driftX);
     canvas.style.transform = `translate(calc(-50% + ${driftX}px), -50%) scale(${scale.toFixed(4)})`;
-    trailCanvas.style.transform = `translate(calc(-50% + ${driftX}px), -50%) scale(${(scale * 1.05).toFixed(4)})`;
     shadowEl.style.transform = `translate(calc(-50% + ${driftX}px), -50%) scale(${(scale * 1.1).toFixed(4)})`;
 
     // Color palette transition
@@ -1527,16 +1508,6 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
       renderer.autoClear = true;
     }
 
-    // Trail: fade previous frame then composite current frame on top
-    trailCtx.globalCompositeOperation = 'destination-out';
-    trailCtx.globalAlpha = 0.12;
-    trailCtx.fillStyle = '#000';
-    trailCtx.fillRect(0, 0, trailCanvas.width, trailCanvas.height);
-    trailCtx.globalCompositeOperation = 'source-over';
-    trailCtx.globalAlpha = 0.3;
-    trailCtx.drawImage(canvas, 0, 0, trailCanvas.width, trailCanvas.height);
-    trailCtx.globalAlpha = 1;
-
     // Clear pulse canvas, then draw wanderers + pulses
     pulseCtx.clearRect(0, 0, PULSE_W, PULSE_H);
     tickWanderers(time);
@@ -1546,7 +1517,6 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
   function show() {
     active = true;
     canvas.style.opacity = '1';
-    trailCanvas.style.opacity = '1';
     shadowEl.style.opacity = '1';
     if (showTime === 0) showTime = performance.now() / 1000;
   }
@@ -1554,7 +1524,6 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
   function hide() {
     active = false;
     canvas.style.opacity = '0';
-    trailCanvas.style.opacity = '0';
     shadowEl.style.opacity = '0';
   }
 
