@@ -858,40 +858,41 @@ export async function init() {
     const ccy = RC_SIZE / 2;
 
     if (smoothReach > 0.01) {
-      // Draw base circle + teardrop extension as one filled shape
-      const reachDist = btnR + smoothReach * btnR * 1.8; // how far the tip extends
-      const tipX = ccx + Math.cos(smoothAngle) * reachDist;
-      const tipY = ccy + Math.sin(smoothAngle) * reachDist;
-
-      // Width of the tendril at the base (where it meets the circle)
-      const baseWidth = btnR * (0.6 + smoothReach * 0.2);
-
-      // Control points for smooth bezier curves
-      const perpAngle = smoothAngle + Math.PI / 2;
-      const base1X = ccx + Math.cos(smoothAngle) * btnR * 0.7 + Math.cos(perpAngle) * baseWidth * 0.5;
-      const base1Y = ccy + Math.sin(smoothAngle) * btnR * 0.7 + Math.sin(perpAngle) * baseWidth * 0.5;
-      const base2X = ccx + Math.cos(smoothAngle) * btnR * 0.7 - Math.cos(perpAngle) * baseWidth * 0.5;
-      const base2Y = ccy + Math.sin(smoothAngle) * btnR * 0.7 - Math.sin(perpAngle) * baseWidth * 0.5;
-
-      // Mid control points for the smooth curve
-      const midDist = reachDist * 0.6;
-      const midWidth = baseWidth * 0.3;
-      const mid1X = ccx + Math.cos(smoothAngle) * midDist + Math.cos(perpAngle) * midWidth;
-      const mid1Y = ccy + Math.sin(smoothAngle) * midDist + Math.sin(perpAngle) * midWidth;
-      const mid2X = ccx + Math.cos(smoothAngle) * midDist - Math.cos(perpAngle) * midWidth;
-      const mid2Y = ccy + Math.sin(smoothAngle) * midDist - Math.sin(perpAngle) * midWidth;
+      // Draw entire shape as one smooth polar curve — circle with sine-wave bulge
+      // The bulge is a smooth half-sine: rises from circle, peaks, returns to circle
+      const peakDist = smoothReach * btnR * 1.8;
+      const bulgeWidth = 1.2; // radians wide (about 70 degrees each side)
 
       rctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
       rctx.beginPath();
 
-      // Draw base circle
-      rctx.arc(ccx, ccy, btnR, smoothAngle + Math.PI * 0.35, smoothAngle - Math.PI * 0.35 + Math.PI * 2);
+      const steps = 80;
+      for (let i = 0; i <= steps; i++) {
+        const theta = (i / steps) * Math.PI * 2;
 
-      // Bezier curve from circle edge → tip (one side)
-      rctx.quadraticCurveTo(mid1X, mid1Y, tipX, tipY);
+        // Base radius = circle
+        let r = btnR;
 
-      // Bezier curve from tip → back to circle (other side)
-      rctx.quadraticCurveTo(mid2X, mid2Y, base2X, base2Y);
+        // Angular distance from the reach direction
+        let diff = theta - smoothAngle;
+        // Wrap to -PI..PI
+        if (diff > Math.PI) diff -= Math.PI * 2;
+        if (diff < -Math.PI) diff += Math.PI * 2;
+
+        // Smooth half-sine bulge: only on the side facing cursor
+        if (Math.abs(diff) < bulgeWidth) {
+          // Sine wave: 0 at edges, 1 at peak — smooth slope up and down
+          const t = 1 - Math.abs(diff) / bulgeWidth; // 0 at edge, 1 at center
+          const sineT = Math.sin(t * Math.PI / 2); // smooth sine ramp
+          r += peakDist * sineT * sineT; // squared for smoother falloff
+        }
+
+        const px = ccx + Math.cos(theta) * r;
+        const py = ccy + Math.sin(theta) * r;
+
+        if (i === 0) rctx.moveTo(px, py);
+        else rctx.lineTo(px, py);
+      }
 
       rctx.closePath();
       rctx.fill();
