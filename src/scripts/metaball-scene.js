@@ -640,66 +640,68 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
       const fadeOut = t > 0.25 ? Math.max(0, 1 - (t - 0.25) / 0.75) : 1;
       const alpha = fadeIn * fadeOut;
 
+      // Glow expansion factor — glow grows as pulse travels outward
+      const glowGrow = 1 + t * 2; // 1x at center → 3x at edge
+
       if (pulse.type === 'nebula') {
-        // Gas ring — much larger blobs filling screen
-        const maxR = maxDim * 0.6;
+        const maxR = maxDim * 0.55;
         const ringR = 30 + t * maxR;
         for (const b of pulse.blobs) {
           const ang = b.angle + t * b.rotSpeed * Math.PI;
           const r = ringR * (1 + b.radiusOffset);
           const bx = cx + Math.cos(ang) * r, by = cy + Math.sin(ang) * r;
-          const sz = b.size * 1.8 * (b.isHotspot ? 1 + t * 1.5 : 1 + t * 0.8) * (1 - t * 0.2);
+          const baseSz = b.size * 1.6 * (b.isHotspot ? 1 + t * 1.5 : 1 + t * 0.8);
+          const sz = baseSz * glowGrow;
           const cr = b.useRim ? pulse.r1 : pulse.r2, cg = b.useRim ? pulse.g1 : pulse.g2, cb = b.useRim ? pulse.b1 : pulse.b2;
           const a = alpha * b.brightness;
           const grad = pulseCtx.createRadialGradient(bx, by, 0, bx, by, sz);
-          grad.addColorStop(0, `rgba(${cr},${cg},${cb},${(a * 0.7).toFixed(3)})`);
-          grad.addColorStop(0.3, `rgba(${cr},${cg},${cb},${(a * 0.4).toFixed(3)})`);
-          grad.addColorStop(0.7, `rgba(${cr},${cg},${cb},${(a * 0.15).toFixed(3)})`);
+          grad.addColorStop(0, `rgba(${cr},${cg},${cb},${(a * 0.6).toFixed(3)})`);
+          grad.addColorStop(0.2, `rgba(${cr},${cg},${cb},${(a * 0.35).toFixed(3)})`);
+          grad.addColorStop(0.5, `rgba(${cr},${cg},${cb},${(a * 0.15).toFixed(3)})`);
           grad.addColorStop(1, `rgba(${cr},${cg},${cb},0)`);
           pulseCtx.fillStyle = grad;
           pulseCtx.beginPath(); pulseCtx.arc(bx, by, sz, 0, Math.PI * 2); pulseCtx.fill();
         }
 
       } else if (pulse.type === 'shockwave') {
-        // Soft glowing ring — lightsaber-like glow, no hard edges
         const maxR = maxDim * 0.55;
         const ringR = 20 + t * t * maxR;
         const a = alpha * 0.7;
-        // Render as a soft radial gradient donut — no stroke, pure glow
-        const innerR = Math.max(0, ringR - 15 - (1 - t) * 20);
-        const outerR = ringR + 30 + (1 - t) * 40;
+        // Glow width grows as ring expands
+        const glowWidth = (20 + t * 60) * glowGrow;
+        const innerR = Math.max(0, ringR - glowWidth * 0.4);
+        const outerR = ringR + glowWidth;
         const grad = pulseCtx.createRadialGradient(cx, cy, innerR, cx, cy, outerR);
         grad.addColorStop(0, `rgba(${pulse.r1},${pulse.g1},${pulse.b1},0)`);
-        grad.addColorStop(0.3, `rgba(${pulse.r1},${pulse.g1},${pulse.b1},${(a * 0.15).toFixed(3)})`);
-        grad.addColorStop(0.45, `rgba(${pulse.r1},${pulse.g1},${pulse.b1},${(a * 0.6).toFixed(3)})`);
-        grad.addColorStop(0.5, `rgba(255,255,255,${(a * 0.5).toFixed(3)})`); // white hot core
-        grad.addColorStop(0.55, `rgba(${pulse.r1},${pulse.g1},${pulse.b1},${(a * 0.6).toFixed(3)})`);
-        grad.addColorStop(0.7, `rgba(${pulse.r2},${pulse.g2},${pulse.b2},${(a * 0.15).toFixed(3)})`);
+        grad.addColorStop(0.25, `rgba(${pulse.r1},${pulse.g1},${pulse.b1},${(a * 0.12).toFixed(3)})`);
+        grad.addColorStop(0.4, `rgba(${pulse.r1},${pulse.g1},${pulse.b1},${(a * 0.5).toFixed(3)})`);
+        grad.addColorStop(0.5, `rgba(255,255,255,${(a * 0.4).toFixed(3)})`);
+        grad.addColorStop(0.6, `rgba(${pulse.r1},${pulse.g1},${pulse.b1},${(a * 0.5).toFixed(3)})`);
+        grad.addColorStop(0.75, `rgba(${pulse.r2},${pulse.g2},${pulse.b2},${(a * 0.1).toFixed(3)})`);
         grad.addColorStop(1, `rgba(${pulse.r2},${pulse.g2},${pulse.b2},0)`);
         pulseCtx.fillStyle = grad;
         pulseCtx.beginPath(); pulseCtx.arc(cx, cy, outerR, 0, Math.PI * 2); pulseCtx.fill();
 
       } else if (pulse.type === 'flare') {
-        // Large asymmetric gas clouds erupting outward
-        const maxR = maxDim * 0.55;
+        const maxR = maxDim * 0.5;
         const baseR = 30 + t * maxR;
         for (const cloud of pulse.clouds) {
           const ang = cloud.angle + t * cloud.drift;
           const r = baseR * cloud.speed;
           const cloudCx = cx + Math.cos(ang) * r;
           const cloudCy = cy + Math.sin(ang) * r;
-          const sz = cloud.size * (1.5 + t * 3); // grow large
+          const sz = cloud.size * (1.5 + t * 2.5) * glowGrow;
           const cr = cloud.useRim ? pulse.r1 : pulse.r2, cg = cloud.useRim ? pulse.g1 : pulse.g2, cb = cloud.useRim ? pulse.b1 : pulse.b2;
           const a = alpha * cloud.brightness;
-          // Multiple layered soft circles per cloud for volume
           for (let sub = 0; sub < 3; sub++) {
             const ox = Math.sin(t * 3 + sub * 2 + cloud.angle) * sz * 0.2;
             const oy = Math.cos(t * 2.5 + sub * 1.7 + cloud.angle) * sz * 0.15;
             const subSz = sz * (0.6 + sub * 0.25);
-            const subA = a * (0.5 - sub * 0.12);
+            const subA = a * (0.45 - sub * 0.1);
             const grad = pulseCtx.createRadialGradient(cloudCx + ox, cloudCy + oy, 0, cloudCx + ox, cloudCy + oy, subSz);
             grad.addColorStop(0, `rgba(${cr},${cg},${cb},${subA.toFixed(3)})`);
-            grad.addColorStop(0.3, `rgba(${cr},${cg},${cb},${(subA * 0.5).toFixed(3)})`);
+            grad.addColorStop(0.25, `rgba(${cr},${cg},${cb},${(subA * 0.5).toFixed(3)})`);
+            grad.addColorStop(0.6, `rgba(${cr},${cg},${cb},${(subA * 0.15).toFixed(3)})`);
             grad.addColorStop(1, `rgba(${cr},${cg},${cb},0)`);
             pulseCtx.fillStyle = grad;
             pulseCtx.beginPath(); pulseCtx.arc(cloudCx + ox, cloudCy + oy, subSz, 0, Math.PI * 2); pulseCtx.fill();
@@ -707,40 +709,40 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
         }
 
       } else if (pulse.type === 'stardust') {
-        // Particles with large glowing halos
-        const maxR = maxDim * 0.6;
+        const maxR = maxDim * 0.55;
         for (const pt of pulse.particles) {
           const r = 10 + t * maxR * pt.speed;
           const wobbleAng = pt.angle + Math.sin(t * 5 + pt.wobble) * 0.15;
           const px = cx + Math.cos(wobbleAng) * r, py = cy + Math.sin(wobbleAng) * r;
-          const sz = (pt.size * 2.5) * (1 - t * 0.3);
+          const baseSz = pt.size * 2;
+          const sz = baseSz * glowGrow;
           const cr = pt.useRim ? pulse.r1 : pulse.r2, cg = pt.useRim ? pulse.g1 : pulse.g2, cb = pt.useRim ? pulse.b1 : pulse.b2;
-          const a = alpha * pt.brightness * (1 - t * 0.2);
-          // Each particle gets a soft glow halo
-          const grad = pulseCtx.createRadialGradient(px, py, 0, px, py, sz * 3);
-          grad.addColorStop(0, `rgba(${cr},${cg},${cb},${(a * 0.6).toFixed(3)})`);
-          grad.addColorStop(0.3, `rgba(${cr},${cg},${cb},${(a * 0.25).toFixed(3)})`);
+          const a = alpha * pt.brightness;
+          const haloR = sz * (2 + t * 2);
+          const grad = pulseCtx.createRadialGradient(px, py, 0, px, py, haloR);
+          grad.addColorStop(0, `rgba(${cr},${cg},${cb},${(a * 0.5).toFixed(3)})`);
+          grad.addColorStop(0.2, `rgba(${cr},${cg},${cb},${(a * 0.25).toFixed(3)})`);
+          grad.addColorStop(0.5, `rgba(${cr},${cg},${cb},${(a * 0.08).toFixed(3)})`);
           grad.addColorStop(1, `rgba(${cr},${cg},${cb},0)`);
           pulseCtx.fillStyle = grad;
-          pulseCtx.beginPath(); pulseCtx.arc(px, py, sz * 3, 0, Math.PI * 2); pulseCtx.fill();
+          pulseCtx.beginPath(); pulseCtx.arc(px, py, haloR, 0, Math.PI * 2); pulseCtx.fill();
         }
 
       } else if (pulse.type === 'bloom') {
-        // Massive soft bloom filling most of the screen
         const maxR = maxDim * 0.5;
         const easeT = t < 0.3 ? (t / 0.3) : 1;
-        const bloomR = easeT * maxR;
+        const bloomR = easeT * maxR * glowGrow;
         const fadeBloom = t > 0.15 ? Math.max(0, 1 - (t - 0.15) / 0.85) : 1;
         for (let layer = 0; layer < 6; layer++) {
-          const lr = bloomR * (0.4 + layer * 0.2);
-          const la = fadeBloom * (0.3 - layer * 0.04);
+          const lr = bloomR * (0.3 + layer * 0.2);
+          const la = fadeBloom * (0.3 - layer * 0.035);
           const cr = layer % 2 === 0 ? pulse.r1 : pulse.r2;
           const cg = layer % 2 === 0 ? pulse.g1 : pulse.g2;
           const cb = layer % 2 === 0 ? pulse.b1 : pulse.b2;
           const grad = pulseCtx.createRadialGradient(cx, cy, 0, cx, cy, lr);
           grad.addColorStop(0, `rgba(${cr},${cg},${cb},${la.toFixed(3)})`);
-          grad.addColorStop(0.4, `rgba(${cr},${cg},${cb},${(la * 0.6).toFixed(3)})`);
-          grad.addColorStop(0.8, `rgba(${cr},${cg},${cb},${(la * 0.2).toFixed(3)})`);
+          grad.addColorStop(0.3, `rgba(${cr},${cg},${cb},${(la * 0.6).toFixed(3)})`);
+          grad.addColorStop(0.7, `rgba(${cr},${cg},${cb},${(la * 0.2).toFixed(3)})`);
           grad.addColorStop(1, `rgba(${cr},${cg},${cb},0)`);
           pulseCtx.fillStyle = grad;
           pulseCtx.beginPath(); pulseCtx.arc(cx, cy, lr, 0, Math.PI * 2); pulseCtx.fill();
