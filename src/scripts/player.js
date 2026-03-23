@@ -860,11 +860,12 @@ export async function init() {
 
       let r = baseR;
 
-      // Hover wobble — subtle organic flowing (size independent of wobble now)
-      if (isHoveringBtn) {
-        r += Math.sin(theta * 3 + now * 1.0) * baseR * 0.035;
-        r += Math.sin(theta * 5 - now * 0.7) * baseR * 0.018;
-        r += Math.sin(theta * 2 + now * 0.4) * baseR * 0.025;
+      // Hover wobble — fades in/out smoothly
+      const ws = tickIntroReach._wobbleStr;
+      if (ws > 0.01) {
+        r += Math.sin(theta * 3 + now * 1.0) * baseR * 0.035 * ws;
+        r += Math.sin(theta * 5 - now * 0.7) * baseR * 0.018 * ws;
+        r += Math.sin(theta * 2 + now * 0.4) * baseR * 0.025 * ws;
       }
 
       // Reach bulge — only when not hovering
@@ -891,10 +892,14 @@ export async function init() {
     playBtn.style.margin = `-${maxExtend}px`;
     playBtn.style.clipPath = `polygon(${points.join(',')})`;
 
-    // Smoothed proximity for size/color — prevents jumpy transitions
+    // Smoothed proximity
     const rawProximity = Math.max(0, 1 - dist / 700);
     if (typeof tickIntroReach._smoothProx === 'undefined') tickIntroReach._smoothProx = rawProximity;
+    if (typeof tickIntroReach._wobbleStr === 'undefined') tickIntroReach._wobbleStr = 0;
     tickIntroReach._smoothProx += (rawProximity - tickIntroReach._smoothProx) * 0.25;
+    // Smooth wobble strength transition
+    const wobbleTarget = isHoveringBtn ? 1 : 0;
+    tickIntroReach._wobbleStr += (wobbleTarget - tickIntroReach._wobbleStr) * 0.06;
     const proximity = tickIntroReach._smoothProx;
 
     // Size — full size at hover zone edge, no change entering/leaving hover
@@ -904,9 +909,8 @@ export async function init() {
     playBtn.style.transform = `scale(${sizeScale.toFixed(4)})`;
 
 
-    // Pure white at varying opacity — instant snap on hover
+    // Pure white at varying opacity — instant highlight on hover
     if (isHoveringBtn) {
-      tickIntroReach._smoothProx = 1;
       playBtn.style.background = 'rgba(255, 255, 255, 0.22)';
       playBtn.style.filter = 'drop-shadow(0 0 12px rgba(255,255,255,0.2)) drop-shadow(0 0 30px rgba(255,255,255,0.08))';
 
