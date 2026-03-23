@@ -897,9 +897,9 @@ export async function init() {
     tickIntroReach._smoothProx += (rawProximity - tickIntroReach._smoothProx) * 0.08;
     const proximity = tickIntroReach._smoothProx;
 
-    // Distance-based size + slow zoom warp only while hovering
-    const breathe = isHoveringBtn ? Math.sin(performance.now() / 1000 * (Math.PI / 2)) * 0.05 : 0;
-    const sizeScale = 0.75 + proximity * 0.35 + breathe;
+    // Distance-based size — subtle range, gentle zoom pulse on hover
+    const breathe = isHoveringBtn ? Math.sin(performance.now() / 1000 * (Math.PI / 2)) * 0.02 : 0;
+    const sizeScale = 0.92 + proximity * 0.1 + breathe;
     playBtn.style.transform = `scale(${sizeScale.toFixed(4)})`;
 
 
