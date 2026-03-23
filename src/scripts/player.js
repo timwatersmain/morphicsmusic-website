@@ -838,11 +838,13 @@ export async function init() {
     const dist = Math.sqrt(dx * dx + dy * dy);
     const targetAngle = Math.atan2(dy, dx);
 
-    // Reach strength — quadratic
+    // Reach strength — inverted: bigger when cursor is far, shrinks as cursor approaches
     let targetReach = 0;
-    if (dist > 10 && dist < 700) {
-      targetReach = Math.max(0, 1 - dist / 700);
-      targetReach = targetReach * targetReach;
+    if (dist > 80 && dist < 700) {
+      targetReach = Math.min((dist - 80) / 500, 1);
+      targetReach = targetReach * 0.8;
+    } else if (dist <= 80) {
+      targetReach = 0; // fully retracted when hovering close
     }
 
     // Smooth interpolation
