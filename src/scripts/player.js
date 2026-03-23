@@ -899,17 +899,17 @@ export async function init() {
     const sizeScale = 0.75 + proximity * 0.35;
     playBtn.style.transform = `scale(${sizeScale.toFixed(4)})`;
 
-    // Toggle ripple animations on hover
-    if (isHoveringBtn) {
-      playBtn.classList.add('is-hover-active');
-    } else {
-      playBtn.classList.remove('is-hover-active');
-    }
 
     // Pure white at varying opacity — no grey tones, no hue
     if (isHoveringBtn) {
+      // Pulsing glow — oscillates in hover mode
+      const pulseT = performance.now() / 1000;
+      const pulse1 = 0.15 + Math.sin(pulseT * 2.0) * 0.08;
+      const pulse2 = 0.06 + Math.sin(pulseT * 1.3 + 1.0) * 0.04;
+      const pulseSize1 = 12 + Math.sin(pulseT * 1.8) * 6;
+      const pulseSize2 = 30 + Math.sin(pulseT * 1.2 + 0.5) * 12;
       playBtn.style.background = 'rgba(255, 255, 255, 0.22)';
-      playBtn.style.filter = 'drop-shadow(0 0 12px rgba(255,255,255,0.2)) drop-shadow(0 0 30px rgba(255,255,255,0.08))';
+      playBtn.style.filter = `drop-shadow(0 0 ${pulseSize1.toFixed(0)}px rgba(255,255,255,${pulse1.toFixed(3)})) drop-shadow(0 0 ${pulseSize2.toFixed(0)}px rgba(255,255,255,${pulse2.toFixed(3)}))`;
     } else {
       // White only — opacity scales from 0.12 (far) to 0.16 (close)
       const alpha = (0.12 + proximity * 0.04).toFixed(3);
