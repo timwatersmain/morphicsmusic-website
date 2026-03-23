@@ -904,8 +904,8 @@ export async function init() {
       playBtn.style.background = 'rgba(255, 255, 255, 0.22)';
       playBtn.style.filter = 'drop-shadow(0 0 12px rgba(255,255,255,0.2)) drop-shadow(0 0 30px rgba(255,255,255,0.08))';
     } else {
-      // White only — opacity scales from 0.10 (far) to 0.16 (close)
-      const alpha = (0.10 + proximity * 0.06).toFixed(3);
+      // White only — opacity scales from 0.12 (far) to 0.16 (close)
+      const alpha = (0.12 + proximity * 0.04).toFixed(3);
       playBtn.style.background = `rgba(255, 255, 255, ${alpha})`;
 
       const glowStr = proximity * 0.12;
