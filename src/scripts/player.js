@@ -903,8 +903,9 @@ export async function init() {
     playBtn.style.transform = `scale(${sizeScale.toFixed(4)})`;
 
 
-    // Pure white at varying opacity — no grey tones, no hue
+    // Pure white at varying opacity — instant snap on hover
     if (isHoveringBtn) {
+      tickIntroReach._smoothProx = 1;
       playBtn.style.background = 'rgba(255, 255, 255, 0.22)';
       playBtn.style.filter = 'drop-shadow(0 0 12px rgba(255,255,255,0.2)) drop-shadow(0 0 30px rgba(255,255,255,0.08))';
 
