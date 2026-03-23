@@ -791,103 +791,110 @@ export async function init() {
     playBtn.addEventListener('animationend', onEnd);
   });
 
-  // Intro: play button morphs a smooth teardrop bulge toward cursor
+  // Intro: play button extends a smooth teardrop toward cursor
   let introMouseX = window.innerWidth / 2;
   let introMouseY = window.innerHeight / 2;
   let smoothAngle = 0;
   let smoothReach = 0;
 
-  // Create SVG clip-path for organic blob shape
-  const svgNS = 'http://www.w3.org/2000/svg';
-  const clipSvg = document.createElementNS(svgNS, 'svg');
-  clipSvg.setAttribute('width', '0');
-  clipSvg.setAttribute('height', '0');
-  clipSvg.style.position = 'absolute';
-  const clipDefs = document.createElementNS(svgNS, 'defs');
-  const clipPath = document.createElementNS(svgNS, 'clipPath');
-  clipPath.id = 'intro-blob-clip';
-  clipPath.setAttribute('clipPathUnits', 'objectBoundingBox');
-  const clipPathEl = document.createElementNS(svgNS, 'path');
-  clipPath.appendChild(clipPathEl);
-  clipDefs.appendChild(clipPath);
-  clipSvg.appendChild(clipDefs);
-  document.body.appendChild(clipSvg);
+  // Canvas overlay that draws the extending blob behind the button
+  const reachCanvas = document.createElement('canvas');
+  const RC_SIZE = 500;
+  reachCanvas.width = RC_SIZE;
+  reachCanvas.height = RC_SIZE;
+  reachCanvas.style.cssText = `
+    position: fixed;
+    pointer-events: none;
+    z-index: 9998;
+    width: ${RC_SIZE}px; height: ${RC_SIZE}px;
+  `;
+  document.body.appendChild(reachCanvas);
+  const rctx = reachCanvas.getContext('2d');
 
   document.addEventListener('mousemove', (e) => {
     introMouseX = e.clientX;
     introMouseY = e.clientY;
   });
 
-  function buildBlobPath(angle, reach) {
-    // Generate a circle with a smooth bulge in one direction
-    // Uses polar coordinates — radius = 0.5 + bulge in direction of angle
-    const cx = 0.5, cy = 0.5;
-    const points = 64;
-    let d = '';
-    for (let i = 0; i <= points; i++) {
-      const theta = (i / points) * Math.PI * 2;
-      // Base circle radius (in 0-1 clipPath space)
-      let r = 0.48;
-
-      // Bulge: cosine falloff centered on the target angle
-      const angleDiff = theta - angle;
-      // Wrap to -PI..PI
-      let diff = ((angleDiff + Math.PI) % (Math.PI * 2)) - Math.PI;
-      if (diff < -Math.PI) diff += Math.PI * 2;
-
-      // Smooth teardrop: narrow bulge (cos^3 gives a pointed shape)
-      const cosD = Math.cos(diff * 0.7);
-      if (cosD > 0) {
-        r += reach * cosD * cosD * cosD * 0.35;
-      }
-
-      const px = cx + Math.cos(theta) * r;
-      const py = cy + Math.sin(theta) * r;
-      d += (i === 0 ? 'M' : 'L') + px.toFixed(4) + ',' + py.toFixed(4);
-    }
-    return d + 'Z';
-  }
-
   function tickIntroReach() {
     if (!controlsEl?.classList.contains('is-intro')) {
-      playBtn.style.clipPath = '';
-      playBtn.style.borderRadius = '';
+      reachCanvas.style.display = 'none';
       requestAnimationFrame(tickIntroReach);
       return;
     }
+    reachCanvas.style.display = '';
 
     const btnRect = playBtn.getBoundingClientRect();
     const btnCx = btnRect.left + btnRect.width / 2;
     const btnCy = btnRect.top + btnRect.height / 2;
+    const btnR = btnRect.width / 2;
+
+    // Position canvas centered on button
+    reachCanvas.style.left = (btnCx - RC_SIZE / 2) + 'px';
+    reachCanvas.style.top = (btnCy - RC_SIZE / 2) + 'px';
 
     const dx = introMouseX - btnCx;
     const dy = introMouseY - btnCy;
     const dist = Math.sqrt(dx * dx + dy * dy);
     const targetAngle = Math.atan2(dy, dx);
 
-    // Reach strength — quadratic, stronger when closer
+    // Reach strength — quadratic
     let targetReach = 0;
     if (dist > 10 && dist < 700) {
       targetReach = Math.max(0, 1 - dist / 700);
       targetReach = targetReach * targetReach;
     }
 
-    // Smooth angle and reach
-    // Angle needs circular interpolation
+    // Smooth interpolation
     let angleDiff = targetAngle - smoothAngle;
     if (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
     if (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
     smoothAngle += angleDiff * 0.05;
     smoothReach += (targetReach - smoothReach) * 0.04;
 
+    rctx.clearRect(0, 0, RC_SIZE, RC_SIZE);
+
+    const ccx = RC_SIZE / 2;
+    const ccy = RC_SIZE / 2;
+
     if (smoothReach > 0.01) {
-      const pathD = buildBlobPath(smoothAngle, smoothReach);
-      clipPathEl.setAttribute('d', pathD);
-      playBtn.style.clipPath = 'url(#intro-blob-clip)';
-      playBtn.style.borderRadius = '0';
-    } else {
-      playBtn.style.clipPath = '';
-      playBtn.style.borderRadius = '';
+      // Draw base circle + teardrop extension as one filled shape
+      const reachDist = btnR + smoothReach * btnR * 1.8; // how far the tip extends
+      const tipX = ccx + Math.cos(smoothAngle) * reachDist;
+      const tipY = ccy + Math.sin(smoothAngle) * reachDist;
+
+      // Width of the tendril at the base (where it meets the circle)
+      const baseWidth = btnR * (0.6 + smoothReach * 0.2);
+
+      // Control points for smooth bezier curves
+      const perpAngle = smoothAngle + Math.PI / 2;
+      const base1X = ccx + Math.cos(smoothAngle) * btnR * 0.7 + Math.cos(perpAngle) * baseWidth * 0.5;
+      const base1Y = ccy + Math.sin(smoothAngle) * btnR * 0.7 + Math.sin(perpAngle) * baseWidth * 0.5;
+      const base2X = ccx + Math.cos(smoothAngle) * btnR * 0.7 - Math.cos(perpAngle) * baseWidth * 0.5;
+      const base2Y = ccy + Math.sin(smoothAngle) * btnR * 0.7 - Math.sin(perpAngle) * baseWidth * 0.5;
+
+      // Mid control points for the smooth curve
+      const midDist = reachDist * 0.6;
+      const midWidth = baseWidth * 0.3;
+      const mid1X = ccx + Math.cos(smoothAngle) * midDist + Math.cos(perpAngle) * midWidth;
+      const mid1Y = ccy + Math.sin(smoothAngle) * midDist + Math.sin(perpAngle) * midWidth;
+      const mid2X = ccx + Math.cos(smoothAngle) * midDist - Math.cos(perpAngle) * midWidth;
+      const mid2Y = ccy + Math.sin(smoothAngle) * midDist - Math.sin(perpAngle) * midWidth;
+
+      rctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
+      rctx.beginPath();
+
+      // Draw base circle
+      rctx.arc(ccx, ccy, btnR, smoothAngle + Math.PI * 0.35, smoothAngle - Math.PI * 0.35 + Math.PI * 2);
+
+      // Bezier curve from circle edge → tip (one side)
+      rctx.quadraticCurveTo(mid1X, mid1Y, tipX, tipY);
+
+      // Bezier curve from tip → back to circle (other side)
+      rctx.quadraticCurveTo(mid2X, mid2Y, base2X, base2Y);
+
+      rctx.closePath();
+      rctx.fill();
     }
 
     requestAnimationFrame(tickIntroReach);
