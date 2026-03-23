@@ -791,6 +791,65 @@ export async function init() {
     playBtn.addEventListener('animationend', onEnd);
   });
 
+  // Intro: play button reaches toward cursor
+  let introMouseX = 0, introMouseY = 0;
+  let introReachX = 0, introReachY = 0;
+  let introScaleX = 1, introScaleY = 1;
+
+  document.addEventListener('mousemove', (e) => {
+    introMouseX = e.clientX;
+    introMouseY = e.clientY;
+  });
+
+  function tickIntroReach() {
+    if (!controlsEl?.classList.contains('is-intro')) {
+      requestAnimationFrame(tickIntroReach);
+      return;
+    }
+
+    const btnRect = playBtn.getBoundingClientRect();
+    const btnCx = btnRect.left + btnRect.width / 2;
+    const btnCy = btnRect.top + btnRect.height / 2;
+
+    const dx = introMouseX - btnCx;
+    const dy = introMouseY - btnCy;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+
+    // Normalize direction
+    const nx = dist > 1 ? dx / dist : 0;
+    const ny = dist > 1 ? dy / dist : 0;
+
+    // Reach strength — stronger when closer, max reach at ~200px, dies off beyond ~600px
+    const maxReach = 25; // px translation
+    let reachStr = 0;
+    if (dist < 600) {
+      reachStr = Math.max(0, 1 - dist / 600);
+      reachStr = reachStr * reachStr; // quadratic — much stronger close up
+    }
+
+    const targetX = nx * maxReach * reachStr;
+    const targetY = ny * maxReach * reachStr;
+
+    // Stretch along the direction toward cursor
+    const stretchAmount = reachStr * 0.2; // up to 20% stretch
+    const angle = Math.atan2(dy, dx);
+    const targetScaleX = 1 + Math.abs(Math.cos(angle)) * stretchAmount;
+    const targetScaleY = 1 + Math.abs(Math.sin(angle)) * stretchAmount;
+
+    // Smooth lerp
+    introReachX += (targetX - introReachX) * 0.06;
+    introReachY += (targetY - introReachY) * 0.06;
+    introScaleX += (targetScaleX - introScaleX) * 0.06;
+    introScaleY += (targetScaleY - introScaleY) * 0.06;
+
+    // Apply — combine with existing CSS animations
+    playBtn.style.translate = `${introReachX.toFixed(1)}px ${introReachY.toFixed(1)}px`;
+    playBtn.style.scale = `${introScaleX.toFixed(4)} ${introScaleY.toFixed(4)}`;
+
+    requestAnimationFrame(tickIntroReach);
+  }
+  requestAnimationFrame(tickIntroReach);
+
   prevBtn?.addEventListener('click', prev);
   nextBtn?.addEventListener('click', next);
   audio.addEventListener('ended', next);
