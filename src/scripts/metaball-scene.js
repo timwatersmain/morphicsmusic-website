@@ -503,14 +503,14 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
 
   // Nebula pulse canvas — renders gaseous ring behind the metaball
   const pulseCanvas = document.createElement('canvas');
-  const PULSE_SIZE = Math.min(window.innerWidth, window.innerHeight);
-  pulseCanvas.width = PULSE_SIZE;
-  pulseCanvas.height = PULSE_SIZE;
+  const PULSE_W = window.innerWidth;
+  const PULSE_H = window.innerHeight;
+  pulseCanvas.width = PULSE_W;
+  pulseCanvas.height = PULSE_H;
   pulseCanvas.style.cssText = `
     position: absolute;
-    top: 50%; left: 50%;
-    width: ${PULSE_SIZE}px; height: ${PULSE_SIZE}px;
-    transform: translate(-50%, -50%);
+    top: 0; left: 0;
+    width: ${PULSE_W}px; height: ${PULSE_H}px;
     pointer-events: none;
     z-index: 0;
     mix-blend-mode: screen;
@@ -624,9 +624,10 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
   function firePulse() { fireNebulaRing(); }
 
   function tickPulses() {
-    pulseCtx.clearRect(0, 0, PULSE_SIZE, PULSE_SIZE);
-    const cx = PULSE_SIZE / 2;
-    const cy = PULSE_SIZE / 2;
+    pulseCtx.clearRect(0, 0, PULSE_W, PULSE_H);
+    const cx = PULSE_W / 2;
+    const cy = PULSE_H / 2;
+    const maxDim = Math.max(PULSE_W, PULSE_H);
     const now = performance.now();
 
     for (let p = activePulses.length - 1; p >= 0; p--) {
@@ -641,13 +642,13 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
 
       if (pulse.type === 'nebula') {
         // Gas ring — much larger blobs filling screen
-        const maxR = PULSE_SIZE * 0.6;
+        const maxR = maxDim * 0.6;
         const ringR = 30 + t * maxR;
         for (const b of pulse.blobs) {
           const ang = b.angle + t * b.rotSpeed * Math.PI;
           const r = ringR * (1 + b.radiusOffset);
           const bx = cx + Math.cos(ang) * r, by = cy + Math.sin(ang) * r;
-          const sz = b.size * 2.5 * (b.isHotspot ? 1 + t * 2 : 1 + t * 1.2) * (1 - t * 0.2);
+          const sz = b.size * 1.8 * (b.isHotspot ? 1 + t * 1.5 : 1 + t * 0.8) * (1 - t * 0.2);
           const cr = b.useRim ? pulse.r1 : pulse.r2, cg = b.useRim ? pulse.g1 : pulse.g2, cb = b.useRim ? pulse.b1 : pulse.b2;
           const a = alpha * b.brightness;
           const grad = pulseCtx.createRadialGradient(bx, by, 0, bx, by, sz);
@@ -660,35 +661,27 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
         }
 
       } else if (pulse.type === 'shockwave') {
-        // Thick glowing ring with massive glow halo
-        const maxR = PULSE_SIZE * 0.7;
+        // Soft glowing ring — lightsaber-like glow, no hard edges
+        const maxR = maxDim * 0.55;
         const ringR = 20 + t * t * maxR;
-        const thickness = 6 + (1 - t) * 18;
-        const a = alpha * 0.8;
-        // Outer glow halo
-        const haloGrad = pulseCtx.createRadialGradient(cx, cy, Math.max(0, ringR - 40), cx, cy, ringR + 80);
-        haloGrad.addColorStop(0, `rgba(${pulse.r1},${pulse.g1},${pulse.b1},0)`);
-        haloGrad.addColorStop(0.4, `rgba(${pulse.r1},${pulse.g1},${pulse.b1},${(a * 0.2).toFixed(3)})`);
-        haloGrad.addColorStop(0.6, `rgba(${pulse.r1},${pulse.g1},${pulse.b1},${(a * 0.15).toFixed(3)})`);
-        haloGrad.addColorStop(1, `rgba(${pulse.r1},${pulse.g1},${pulse.b1},0)`);
-        pulseCtx.fillStyle = haloGrad;
-        pulseCtx.beginPath(); pulseCtx.arc(cx, cy, ringR + 80, 0, Math.PI * 2); pulseCtx.fill();
-        // Main ring
-        pulseCtx.strokeStyle = `rgba(${pulse.r1},${pulse.g1},${pulse.b1},${a.toFixed(3)})`;
-        pulseCtx.lineWidth = thickness;
-        pulseCtx.shadowColor = `rgba(${pulse.r1},${pulse.g1},${pulse.b1},${(a * 0.8).toFixed(3)})`;
-        pulseCtx.shadowBlur = 30 + t * 40;
-        pulseCtx.beginPath(); pulseCtx.arc(cx, cy, ringR, 0, Math.PI * 2); pulseCtx.stroke();
-        // Inner ring
-        pulseCtx.strokeStyle = `rgba(${pulse.r2},${pulse.g2},${pulse.b2},${(a * 0.5).toFixed(3)})`;
-        pulseCtx.lineWidth = thickness * 0.6;
-        pulseCtx.shadowBlur = 40;
-        pulseCtx.beginPath(); pulseCtx.arc(cx, cy, ringR * 0.8, 0, Math.PI * 2); pulseCtx.stroke();
-        pulseCtx.shadowBlur = 0;
+        const a = alpha * 0.7;
+        // Render as a soft radial gradient donut — no stroke, pure glow
+        const innerR = Math.max(0, ringR - 15 - (1 - t) * 20);
+        const outerR = ringR + 30 + (1 - t) * 40;
+        const grad = pulseCtx.createRadialGradient(cx, cy, innerR, cx, cy, outerR);
+        grad.addColorStop(0, `rgba(${pulse.r1},${pulse.g1},${pulse.b1},0)`);
+        grad.addColorStop(0.3, `rgba(${pulse.r1},${pulse.g1},${pulse.b1},${(a * 0.15).toFixed(3)})`);
+        grad.addColorStop(0.45, `rgba(${pulse.r1},${pulse.g1},${pulse.b1},${(a * 0.6).toFixed(3)})`);
+        grad.addColorStop(0.5, `rgba(255,255,255,${(a * 0.5).toFixed(3)})`); // white hot core
+        grad.addColorStop(0.55, `rgba(${pulse.r1},${pulse.g1},${pulse.b1},${(a * 0.6).toFixed(3)})`);
+        grad.addColorStop(0.7, `rgba(${pulse.r2},${pulse.g2},${pulse.b2},${(a * 0.15).toFixed(3)})`);
+        grad.addColorStop(1, `rgba(${pulse.r2},${pulse.g2},${pulse.b2},0)`);
+        pulseCtx.fillStyle = grad;
+        pulseCtx.beginPath(); pulseCtx.arc(cx, cy, outerR, 0, Math.PI * 2); pulseCtx.fill();
 
       } else if (pulse.type === 'flare') {
         // Large asymmetric gas clouds erupting outward
-        const maxR = PULSE_SIZE * 0.55;
+        const maxR = maxDim * 0.55;
         const baseR = 30 + t * maxR;
         for (const cloud of pulse.clouds) {
           const ang = cloud.angle + t * cloud.drift;
@@ -715,7 +708,7 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
 
       } else if (pulse.type === 'stardust') {
         // Particles with large glowing halos
-        const maxR = PULSE_SIZE * 0.6;
+        const maxR = maxDim * 0.6;
         for (const pt of pulse.particles) {
           const r = 10 + t * maxR * pt.speed;
           const wobbleAng = pt.angle + Math.sin(t * 5 + pt.wobble) * 0.15;
@@ -734,7 +727,7 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
 
       } else if (pulse.type === 'bloom') {
         // Massive soft bloom filling most of the screen
-        const maxR = PULSE_SIZE * 0.5;
+        const maxR = maxDim * 0.5;
         const easeT = t < 0.3 ? (t / 0.3) : 1;
         const bloomR = easeT * maxR;
         const fadeBloom = t > 0.15 ? Math.max(0, 1 - (t - 0.15) / 0.85) : 1;
