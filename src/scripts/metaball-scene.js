@@ -35,6 +35,9 @@ uniform int   uSkinTo;
 uniform float uSkinMix;
 uniform float uKickGlow;
 uniform float uKickGlowSlow;
+uniform float uTendrilStr;    // 0-1 how extended tendrils are
+uniform float uTendrilPhase;  // rotation phase for tendril directions
+uniform float uMorphIntensity; // 0-1 how bizarre the overall shape gets
 uniform float uStereoWidth;
 uniform float uPan;
 
@@ -323,7 +326,47 @@ float sceneSDF(vec3 p) {
   }
 
 
-  // Kick: no SDF shape change — glow only
+  // Amoeba tendrils — thin elongated shapes that extend outward
+  if (uTendrilStr > 0.01) {
+    float ts = uTendrilStr;
+    float phase = uTendrilPhase;
+    float mi = uMorphIntensity;
+
+    // 4 tendrils at different angles, each with organic motion
+    for (int ti = 0; ti < 4; ti++) {
+      float baseAngle = phase + float(ti) * 1.5708 + sin(t * 0.2 + float(ti)) * 0.5;
+      float tendrilLen = (0.5 + mi * 1.5) * ts;
+
+      // Tendril direction
+      vec3 dir = vec3(cos(baseAngle), sin(baseAngle) * 0.7, sin(baseAngle + t * 0.3) * 0.3);
+
+      // Capsule: elongated along direction
+      vec3 a = dir * 0.2;
+      vec3 b = dir * tendrilLen;
+
+      // Point-to-segment distance for capsule SDF
+      vec3 pa = p - a;
+      vec3 ba = b - a;
+      float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
+      vec3 closest = a + ba * h;
+
+      // Thickness tapers from base to tip
+      float thickness = mix(0.25, 0.06, h) * ts;
+
+      // Add organic wobble along the tendril
+      float wobble = snoise(p * 2.0 + t * 0.4 + float(ti) * 50.0) * 0.08 * ts;
+      float tendrilD = length(p - closest) - thickness + wobble;
+
+      d = smin(d, tendrilD, 0.4 + (1.0 - ts) * 0.3);
+    }
+
+    // Extra bizarre morph: distort the whole SDF with additional noise when intensity is high
+    if (mi > 0.3) {
+      float bizarreNoise = snoise(p * 0.8 + t * 0.15) * mi * 0.15;
+      d += bizarreNoise;
+    }
+  }
+
   // Idle breathing offset
   d -= idleBreathe;
 
@@ -663,21 +706,25 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
       w.x += Math.sin(t * w.speedX + w.phaseX) * 0.5 + w.vx;
       w.y += Math.sin(t * w.speedY + w.phaseY) * 0.4 + w.vy;
 
-      // Wrap around edges
-      if (w.x < -100) w.x = PULSE_W + 50;
-      if (w.x > PULSE_W + 100) w.x = -50;
-      if (w.y < -100) w.y = PULSE_H + 50;
-      if (w.y > PULSE_H + 100) w.y = -50;
+      // Bounce off edges
+      if (w.x < 20) { w.x = 20; w.vx = Math.abs(w.vx) + Math.random() * 0.2; w.targetBrightness = 0.15 + Math.random() * 0.15; }
+      if (w.x > PULSE_W - 20) { w.x = PULSE_W - 20; w.vx = -Math.abs(w.vx) - Math.random() * 0.2; w.targetBrightness = 0.15 + Math.random() * 0.15; }
+      if (w.y < 20) { w.y = 20; w.vy = Math.abs(w.vy) + Math.random() * 0.15; w.targetBrightness = 0.12 + Math.random() * 0.12; }
+      if (w.y > PULSE_H - 20) { w.y = PULSE_H - 20; w.vy = -Math.abs(w.vy) - Math.random() * 0.15; w.targetBrightness = 0.12 + Math.random() * 0.12; }
 
-      // Random fade in/out cycle
+      // Gentle velocity damping
+      w.vx *= 0.998;
+      w.vy *= 0.998;
+
+      // Random fade in/out cycle — longer lifespan
       w.fadeTimer += 16;
       if (w.fadeTimer > w.fadeDur) {
         w.fadeTimer = 0;
-        w.fadeDur = 3000 + Math.random() * 6000;
-        w.targetBrightness = Math.random() * 0.2;
+        w.fadeDur = 5000 + Math.random() * 10000;
+        w.targetBrightness = 0.05 + Math.random() * 0.2;
         w.useRim = Math.random() > 0.5;
       }
-      w.brightness += (w.targetBrightness - w.brightness) * 0.01;
+      w.brightness += (w.targetBrightness - w.brightness) * 0.008;
 
       if (w.brightness < 0.01) continue;
 
@@ -969,6 +1016,9 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
     uKickGlowSlow:     { value: 0 },
     uStereoWidth:      { value: 0 },
     uPan:              { value: 0 },
+    uTendrilStr:       { value: 0 },
+    uTendrilPhase:     { value: 0 },
+    uMorphIntensity:   { value: 0 },
   };
 
   const material = new THREE.ShaderMaterial({
@@ -1398,6 +1448,31 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
     }
     uniforms.uKickGlow.value = kickGlow;
     uniforms.uKickGlowSlow.value = kickGlowSlow;
+
+    // ── Amoeba tendril morphing — audio-contextual ──
+    // Tendril strength driven by: sustained mid+high energy = tendrils extend
+    // Morph intensity driven by: bass energy variance = more bizarre shapes
+    {
+      // Mid-high energy detection (bins 30-80)
+      let midHighSum = 0;
+      if (analyserRef) {
+        for (let i = 30; i < 80; i++) midHighSum += freqData[i];
+      }
+      const midHighLevel = midHighSum / (50 * 255);
+
+      // Smooth tendril strength — extends on sustained mid-high content
+      const targetTendril = midHighLevel > 0.2 ? Math.min(midHighLevel * 2, 1) : 0;
+      const tendrilRate = targetTendril > uniforms.uTendrilStr.value ? 0.03 : 0.008;
+      uniforms.uTendrilStr.value += (targetTendril - uniforms.uTendrilStr.value) * tendrilRate;
+
+      // Phase slowly rotates — tendrils sweep around
+      uniforms.uTendrilPhase.value += dt * 0.15 * (1 + masterEnergy);
+
+      // Morph intensity — high when bass is punchy and energy is high
+      const targetMorph = masterEnergy > 0.3 ? Math.min((masterEnergy - 0.3) * 3, 1) * (0.5 + ema.bass) : 0;
+      const morphRate = targetMorph > uniforms.uMorphIntensity.value ? 0.04 : 0.01;
+      uniforms.uMorphIntensity.value += (targetMorph - uniforms.uMorphIntensity.value) * morphRate;
+    }
 
     // Master level → canvas scale
     if (analyserRef) {
