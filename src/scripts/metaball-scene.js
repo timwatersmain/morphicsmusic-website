@@ -1442,16 +1442,26 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
       }
       const midHighLevel = midHighSum / (50 * 255);
 
-      // Smooth tendril strength — only on high sustained mid-high content
-      const targetTendril = midHighLevel > 0.35 ? Math.min((midHighLevel - 0.35) * 2.5, 0.7) : 0;
+      // Tendril strength — scales with energy, impossible below 0.1, unlikely at low levels
+      // Probability curve: quiet = rare brief flickers, loud = sustained extensions
+      let targetTendril = 0;
+      if (midHighLevel > 0.1) {
+        // Scaled likelihood: 0.1-0.2 = subtle, 0.2-0.35 = moderate, 0.35+ = strong
+        const energy01 = Math.min((midHighLevel - 0.1) / 0.4, 1); // 0-1 normalized
+        targetTendril = energy01 * energy01 * 0.7; // quadratic — gentle at low, strong at high
+      }
       const tendrilRate = targetTendril > uniforms.uTendrilStr.value ? 0.015 : 0.005;
       uniforms.uTendrilStr.value += (targetTendril - uniforms.uTendrilStr.value) * tendrilRate;
 
       // Phase slowly rotates — tendrils sweep around
       uniforms.uTendrilPhase.value += dt * 0.1 * (1 + masterEnergy * 0.5);
 
-      // Morph intensity — only on very heavy sections
-      const targetMorph = masterEnergy > 0.45 ? Math.min((masterEnergy - 0.45) * 2.5, 0.6) * ema.bass : 0;
+      // Morph intensity — scales with energy, needs at least moderate level
+      let targetMorph = 0;
+      if (masterEnergy > 0.15) {
+        const morphEnergy = Math.min((masterEnergy - 0.15) / 0.5, 1);
+        targetMorph = morphEnergy * morphEnergy * 0.6 * (0.3 + ema.bass * 0.7);
+      }
       const morphRate = targetMorph > uniforms.uMorphIntensity.value ? 0.02 : 0.006;
       uniforms.uMorphIntensity.value += (targetMorph - uniforms.uMorphIntensity.value) * morphRate;
     }
