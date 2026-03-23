@@ -897,11 +897,10 @@ export async function init() {
     tickIntroReach._smoothProx += (rawProximity - tickIntroReach._smoothProx) * 0.25;
     const proximity = tickIntroReach._smoothProx;
 
-    // Distance-based size — reaches 1.0 at edge of hover zone (80px)
-    // proximity at 80px = 1 - 80/700 ≈ 0.886
-    const idleScale = Math.min(proximity / 0.886, 1.0); // 0 at far → 1.0 at hover edge
-    const breathe = isHoveringBtn ? Math.sin(performance.now() / 1000 * (Math.PI / 2)) * 0.02 : 0;
-    const sizeScale = 0.82 + idleScale * 0.18 + breathe; // 0.82 at far → 1.0 at hover edge
+    // Size — full size at hover zone edge, no change entering/leaving hover
+    const idleScale = Math.min(proximity / 0.886, 1.0);
+    const sizeScale = 0.82 + idleScale * 0.18;
+    playBtn.style.transition = isHoveringBtn ? 'none' : 'transform 0.3s ease';
     playBtn.style.transform = `scale(${sizeScale.toFixed(4)})`;
 
 
