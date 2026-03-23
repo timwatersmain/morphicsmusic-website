@@ -894,7 +894,7 @@ export async function init() {
     // Smoothed proximity for size/color — prevents jumpy transitions
     const rawProximity = Math.max(0, 1 - dist / 700);
     if (typeof tickIntroReach._smoothProx === 'undefined') tickIntroReach._smoothProx = rawProximity;
-    tickIntroReach._smoothProx += (rawProximity - tickIntroReach._smoothProx) * 0.08;
+    tickIntroReach._smoothProx += (rawProximity - tickIntroReach._smoothProx) * 0.25;
     const proximity = tickIntroReach._smoothProx;
 
     // Distance-based size — subtle range, gentle zoom pulse on hover
