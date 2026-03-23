@@ -843,7 +843,8 @@ export async function init() {
     const halfSize = totalSize / 2;
     const baseR = introBaseSize / 2; // circle radius in the larger element
     const peakDist = smoothReach * baseR * 1.8;
-    const bulgeWidth = 1.2;
+    // Bulge width narrows as reach increases — thin tendril when far, wide when close
+    const bulgeWidth = 1.2 - smoothReach * 0.7; // 1.2 at no reach → 0.64 at max reach
 
     // Build polygon clip-path in % coordinates
     const steps = 64;
