@@ -830,10 +830,10 @@ export async function init() {
       targetReach = Math.min((dist - 80) / 500, 1) * 0.8;
     }
 
-    // Smooth interpolation — fast tracking
+    // Smooth interpolation — fast tracking, continuous rotation (no wrapping jumps)
     let angleDiff = targetAngle - smoothAngle;
-    if (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
-    if (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+    // Always take the shortest path around the circle
+    angleDiff = ((angleDiff % (Math.PI * 2)) + Math.PI * 3) % (Math.PI * 2) - Math.PI;
     smoothAngle += angleDiff * 0.18;
     smoothReach += (targetReach - smoothReach) * 0.15;
 
