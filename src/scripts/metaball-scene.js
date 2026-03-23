@@ -689,7 +689,7 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
   }
 
   function tickWanderers(now) {
-    const c = getColors();
+    const c = getColors(); // always live colors — transitions with glob
     const t = now / 1000;
     for (const w of wanderers) {
       // Gentle center gravity
@@ -746,8 +746,14 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
     const maxDim = Math.max(PULSE_W, PULSE_H);
     const now = performance.now();
 
+    // Live colors — all pulses transition with the glob
+    const liveC = getColors();
+
     for (let p = activePulses.length - 1; p >= 0; p--) {
       const pulse = activePulses[p];
+      // Update pulse colors to match current glob colors
+      pulse.r1 = liveC.r1; pulse.g1 = liveC.g1; pulse.b1 = liveC.b1;
+      pulse.r2 = liveC.r2; pulse.g2 = liveC.g2; pulse.b2 = liveC.b2;
       const elapsed = now - pulse.startTime;
       const t = elapsed / pulse.duration;
       if (t > 1) { activePulses.splice(p, 1); continue; }
