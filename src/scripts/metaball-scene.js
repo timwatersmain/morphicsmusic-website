@@ -652,9 +652,9 @@ export function createMetaballScene(container, getAnalyser, getStereoAnalysers) 
       const t = elapsed / pulse.duration;
       if (t > 1) { activePulses.splice(p, 1); continue; }
 
-      const fadeIn = Math.min(t / 0.08, 1);
-      const fadeOut = t > 0.25 ? Math.max(0, 1 - (t - 0.25) / 0.75) : 1;
-      const alpha = fadeIn * fadeOut;
+      const fadeIn = Math.min(t / 0.1, 1);
+      const fadeOut = t > 0.2 ? Math.max(0, 1 - (t - 0.2) / 0.8) : 1;
+      const alpha = fadeIn * fadeOut * 0.45; // global brightness reduction
 
       // Glow expansion factor — glow grows as pulse travels outward
       const glowGrow = 1 + t * 2; // 1x at center → 3x at edge
