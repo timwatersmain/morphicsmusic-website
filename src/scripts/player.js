@@ -942,35 +942,43 @@ export async function init() {
       // Spawn burst rings occasionally while hovering
       hoverBurstRunning = true;
       const now = performance.now();
-      if (now - lastBurstTime > 800 + Math.random() * 1200) {
+      if (now - lastBurstTime > 600 + Math.random() * 800) {
         lastBurstTime = now;
-        // Create a ring that expands from button center to fill screen
-        const ring = document.createElement('div');
-        const size = Math.max(window.innerWidth, window.innerHeight) * 2.5;
-        ring.style.cssText = `
-          position: fixed;
-          left: ${btnCx}px; top: ${btnCy}px;
-          width: ${size}px; height: ${size}px;
-          margin-left: ${-size/2}px; margin-top: ${-size/2}px;
-          border-radius: 50%;
-          border: 3px solid rgba(255,255,255,0.6);
-          box-shadow: 0 0 25px rgba(255,255,255,0.3), 0 0 60px rgba(255,255,255,0.1), inset 0 0 20px rgba(255,255,255,0.15);
-          pointer-events: none;
-          z-index: 99999;
-          transform: scale(0);
-          opacity: 1;
-        `;
-        document.body.appendChild(ring);
+        // Spawn 3-5 rings as a burst
+        const burstCount = 3 + Math.floor(Math.random() * 3);
+        for (let b = 0; b < burstCount; b++) {
+          const delay = b * 120;
+          setTimeout(() => {
+            const ring = document.createElement('div');
+            const size = Math.max(window.innerWidth, window.innerHeight) * 2.5;
+            const thickness = 6 + Math.random() * 6; // 6-12px thick
+            ring.style.cssText = `
+              position: fixed;
+              left: ${btnCx}px; top: ${btnCy}px;
+              width: ${size}px; height: ${size}px;
+              margin-left: ${-size/2}px; margin-top: ${-size/2}px;
+              border-radius: 50%;
+              border: ${thickness}px solid rgba(255,255,255,0.5);
+              box-shadow: 0 0 20px rgba(255,255,255,0.2), inset 0 0 15px rgba(255,255,255,0.1);
+              pointer-events: none;
+              z-index: 99999;
+              transform: scale(0);
+              opacity: 1;
+            `;
+            document.body.appendChild(ring);
 
-        ring.animate([
-          { transform: 'scale(0)', opacity: 0.9, borderWidth: '4px' },
-          { transform: 'scale(0.1)', opacity: 0.7, borderWidth: '3px', offset: 0.15 },
-          { transform: 'scale(0.3)', opacity: 0.45, borderWidth: '2.5px', offset: 0.35 },
-          { transform: 'scale(0.6)', opacity: 0.25, borderWidth: '2px', offset: 0.6 },
-          { transform: 'scale(1)', opacity: 0, borderWidth: '1px' },
-        ], { duration: 3000, easing: 'cubic-bezier(0.16, 1, 0.3, 1)', fill: 'forwards' });
+            ring.animate([
+              { transform: 'scale(0)', opacity: 0.8, borderWidth: thickness + 'px' },
+              { transform: 'scale(0.08)', opacity: 0.6, borderWidth: (thickness * 0.8) + 'px', offset: 0.1 },
+              { transform: 'scale(0.25)', opacity: 0.35, borderWidth: (thickness * 0.5) + 'px', offset: 0.3 },
+              { transform: 'scale(0.5)', opacity: 0.15, borderWidth: (thickness * 0.3) + 'px', offset: 0.55 },
+              { transform: 'scale(0.8)', opacity: 0.05, borderWidth: '1px', offset: 0.8 },
+              { transform: 'scale(1)', opacity: 0, borderWidth: '0.5px' },
+            ], { duration: 2800 + Math.random() * 600, easing: 'cubic-bezier(0.16, 1, 0.3, 1)', fill: 'forwards' });
 
-        setTimeout(() => ring.remove(), 2600);
+            setTimeout(() => ring.remove(), 3500);
+          }, delay);
+        }
       }
     } else {
       hoverBurstRunning = false;
