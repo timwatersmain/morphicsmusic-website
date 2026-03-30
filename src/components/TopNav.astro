@@ -1,0 +1,46 @@
+---
+const { currentPage = '' } = Astro.props;
+
+const navItems = [
+  { label: 'SONICS', href: '/sonics' },
+  { label: 'VISUALS', href: '/visuals' },
+  { label: 'LABS', href: '/labs' },
+  { label: 'SIGNAL', href: '/signal' },
+];
+---
+
+<header class="fixed top-0 w-full z-50 bg-[#0A0A0A]/80 backdrop-blur-2xl flex justify-between items-center px-8 py-6">
+  <a href="/" class="text-xl font-bold tracking-tighter text-primary drop-shadow-[0_0_8px_rgba(219,252,255,0.5)] font-headline">
+    MORPHICS
+  </a>
+  <nav class="hidden md:flex space-x-12">
+    {navItems.map(item => (
+      <a
+        href={item.href}
+        class:list={[
+          "font-headline uppercase tracking-[0.2em] text-[0.75rem] hover:text-primary hover:scale-105 transition-all duration-[400ms]",
+          currentPage === item.href
+            ? "text-primary drop-shadow-[0_0_5px_#00F0FF] border-b border-primary/30"
+            : "text-primary/50"
+        ]}
+      >
+        {item.label}
+      </a>
+    ))}
+  </nav>
+  <div class="flex items-center space-x-4">
+    {currentPage === '/labs' && (
+      <div class="hidden sm:flex items-center bg-white/5 border border-white/10 px-4 py-2">
+        <span class="material-symbols-outlined text-sm text-primary/50 mr-2">search</span>
+        <input
+          type="text"
+          placeholder="QUERY_SYSTEM..."
+          class="bg-transparent border-none focus:ring-0 text-xs font-mono text-primary placeholder:text-primary/20 p-0 w-32"
+        />
+      </div>
+    )}
+    <button class="text-primary hover:scale-105 transition-all duration-[400ms]">
+      <span class="material-symbols-outlined">settings_input_component</span>
+    </button>
+  </div>
+</header>
