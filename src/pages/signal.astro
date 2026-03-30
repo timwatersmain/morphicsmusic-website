@@ -1,0 +1,125 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import signalData from '../data/signal.json';
+
+const platforms = [
+  { name: 'SPOTIFY', icon: 'music_note', url: '#' },
+  { name: 'SOUNDCLOUD', icon: 'cloud', url: '#' },
+  { name: 'INSTAGRAM', icon: 'photo_camera', url: '#' },
+  { name: 'YOUTUBE', icon: 'play_circle', url: '#' },
+  { name: 'BLUESKY', icon: 'public', url: '#' },
+];
+
+const platformIcons: Record<string, string> = {
+  youtube: 'play_circle',
+  spotify: 'music_note',
+  soundcloud: 'cloud',
+  instagram: 'photo_camera',
+  bluesky: 'public',
+};
+
+const typeIcons: Record<string, string> = {
+  video: 'videocam',
+  track: 'graphic_eq',
+  visual: 'image',
+};
+---
+
+<BaseLayout title="SIGNAL" currentPage="/signal">
+  <header class="mb-20">
+    <div class="flex items-baseline gap-4 mb-2">
+      <span class="font-mono text-xs text-secondary">[ BROADCAST_ARRAY ]</span>
+      <div class="h-[1px] flex-1 bg-outline-variant/30"></div>
+    </div>
+    <h1 class="text-6xl md:text-8xl font-headline font-bold text-primary tracking-tighter leading-none mb-6">
+      SIGNAL
+    </h1>
+    <p class="max-w-xl text-on-surface-variant font-body leading-relaxed">
+      Neural broadcast across all channels. A unified feed of transmissions — deduplicated, prioritized by signal strength.
+    </p>
+  </header>
+
+  <!-- Platform Nodes (Particle Array) -->
+  <div class="mb-20 relative">
+    <div class="flex flex-wrap items-center justify-center gap-12 relative py-8">
+      {platforms.map((platform, i) => (
+        <a
+          href={platform.url}
+          class="group relative flex flex-col items-center gap-3 transition-all duration-[400ms] hover:scale-110"
+        >
+          <div class="w-16 h-16 border border-outline-variant/30 flex items-center justify-center bg-surface-container-low hover:border-primary/60 hover:bg-primary/5 transition-all duration-[400ms] shadow-[0_0_40px_rgba(0,219,233,0.06)]">
+            <span class="material-symbols-outlined text-2xl text-primary/60 group-hover:text-primary transition-colors">{platform.icon}</span>
+          </div>
+          <span class="font-mono text-[9px] tracking-widest text-white/30 group-hover:text-primary transition-colors">{platform.name}</span>
+          {i < platforms.length - 1 && (
+            <div class="absolute top-8 left-full w-12 h-[0.5px] bg-outline-variant/30 hidden lg:block"></div>
+          )}
+        </a>
+      ))}
+    </div>
+  </div>
+
+  <!-- Deduplicated Feed -->
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+    {signalData.map(post => (
+      <a
+        href={post.url}
+        class="group relative bg-surface-container-low border border-white/5 transition-all duration-500 hover:border-primary/30 terminal-glow block"
+      >
+        <div class="relative overflow-hidden">
+          <img
+            src={post.thumbnail}
+            alt={post.title}
+            class="w-full aspect-video object-cover grayscale opacity-50 group-hover:grayscale-0 group-hover:opacity-80 transition-all duration-700"
+          />
+          <div class="absolute inset-0 bg-gradient-to-t from-background to-transparent opacity-60"></div>
+          <div class="absolute top-4 left-4 flex items-center gap-2">
+            <div class="bg-background/80 px-2 py-1 backdrop-blur-md flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-sm text-secondary">{typeIcons[post.type]}</span>
+              <span class="font-mono text-[9px] text-secondary uppercase">{post.type}</span>
+            </div>
+          </div>
+          <div class="absolute top-4 right-4">
+            <div class="bg-background/80 px-2 py-1 backdrop-blur-md flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-sm text-primary">{platformIcons[post.platform]}</span>
+              <span class="font-mono text-[9px] text-primary uppercase">{post.platform}</span>
+            </div>
+          </div>
+        </div>
+        <div class="p-6">
+          <h3 class="font-headline text-lg text-primary group-hover:text-secondary transition-colors uppercase tracking-tight mb-2">{post.title}</h3>
+          <p class="font-mono text-[11px] text-white/40 leading-relaxed mb-4">{post.caption}</p>
+          <div class="flex items-center justify-between">
+            <span class="font-mono text-[9px] text-white/20 uppercase">{post.date}</span>
+            <div class="flex gap-1">
+              {post.originalPlatforms.map(p => (
+                <span class="w-1.5 h-1.5 bg-primary/30 rounded-full" title={p}></span>
+              ))}
+            </div>
+          </div>
+        </div>
+      </a>
+    ))}
+  </div>
+
+  <footer class="mt-32 pt-12 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-8">
+    <div class="flex gap-12">
+      <div>
+        <div class="font-mono text-[9px] text-white/20 uppercase mb-1">Active Channels</div>
+        <div class="font-headline text-lg text-primary">{platforms.length}</div>
+      </div>
+      <div>
+        <div class="font-mono text-[9px] text-white/20 uppercase mb-1">Total Posts</div>
+        <div class="font-headline text-lg text-primary">{signalData.length}</div>
+      </div>
+      <div>
+        <div class="font-mono text-[9px] text-white/20 uppercase mb-1">Signal Strength</div>
+        <div class="font-headline text-lg text-secondary">OPTIMAL</div>
+      </div>
+    </div>
+    <div class="flex gap-4">
+      <span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+      <span class="font-mono text-[10px] text-white/40 uppercase tracking-widest">Broadcasting...</span>
+    </div>
+  </footer>
+</BaseLayout>
