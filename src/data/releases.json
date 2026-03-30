@@ -1,0 +1,83 @@
+[
+  {
+    "id": "metanoia",
+    "title": "METANOIA",
+    "type": "album",
+    "date": "2024-01-15",
+    "artwork": "/images/albums/metanoia.jpg",
+    "bpm": 140,
+    "key": "Dm",
+    "genre": ["electronic", "experimental"],
+    "links": {
+      "spotify": "#",
+      "soundcloud": "#",
+      "bandcamp": "#"
+    },
+    "embed": "",
+    "featured": true
+  },
+  {
+    "id": "morpheus",
+    "title": "MORPHEUS",
+    "type": "album",
+    "date": "2023-06-20",
+    "artwork": "/images/albums/morpheus.jpg",
+    "bpm": 128,
+    "key": "Am",
+    "genre": ["electronic", "ambient"],
+    "links": {
+      "spotify": "#",
+      "soundcloud": "#"
+    },
+    "embed": "",
+    "featured": false
+  },
+  {
+    "id": "nexus",
+    "title": "NEXUS",
+    "type": "ep",
+    "date": "2023-03-10",
+    "artwork": "/images/albums/nexus.jpg",
+    "bpm": 150,
+    "key": "Fm",
+    "genre": ["electronic", "bass"],
+    "links": {
+      "spotify": "#",
+      "soundcloud": "#"
+    },
+    "embed": "",
+    "featured": false
+  },
+  {
+    "id": "sound-experiments",
+    "title": "SOUND_EXPERIMENTS",
+    "type": "album",
+    "date": "2022-11-05",
+    "artwork": "/images/albums/sound-experiments.jpg",
+    "bpm": 135,
+    "key": "Cm",
+    "genre": ["experimental", "sound-design"],
+    "links": {
+      "spotify": "#",
+      "soundcloud": "#"
+    },
+    "embed": "",
+    "featured": false
+  },
+  {
+    "id": "from-skratch",
+    "title": "FROM_SKRATCH",
+    "type": "album",
+    "date": "2022-05-18",
+    "artwork": "/images/albums/from-skratch.jpg",
+    "bpm": 145,
+    "key": "Gm",
+    "genre": ["electronic", "experimental"],
+    "links": {
+      "spotify": "#",
+      "soundcloud": "#"
+    },
+    "embed": "",
+    "featured": false
+  }
+]

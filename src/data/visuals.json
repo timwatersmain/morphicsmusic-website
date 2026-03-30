@@ -1,0 +1,100 @@
+[
+  {
+    "id": "dscf-3341",
+    "title": "NEURAL_DRIFT_01",
+    "image": "/images/visuals/dscf3341.jpg",
+    "tags": ["algorithmic", "neural"],
+    "size": "tall",
+    "metadata": {
+      "genId": "982-A",
+      "iteration": 48202,
+      "resolution": "8K_ULTRA",
+      "latency": "42ms"
+    },
+    "date": "2025-12-04"
+  },
+  {
+    "id": "morphics-banner",
+    "title": "DATA_STREAM_CORE",
+    "image": "/images/visuals/morphics-banner.jpg",
+    "tags": ["neural", "sonic"],
+    "size": "wide",
+    "metadata": {
+      "genId": "117-B",
+      "iteration": 12800,
+      "resolution": "4K_HDR",
+      "latency": "18ms"
+    },
+    "date": "2025-11-20"
+  },
+  {
+    "id": "dscf-3354",
+    "title": "VOID_SEQUENCE",
+    "image": "/images/visuals/dscf3354.jpg",
+    "tags": ["algorithmic"],
+    "size": "square",
+    "metadata": {
+      "genId": "401-C",
+      "iteration": 401,
+      "resolution": "4K_ULTRA",
+      "latency": "31ms"
+    },
+    "date": "2025-11-15"
+  },
+  {
+    "id": "malwear-clouds",
+    "title": "NEBULA_DRIFT",
+    "image": "/images/visuals/malwear-clouds.jpg",
+    "tags": ["neural"],
+    "size": "standard",
+    "metadata": {
+      "genId": "550-D",
+      "iteration": 9400,
+      "resolution": "6K_HDR",
+      "latency": "55ms"
+    },
+    "date": "2025-10-28"
+  },
+  {
+    "id": "dscf-3589",
+    "title": "CHROMATIC_SHIFT",
+    "image": "/images/visuals/dscf3589.jpg",
+    "tags": ["algorithmic", "sonic"],
+    "size": "tall",
+    "metadata": {
+      "genId": "733-E",
+      "iteration": 22100,
+      "resolution": "8K_ULTRA",
+      "latency": "38ms"
+    },
+    "date": "2025-10-10"
+  },
+  {
+    "id": "timeline-01",
+    "title": "TEMPORAL_MAP_01",
+    "image": "/images/visuals/timeline-01.jpg",
+    "tags": ["neural"],
+    "size": "standard",
+    "metadata": {
+      "genId": "890-F",
+      "iteration": 5600,
+      "resolution": "4K_HDR",
+      "latency": "22ms"
+    },
+    "date": "2025-09-25"
+  },
+  {
+    "id": "datamind-3",
+    "title": "DATAMIND_CONSTRUCT",
+    "image": "/images/visuals/datamind-3.jpg",
+    "tags": ["algorithmic", "neural"],
+    "size": "wide",
+    "metadata": {
+      "genId": "204-G",
+      "iteration": 33000,
+      "resolution": "8K_ULTRA",
+      "latency": "47ms"
+    },
+    "date": "2025-09-12"
+  }
+]

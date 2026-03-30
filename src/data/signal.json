@@ -1,0 +1,68 @@
+[
+  {
+    "id": "av-short-01",
+    "title": "AV_SHORTS_01",
+    "type": "video",
+    "thumbnail": "/images/signal/blue-insta.jpg",
+    "caption": "Audiovisual experiment in chromatic distortion",
+    "date": "2025-03-20",
+    "platform": "youtube",
+    "url": "#",
+    "originalPlatforms": ["youtube", "instagram"]
+  },
+  {
+    "id": "molten-visual",
+    "title": "MOLTEN_SEQUENCE",
+    "type": "visual",
+    "thumbnail": "/images/signal/molten-insta.jpg",
+    "caption": "Generative fluid dynamics render — molten substrate",
+    "date": "2025-03-15",
+    "platform": "instagram",
+    "url": "#",
+    "originalPlatforms": ["instagram"]
+  },
+  {
+    "id": "portal-render",
+    "title": "PORTAL_CONSTRUCT",
+    "type": "visual",
+    "thumbnail": "/images/signal/portal-insta.jpg",
+    "caption": "Recursive portal geometry with depth-mapped lighting",
+    "date": "2025-03-08",
+    "platform": "instagram",
+    "url": "#",
+    "originalPlatforms": ["instagram", "bluesky"]
+  },
+  {
+    "id": "metanoia-drop",
+    "title": "METANOIA_RELEASE",
+    "type": "track",
+    "thumbnail": "/images/albums/metanoia.jpg",
+    "caption": "Full album now streaming — METANOIA",
+    "date": "2025-02-28",
+    "platform": "spotify",
+    "url": "#",
+    "originalPlatforms": ["spotify", "soundcloud", "youtube"]
+  },
+  {
+    "id": "purp-glitch",
+    "title": "PURP_GLITCH_SESSION",
+    "type": "video",
+    "thumbnail": "/images/signal/purp-insta.jpg",
+    "caption": "Live glitch synthesis session — purple spectrum",
+    "date": "2025-02-20",
+    "platform": "youtube",
+    "url": "#",
+    "originalPlatforms": ["youtube", "instagram"]
+  },
+  {
+    "id": "red-spectrum",
+    "title": "RED_SPECTRUM_DRIFT",
+    "type": "visual",
+    "thumbnail": "/images/signal/red-insta.jpg",
+    "caption": "Chromatic aberration study in the red spectrum",
+    "date": "2025-02-10",
+    "platform": "instagram",
+    "url": "#",
+    "originalPlatforms": ["instagram"]
+  }
+]
