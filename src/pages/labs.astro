@@ -1,0 +1,140 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import experiments from '../data/experiments.json';
+---
+
+<BaseLayout title="LABS" currentPage="/labs">
+  <div class="grid-overlay fixed inset-0 pointer-events-none z-0"></div>
+
+  <header class="mb-20">
+    <div class="flex items-baseline gap-4 mb-2">
+      <span class="font-mono text-xs text-secondary">[ DEPT_EXPERIMENTAL ]</span>
+      <div class="h-[1px] flex-1 bg-outline-variant/30"></div>
+    </div>
+    <h1 class="text-6xl md:text-8xl font-headline font-bold text-primary tracking-tighter leading-none mb-6">
+      LABS<span class="text-secondary">.035</span>
+    </h1>
+    <p class="max-w-xl text-on-surface-variant font-body leading-relaxed">
+      Autonomous real-time generative research. This module executes GLSL fragment shaders and neural hallucinations derived from local environmental telemetry.
+    </p>
+  </header>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+    {experiments.map(exp => (
+      <div class="group relative bg-surface-container-low border border-white/5 transition-all duration-500 hover:border-secondary/30 terminal-glow">
+        <div class="flex items-center justify-between px-4 py-2 bg-surface-container-high/50 border-b border-white/5">
+          <div class="flex gap-1.5">
+            <div class="w-2.5 h-2.5 rounded-full bg-error/40"></div>
+            <div class="w-2.5 h-2.5 rounded-full bg-secondary/40"></div>
+            <div class="w-2.5 h-2.5 rounded-full bg-primary/40"></div>
+          </div>
+          <span class="font-mono text-[9px] text-white/20 uppercase tracking-widest">{exp.file}</span>
+        </div>
+        <div class="relative h-64 overflow-hidden">
+          <img
+            src={exp.image}
+            alt={exp.title}
+            class="w-full h-full object-cover grayscale opacity-50 group-hover:grayscale-0 group-hover:scale-105 group-hover:opacity-100 transition-all duration-700"
+          />
+          <div class="absolute inset-0 bg-gradient-to-t from-background to-transparent opacity-60"></div>
+          <div class="absolute bottom-4 left-4 font-mono text-[10px] text-primary space-y-1">
+            <div class="flex items-center gap-2 bg-background/80 px-2 py-1 backdrop-blur-md">
+              <span class="w-1.5 h-1.5 bg-primary animate-pulse"></span> FPS: {exp.fps}
+            </div>
+            <div class="flex items-center gap-2 bg-background/80 px-2 py-1 backdrop-blur-md">
+              GPU_LOAD: {exp.gpuLoad}%
+            </div>
+          </div>
+        </div>
+        <div class="p-6">
+          <h3 class="font-headline text-xl text-primary mb-4 group-hover:text-secondary transition-colors uppercase tracking-tight">{exp.title}</h3>
+          <pre class="font-mono text-[11px] text-white/40 mb-6 leading-relaxed whitespace-pre-wrap overflow-hidden">{exp.code}</pre>
+          <button class="w-full py-3 border border-primary/20 hover:bg-primary hover:text-on-primary font-mono text-[10px] tracking-widest transition-all uppercase">
+            INITIALIZE_BUFFER
+          </button>
+        </div>
+      </div>
+    ))}
+
+    <div class="md:col-span-2 relative bg-surface-container-low border border-white/5 p-8 flex flex-col md:flex-row gap-8 terminal-glow group">
+      <div class="flex-1">
+        <div class="flex items-center gap-3 mb-6">
+          <span class="material-symbols-outlined text-secondary">monitoring</span>
+          <h3 class="font-headline text-2xl text-primary uppercase">Global_Telemetry_Stream</h3>
+        </div>
+        <div class="space-y-4 font-mono text-[10px] text-white/40">
+          <div class="flex justify-between border-b border-white/5 pb-2">
+            <span>SESSION_ID</span>
+            <span class="text-primary">0x8849-F002-X91</span>
+          </div>
+          <div class="flex justify-between border-b border-white/5 pb-2">
+            <span>UPTIME</span>
+            <span class="text-primary">04:12:33:09</span>
+          </div>
+          <div class="flex justify-between border-b border-white/5 pb-2">
+            <span>MEMORY_CONSUMPTION</span>
+            <span class="text-secondary">4.2GB / 128GB</span>
+          </div>
+          <div class="flex justify-between border-b border-white/5 pb-2">
+            <span>NODE_STATUS</span>
+            <span class="text-primary">ACTIVE [18/18]</span>
+          </div>
+        </div>
+      </div>
+      <div class="flex-1 bg-surface-container-lowest p-4 border border-white/5 relative overflow-hidden">
+        <div class="relative h-full flex flex-col justify-end">
+          <div class="flex items-end gap-1 h-24">
+            <div class="bg-primary/20 w-full h-[40%]"></div>
+            <div class="bg-primary/20 w-full h-[60%]"></div>
+            <div class="bg-primary/20 w-full h-[55%]"></div>
+            <div class="bg-primary/20 w-full h-[80%]"></div>
+            <div class="bg-primary/40 w-full h-[95%]"></div>
+            <div class="bg-secondary/40 w-full h-[70%]"></div>
+            <div class="bg-primary/20 w-full h-[45%]"></div>
+            <div class="bg-primary/20 w-full h-[65%]"></div>
+          </div>
+          <div class="mt-4 font-mono text-[9px] text-white/20 text-center tracking-widest uppercase">Real-time Spectral Analysis</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-surface-container-low border border-white/5 p-8 flex flex-col justify-center terminal-glow">
+      <span class="material-symbols-outlined text-4xl text-secondary mb-4">terminal</span>
+      <p class="font-mono text-[11px] text-white/50 leading-relaxed mb-6">
+        [SYSTEM_NOTICE]: Experimental kernels may cause interface destabilization. Ensure local neural buffers are cleared before execution.
+      </p>
+      <div class="flex flex-wrap gap-2">
+        <span class="px-2 py-1 bg-white/5 text-[9px] font-mono text-primary border border-primary/10">#GLSL</span>
+        <span class="px-2 py-1 bg-white/5 text-[9px] font-mono text-primary border border-primary/10">#GEN_ART</span>
+        <span class="px-2 py-1 bg-white/5 text-[9px] font-mono text-primary border border-primary/10">#WEBGL_2</span>
+      </div>
+    </div>
+  </div>
+
+  <button class="fixed right-8 bottom-24 lg:bottom-8 z-40 bg-primary text-on-primary p-4 shadow-2xl hover:scale-110 transition-transform flex items-center gap-2 group">
+    <span class="material-symbols-outlined">add</span>
+    <span class="max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-500 font-mono text-[10px] tracking-widest whitespace-nowrap">NEW_EXPERIMENT</span>
+  </button>
+
+  <footer class="mt-32 pt-12 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-8">
+    <div class="flex gap-12">
+      <div>
+        <div class="font-mono text-[9px] text-white/20 uppercase mb-1">Packet Loss</div>
+        <div class="font-headline text-lg text-primary">0.0002%</div>
+      </div>
+      <div>
+        <div class="font-mono text-[9px] text-white/20 uppercase mb-1">Latency</div>
+        <div class="font-headline text-lg text-primary">4ms</div>
+      </div>
+      <div>
+        <div class="font-mono text-[9px] text-white/20 uppercase mb-1">Encryption</div>
+        <div class="font-headline text-lg text-secondary">AES-512</div>
+      </div>
+    </div>
+    <div class="flex gap-6">
+      <a class="text-white/30 hover:text-primary transition-colors" href="#"><span class="material-symbols-outlined">share</span></a>
+      <a class="text-white/30 hover:text-primary transition-colors" href="#"><span class="material-symbols-outlined">download</span></a>
+      <a class="text-white/30 hover:text-primary transition-colors" href="#"><span class="material-symbols-outlined">help_outline</span></a>
+    </div>
+  </footer>
+</BaseLayout>
