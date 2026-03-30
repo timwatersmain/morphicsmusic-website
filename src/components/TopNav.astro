@@ -4,7 +4,7 @@ const { currentPage = '' } = Astro.props;
 const navItems = [
   { label: 'SONICS', href: '/sonics' },
   { label: 'VISUALS', href: '/visuals' },
-  { label: 'LABS', href: '/labs' },
+  { label: 'STORE', href: '/store' },
   { label: 'SIGNAL', href: '/signal' },
 ];
 ---
@@ -29,16 +29,6 @@ const navItems = [
     ))}
   </nav>
   <div class="flex items-center space-x-4">
-    {currentPage === '/labs' && (
-      <div class="hidden sm:flex items-center bg-white/5 border border-white/10 px-4 py-2">
-        <span class="material-symbols-outlined text-sm text-primary/50 mr-2">search</span>
-        <input
-          type="text"
-          placeholder="QUERY_SYSTEM..."
-          class="bg-transparent border-none focus:ring-0 text-xs font-mono text-primary placeholder:text-primary/20 p-0 w-32"
-        />
-      </div>
-    )}
     <button class="text-primary hover:scale-105 transition-all duration-[400ms]">
       <span class="material-symbols-outlined">settings_input_component</span>
     </button>
