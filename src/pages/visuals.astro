@@ -1,0 +1,120 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import visualsData from '../data/visuals.json';
+---
+
+<BaseLayout title="VISUALS" currentPage="/visuals">
+  <header class="mb-20">
+    <div class="flex flex-col md:flex-row md:items-end justify-between gap-8">
+      <div class="max-w-2xl">
+        <span class="font-mono text-[10px] text-primary tracking-[0.5em] uppercase mb-4 block">Archive.Data_Stream</span>
+        <h1 class="font-headline text-5xl md:text-7xl font-bold tracking-tighter text-on-surface leading-none mb-6">
+          GENERATIVE<br /><span class="text-outline-variant">VISUALS</span>
+        </h1>
+        <p class="text-on-surface-variant max-w-md leading-relaxed">
+          A cinematic synthesis of neural architecture and procedural artifacts. Exploring the boundary between carbon memory and silicon imagination.
+        </p>
+      </div>
+      <div class="flex flex-wrap gap-3 font-mono text-[10px] tracking-widest uppercase">
+        <button class="filter-btn px-6 py-3 border border-primary text-primary bg-primary/5 hover:bg-primary/20 transition-all" data-filter="all">ALL</button>
+        <button class="filter-btn px-6 py-3 border border-outline-variant text-white/40 hover:text-white/80 hover:border-white/40 transition-all" data-filter="algorithmic">ALGORITHMIC</button>
+        <button class="filter-btn px-6 py-3 border border-outline-variant text-white/40 hover:text-white/80 hover:border-white/40 transition-all" data-filter="neural">NEURAL</button>
+        <button class="filter-btn px-6 py-3 border border-outline-variant text-white/40 hover:text-white/80 hover:border-white/40 transition-all" data-filter="sonic">SONIC</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="masonry-grid" id="visuals-grid">
+    {visualsData.map(v => (
+      <div
+        class:list={[
+          "visual-card group relative border border-outline-variant bg-surface-container-low transition-all duration-500 hover:scale-[1.02] hover:z-10 card-glow violet-pulse",
+          v.size === 'tall' && 'masonry-item-tall',
+          v.size === 'wide' && 'masonry-item-wide',
+          v.size === 'square' && 'masonry-item-square',
+        ]}
+        data-tags={v.tags.join(',')}
+      >
+        <img
+          src={v.image}
+          alt={v.title}
+          class="w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-opacity"
+        />
+        <div class="absolute inset-0 p-6 flex flex-col justify-between opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+          <div class="flex justify-between items-start">
+            <span class="font-mono text-[10px] text-primary bg-background/80 px-2 py-1">GEN_ID: {v.metadata.genId}</span>
+            <span class="material-symbols-outlined text-primary scale-75">expand_content</span>
+          </div>
+          <div class="bg-background/90 p-4 border-l-2 border-primary backdrop-blur-md">
+            <p class="font-headline text-lg font-bold text-white mb-2">{v.title}</p>
+            <div class="grid grid-cols-2 gap-2 font-mono text-[8px] text-white/50 uppercase tracking-tighter">
+              <div>Iteration: <span class="text-primary">{v.metadata.iteration.toLocaleString()}</span></div>
+              <div>Res: <span class="text-primary">{v.metadata.resolution}</span></div>
+              <div>Latency: <span class="text-primary">{v.metadata.latency}</span></div>
+              <div>Date: <span class="text-primary">{v.date}</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    ))}
+  </div>
+
+  <div class="mt-24 pt-12 border-t border-outline-variant/30 flex flex-col md:flex-row justify-between items-center gap-6">
+    <div class="flex items-center gap-8">
+      <div class="flex flex-col">
+        <span class="font-mono text-[8px] text-white/30 uppercase">Neural Load</span>
+        <div class="flex gap-1 mt-1">
+          <div class="w-4 h-1 bg-primary"></div>
+          <div class="w-4 h-1 bg-primary"></div>
+          <div class="w-4 h-1 bg-primary"></div>
+          <div class="w-4 h-1 bg-primary/20"></div>
+          <div class="w-4 h-1 bg-primary/20"></div>
+        </div>
+      </div>
+      <div class="flex flex-col">
+        <span class="font-mono text-[8px] text-white/30 uppercase">Render Latency</span>
+        <span class="font-mono text-[12px] text-secondary mt-1 tracking-widest">0.0034ms</span>
+      </div>
+    </div>
+    <div class="flex gap-4">
+      <span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+      <span class="font-mono text-[10px] text-white/40 uppercase tracking-widest">Global Archive Syncing...</span>
+    </div>
+  </div>
+</BaseLayout>
+
+<style>
+  .masonry-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    grid-auto-rows: 200px;
+    gap: 2rem;
+  }
+  .masonry-item-tall { grid-row: span 3; }
+  .masonry-item-wide { grid-column: span 2; }
+  .masonry-item-square { grid-row: span 2; }
+</style>
+
+<script>
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const filter = btn.getAttribute('data-filter');
+
+      document.querySelectorAll('.filter-btn').forEach(b => {
+        b.classList.remove('border-primary', 'text-primary', 'bg-primary/5');
+        b.classList.add('border-outline-variant', 'text-white/40');
+      });
+      btn.classList.remove('border-outline-variant', 'text-white/40');
+      btn.classList.add('border-primary', 'text-primary', 'bg-primary/5');
+
+      document.querySelectorAll('.visual-card').forEach(card => {
+        const tags = card.getAttribute('data-tags');
+        if (filter === 'all' || tags.includes(filter)) {
+          card.style.display = '';
+        } else {
+          card.style.display = 'none';
+        }
+      });
+    });
+  });
+</script>
