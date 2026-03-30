@@ -1,0 +1,98 @@
+[
+  {
+    "id": "metanoia-album",
+    "title": "METANOIA",
+    "type": "music",
+    "category": "album",
+    "price": "$9.99",
+    "image": "/images/albums/metanoia.jpg",
+    "description": "Full-length album — 12 tracks of experimental electronic synthesis",
+    "url": "#",
+    "platform": "bandcamp",
+    "tags": ["album", "electronic", "experimental"]
+  },
+  {
+    "id": "morpheus-album",
+    "title": "MORPHEUS",
+    "type": "music",
+    "category": "album",
+    "price": "$9.99",
+    "image": "/images/albums/morpheus.jpg",
+    "description": "Ambient explorations through neural architecture and deep synthesis",
+    "url": "#",
+    "platform": "bandcamp",
+    "tags": ["album", "ambient", "electronic"]
+  },
+  {
+    "id": "nexus-ep",
+    "title": "NEXUS",
+    "type": "music",
+    "category": "ep",
+    "price": "$5.99",
+    "image": "/images/albums/nexus.jpg",
+    "description": "4-track EP — high-energy bass constructs and neural frequencies",
+    "url": "#",
+    "platform": "bandcamp",
+    "tags": ["ep", "bass", "electronic"]
+  },
+  {
+    "id": "sound-experiments-album",
+    "title": "SOUND_EXPERIMENTS",
+    "type": "music",
+    "category": "album",
+    "price": "$7.99",
+    "image": "/images/albums/sound-experiments.jpg",
+    "description": "Sound design explorations — field recordings meets digital synthesis",
+    "url": "#",
+    "platform": "bandcamp",
+    "tags": ["album", "sound-design", "experimental"]
+  },
+  {
+    "id": "from-skratch-album",
+    "title": "FROM_SKRATCH",
+    "type": "music",
+    "category": "album",
+    "price": "$9.99",
+    "image": "/images/albums/from-skratch.jpg",
+    "description": "Built from the ground up — raw electronic constructs and textures",
+    "url": "#",
+    "platform": "bandcamp",
+    "tags": ["album", "electronic", "experimental"]
+  },
+  {
+    "id": "morphics-tee-black",
+    "title": "MORPHICS_TEE // BLACK",
+    "type": "merch",
+    "category": "apparel",
+    "price": "$35.00",
+    "image": "/images/visuals/morphics-banner.jpg",
+    "description": "Premium black tee — Morphics neural logo front, coordinates back",
+    "url": "#",
+    "platform": "store",
+    "tags": ["apparel", "tee"]
+  },
+  {
+    "id": "neural-hoodie",
+    "title": "NEURAL_HOODIE // VOID",
+    "type": "merch",
+    "category": "apparel",
+    "price": "$65.00",
+    "image": "/images/visuals/datamind-3.jpg",
+    "description": "Heavyweight hoodie — datamind generative print, embroidered logo",
+    "url": "#",
+    "platform": "store",
+    "tags": ["apparel", "hoodie"]
+  },
+  {
+    "id": "generative-print-01",
+    "title": "PRINT_001 // NEURAL_DRIFT",
+    "type": "merch",
+    "category": "print",
+    "price": "$45.00",
+    "image": "/images/visuals/dscf3341.jpg",
+    "description": "Limited edition archival print — 18x24 signed and numbered",
+    "url": "#",
+    "platform": "store",
+    "tags": ["print", "limited"]
+  }
+]
