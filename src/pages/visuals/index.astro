@@ -1,0 +1,615 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import visualsData from '../../data/visuals.json';
+import videosData from '../../data/videos.json';
+
+const featuredVisuals = visualsData.filter(v => v.featured);
+---
+
+<BaseLayout title="VISUALS" currentPage="/visuals">
+  <header class="mb-16">
+    <h1 class="font-headline text-5xl md:text-7xl font-bold tracking-tighter text-on-surface leading-none mb-6">
+      VISUALS
+    </h1>
+    <p class="text-on-surface-variant max-w-md leading-relaxed">
+      Motion, artwork, photography, and generative visuals.
+    </p>
+  </header>
+
+  <!-- ═══ MOTION SECTION ═══ -->
+  <section id="motion-section" class="mb-24">
+    <div class="flex items-center gap-4 mb-8">
+      <span class="material-symbols-outlined text-primary text-2xl">slow_motion_video</span>
+      <h2 class="font-headline text-3xl md:text-4xl font-bold tracking-tighter text-on-surface leading-none">
+        MOTION
+      </h2>
+      <div class="flex-1 h-px bg-outline-variant ml-4"></div>
+    </div>
+
+    <!-- Main preview player -->
+    <div class="video-showcase" id="video-showcase">
+      <div class="video-showcase-player">
+        <video
+          id="preview-player"
+          class="w-full aspect-video object-cover"
+          muted
+          loop
+          playsinline
+          autoplay
+        />
+        <!-- Click-to-expand overlay -->
+        <div class="video-showcase-overlay" id="video-expand-overlay">
+          <div class="flex flex-col items-center gap-2">
+            <span class="material-symbols-outlined text-primary text-4xl">fullscreen</span>
+            <span class="font-mono text-[10px] text-white/50 uppercase tracking-widest">Click to watch full</span>
+          </div>
+        </div>
+        <!-- Now playing info -->
+        <div class="video-showcase-info">
+          <div class="flex items-center gap-3">
+            <span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+            <span id="now-playing-title" class="font-headline text-sm font-bold text-white">—</span>
+          </div>
+          <p id="now-playing-desc" class="font-mono text-[9px] text-white/40 uppercase tracking-wider mt-1 ml-5"></p>
+        </div>
+        <!-- Progress bar -->
+        <div class="video-showcase-progress">
+          <div class="video-showcase-progress-bar" id="preview-progress"></div>
+        </div>
+      </div>
+
+      <!-- Video switcher thumbnails -->
+      <div class="video-switcher" id="video-switcher">
+        {videosData.map((v, i) => (
+          <button
+            class:list={["video-switch-btn group", i === 0 && "active"]}
+            data-video-index={i}
+            data-src={v.src}
+            data-title={v.title}
+            data-desc={v.description}
+          >
+            <div class="video-switch-indicator"></div>
+            <div class="flex-1 text-left">
+              <p class="font-headline text-xs font-bold text-white group-hover:text-primary transition-colors">{v.title}</p>
+              <div class="flex gap-2 mt-1">
+                {v.tags.map(tag => (
+                  <span class="font-mono text-[7px] text-primary/50 uppercase">#{tag}</span>
+                ))}
+              </div>
+            </div>
+            <span class="font-mono text-[10px] text-white/20">{String(i + 1).padStart(2, '0')}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- Fullscreen video modal -->
+  <div id="video-fullscreen" class="video-fullscreen-modal">
+    <div class="video-fullscreen-backdrop"></div>
+    <button id="video-fs-close" class="art-lb-close" aria-label="Close">
+      <span class="material-symbols-outlined">close</span>
+    </button>
+    <video
+      id="fullscreen-player"
+      class="video-fullscreen-video"
+      controls
+      playsinline
+    />
+  </div>
+
+  <!-- Divider -->
+  <div class="brand-divider brand-divider--wide mb-0">
+    <img src="/images/brand/morph-line-g.png" alt="" loading="lazy" />
+  </div>
+
+  <!-- ═══ ARTWORK SECTION ═══ -->
+  <section class="mt-8">
+    <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
+      <div class="flex items-center gap-4">
+        <span class="material-symbols-outlined text-primary text-2xl">palette</span>
+        <h2 class="font-headline text-3xl md:text-4xl font-bold tracking-tighter text-on-surface leading-none">
+          ARTWORK
+        </h2>
+        <div class="flex-1 h-px bg-outline-variant ml-4 hidden md:block" style="min-width:100px"></div>
+      </div>
+      <a
+        href="/visuals/gallery"
+        class="self-start md:self-end flex items-center gap-3 px-5 py-3 border border-outline-variant text-on-surface font-mono text-xs uppercase tracking-widest hover:bg-primary/10 hover:border-primary transition-all duration-300 group no-underline"
+      >
+        <span class="material-symbols-outlined text-primary text-base transition-transform group-hover:scale-110">gallery_thumbnail</span>
+        VIEW FULL GALLERY
+      </a>
+    </div>
+
+    <div class="masonry-grid" id="visuals-grid">
+      {featuredVisuals.map((v, i) => (
+        <div
+          class:list={[
+            "visual-card group relative border border-outline-variant bg-surface-container-low transition-all duration-500 hover:scale-[1.02] hover:z-10 card-glow violet-pulse cursor-pointer",
+            v.size === 'tall' && 'masonry-item-tall',
+            v.size === 'wide' && 'masonry-item-wide',
+            v.size === 'square' && 'masonry-item-square',
+          ]}
+          data-slide-index={i}
+        >
+          <img
+            src={v.image}
+            alt={v.title}
+            class="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-opacity duration-500"
+          />
+          <div class="absolute inset-0 flex flex-col justify-end opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+            <div class="p-4 bg-gradient-to-t from-background/90 via-background/40 to-transparent">
+              <p class="font-headline text-sm font-bold text-white">{v.title}</p>
+              <div class="flex gap-2 mt-1">
+                {v.tags.map(t => (
+                  <span class="font-mono text-[8px] text-primary/60 uppercase">#{t}</span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <!-- Artwork Lightbox (click to expand fullscreen) -->
+  <div id="art-lightbox" class="art-lightbox">
+    <div class="art-lightbox-backdrop"></div>
+    <button id="art-lb-close" class="art-lb-close" aria-label="Close">
+      <span class="material-symbols-outlined">close</span>
+    </button>
+    <button id="art-lb-prev" class="art-lb-nav art-lb-prev" aria-label="Previous">
+      <span class="material-symbols-outlined">chevron_left</span>
+    </button>
+    <button id="art-lb-next" class="art-lb-nav art-lb-next" aria-label="Next">
+      <span class="material-symbols-outlined">chevron_right</span>
+    </button>
+    <img id="art-lb-img" class="art-lb-img" src="" alt="" />
+    <div class="art-lb-info">
+      <span id="art-lb-title" class="font-headline text-lg font-bold text-white"></span>
+      <span id="art-lb-counter" class="font-mono text-[10px] text-white/30 ml-4"></span>
+    </div>
+  </div>
+
+  <!-- Stats footer -->
+  <div class="brand-divider brand-divider--wide mt-24 mb-0">
+    <img src="/images/brand/morph-line-g.png" alt="" loading="lazy" />
+  </div>
+  <div class="mt-8 pt-12 flex flex-col md:flex-row justify-between items-center gap-6">
+    <div class="flex items-center gap-8">
+      <div class="flex flex-col">
+        <span class="font-mono text-[8px] text-white/30 uppercase">Neural Load</span>
+        <div class="flex gap-1 mt-1">
+          <div class="w-4 h-1 bg-primary"></div>
+          <div class="w-4 h-1 bg-primary"></div>
+          <div class="w-4 h-1 bg-primary"></div>
+          <div class="w-4 h-1 bg-primary/20"></div>
+          <div class="w-4 h-1 bg-primary/20"></div>
+        </div>
+      </div>
+      <div class="flex flex-col">
+        <span class="font-mono text-[8px] text-white/30 uppercase">Render Latency</span>
+        <span class="font-mono text-[12px] text-secondary mt-1 tracking-widest">0.0034ms</span>
+      </div>
+    </div>
+    <div class="flex gap-4">
+      <span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+      <span class="font-mono text-[10px] text-white/40 uppercase tracking-widest">Global Archive Syncing...</span>
+    </div>
+  </div>
+</BaseLayout>
+
+<script>
+  // ═══ VIDEO SWITCHER / PREVIEWER ═══
+  const previewPlayer = document.getElementById('preview-player') as HTMLVideoElement | null;
+  const fullscreenPlayer = document.getElementById('fullscreen-player') as HTMLVideoElement | null;
+  const videoFsModal = document.getElementById('video-fullscreen');
+  const videoFsClose = document.getElementById('video-fs-close');
+  const expandOverlay = document.getElementById('video-expand-overlay');
+  const progressBar = document.getElementById('preview-progress');
+  const nowTitle = document.getElementById('now-playing-title');
+  const nowDesc = document.getElementById('now-playing-desc');
+  const switchBtns = document.querySelectorAll('.video-switch-btn');
+
+  const PREVIEW_DURATION = 8; // seconds per preview
+  let activeVideoIndex = 0;
+  let autoSwitchTimer: ReturnType<typeof setTimeout> | null = null;
+  let progressRaf: number | null = null;
+
+  // Build video list from button data attributes
+  const videoList = Array.from(switchBtns).map(btn => ({
+    src: btn.getAttribute('data-src') ?? '',
+    title: btn.getAttribute('data-title') ?? '',
+    desc: btn.getAttribute('data-desc') ?? '',
+  }));
+
+  function switchToVideo(index: number) {
+    activeVideoIndex = index;
+    const v = videoList[index];
+    if (!previewPlayer || !v) return;
+
+    // Update active button
+    switchBtns.forEach((btn, i) => btn.classList.toggle('active', i === index));
+
+    // Load and play preview
+    previewPlayer.src = v.src;
+    previewPlayer.currentTime = 0;
+    previewPlayer.play().catch(() => {});
+
+    // Update info
+    if (nowTitle) nowTitle.textContent = v.title;
+    if (nowDesc) nowDesc.textContent = v.desc;
+
+    // Start progress tracking
+    startProgressTracking();
+
+    // Auto-advance after preview duration
+    clearAutoSwitch();
+    autoSwitchTimer = setTimeout(() => {
+      switchToVideo((index + 1) % videoList.length);
+    }, PREVIEW_DURATION * 1000);
+  }
+
+  function clearAutoSwitch() {
+    if (autoSwitchTimer) { clearTimeout(autoSwitchTimer); autoSwitchTimer = null; }
+    if (progressRaf) { cancelAnimationFrame(progressRaf); progressRaf = null; }
+  }
+
+  function startProgressTracking() {
+    if (progressRaf) cancelAnimationFrame(progressRaf);
+    const startTime = performance.now();
+    function tick() {
+      const elapsed = (performance.now() - startTime) / 1000;
+      const pct = Math.min((elapsed / PREVIEW_DURATION) * 100, 100);
+      if (progressBar) progressBar.style.width = pct + '%';
+      if (pct < 100) progressRaf = requestAnimationFrame(tick);
+    }
+    progressRaf = requestAnimationFrame(tick);
+  }
+
+  // Switcher button clicks
+  switchBtns.forEach((btn, i) => {
+    btn.addEventListener('click', () => switchToVideo(i));
+  });
+
+  // Click preview to open fullscreen video
+  expandOverlay?.addEventListener('click', openFullscreenVideo);
+  previewPlayer?.addEventListener('click', openFullscreenVideo);
+
+  function openFullscreenVideo() {
+    const v = videoList[activeVideoIndex];
+    if (!fullscreenPlayer || !v) return;
+    clearAutoSwitch();
+    previewPlayer?.pause();
+    fullscreenPlayer.src = v.src;
+    fullscreenPlayer.currentTime = 0;
+    fullscreenPlayer.muted = false;
+    videoFsModal?.classList.add('active');
+    document.body.style.overflow = 'hidden';
+    fullscreenPlayer.play().catch(() => {});
+  }
+
+  function closeFullscreenVideo() {
+    videoFsModal?.classList.remove('active');
+    document.body.style.overflow = '';
+    fullscreenPlayer?.pause();
+    if (fullscreenPlayer) fullscreenPlayer.src = '';
+    // Resume preview cycling
+    switchToVideo(activeVideoIndex);
+  }
+
+  videoFsClose?.addEventListener('click', closeFullscreenVideo);
+  document.getElementById('video-fullscreen')?.addEventListener('click', (e) => {
+    if (e.target === document.querySelector('.video-fullscreen-backdrop')) closeFullscreenVideo();
+  });
+
+  // Start first video on load
+  if (videoList.length > 0) switchToVideo(0);
+
+  // ═══ ARTWORK — CLICK TO EXPAND FULLSCREEN ═══
+  const lightbox = document.getElementById('art-lightbox');
+  const lbImg = document.getElementById('art-lb-img') as HTMLImageElement | null;
+  const lbTitle = document.getElementById('art-lb-title');
+  const lbCounter = document.getElementById('art-lb-counter');
+  const lbClose = document.getElementById('art-lb-close');
+  const lbPrev = document.getElementById('art-lb-prev');
+  const lbNext = document.getElementById('art-lb-next');
+  const cards = document.querySelectorAll('.visual-card');
+
+  const artItems = Array.from(cards).map(card => ({
+    src: card.querySelector('img')?.src ?? '',
+    title: card.querySelector('.font-headline')?.textContent ?? '',
+  }));
+  let lbIndex = 0;
+
+  function openLightbox(index: number) {
+    lbIndex = index;
+    updateLightbox();
+    lightbox?.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeLightbox() {
+    lightbox?.classList.remove('active');
+    document.body.style.overflow = '';
+  }
+
+  function updateLightbox() {
+    const item = artItems[lbIndex];
+    if (!item) return;
+    if (lbImg) { lbImg.src = item.src; lbImg.alt = item.title; }
+    if (lbTitle) lbTitle.textContent = item.title;
+    if (lbCounter) lbCounter.textContent = `${lbIndex + 1} / ${artItems.length}`;
+  }
+
+  cards.forEach((card, i) => {
+    card.addEventListener('click', () => openLightbox(i));
+  });
+
+  lbClose?.addEventListener('click', closeLightbox);
+  lbPrev?.addEventListener('click', () => { lbIndex = (lbIndex - 1 + artItems.length) % artItems.length; updateLightbox(); });
+  lbNext?.addEventListener('click', () => { lbIndex = (lbIndex + 1) % artItems.length; updateLightbox(); });
+
+  lightbox?.addEventListener('click', (e) => {
+    if ((e.target as HTMLElement).classList.contains('art-lightbox-backdrop')) closeLightbox();
+  });
+
+  // Global keyboard
+  document.addEventListener('keydown', (e) => {
+    if (videoFsModal?.classList.contains('active')) {
+      if (e.key === 'Escape') closeFullscreenVideo();
+      return;
+    }
+    if (lightbox?.classList.contains('active')) {
+      if (e.key === 'Escape') closeLightbox();
+      if (e.key === 'ArrowRight') { lbIndex = (lbIndex + 1) % artItems.length; updateLightbox(); }
+      if (e.key === 'ArrowLeft') { lbIndex = (lbIndex - 1 + artItems.length) % artItems.length; updateLightbox(); }
+    }
+  });
+</script>
+
+<style>
+  /* ═══ VIDEO SHOWCASE ═══ */
+  .video-showcase {
+    display: grid;
+    grid-template-columns: 1fr 280px;
+    gap: 0;
+    border: 1px solid var(--outline-variant);
+    background: var(--surface-container-low);
+    overflow: hidden;
+  }
+
+  .video-showcase-player {
+    position: relative;
+    cursor: pointer;
+    overflow: hidden;
+  }
+  .video-showcase-player video {
+    display: block;
+  }
+
+  .video-showcase-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.3);
+    opacity: 0;
+    transition: opacity 0.3s;
+    z-index: 2;
+  }
+  .video-showcase-player:hover .video-showcase-overlay {
+    opacity: 1;
+  }
+
+  .video-showcase-info {
+    position: absolute;
+    bottom: 0.5rem;
+    left: 0;
+    right: 0;
+    padding: 0.75rem 1rem;
+    background: linear-gradient(to top, rgba(0,0,0,0.85), transparent);
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  .video-showcase-progress {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: rgba(255,255,255,0.08);
+    z-index: 3;
+  }
+  .video-showcase-progress-bar {
+    height: 100%;
+    background: var(--primary);
+    width: 0%;
+    transition: width 0.1s linear;
+  }
+
+  /* Switcher sidebar */
+  .video-switcher {
+    display: flex;
+    flex-direction: column;
+    border-left: 1px solid var(--outline-variant);
+    background: var(--surface-container);
+    max-height: 100%;
+    overflow-y: auto;
+    scrollbar-width: none;
+  }
+  .video-switcher::-webkit-scrollbar { display: none; }
+
+  .video-switch-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem;
+    border: none;
+    border-bottom: 1px solid var(--outline-variant);
+    background: none;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.2s;
+  }
+  .video-switch-btn:hover {
+    background: rgba(255,255,255,0.03);
+  }
+  .video-switch-btn.active {
+    background: rgba(var(--primary-rgb, 0, 204, 168), 0.06);
+  }
+
+  .video-switch-indicator {
+    width: 3px;
+    height: 24px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 2px;
+    flex-shrink: 0;
+    transition: background 0.2s;
+  }
+  .video-switch-btn.active .video-switch-indicator {
+    background: var(--primary);
+    box-shadow: 0 0 8px rgba(var(--primary-rgb, 0, 204, 168), 0.4);
+  }
+
+  /* Fullscreen video modal */
+  .video-fullscreen-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+  }
+  .video-fullscreen-modal.active {
+    opacity: 1;
+    pointer-events: all;
+  }
+  .video-fullscreen-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.97);
+    backdrop-filter: blur(20px);
+  }
+  .video-fullscreen-video {
+    position: relative;
+    z-index: 1;
+    max-width: 90vw;
+    max-height: 85vh;
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+
+  /* ═══ MASONRY GRID ═══ */
+  .masonry-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    grid-auto-rows: 200px;
+    gap: 2rem;
+  }
+  .masonry-item-tall { grid-row: span 3; }
+  .masonry-item-wide { grid-column: span 2; }
+  .masonry-item-square { grid-row: span 2; }
+
+  /* ═══ ARTWORK LIGHTBOX ═══ */
+  .art-lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+  }
+  .art-lightbox.active { opacity: 1; pointer-events: all; }
+  .art-lightbox-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.97);
+    backdrop-filter: blur(20px);
+  }
+  .art-lb-close {
+    position: absolute;
+    top: 1.5rem;
+    right: 1.5rem;
+    z-index: 10;
+    background: none;
+    border: 1px solid rgba(255,255,255,0.15);
+    color: white;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .art-lb-close:hover { border-color: var(--primary); color: var(--primary); }
+  .art-lb-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 10;
+    background: rgba(0,0,0,0.5);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: white;
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .art-lb-nav:hover { border-color: var(--primary); color: var(--primary); }
+  .art-lb-prev { left: 1rem; }
+  .art-lb-next { right: 1rem; }
+  .art-lb-img {
+    position: relative;
+    z-index: 1;
+    max-width: 90vw;
+    max-height: 85vh;
+    object-fit: contain;
+  }
+  .art-lb-info {
+    position: absolute;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    display: flex;
+    align-items: baseline;
+    padding: 0.75rem 1.5rem;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+
+  /* ═══ RESPONSIVE ═══ */
+  @media (max-width: 768px) {
+    .video-showcase {
+      grid-template-columns: 1fr;
+    }
+    .video-switcher {
+      flex-direction: row;
+      border-left: none;
+      border-top: 1px solid var(--outline-variant);
+      overflow-x: auto;
+      overflow-y: hidden;
+    }
+    .video-switch-btn {
+      flex-shrink: 0;
+      min-width: 160px;
+      border-bottom: none;
+      border-right: 1px solid var(--outline-variant);
+    }
+    .art-lb-nav { display: none; }
+  }
+</style>

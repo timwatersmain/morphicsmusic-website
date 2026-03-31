@@ -1,33 +1,61 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import releases from '../data/releases.json';
+import bandcamp from '../data/bandcamp-latest.json';
 ---
 
 <BaseLayout title="SONICS" currentPage="/sonics">
   <header class="mb-20">
     <div class="flex items-baseline gap-4 mb-2">
-      <span class="font-mono text-xs text-secondary">[ FREQUENCY_ARCHIVE ]</span>
+      <span class="font-mono text-xs text-secondary uppercase">Releases</span>
       <div class="h-[1px] flex-1 bg-outline-variant/30"></div>
     </div>
     <h1 class="text-6xl md:text-8xl font-headline font-bold text-primary tracking-tighter leading-none mb-6">
-      SONICS
+      MUSIC
     </h1>
     <p class="max-w-xl text-on-surface-variant font-body leading-relaxed">
-      Neural frequency archive. A catalogue of transmissions from the synthesis engine — albums, EPs, and experimental sonic constructs.
+      Albums, EPs, and singles. Available on all platforms.
     </p>
   </header>
+
+  <!-- Embedded Player -->
+  <div class="mb-20 max-w-4xl">
+    <div class="flex items-baseline gap-4 mb-6">
+      <span class="font-mono text-xs text-secondary uppercase">Preview</span>
+      <div class="h-[1px] flex-1 bg-outline-variant/30"></div>
+    </div>
+    <div class="bg-surface-container-low border border-white/5 p-6">
+      <iframe
+        style="border: 0; width: 100%; height: 120px;"
+        src={bandcamp.embedUrl}
+        seamless
+      >
+        <a href={bandcamp.pageUrl}>{bandcamp.title} on Bandcamp</a>
+      </iframe>
+      <div class="flex items-center justify-between mt-3">
+        <p class="font-mono text-[9px] text-white/20 tracking-widest uppercase">
+          Now playing: {bandcamp.title}
+        </p>
+        <a href="https://morphics.bandcamp.com/" target="_blank" rel="noopener" class="font-mono text-[9px] text-primary/40 hover:text-primary tracking-widest uppercase transition-colors">
+          Full catalog &rarr;
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Releases divider -->
+  <div class="brand-divider brand-divider--wide mb-12">
+    <img src="/images/brand/morph-line-g.png" alt="" loading="lazy" />
+  </div>
+
+  <div class="flex items-baseline gap-4 mb-8">
+    <span class="font-mono text-xs text-secondary uppercase">All Releases</span>
+    <div class="h-[1px] flex-1 bg-outline-variant/30"></div>
+  </div>
 
   <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
     {releases.map(release => (
       <div class="group relative bg-surface-container-low border border-white/5 transition-all duration-500 hover:border-secondary/30 terminal-glow">
-        <div class="flex items-center justify-between px-4 py-2 bg-surface-container-high/50 border-b border-white/5">
-          <div class="flex gap-1.5">
-            <div class="w-2.5 h-2.5 rounded-full bg-error/40"></div>
-            <div class="w-2.5 h-2.5 rounded-full bg-secondary/40"></div>
-            <div class="w-2.5 h-2.5 rounded-full bg-primary/40"></div>
-          </div>
-          <span class="font-mono text-[9px] text-white/20 uppercase tracking-widest">{release.id}.wav</span>
-        </div>
         <div class="relative overflow-hidden">
           <img
             src={release.artwork}
@@ -35,14 +63,6 @@ import releases from '../data/releases.json';
             class="w-full aspect-square object-cover grayscale opacity-50 group-hover:grayscale-0 group-hover:scale-105 group-hover:opacity-100 transition-all duration-700"
           />
           <div class="absolute inset-0 bg-gradient-to-t from-background to-transparent opacity-60"></div>
-          <div class="absolute bottom-4 left-4 font-mono text-[10px] text-primary space-y-1">
-            <div class="flex items-center gap-2 bg-background/80 px-2 py-1 backdrop-blur-md">
-              BPM: {release.bpm}
-            </div>
-            <div class="flex items-center gap-2 bg-background/80 px-2 py-1 backdrop-blur-md">
-              KEY: {release.key}
-            </div>
-          </div>
         </div>
         <div class="p-6">
           <div class="flex items-baseline justify-between mb-2">
@@ -70,15 +90,16 @@ import releases from '../data/releases.json';
     ))}
   </div>
 
-  <footer class="mt-32 pt-12 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-8">
+  <!-- Footer divider -->
+  <div class="brand-divider brand-divider--wide mt-32 mb-0">
+    <img src="/images/brand/morph-line-t.png" alt="" loading="lazy" />
+  </div>
+
+  <footer class="mt-4 pt-12 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-8">
     <div class="flex gap-12">
       <div>
         <div class="font-mono text-[9px] text-white/20 uppercase mb-1">Total Releases</div>
         <div class="font-headline text-lg text-primary">{releases.length}</div>
-      </div>
-      <div>
-        <div class="font-mono text-[9px] text-white/20 uppercase mb-1">Avg BPM</div>
-        <div class="font-headline text-lg text-primary">{Math.round(releases.reduce((acc, r) => acc + r.bpm, 0) / releases.length)}</div>
       </div>
       <div>
         <div class="font-mono text-[9px] text-white/20 uppercase mb-1">Format</div>

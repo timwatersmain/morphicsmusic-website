@@ -1,100 +1,162 @@
 [
   {
-    "id": "dscf-3341",
-    "title": "NEURAL_DRIFT_01",
-    "image": "/images/visuals/dscf3341.jpg",
-    "tags": ["algorithmic", "neural"],
-    "size": "tall",
-    "metadata": {
-      "genId": "982-A",
-      "iteration": 48202,
-      "resolution": "8K_ULTRA",
-      "latency": "42ms"
-    },
-    "date": "2025-12-04"
-  },
-  {
-    "id": "morphics-banner",
-    "title": "DATA_STREAM_CORE",
-    "image": "/images/visuals/morphics-banner.jpg",
-    "tags": ["neural", "sonic"],
+    "id": "screenshot-macro",
+    "title": "MACRO STUDY",
+    "image": "/images/visuals/screenshot-macro.jpg",
+    "tags": ["macro", "photography"],
     "size": "wide",
-    "metadata": {
-      "genId": "117-B",
-      "iteration": 12800,
-      "resolution": "4K_HDR",
-      "latency": "18ms"
-    },
-    "date": "2025-11-20"
+    "featured": true
   },
   {
-    "id": "dscf-3354",
-    "title": "VOID_SEQUENCE",
-    "image": "/images/visuals/dscf3354.jpg",
-    "tags": ["algorithmic"],
-    "size": "square",
-    "metadata": {
-      "genId": "401-C",
-      "iteration": 401,
-      "resolution": "4K_ULTRA",
-      "latency": "31ms"
-    },
-    "date": "2025-11-15"
-  },
-  {
-    "id": "malwear-clouds",
-    "title": "NEBULA_DRIFT",
-    "image": "/images/visuals/malwear-clouds.jpg",
-    "tags": ["neural"],
-    "size": "standard",
-    "metadata": {
-      "genId": "550-D",
-      "iteration": 9400,
-      "resolution": "6K_HDR",
-      "latency": "55ms"
-    },
-    "date": "2025-10-28"
-  },
-  {
-    "id": "dscf-3589",
-    "title": "CHROMATIC_SHIFT",
-    "image": "/images/visuals/dscf3589.jpg",
-    "tags": ["algorithmic", "sonic"],
+    "id": "portal",
+    "title": "PORTAL",
+    "image": "/images/signal/portal-insta.jpg",
+    "tags": ["macro", "photography"],
     "size": "tall",
-    "metadata": {
-      "genId": "733-E",
-      "iteration": 22100,
-      "resolution": "8K_ULTRA",
-      "latency": "38ms"
-    },
-    "date": "2025-10-10"
+    "featured": true
   },
   {
     "id": "timeline-01",
-    "title": "TEMPORAL_MAP_01",
+    "title": "TIMELINE 01",
     "image": "/images/visuals/timeline-01.jpg",
-    "tags": ["neural"],
+    "tags": ["macro", "chemistry"],
+    "size": "wide",
+    "featured": true
+  },
+  {
+    "id": "timeline-03",
+    "title": "TIMELINE 03",
+    "image": "/images/visuals/timeline-03.jpg",
+    "tags": ["macro", "chemistry"],
+    "size": "square",
+    "featured": true
+  },
+  {
+    "id": "scrying-art",
+    "title": "SCRYING",
+    "image": "/images/albums/scrying.jpg",
+    "tags": ["album-art"],
+    "size": "square",
+    "featured": true
+  },
+  {
+    "id": "nexus-art",
+    "title": "NEXUS",
+    "image": "/images/albums/nexus.jpg",
+    "tags": ["album-art"],
+    "size": "square",
+    "featured": true
+  },
+  {
+    "id": "morpheus-art",
+    "title": "MORPHEUS",
+    "image": "/images/albums/morpheus.jpg",
+    "tags": ["album-art"],
+    "size": "square",
+    "featured": true
+  },
+  {
+    "id": "seraphic-art",
+    "title": "SERAPHIC",
+    "image": "/images/albums/seraphic.jpg",
+    "tags": ["album-art"],
+    "size": "square",
+    "featured": true
+  },
+  {
+    "id": "metanoia-art",
+    "title": "METANOIA",
+    "image": "/images/albums/metanoia.jpg",
+    "tags": ["album-art"],
+    "size": "square",
+    "featured": true
+  },
+  {
+    "id": "sound-experiments-art",
+    "title": "SOUND EXPERIMENTS",
+    "image": "/images/albums/sound-experiments.jpg",
+    "tags": ["album-art"],
+    "size": "square",
+    "featured": true
+  },
+  {
+    "id": "swamp-logic-art",
+    "title": "SWAMP LOGIC",
+    "image": "/images/albums/swamp-logic.jpg",
+    "tags": ["album-art"],
+    "size": "square",
+    "featured": true
+  },
+  {
+    "id": "cicadas-art",
+    "title": "CICADAS",
+    "image": "/images/albums/cicadas.jpg",
+    "tags": ["album-art"],
+    "size": "square",
+    "featured": true
+  },
+  {
+    "id": "blue-stack",
+    "title": "BLUE STACK",
+    "image": "/images/signal/blue-insta.jpg",
+    "tags": ["macro", "photography"],
+    "size": "wide",
+    "featured": false
+  },
+  {
+    "id": "timeline-02",
+    "title": "TIMELINE 02",
+    "image": "/images/visuals/timeline-02.jpg",
+    "tags": ["macro", "chemistry"],
     "size": "standard",
-    "metadata": {
-      "genId": "890-F",
-      "iteration": 5600,
-      "resolution": "4K_HDR",
-      "latency": "22ms"
-    },
-    "date": "2025-09-25"
+    "featured": false
+  },
+  {
+    "id": "morphics-banner",
+    "title": "MORPHICS BANNER",
+    "image": "/images/visuals/morphics-banner.jpg",
+    "tags": ["brand"],
+    "size": "wide",
+    "featured": false
+  },
+  {
+    "id": "dscf-3341",
+    "title": "MACRO 01",
+    "image": "/images/visuals/dscf3341.jpg",
+    "tags": ["macro", "photography"],
+    "size": "tall",
+    "featured": false
+  },
+  {
+    "id": "dscf-3354",
+    "title": "MACRO 02",
+    "image": "/images/visuals/dscf3354.jpg",
+    "tags": ["macro", "photography"],
+    "size": "square",
+    "featured": false
+  },
+  {
+    "id": "malwear-clouds",
+    "title": "STACK 08",
+    "image": "/images/visuals/malwear-clouds.jpg",
+    "tags": ["macro", "chemistry"],
+    "size": "standard",
+    "featured": false
+  },
+  {
+    "id": "dscf-3589",
+    "title": "MACRO 03",
+    "image": "/images/visuals/dscf3589.jpg",
+    "tags": ["macro", "photography"],
+    "size": "tall",
+    "featured": false
   },
   {
     "id": "datamind-3",
-    "title": "DATAMIND_CONSTRUCT",
+    "title": "TIMELINE WIDE",
     "image": "/images/visuals/datamind-3.jpg",
-    "tags": ["algorithmic", "neural"],
+    "tags": ["macro", "chemistry"],
     "size": "wide",
-    "metadata": {
-      "genId": "204-G",
-      "iteration": 33000,
-      "resolution": "8K_ULTRA",
-      "latency": "47ms"
-    },
-    "date": "2025-09-12"
+    "featured": false
   }
 ]

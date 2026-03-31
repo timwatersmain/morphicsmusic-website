@@ -1,33 +1,72 @@
 [
   {
-    "id": "metanoia",
-    "title": "METANOIA",
-    "type": "album",
-    "date": "2024-01-15",
-    "artwork": "/images/albums/metanoia.jpg",
-    "bpm": 140,
-    "key": "Dm",
-    "genre": ["electronic", "experimental"],
+    "id": "golden-dawn",
+    "title": "GOLDEN DAWN",
+    "type": "single",
+    "date": "2025-03-20",
+    "artwork": "/images/albums/golden-dawn.jpg",
+    "genre": [
+      "electronic",
+      "experimental"
+    ],
     "links": {
-      "spotify": "#",
-      "soundcloud": "#",
-      "bandcamp": "#"
+      "bandcamp": "https://morphics.bandcamp.com/track/golden-dawn",
+      "spotify": "https://open.spotify.com/artist/morphicsmusic",
+      "apple music": "https://music.apple.com/artist/morphicsmusic",
+      "soundcloud": "https://soundcloud.com/morphicsmusic"
     },
     "embed": "",
     "featured": true
   },
   {
+    "id": "metanoia",
+    "title": "METANOIA",
+    "type": "album",
+    "date": "2023-05-01",
+    "artwork": "/images/albums/metanoia.jpg",
+    "genre": [
+      "electronic",
+      "experimental"
+    ],
+    "links": {
+      "spotify": "https://open.spotify.com/artist/morphicsmusic",
+      "apple music": "https://music.apple.com/artist/morphicsmusic",
+      "soundcloud": "https://soundcloud.com/morphicsmusic"
+    },
+    "embed": "",
+    "featured": true
+  },
+  {
+    "id": "sound-experiments",
+    "title": "SOUND EXPERIMENTS",
+    "type": "mix",
+    "date": "2023-02-12",
+    "artwork": "/images/albums/sound-experiments.jpg",
+    "genre": [
+      "experimental",
+      "sound-design"
+    ],
+    "links": {
+      "soundcloud": "https://soundcloud.com/morphicsmusic"
+    },
+    "embed": "",
+    "featured": false
+  },
+  {
     "id": "morpheus",
     "title": "MORPHEUS",
-    "type": "album",
-    "date": "2023-06-20",
+    "type": "single",
+    "date": "2022-08-15",
     "artwork": "/images/albums/morpheus.jpg",
-    "bpm": 128,
-    "key": "Am",
-    "genre": ["electronic", "ambient"],
+    "genre": [
+      "electronic",
+      "ambient"
+    ],
     "links": {
-      "spotify": "#",
-      "soundcloud": "#"
+      "bandcamp": "https://morphics.bandcamp.com/track/morpheus",
+      "spotify": "https://open.spotify.com/artist/morphicsmusic",
+      "apple music": "https://music.apple.com/artist/morphicsmusic",
+      "soundcloud": "https://soundcloud.com/morphicsmusic"
     },
     "embed": "",
     "featured": false
@@ -36,46 +75,36 @@
     "id": "nexus",
     "title": "NEXUS",
     "type": "ep",
-    "date": "2023-03-10",
+    "date": "2022-03-13",
     "artwork": "/images/albums/nexus.jpg",
-    "bpm": 150,
-    "key": "Fm",
-    "genre": ["electronic", "bass"],
+    "genre": [
+      "electronic",
+      "bass"
+    ],
     "links": {
-      "spotify": "#",
-      "soundcloud": "#"
+      "bandcamp": "https://morphics.bandcamp.com/album/nexus",
+      "spotify": "https://open.spotify.com/artist/morphicsmusic",
+      "apple music": "https://music.apple.com/artist/morphicsmusic",
+      "soundcloud": "https://soundcloud.com/morphicsmusic"
     },
     "embed": "",
     "featured": false
   },
   {
-    "id": "sound-experiments",
-    "title": "SOUND_EXPERIMENTS",
-    "type": "album",
-    "date": "2022-11-05",
-    "artwork": "/images/albums/sound-experiments.jpg",
-    "bpm": 135,
-    "key": "Cm",
-    "genre": ["experimental", "sound-design"],
+    "id": "cicadas",
+    "title": "CICADAS",
+    "type": "single",
+    "date": "2020-12-17",
+    "artwork": "/images/albums/cicadas.jpg",
+    "genre": [
+      "electronic",
+      "ambient"
+    ],
     "links": {
-      "spotify": "#",
-      "soundcloud": "#"
-    },
-    "embed": "",
-    "featured": false
-  },
-  {
-    "id": "from-skratch",
-    "title": "FROM_SKRATCH",
-    "type": "album",
-    "date": "2022-05-18",
-    "artwork": "/images/albums/from-skratch.jpg",
-    "bpm": 145,
-    "key": "Gm",
-    "genre": ["electronic", "experimental"],
-    "links": {
-      "spotify": "#",
-      "soundcloud": "#"
+      "bandcamp": "https://morphics.bandcamp.com/track/cicada",
+      "spotify": "https://open.spotify.com/artist/morphicsmusic",
+      "apple music": "https://music.apple.com/artist/morphicsmusic",
+      "soundcloud": "https://soundcloud.com/morphicsmusic"
     },
     "embed": "",
     "featured": false

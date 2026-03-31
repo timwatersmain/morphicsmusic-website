@@ -3,7 +3,6 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import storeData from '../data/store.json';
 
 const musicItems = storeData.filter(item => item.type === 'music');
-const merchItems = storeData.filter(item => item.type === 'merch');
 
 const platformIcons: Record<string, string> = {
   bandcamp: 'album',
@@ -14,43 +13,29 @@ const platformIcons: Record<string, string> = {
 <BaseLayout title="STORE" currentPage="/store">
   <header class="mb-20 max-w-[1400px] mx-auto">
     <div class="flex items-baseline gap-4 mb-2">
-      <span class="font-mono text-xs text-secondary">[ ACQUISITION_TERMINAL ]</span>
+      <span class="font-mono text-xs text-secondary uppercase">Shop</span>
       <div class="h-[1px] flex-1 bg-outline-variant/30"></div>
     </div>
-    <h1 class="text-6xl md:text-8xl font-headline font-bold text-primary tracking-tighter leading-none mb-6">
-      STORE
-    </h1>
+    <div class="flex items-center gap-4">
+      <img src="/images/brand/morph-line-k.png" alt="" class="w-[3px] h-20 md:h-28 object-contain opacity-15 invert rotate-90" loading="lazy" />
+      <h1 class="text-6xl md:text-8xl font-headline font-bold text-primary tracking-tighter leading-none mb-6">
+        STORE
+      </h1>
+    </div>
     <p class="max-w-xl text-on-surface-variant font-body leading-relaxed">
-      Acquire neural transmissions and physical artifacts. All music available as lossless digital downloads. Merch ships worldwide.
+      Music releases. Digital downloads via Bandcamp.
     </p>
   </header>
 
-  <!-- Filter Buttons -->
-  <div class="max-w-[1400px] mx-auto mb-12">
-    <div class="flex flex-wrap gap-3 font-mono text-[10px] tracking-widest uppercase">
-      <button class="filter-btn px-6 py-3 border border-primary text-primary bg-primary/5 hover:bg-primary/20 transition-all" data-filter="all">ALL</button>
-      <button class="filter-btn px-6 py-3 border border-outline-variant text-white/40 hover:text-white/80 hover:border-white/40 transition-all" data-filter="music">MUSIC</button>
-      <button class="filter-btn px-6 py-3 border border-outline-variant text-white/40 hover:text-white/80 hover:border-white/40 transition-all" data-filter="merch">MERCH</button>
-    </div>
-  </div>
-
   <!-- Music Section -->
-  <section class="max-w-[1400px] mx-auto mb-24 store-section" data-type="music">
+  <section class="max-w-[1400px] mx-auto mb-24">
     <div class="flex items-baseline gap-4 mb-8">
-      <span class="font-mono text-xs text-secondary">[ DIGITAL_TRANSMISSIONS ]</span>
+      <span class="font-mono text-xs text-secondary uppercase">Music</span>
       <div class="h-[1px] flex-1 bg-outline-variant/30"></div>
     </div>
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
       {musicItems.map(item => (
         <a href={item.url} class="group relative bg-surface-container-low border border-white/5 transition-all duration-500 hover:border-secondary/30 terminal-glow block">
-          <div class="flex items-center justify-between px-4 py-2 bg-surface-container-high/50 border-b border-white/5">
-            <div class="flex gap-1.5">
-              <div class="w-2.5 h-2.5 rounded-full bg-error/40"></div>
-              <div class="w-2.5 h-2.5 rounded-full bg-secondary/40"></div>
-              <div class="w-2.5 h-2.5 rounded-full bg-primary/40"></div>
-            </div>
-            <span class="font-mono text-[9px] text-white/20 uppercase tracking-widest">{item.category}</span>
-          </div>
           <div class="relative overflow-hidden">
             <img
               src={item.image}
@@ -77,7 +62,7 @@ const platformIcons: Record<string, string> = {
               ))}
             </div>
             <button class="w-full py-3 border border-primary/20 hover:bg-primary hover:text-on-primary font-mono text-[10px] tracking-widest transition-all uppercase group-hover:border-primary/40">
-              ACQUIRE_ON_{item.platform.toUpperCase()}
+              GET ON {item.platform.toUpperCase()}
             </button>
           </div>
         </a>
@@ -85,64 +70,21 @@ const platformIcons: Record<string, string> = {
     </div>
   </section>
 
-  <!-- Merch Section -->
-  <section class="max-w-[1400px] mx-auto mb-24 store-section" data-type="merch">
-    <div class="flex items-baseline gap-4 mb-8">
-      <span class="font-mono text-xs text-secondary">[ PHYSICAL_ARTIFACTS ]</span>
-      <div class="h-[1px] flex-1 bg-outline-variant/30"></div>
-    </div>
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-      {merchItems.map(item => (
-        <a href={item.url} class="group relative bg-surface-container-low border border-white/5 transition-all duration-500 hover:border-primary/30 terminal-glow block">
-          <div class="relative overflow-hidden">
-            <img
-              src={item.image}
-              alt={item.title}
-              class="w-full aspect-[4/3] object-cover grayscale opacity-50 group-hover:grayscale-0 group-hover:scale-105 group-hover:opacity-100 transition-all duration-700"
-            />
-            <div class="absolute inset-0 bg-gradient-to-t from-background to-transparent opacity-60"></div>
-            <div class="absolute top-4 right-4">
-              <div class="bg-background/80 px-3 py-1.5 backdrop-blur-md font-mono text-[11px] text-secondary font-bold">
-                {item.price}
-              </div>
-            </div>
-            {item.tags.includes('limited') && (
-              <div class="absolute top-4 left-4">
-                <div class="bg-secondary/20 px-3 py-1.5 backdrop-blur-md font-mono text-[9px] text-secondary uppercase tracking-widest">
-                  LIMITED
-                </div>
-              </div>
-            )}
-          </div>
-          <div class="p-6">
-            <div class="flex items-baseline justify-between mb-2">
-              <h3 class="font-headline text-lg text-primary group-hover:text-secondary transition-colors uppercase tracking-tight">{item.title}</h3>
-              <span class="font-mono text-[9px] text-white/20 uppercase">{item.category}</span>
-            </div>
-            <p class="font-mono text-[11px] text-white/40 leading-relaxed mb-6">{item.description}</p>
-            <button class="w-full py-3 border border-primary/20 hover:bg-primary hover:text-on-primary font-mono text-[10px] tracking-widest transition-all uppercase group-hover:border-primary/40">
-              ADD_TO_CART
-            </button>
-          </div>
-        </a>
-      ))}
-    </div>
-  </section>
+  <!-- Footer divider -->
+  <div class="brand-divider brand-divider--wide mt-12 mb-0 max-w-[1400px] mx-auto">
+    <img src="/images/brand/morph-line-j.png" alt="" loading="lazy" />
+  </div>
 
   <!-- Footer Stats -->
-  <footer class="max-w-[1400px] mx-auto mt-12 pt-12 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-8">
+  <footer class="max-w-[1400px] mx-auto mt-4 pt-12 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-8">
     <div class="flex gap-12">
       <div>
-        <div class="font-mono text-[9px] text-white/20 uppercase mb-1">Catalog Items</div>
-        <div class="font-headline text-lg text-primary">{storeData.length}</div>
+        <div class="font-mono text-[9px] text-white/20 uppercase mb-1">Releases</div>
+        <div class="font-headline text-lg text-primary">{musicItems.length}</div>
       </div>
       <div>
         <div class="font-mono text-[9px] text-white/20 uppercase mb-1">Digital Formats</div>
         <div class="font-headline text-lg text-primary">FLAC / WAV / MP3</div>
-      </div>
-      <div>
-        <div class="font-mono text-[9px] text-white/20 uppercase mb-1">Shipping</div>
-        <div class="font-headline text-lg text-secondary">WORLDWIDE</div>
       </div>
     </div>
     <div class="flex gap-4">
@@ -151,27 +93,3 @@ const platformIcons: Record<string, string> = {
     </div>
   </footer>
 </BaseLayout>
-
-<script>
-  document.querySelectorAll('.filter-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const filter = btn.getAttribute('data-filter');
-
-      document.querySelectorAll('.filter-btn').forEach(b => {
-        b.classList.remove('border-primary', 'text-primary', 'bg-primary/5');
-        b.classList.add('border-outline-variant', 'text-white/40');
-      });
-      btn.classList.remove('border-outline-variant', 'text-white/40');
-      btn.classList.add('border-primary', 'text-primary', 'bg-primary/5');
-
-      document.querySelectorAll('.store-section').forEach(section => {
-        const type = section.getAttribute('data-type');
-        if (filter === 'all' || type === filter) {
-          section.style.display = '';
-        } else {
-          section.style.display = 'none';
-        }
-      });
-    });
-  });
-</script>

@@ -1,6 +1,5 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-import TelemetryDecor from '../components/TelemetryDecor.astro';
 import releases from '../data/releases.json';
 import visuals from '../data/visuals.json';
 
@@ -8,65 +7,26 @@ const featuredRelease = releases.find(r => r.featured);
 const recentVisuals = visuals.slice(0, 4);
 ---
 
-<BaseLayout title="NEURAL SYNTHESIZER" currentPage="/">
+<BaseLayout title="MORPHICS" currentPage="/">
   <!-- Hero Section -->
   <section class="relative h-screen w-full flex flex-col items-center justify-center px-6 overflow-hidden">
-    <TelemetryDecor />
-
     <div class="relative z-10 text-center max-w-4xl px-4">
-      <div class="mb-2">
-        <span class="font-mono text-[12px] tracking-[0.5em] text-secondary uppercase glow-text">01 / START</span>
-      </div>
-      <h1 class="font-headline text-[6rem] md:text-[9rem] font-bold leading-none tracking-tighter text-primary mix-blend-difference mb-6">
-        MORPHICS
+      <h1 class="mb-6">
+        <img
+          src="/images/logos/morphics-text-white.png"
+          alt="MORPHICS"
+          class="h-24 md:h-36 lg:h-44 w-auto mx-auto"
+        />
       </h1>
       <p class="font-body text-lg md:text-xl text-on-surface-variant font-light tracking-wide max-w-lg mx-auto mb-12">
-        Immersive music, art, and technology. A sentient interface for neural synthesis.
+        The only constant is change.
       </p>
-      <div class="flex flex-col items-center gap-8">
-        <a href="#below-fold" class="group relative px-12 py-4 overflow-hidden border border-primary/20 hover:border-primary/60 transition-all duration-500 scale-100 hover:scale-105 active:scale-95">
-          <div class="absolute inset-0 bg-primary/5 group-hover:bg-primary/10 transition-colors"></div>
-          <div class="absolute bottom-0 left-0 h-[2px] w-0 bg-primary group-hover:w-full transition-all duration-700"></div>
-          <span class="relative z-10 font-headline font-bold text-primary tracking-[0.4em] text-sm uppercase glow-text">ENTER</span>
-        </a>
-        <div class="flex items-center gap-4 opacity-40 group hover:opacity-100 transition-opacity cursor-crosshair">
-          <div class="h-[1px] w-12 bg-outline-variant group-hover:w-24 group-hover:bg-primary transition-all duration-500"></div>
-          <span class="font-mono text-[9px] tracking-widest uppercase">Initializing neural link...</span>
-        </div>
-      </div>
+      <a href="#below-fold" class="group relative inline-block px-12 py-4 overflow-hidden border border-primary/20 hover:border-primary/60 transition-all duration-500 hover:scale-105 active:scale-95">
+        <div class="absolute inset-0 bg-primary/5 group-hover:bg-primary/10 transition-colors"></div>
+        <div class="absolute bottom-0 left-0 h-[2px] w-0 bg-primary group-hover:w-full transition-all duration-700"></div>
+        <span class="relative z-10 font-headline font-bold text-primary tracking-[0.4em] text-sm uppercase">ENTER</span>
+      </a>
     </div>
-
-    <!-- Bottom Telemetry Stats -->
-    <div class="absolute bottom-12 left-12 grid grid-cols-2 gap-8 hidden xl:grid">
-      <div class="flex flex-col gap-1 border-l border-primary/20 pl-4 py-1">
-        <span class="font-mono text-[9px] text-primary/50 uppercase tracking-tighter">FREQUENCY_RANGE</span>
-        <span class="font-mono text-[12px] text-primary">24.5 - 192.0 KHZ</span>
-      </div>
-      <div class="flex flex-col gap-1 border-l border-secondary/20 pl-4 py-1">
-        <span class="font-mono text-[9px] text-secondary/50 uppercase tracking-tighter">NEURAL_DENSITY</span>
-        <span class="font-mono text-[12px] text-secondary">0.984 MS/NODE</span>
-      </div>
-    </div>
-
-    <!-- Bottom FAB Panel -->
-    <nav class="fixed bottom-6 right-6 w-auto border border-primary/20 bg-[#131313]/60 backdrop-blur-xl flex flex-row items-center p-2 space-x-4 shadow-[0_0_40px_rgba(0,219,233,0.06)] z-50 hidden md:flex">
-      <button class="flex flex-col items-center justify-center p-3 text-primary bg-primary/10 cursor-crosshair transition-all duration-200">
-        <span class="material-symbols-outlined">graphic_eq</span>
-        <span class="font-mono text-[9px] mt-1">SPECTRAL_UI</span>
-      </button>
-      <button class="flex flex-col items-center justify-center p-3 text-primary/30 hover:bg-primary/5 cursor-crosshair transition-all duration-200">
-        <span class="material-symbols-outlined">analytics</span>
-        <span class="font-mono text-[9px] mt-1">WAVEFORM</span>
-      </button>
-      <button class="flex flex-col items-center justify-center p-3 text-primary/30 hover:bg-primary/5 cursor-crosshair transition-all duration-200">
-        <span class="material-symbols-outlined">blur_on</span>
-        <span class="font-mono text-[9px] mt-1">FREQ</span>
-      </button>
-      <button class="flex flex-col items-center justify-center p-3 text-primary/30 hover:bg-primary/5 cursor-crosshair transition-all duration-200">
-        <span class="material-symbols-outlined">close</span>
-        <span class="font-mono text-[9px] mt-1">NULL</span>
-      </button>
-    </nav>
   </section>
 
   <!-- Below the Fold -->
@@ -75,22 +35,23 @@ const recentVisuals = visuals.slice(0, 4);
     {featuredRelease && (
       <div class="mb-32">
         <div class="flex items-baseline gap-4 mb-8">
-          <span class="font-mono text-xs text-secondary">[ LATEST_RELEASE ]</span>
+          <span class="font-mono text-xs text-secondary uppercase">Latest Release</span>
           <div class="h-[1px] flex-1 bg-outline-variant/30"></div>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-          <div class="group relative overflow-hidden border border-white/5 terminal-glow">
-            <img
-              src={featuredRelease.artwork}
-              alt={featuredRelease.title}
-              class="w-full aspect-square object-cover grayscale opacity-70 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-700"
-            />
+          <div class="relative">
+            <img src="/images/brand/morph-line-a.png" alt="" style="width: 115%; max-width: none; position: absolute; bottom: -5rem; left: 50%; transform: translateX(-50%);" class="invert opacity-15 pointer-events-none" loading="lazy" />
+            <div class="group relative overflow-hidden border border-white/5 terminal-glow">
+              <img
+                src={featuredRelease.artwork}
+                alt={featuredRelease.title}
+                class="w-full aspect-square object-cover grayscale opacity-70 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-700"
+              />
+            </div>
           </div>
           <div>
             <h2 class="font-headline text-5xl font-bold text-primary tracking-tighter mb-4">{featuredRelease.title}</h2>
             <div class="flex gap-6 font-mono text-[10px] text-white/40 mb-6">
-              <span>BPM: <span class="text-primary">{featuredRelease.bpm}</span></span>
-              <span>KEY: <span class="text-primary">{featuredRelease.key}</span></span>
               <span>TYPE: <span class="text-secondary">{featuredRelease.type.toUpperCase()}</span></span>
             </div>
             <div class="flex flex-wrap gap-2 mb-8">
@@ -98,10 +59,12 @@ const recentVisuals = visuals.slice(0, 4);
                 <span class="px-2 py-1 bg-white/5 text-[9px] font-mono text-primary border border-primary/10">#{g.toUpperCase()}</span>
               ))}
             </div>
-            <div class="flex gap-4">
+            <div class="flex flex-wrap gap-4">
               {Object.entries(featuredRelease.links).map(([platform, url]) => (
                 <a
                   href={url}
+                  target="_blank"
+                  rel="noopener"
                   class="px-6 py-3 border border-primary/20 hover:bg-primary hover:text-on-primary font-mono text-[10px] tracking-widest transition-all uppercase"
                 >
                   {platform.toUpperCase()}
@@ -113,12 +76,13 @@ const recentVisuals = visuals.slice(0, 4);
       </div>
     )}
 
+
     <!-- Recent Visuals -->
     <div>
       <div class="flex items-baseline gap-4 mb-8">
-        <span class="font-mono text-xs text-secondary">[ RECENT_VISUALS ]</span>
+        <span class="font-mono text-xs text-secondary uppercase">Recent Visuals</span>
         <div class="h-[1px] flex-1 bg-outline-variant/30"></div>
-        <a href="/visuals" class="font-mono text-[10px] text-primary/50 hover:text-primary tracking-widest transition-colors">VIEW_ALL →</a>
+        <a href="/visuals" class="font-mono text-[10px] text-primary/50 hover:text-primary tracking-widest transition-colors uppercase">View All &rarr;</a>
       </div>
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
         {recentVisuals.map(v => (
@@ -126,29 +90,30 @@ const recentVisuals = visuals.slice(0, 4);
             <img
               src={v.image}
               alt={v.title}
-              class="w-full aspect-square object-cover opacity-60 group-hover:opacity-80 transition-opacity"
+              class="w-full aspect-square object-cover grayscale opacity-60 group-hover:grayscale-0 group-hover:opacity-90 transition-all duration-500"
             />
-            <div class="absolute inset-0 p-4 flex flex-col justify-end opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-              <div class="bg-background/90 p-3 border-l-2 border-primary backdrop-blur-md">
-                <p class="font-headline text-sm font-bold text-white">{v.title}</p>
-                <p class="font-mono text-[8px] text-primary/50">{v.metadata.resolution}</p>
-              </div>
-            </div>
           </a>
         ))}
       </div>
+    </div>
+
+    <!-- Visuals shelf -->
+    <div class="brand-divider brand-divider--wide mt-8 mb-0">
+      <img src="/images/brand/morph-line-t.png" alt="" style="max-width: none; width: 80%; transform: scaleY(-1);" class="invert opacity-15" loading="lazy" />
     </div>
   </section>
 
   <!-- Footer -->
   <footer class="max-w-[1400px] mx-auto px-8 py-12 flex flex-col md:flex-row justify-between items-center gap-6 border-t border-outline-variant/30">
     <div class="font-mono text-[10px] tracking-widest uppercase text-secondary/40">
-      &copy;2035 NEURAL SYNTHESIZER
+      &copy;2025 MORPHICS
     </div>
     <div class="flex gap-8">
-      <a class="font-mono text-[10px] tracking-widest uppercase text-secondary/40 hover:text-primary hover:tracking-[0.3em] transition-all duration-500" href="/signal">SIGNAL</a>
-      <a class="font-mono text-[10px] tracking-widest uppercase text-secondary/40 hover:text-primary hover:tracking-[0.3em] transition-all duration-500" href="#">SPOTIFY</a>
-      <a class="font-mono text-[10px] tracking-widest uppercase text-secondary/40 hover:text-primary hover:tracking-[0.3em] transition-all duration-500" href="#">BLUESKY</a>
+      <a class="font-mono text-[10px] tracking-widest uppercase text-secondary/40 hover:text-primary transition-all duration-500" href="https://morphics.bandcamp.com/" target="_blank" rel="noopener">BANDCAMP</a>
+      <a class="font-mono text-[10px] tracking-widest uppercase text-secondary/40 hover:text-primary transition-all duration-500" href="https://www.instagram.com/morphicsmusic/" target="_blank" rel="noopener">INSTAGRAM</a>
+      <a class="font-mono text-[10px] tracking-widest uppercase text-secondary/40 hover:text-primary transition-all duration-500" href="https://www.twitter.com/MorphicsMusic" target="_blank" rel="noopener">TWITTER</a>
+      <a class="font-mono text-[10px] tracking-widest uppercase text-secondary/40 hover:text-primary transition-all duration-500" href="https://www.tiktok.com/@skratchwax" target="_blank" rel="noopener">TIKTOK</a>
+      <a class="font-mono text-[10px] tracking-widest uppercase text-secondary/40 hover:text-primary transition-all duration-500" href="https://www.pinterest.com/morphicsmusic/" target="_blank" rel="noopener">PINTEREST</a>
     </div>
   </footer>
 </BaseLayout>

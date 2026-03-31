@@ -6,13 +6,13 @@
   --color-on-primary-fixed: #002022;
   --color-surface-tint: #00dbe9;
   --color-surface-container: #201f1f;
-  --color-on-secondary-fixed-variant: #5e4200;
+  --color-on-secondary-fixed-variant: #005e2a;
   --color-on-primary-fixed-variant: #004f54;
   --color-surface-container-low: #1c1b1b;
   --color-primary-container: #00f0ff;
   --color-outline: #849495;
   --color-on-error: #690005;
-  --color-secondary-fixed: #ffdea8;
+  --color-secondary-fixed: #a8f0c8;
   --color-surface-dim: #131313;
   --color-on-surface-variant: #b9cacb;
   --color-error: #ffb4ab;
@@ -29,16 +29,16 @@
   --color-surface-container-highest: #353534;
   --color-inverse-on-surface: #313030;
   --color-primary-fixed: #7df4ff;
-  --color-secondary-container: #feb700;
+  --color-secondary-container: #00b347;
   --color-on-tertiary-fixed: #2d004f;
   --color-on-tertiary: #4b007e;
-  --color-on-secondary-container: #6b4b00;
-  --color-on-secondary: #412d00;
+  --color-on-secondary-container: #004d22;
+  --color-on-secondary: #003d1a;
   --color-inverse-primary: #006970;
-  --color-secondary: #ffdb9d;
+  --color-secondary: #7dffb3;
   --color-surface: #131313;
   --color-on-surface: #e5e2e1;
-  --color-secondary-fixed-dim: #ffba20;
+  --color-secondary-fixed-dim: #20ff6e;
   --color-on-error-container: #ffdad6;
   --color-tertiary-fixed-dim: #dfb7ff;
   --color-surface-variant: #353534;
@@ -47,12 +47,12 @@
   --color-tertiary-fixed: #f1daff;
   --color-on-tertiary-fixed-variant: #6b00b0;
   --color-surface-container-lowest: #0e0e0e;
-  --color-on-secondary-fixed: #271900;
+  --color-on-secondary-fixed: #001a0a;
   --color-on-background: #e5e2e1;
 
   /* Font families */
-  --font-headline: "Space Grotesk", sans-serif;
-  --font-body: "Inter", sans-serif;
+  --font-headline: "Rubik", sans-serif;
+  --font-body: "Rubik", sans-serif;
   --font-mono: "Geist Mono", monospace;
 
   /* Border radius — sharp edges by default */
@@ -96,7 +96,7 @@
   }
 
   .terminal-glow:hover {
-    box-shadow: 0 0 20px rgba(255, 219, 157, 0.15);
+    box-shadow: 0 0 20px rgba(125, 255, 179, 0.15);
   }
 
   .card-glow:hover {
@@ -123,6 +123,72 @@
   }
 
   .glitch-text:hover {
-    text-shadow: 2px 0 #ffdb9d, -2px 0 #dbfcff;
+    text-shadow: 2px 0 #7dffb3, -2px 0 #dbfcff;
+  }
+
+  /* Brand line assets */
+  .brand-divider {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .brand-divider img {
+    filter: invert(1);
+    opacity: 0.15;
+    width: 100%;
+    max-width: 600px;
+    height: auto;
+    transition: opacity 0.6s ease;
+  }
+
+  .brand-divider:hover img {
+    opacity: 0.3;
+  }
+
+  .brand-divider--cyan img {
+    filter: invert(1) sepia(1) saturate(5) hue-rotate(155deg) brightness(0.9);
+    opacity: 0.12;
+  }
+
+  .brand-divider--cyan:hover img {
+    opacity: 0.25;
+  }
+
+  .brand-divider--wide img {
+    max-width: 900px;
+  }
+
+  .brand-divider--narrow img {
+    max-width: 300px;
+  }
+
+  .brand-corner {
+    position: absolute;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .brand-corner img {
+    filter: invert(1);
+    opacity: 0.1;
+    width: 80px;
+    height: 80px;
+    object-fit: contain;
+  }
+
+  .brand-accent {
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .brand-accent img {
+    filter: invert(1);
+    opacity: 0.12;
+    height: auto;
+    transition: opacity 0.6s ease;
   }
 }

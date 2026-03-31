@@ -2,16 +2,17 @@
 const { currentPage = '' } = Astro.props;
 
 const navItems = [
-  { label: 'SONICS', href: '/sonics' },
+  { label: 'MUSIC', href: '/sonics' },
   { label: 'VISUALS', href: '/visuals' },
   { label: 'STORE', href: '/store' },
-  { label: 'SIGNAL', href: '/signal' },
+  { label: 'SOCIAL', href: '/signal' },
+  { label: 'PLAYER', href: '/player' },
 ];
 ---
 
 <header class="fixed top-0 w-full z-50 bg-[#0A0A0A]/80 backdrop-blur-2xl flex justify-between items-center px-8 py-6">
-  <a href="/" class="text-xl font-bold tracking-tighter text-primary drop-shadow-[0_0_8px_rgba(219,252,255,0.5)] font-headline">
-    MORPHICS
+  <a href="/">
+    <img src="/images/logos/morphics-text-white.png" alt="MORPHICS" class="h-6 w-auto" />
   </a>
   <nav class="hidden md:flex space-x-12">
     {navItems.map(item => (
@@ -29,8 +30,8 @@ const navItems = [
     ))}
   </nav>
   <div class="flex items-center space-x-4">
-    <button class="text-primary hover:scale-105 transition-all duration-[400ms]">
-      <span class="material-symbols-outlined">settings_input_component</span>
-    </button>
+    <a href="/" class="hover:scale-105 transition-all duration-[400ms]">
+      <img src="/images/logos/emblem-circle.png" alt="Morphics" class="h-12 w-12 object-contain" />
+    </a>
   </div>
 </header>

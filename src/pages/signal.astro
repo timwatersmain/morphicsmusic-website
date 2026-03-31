@@ -2,12 +2,19 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import signalData from '../data/signal.json';
 
+const videoPosts = signalData.filter(p => p.type === 'video');
+const photoPosts = signalData.filter(p => p.type === 'image' || p.type === 'visual' || p.type === 'photo');
+const textPosts = signalData.filter(p => p.type === 'text' || p.type === 'track' || (!p.mediaUrl && !p.thumbnail));
+
 const platforms = [
-  { name: 'SPOTIFY', icon: 'music_note', url: '#' },
-  { name: 'SOUNDCLOUD', icon: 'cloud', url: '#' },
-  { name: 'INSTAGRAM', icon: 'photo_camera', url: '#' },
-  { name: 'YOUTUBE', icon: 'play_circle', url: '#' },
-  { name: 'BLUESKY', icon: 'public', url: '#' },
+  { name: 'BANDCAMP', icon: 'album', url: 'https://morphics.bandcamp.com/' },
+  { name: 'SPOTIFY', icon: 'music_note', url: 'https://open.spotify.com/artist/morphics' },
+  { name: 'AUDIUS', icon: 'headphones', url: 'https://audius.co/morphics' },
+  { name: 'INSTAGRAM', icon: 'photo_camera', url: 'https://www.instagram.com/morphicsmusic/' },
+  { name: 'TWITTER', icon: 'tag', url: 'https://www.twitter.com/MorphicsMusic' },
+  { name: 'FACEBOOK', icon: 'group', url: 'https://www.facebook.com/morphicsmusic/' },
+  { name: 'TIKTOK', icon: 'slow_motion_video', url: 'https://www.tiktok.com/@skratchwax' },
+  { name: 'PINTEREST', icon: 'push_pin', url: 'https://www.pinterest.com/morphicsmusic/' },
 ];
 
 const platformIcons: Record<string, string> = {
@@ -15,7 +22,12 @@ const platformIcons: Record<string, string> = {
   spotify: 'music_note',
   soundcloud: 'cloud',
   instagram: 'photo_camera',
-  bluesky: 'public',
+  bandcamp: 'album',
+  twitter: 'tag',
+  facebook: 'group',
+  audius: 'headphones',
+  tiktok: 'slow_motion_video',
+  pinterest: 'push_pin',
 };
 
 const typeIcons: Record<string, string> = {
@@ -28,19 +40,19 @@ const typeIcons: Record<string, string> = {
 <BaseLayout title="SIGNAL" currentPage="/signal">
   <header class="mb-20">
     <div class="flex items-baseline gap-4 mb-2">
-      <span class="font-mono text-xs text-secondary">[ BROADCAST_ARRAY ]</span>
+      <span class="font-mono text-xs text-secondary uppercase">Social</span>
       <div class="h-[1px] flex-1 bg-outline-variant/30"></div>
     </div>
     <h1 class="text-6xl md:text-8xl font-headline font-bold text-primary tracking-tighter leading-none mb-6">
-      SIGNAL
+      SOCIAL
     </h1>
     <p class="max-w-xl text-on-surface-variant font-body leading-relaxed">
-      Neural broadcast across all channels. A unified feed of transmissions — deduplicated, prioritized by signal strength.
+      Latest posts and updates across all platforms.
     </p>
   </header>
 
   <!-- Platform Nodes (Particle Array) -->
-  <div class="mb-20 relative">
+  <div class="mb-4 relative">
     <div class="flex flex-wrap items-center justify-center gap-12 relative py-8">
       {platforms.map((platform, i) => (
         <a
@@ -59,50 +71,133 @@ const typeIcons: Record<string, string> = {
     </div>
   </div>
 
-  <!-- Deduplicated Feed -->
-  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-    {signalData.map(post => (
-      <a
-        href={post.url}
-        class="group relative bg-surface-container-low border border-white/5 transition-all duration-500 hover:border-primary/30 terminal-glow block"
-      >
-        <div class="relative overflow-hidden">
-          <img
-            src={post.thumbnail}
-            alt={post.title}
-            class="w-full aspect-video object-cover grayscale opacity-50 group-hover:grayscale-0 group-hover:opacity-80 transition-all duration-700"
-          />
-          <div class="absolute inset-0 bg-gradient-to-t from-background to-transparent opacity-60"></div>
-          <div class="absolute top-4 left-4 flex items-center gap-2">
-            <div class="bg-background/80 px-2 py-1 backdrop-blur-md flex items-center gap-1.5">
-              <span class="material-symbols-outlined text-sm text-secondary">{typeIcons[post.type]}</span>
-              <span class="font-mono text-[9px] text-secondary uppercase">{post.type}</span>
-            </div>
-          </div>
-          <div class="absolute top-4 right-4">
-            <div class="bg-background/80 px-2 py-1 backdrop-blur-md flex items-center gap-1.5">
-              <span class="material-symbols-outlined text-sm text-primary">{platformIcons[post.platform]}</span>
-              <span class="font-mono text-[9px] text-primary uppercase">{post.platform}</span>
-            </div>
-          </div>
-        </div>
-        <div class="p-6">
-          <h3 class="font-headline text-lg text-primary group-hover:text-secondary transition-colors uppercase tracking-tight mb-2">{post.title}</h3>
-          <p class="font-mono text-[11px] text-white/40 leading-relaxed mb-4">{post.caption}</p>
-          <div class="flex items-center justify-between">
-            <span class="font-mono text-[9px] text-white/20 uppercase">{post.date}</span>
-            <div class="flex gap-1">
-              {post.originalPlatforms.map(p => (
-                <span class="w-1.5 h-1.5 bg-primary/30 rounded-full" title={p}></span>
-              ))}
-            </div>
-          </div>
-        </div>
-      </a>
-    ))}
+
+  <!-- Feed divider -->
+  <div class="brand-divider brand-divider--wide mb-12">
+    <img src="/images/brand/morph-line-n.png" alt="" loading="lazy" />
   </div>
 
-  <footer class="mt-32 pt-12 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-8">
+  <!-- Feed: 3-column by media type -->
+  <div class="signal-feed">
+    <!-- Video Posts -->
+    <div class="signal-column">
+      <div class="signal-column-header">
+        <span class="material-symbols-outlined text-sm text-secondary">videocam</span>
+        <span class="font-mono text-[10px] text-secondary uppercase tracking-widest">Video</span>
+        <span class="font-mono text-[9px] text-white/20">{videoPosts.length}</span>
+      </div>
+      {videoPosts.length > 0 ? videoPosts.map(post => (
+        <a href={post.url} class="signal-card group block" target="_blank" rel="noopener">
+          <div class="relative overflow-hidden">
+            <video
+              src={post.mediaUrl}
+              class="w-full aspect-video object-cover opacity-60 group-hover:opacity-90 transition-all duration-500"
+              muted loop playsinline preload="metadata" data-hover-play
+            />
+            <div class="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent"></div>
+            <div class="absolute top-3 right-3">
+              <div class="bg-background/80 px-2 py-1 backdrop-blur-md flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-sm text-primary">{platformIcons[post.platform]}</span>
+                <span class="font-mono text-[8px] text-primary uppercase">{post.platform}</span>
+              </div>
+            </div>
+          </div>
+          <div class="p-4">
+            <p class="font-mono text-[11px] text-white/50 leading-relaxed mb-3">{post.caption}</p>
+            <div class="flex items-center justify-between">
+              <span class="font-mono text-[9px] text-white/20">{post.date}</span>
+              <div class="flex gap-1">
+                {post.originalPlatforms.map(p => (
+                  <span class="w-1.5 h-1.5 bg-primary/30 rounded-full" title={p}></span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </a>
+      )) : (
+        <div class="signal-empty">
+          <span class="material-symbols-outlined text-2xl text-white/10">videocam_off</span>
+          <span class="font-mono text-[9px] text-white/15 uppercase">No recent videos</span>
+        </div>
+      )}
+    </div>
+
+    <!-- Photo Posts -->
+    <div class="signal-column">
+      <div class="signal-column-header">
+        <span class="material-symbols-outlined text-sm text-secondary">image</span>
+        <span class="font-mono text-[10px] text-secondary uppercase tracking-widest">Photo</span>
+        <span class="font-mono text-[9px] text-white/20">{photoPosts.length}</span>
+      </div>
+      {photoPosts.length > 0 ? photoPosts.map(post => (
+        <a href={post.url} class="signal-card group block" target="_blank" rel="noopener">
+          <div class="relative overflow-hidden">
+            <img
+              src={post.thumbnail || post.mediaUrl || ''}
+              alt={post.caption}
+              class="w-full aspect-square object-cover opacity-60 group-hover:opacity-90 transition-all duration-500"
+            />
+            <div class="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent"></div>
+            <div class="absolute top-3 right-3">
+              <div class="bg-background/80 px-2 py-1 backdrop-blur-md flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-sm text-primary">{platformIcons[post.platform]}</span>
+                <span class="font-mono text-[8px] text-primary uppercase">{post.platform}</span>
+              </div>
+            </div>
+          </div>
+          <div class="p-4">
+            <p class="font-mono text-[11px] text-white/50 leading-relaxed mb-3">{post.caption}</p>
+            <span class="font-mono text-[9px] text-white/20">{post.date}</span>
+          </div>
+        </a>
+      )) : (
+        <div class="signal-empty">
+          <span class="material-symbols-outlined text-2xl text-white/10">image</span>
+          <span class="font-mono text-[9px] text-white/15 uppercase">No recent photos</span>
+        </div>
+      )}
+    </div>
+
+    <!-- Text Posts -->
+    <div class="signal-column">
+      <div class="signal-column-header">
+        <span class="material-symbols-outlined text-sm text-secondary">chat</span>
+        <span class="font-mono text-[10px] text-secondary uppercase tracking-widest">Text</span>
+        <span class="font-mono text-[9px] text-white/20">{textPosts.length}</span>
+      </div>
+      {textPosts.length > 0 ? textPosts.map(post => (
+        <a href={post.url} class="signal-card signal-card--text group block" target="_blank" rel="noopener">
+          <div class="p-5">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="material-symbols-outlined text-sm text-primary">{platformIcons[post.platform]}</span>
+              <span class="font-mono text-[8px] text-primary uppercase">{post.platform}</span>
+            </div>
+            <p class="font-body text-sm text-white/70 leading-relaxed mb-4 group-hover:text-white/90 transition-colors">{post.caption}</p>
+            <div class="flex items-center justify-between">
+              <span class="font-mono text-[9px] text-white/20">{post.date}</span>
+              <div class="flex gap-1">
+                {post.originalPlatforms.map(p => (
+                  <span class="w-1.5 h-1.5 bg-primary/30 rounded-full" title={p}></span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </a>
+      )) : (
+        <div class="signal-empty">
+          <span class="material-symbols-outlined text-2xl text-white/10">chat_bubble_outline</span>
+          <span class="font-mono text-[9px] text-white/15 uppercase">No recent text posts</span>
+        </div>
+      )}
+    </div>
+  </div>
+
+  <!-- Footer divider -->
+  <div class="brand-divider brand-divider--wide mt-32 mb-0">
+    <img src="/images/brand/morph-line-j.png" alt="" loading="lazy" />
+  </div>
+
+  <footer class="mt-4 pt-12 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-8">
     <div class="flex gap-12">
       <div>
         <div class="font-mono text-[9px] text-white/20 uppercase mb-1">Active Channels</div>
@@ -123,3 +218,70 @@ const typeIcons: Record<string, string> = {
     </div>
   </footer>
 </BaseLayout>
+
+<style>
+  .signal-feed {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1.5rem;
+    align-items: start;
+  }
+
+  .signal-column {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .signal-column-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--outline-variant);
+    margin-bottom: 0.25rem;
+  }
+
+  .signal-card {
+    border: 1px solid rgba(255,255,255,0.05);
+    background: var(--surface-container-low);
+    transition: all 0.4s;
+    overflow: hidden;
+  }
+  .signal-card:hover {
+    border-color: rgba(var(--primary-rgb, 0, 204, 168), 0.3);
+  }
+
+  .signal-card--text {
+    border-left: 2px solid rgba(var(--primary-rgb, 0, 204, 168), 0.2);
+  }
+  .signal-card--text:hover {
+    border-left-color: var(--primary);
+  }
+
+  .signal-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 3rem 1rem;
+    border: 1px dashed rgba(255,255,255,0.06);
+    min-height: 200px;
+  }
+
+  @media (max-width: 768px) {
+    .signal-feed {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<script>
+  document.querySelectorAll('[data-hover-play]').forEach(video => {
+    const card = video.closest('a');
+    if (!card) return;
+    card.addEventListener('mouseenter', () => { (video as HTMLVideoElement).play().catch(() => {}); });
+    card.addEventListener('mouseleave', () => { (video as HTMLVideoElement).pause(); (video as HTMLVideoElement).currentTime = 0; });
+  });
+</script>

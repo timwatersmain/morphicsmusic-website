@@ -1,68 +1,19 @@
 [
   {
-    "id": "av-short-01",
-    "title": "AV_SHORTS_01",
+    "id": "45fa3e12-7465-4be0-a765-20ade5c342ee",
+    "title": "WATCHING STRUCTURES DISSOLVE AND REBUILD.",
     "type": "video",
-    "thumbnail": "/images/signal/blue-insta.jpg",
-    "caption": "Audiovisual experiment in chromatic distortion",
-    "date": "2025-03-20",
+    "mediaUrl": "https://pub-a0375585d55c403e96807f495afed472.r2.dev/f8eeb359dda64e74a5fce87100e2f207.mp4",
+    "thumbnail": "",
+    "caption": "watching structures dissolve and rebuild.",
+    "date": "2026-03-28",
     "platform": "youtube",
-    "url": "#",
-    "originalPlatforms": ["youtube", "instagram"]
-  },
-  {
-    "id": "molten-visual",
-    "title": "MOLTEN_SEQUENCE",
-    "type": "visual",
-    "thumbnail": "/images/signal/molten-insta.jpg",
-    "caption": "Generative fluid dynamics render — molten substrate",
-    "date": "2025-03-15",
-    "platform": "instagram",
-    "url": "#",
-    "originalPlatforms": ["instagram"]
-  },
-  {
-    "id": "portal-render",
-    "title": "PORTAL_CONSTRUCT",
-    "type": "visual",
-    "thumbnail": "/images/signal/portal-insta.jpg",
-    "caption": "Recursive portal geometry with depth-mapped lighting",
-    "date": "2025-03-08",
-    "platform": "instagram",
-    "url": "#",
-    "originalPlatforms": ["instagram", "bluesky"]
-  },
-  {
-    "id": "metanoia-drop",
-    "title": "METANOIA_RELEASE",
-    "type": "track",
-    "thumbnail": "/images/albums/metanoia.jpg",
-    "caption": "Full album now streaming — METANOIA",
-    "date": "2025-02-28",
-    "platform": "spotify",
-    "url": "#",
-    "originalPlatforms": ["spotify", "soundcloud", "youtube"]
-  },
-  {
-    "id": "purp-glitch",
-    "title": "PURP_GLITCH_SESSION",
-    "type": "video",
-    "thumbnail": "/images/signal/purp-insta.jpg",
-    "caption": "Live glitch synthesis session — purple spectrum",
-    "date": "2025-02-20",
-    "platform": "youtube",
-    "url": "#",
-    "originalPlatforms": ["youtube", "instagram"]
-  },
-  {
-    "id": "red-spectrum",
-    "title": "RED_SPECTRUM_DRIFT",
-    "type": "visual",
-    "thumbnail": "/images/signal/red-insta.jpg",
-    "caption": "Chromatic aberration study in the red spectrum",
-    "date": "2025-02-10",
-    "platform": "instagram",
-    "url": "#",
-    "originalPlatforms": ["instagram"]
+    "url": "https://www.youtube.com/watch?v=jldVB1NjQto",
+    "originalPlatforms": [
+      "youtube",
+      "instagram",
+      "bluesky",
+      "facebook"
+    ]
   }
 ]
