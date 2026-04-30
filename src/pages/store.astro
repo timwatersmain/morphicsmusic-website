@@ -23,9 +23,44 @@ const platformIcons: Record<string, string> = {
       </h1>
     </div>
     <p class="max-w-xl text-on-surface-variant font-body leading-relaxed">
-      Music releases. Digital downloads via Bandcamp.
+      Music releases &middot; Merch
     </p>
   </header>
+
+  <!-- Merch — links to BigCartel for full product list, sizes, checkout -->
+  <section class="max-w-[1400px] mx-auto mb-24">
+    <div class="flex items-baseline gap-4 mb-8">
+      <span class="font-mono text-xs text-secondary uppercase">Merch</span>
+      <div class="h-[1px] flex-1 bg-outline-variant/30"></div>
+    </div>
+    <a href="https://morphics.bigcartel.com/" target="_blank" rel="noopener"
+       class="group relative bg-surface-container-low border border-white/5 transition-all duration-500 hover:border-secondary/30 terminal-glow block">
+      <div class="grid grid-cols-1 md:grid-cols-[1fr,1.2fr] items-center">
+        <div class="p-10 md:p-14">
+          <div class="font-mono text-[10px] text-secondary uppercase mb-3 flex items-center gap-2">
+            <span class="material-symbols-outlined text-sm">storefront</span>
+            BIGCARTEL
+          </div>
+          <h3 class="font-headline text-3xl md:text-4xl text-primary group-hover:text-secondary transition-colors uppercase tracking-tight mb-4">
+            Shop Morphics Merch
+          </h3>
+          <p class="font-mono text-[11px] text-white/50 leading-relaxed mb-6">
+            T-shirts, hoodies, beanies, and album bundles. Sizes, variants,
+            and checkout handled directly on BigCartel.
+          </p>
+          <button class="px-5 py-3 border border-primary/20 group-hover:bg-primary group-hover:text-on-primary font-mono text-[10px] tracking-widest transition-all uppercase group-hover:border-primary/40">
+            VISIT BIGCARTEL &nbsp;→
+          </button>
+        </div>
+        <div class="relative aspect-square md:aspect-[4/5] overflow-hidden">
+          <img src="/images/brand/morph-line-j.png" alt=""
+               class="absolute inset-0 w-full h-full object-cover grayscale opacity-30 group-hover:grayscale-0 group-hover:opacity-60 transition-all duration-700"
+               loading="lazy" />
+          <div class="absolute inset-0 bg-gradient-to-l from-background/40 to-transparent"></div>
+        </div>
+      </div>
+    </a>
+  </section>
 
   <!-- Music Section -->
   <section class="max-w-[1400px] mx-auto mb-24">
