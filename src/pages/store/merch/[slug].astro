@@ -115,12 +115,17 @@ const fmtPrice = (lo: number, hi: number) =>
         image: item.thumbnail,
         unit_amount: Math.round(match.retail_price * 100),
         qty: 1,
-        metadata: {
-          printful_variant_id: match.variant_id,
-          sku: match.sku,
-        },
+        metadata: { printful_variant_id: match.variant_id, sku: match.sku },
       });
-      (window as any).morphicsCart.open();
+
+      const btn = document.getElementById('add-btn') as HTMLButtonElement;
+      const original = btn.textContent;
+      btn.textContent = '✓ Added — view cart';
+      btn.classList.add('bg-secondary', 'text-on-secondary');
+      setTimeout(() => {
+        btn.textContent = original;
+        btn.classList.remove('bg-secondary', 'text-on-secondary');
+      }, 2000);
     });
   </script>
 </BaseLayout>

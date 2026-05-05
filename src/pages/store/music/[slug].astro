@@ -66,7 +66,7 @@ function fmtDuration(seconds: number | null) {
             class="w-full py-4 bg-primary text-on-primary font-mono text-[11px] tracking-widest uppercase hover:bg-secondary hover:text-on-secondary transition-colors disabled:opacity-30"
             disabled={!release.has_masters}
           >
-            {release.has_masters ? `Buy ${release.type === 'single' ? 'track' : 'release'}` : 'Coming soon'}
+            {release.has_masters ? 'Add to Cart' : 'Coming soon'}
           </button>
           {!release.has_masters && (
             <p class="font-mono text-[10px] text-white/40">Master files not yet uploaded for this release.</p>
@@ -115,6 +115,9 @@ function fmtDuration(seconds: number | null) {
     const release = JSON.parse(document.getElementById('release-data')!.textContent || '{}');
     const form = document.getElementById('release-form') as HTMLFormElement;
 
+    const submitBtn = form.querySelector('button[type="submit"]') as HTMLButtonElement;
+    const originalLabel = submitBtn.textContent;
+
     form.addEventListener('submit', (e) => {
       e.preventDefault();
       const fd = new FormData(form);
@@ -130,11 +133,16 @@ function fmtDuration(seconds: number | null) {
         image: release.image,
         unit_amount: cents,
         qty: 1,
-        metadata: {
-          release_slug: release.slug,
-        },
+        metadata: { release_slug: release.slug },
       });
-      (window as any).morphicsCart.open();
+
+      // Confirm to the user without hijacking focus to the drawer.
+      submitBtn.textContent = '✓ Added — view cart';
+      submitBtn.classList.add('bg-secondary', 'text-on-secondary');
+      setTimeout(() => {
+        submitBtn.textContent = originalLabel;
+        submitBtn.classList.remove('bg-secondary', 'text-on-secondary');
+      }, 2000);
     });
   </script>
 </BaseLayout>
