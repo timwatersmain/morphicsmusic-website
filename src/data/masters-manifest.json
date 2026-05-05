@@ -1,5 +1,322 @@
 {
-  "bucket": "morphics-masters",
-  "generated_at": null,
-  "releases": {}
+  "bucket": "morphicsbrain-media",
+  "generated_at": "2026-05-05T15:13:24.756Z",
+  "releases": {
+    "cicada": [
+      {
+        "filename": "MorphicsCicadaFULLFINAL (1).aif",
+        "key": "masters/cicada/MorphicsCicadaFULLFINAL_1_.aif",
+        "size": 47694762,
+        "ext": "aif"
+      }
+    ],
+    "dark-side-of-the-mind": [
+      {
+        "filename": "Morphics - Eartoy.wav",
+        "key": "masters/dark-side-of-the-mind/Morphics_-_Eartoy.wav",
+        "size": 28679272,
+        "ext": "wav"
+      },
+      {
+        "filename": "Morphics - Goetia.wav",
+        "key": "masters/dark-side-of-the-mind/Morphics_-_Goetia.wav",
+        "size": 36288044,
+        "ext": "wav"
+      },
+      {
+        "filename": "Morphics - New Magick.wav",
+        "key": "masters/dark-side-of-the-mind/Morphics_-_New_Magick.wav",
+        "size": 43951372,
+        "ext": "wav"
+      },
+      {
+        "filename": "Morphics - Recluse.wav",
+        "key": "masters/dark-side-of-the-mind/Morphics_-_Recluse.wav",
+        "size": 17539244,
+        "ext": "wav"
+      },
+      {
+        "filename": "Morphics - Solve Coagula.wav",
+        "key": "masters/dark-side-of-the-mind/Morphics_-_Solve_Coagula.wav",
+        "size": 57550544,
+        "ext": "wav"
+      },
+      {
+        "filename": "Morphics - Top Steppa.wav",
+        "key": "masters/dark-side-of-the-mind/Morphics_-_Top_Steppa.wav",
+        "size": 24554924,
+        "ext": "wav"
+      }
+    ],
+    "distort": [
+      {
+        "filename": "Distort.mp3",
+        "key": "masters/distort/Distort.mp3",
+        "size": 7427136,
+        "ext": "mp3"
+      },
+      {
+        "filename": "Distort.wav",
+        "key": "masters/distort/Distort.wav",
+        "size": 32739918,
+        "ext": "wav"
+      }
+    ],
+    "evolution": [
+      {
+        "filename": "Evolution.wav",
+        "key": "masters/evolution/Evolution.wav",
+        "size": 29536792,
+        "ext": "wav"
+      }
+    ],
+    "eye-within": [
+      {
+        "filename": "Morphics - Get Bit.wav",
+        "key": "masters/eye-within/Morphics_-_Get_Bit.wav",
+        "size": 36454260,
+        "ext": "wav"
+      },
+      {
+        "filename": "Morphics - Lies.aif",
+        "key": "masters/eye-within/Morphics_-_Lies.aif",
+        "size": 32398988,
+        "ext": "aif"
+      },
+      {
+        "filename": "MorphicsThe6thSense.wav",
+        "key": "masters/eye-within/MorphicsThe6thSense.wav",
+        "size": 33893334,
+        "ext": "wav"
+      },
+      {
+        "filename": "MorphicsTheEyeWithin.aif",
+        "key": "masters/eye-within/MorphicsTheEyeWithin.aif",
+        "size": 43294930,
+        "ext": "aif"
+      }
+    ],
+    "golden-dawn": [
+      {
+        "filename": "Morphics - Golden Dawn Soundcloud.wav",
+        "key": "masters/golden-dawn/Morphics_-_Golden_Dawn_Soundcloud.wav",
+        "size": 31752044,
+        "ext": "wav"
+      }
+    ],
+    "heart-of-the-sun": [
+      {
+        "filename": "CompassionFin.aif",
+        "key": "masters/heart-of-the-sun/CompassionFin.aif",
+        "size": 48263094,
+        "ext": "aif"
+      },
+      {
+        "filename": "Dreamerfin).aif",
+        "key": "masters/heart-of-the-sun/Dreamerfin_.aif",
+        "size": 60328854,
+        "ext": "aif"
+      },
+      {
+        "filename": "FloatingFin.aif",
+        "key": "masters/heart-of-the-sun/FloatingFin.aif",
+        "size": 45864054,
+        "ext": "aif"
+      },
+      {
+        "filename": "FusionFin.aif",
+        "key": "masters/heart-of-the-sun/FusionFin.aif",
+        "size": 44717454,
+        "ext": "aif"
+      },
+      {
+        "filename": "MORPHICS - ORGANIC.aif",
+        "key": "masters/heart-of-the-sun/MORPHICS_-_ORGANIC.aif",
+        "size": 71500854,
+        "ext": "aif"
+      },
+      {
+        "filename": "SynthFin.aif",
+        "key": "masters/heart-of-the-sun/SynthFin.aif",
+        "size": 42336054,
+        "ext": "aif"
+      },
+      {
+        "filename": "heartofthesunfin.aif",
+        "key": "masters/heart-of-the-sun/heartofthesunfin.aif",
+        "size": 58542806,
+        "ext": "aif"
+      }
+    ],
+    "livevil": [
+      {
+        "filename": "LIVEVIL.wav",
+        "key": "masters/livevil/LIVEVIL.wav",
+        "size": 39852878,
+        "ext": "wav"
+      },
+      {
+        "filename": "Morphics - livevil Final.aif",
+        "key": "masters/livevil/Morphics_-_livevil_Final.aif",
+        "size": 45889254,
+        "ext": "aif"
+      },
+      {
+        "filename": "MorphicslivevilFinal.aif",
+        "key": "masters/livevil/MorphicslivevilFinal.aif",
+        "size": 45889254,
+        "ext": "aif"
+      }
+    ],
+    "mellifluous": [
+      {
+        "filename": "MorphicsDrifting.aif",
+        "key": "masters/mellifluous/MorphicsDrifting.aif",
+        "size": 45991204,
+        "ext": "aif"
+      },
+      {
+        "filename": "MorphicsFluffyL.aif",
+        "key": "masters/mellifluous/MorphicsFluffyL.aif",
+        "size": 43577398,
+        "ext": "aif"
+      },
+      {
+        "filename": "MorphicsMelliflous (1).aif",
+        "key": "masters/mellifluous/MorphicsMelliflous_1_.aif",
+        "size": 36315628,
+        "ext": "aif"
+      },
+      {
+        "filename": "MorphicsScarab.aif",
+        "key": "masters/mellifluous/MorphicsScarab.aif",
+        "size": 43575504,
+        "ext": "aif"
+      },
+      {
+        "filename": "MorphicsSweetDeams.aif",
+        "key": "masters/mellifluous/MorphicsSweetDeams.aif",
+        "size": 44107693,
+        "ext": "aif"
+      },
+      {
+        "filename": "MorphicsUnwind.aif",
+        "key": "masters/mellifluous/MorphicsUnwind.aif",
+        "size": 41237239,
+        "ext": "aif"
+      }
+    ],
+    "perception": [
+      {
+        "filename": "Morphics - Blindly 6.wav",
+        "key": "masters/perception/Morphics_-_Blindly_6.wav",
+        "size": 44219362,
+        "ext": "wav"
+      },
+      {
+        "filename": "Morphics - Corruption 7.wav",
+        "key": "masters/perception/Morphics_-_Corruption_7.wav",
+        "size": 39166356,
+        "ext": "wav"
+      },
+      {
+        "filename": "Morphics - Crystal K 6.wav",
+        "key": "masters/perception/Morphics_-_Crystal_K_6.wav",
+        "size": 45864044,
+        "ext": "wav"
+      },
+      {
+        "filename": "Morphics - Disolve 3.wav",
+        "key": "masters/perception/Morphics_-_Disolve_3.wav",
+        "size": 38677862,
+        "ext": "wav"
+      },
+      {
+        "filename": "Morphics - Infinity 3.wav",
+        "key": "masters/perception/Morphics_-_Infinity_3.wav",
+        "size": 38107956,
+        "ext": "wav"
+      },
+      {
+        "filename": "Morphics - Metamorphosis.wav",
+        "key": "masters/perception/Morphics_-_Metamorphosis.wav",
+        "size": 45869558,
+        "ext": "wav"
+      },
+      {
+        "filename": "Morphics - Oligarchy.wav",
+        "key": "masters/perception/Morphics_-_Oligarchy.wav",
+        "size": 35211282,
+        "ext": "wav"
+      },
+      {
+        "filename": "Morphics - Resonate.wav",
+        "key": "masters/perception/Morphics_-_Resonate.wav",
+        "size": 35606292,
+        "ext": "wav"
+      },
+      {
+        "filename": "Morphics - Saturate.wav",
+        "key": "masters/perception/Morphics_-_Saturate.wav",
+        "size": 49506110,
+        "ext": "wav"
+      },
+      {
+        "filename": "Morphics - Stimulate.wav",
+        "key": "masters/perception/Morphics_-_Stimulate.wav",
+        "size": 45547744,
+        "ext": "wav"
+      },
+      {
+        "filename": "Morphics - Venom 4.wav",
+        "key": "masters/perception/Morphics_-_Venom_4.wav",
+        "size": 42330172,
+        "ext": "wav"
+      },
+      {
+        "filename": "Morphics - _erce_tion.wav",
+        "key": "masters/perception/Morphics_-__erce_tion.wav",
+        "size": 57736456,
+        "ext": "wav"
+      },
+      {
+        "filename": "Rivka - Swim High (Morphics Reslime).wav",
+        "key": "masters/perception/Rivka_-_Swim_High_Morphics_Reslime_.wav",
+        "size": 38107970,
+        "ext": "wav"
+      }
+    ],
+    "phormless": [
+      {
+        "filename": "Formless.wav",
+        "key": "masters/phormless/Formless.wav",
+        "size": 28888428,
+        "ext": "wav"
+      }
+    ],
+    "properly-gassed-up": [
+      {
+        "filename": "MorphicsProperlyGassedUp.aif",
+        "key": "masters/properly-gassed-up/MorphicsProperlyGassedUp.aif",
+        "size": 45317466,
+        "ext": "aif"
+      }
+    ],
+    "slang": [
+      {
+        "filename": "SlangFinish.wav",
+        "key": "masters/slang/SlangFinish.wav",
+        "size": 51156044,
+        "ext": "wav"
+      }
+    ],
+    "sup-like-this": [
+      {
+        "filename": "Morphics - Sup Like This (Final).aif",
+        "key": "masters/sup-like-this/Morphics_-_Sup_Like_This_Final_.aif",
+        "size": 43394454,
+        "ext": "aif"
+      }
+    ]
+  }
 }

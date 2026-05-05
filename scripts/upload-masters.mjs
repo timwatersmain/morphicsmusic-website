@@ -76,12 +76,45 @@ function scan() {
   return map;
 }
 
+function objectExists(key) {
+  try {
+    // wrangler r2 object get with --head-only would be ideal; instead probe
+    // via a tiny GET range. Output is muted; non-zero exit = missing/error.
+    execSync(
+      `npx --yes wrangler r2 object get "${BUCKET}/${key}" --remote --pipe --range="bytes=0-0" > /dev/null 2>&1`,
+      { stdio: 'ignore' },
+    );
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function upload(key, path) {
   if (DRY) { console.log(`  [dry] would upload ${key}`); return; }
-  execSync(
-    `npx --yes wrangler r2 object put "${BUCKET}/${key}" --file="${path}" --remote`,
-    { stdio: 'inherit' },
-  );
+  if (objectExists(key)) {
+    console.log(`  ✓ already in R2 — skip ${key}`);
+    return;
+  }
+  // Retry on transient fetch errors (Cloudflare occasionally drops the
+  // multipart upload mid-stream on big files).
+  let attempts = 0;
+  const maxAttempts = 3;
+  while (true) {
+    try {
+      execSync(
+        `npx --yes wrangler r2 object put "${BUCKET}/${key}" --file="${path}" --remote`,
+        { stdio: 'inherit' },
+      );
+      return;
+    } catch (e) {
+      attempts++;
+      if (attempts >= maxAttempts) throw e;
+      const wait = attempts * 5;
+      console.log(`  ✗ failed (attempt ${attempts}/${maxAttempts}) — waiting ${wait}s`);
+      execSync(`sleep ${wait}`);
+    }
+  }
 }
 
 console.log(`• scanning ${MASTERS}`);

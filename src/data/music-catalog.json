@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-05T13:13:59.581Z",
+  "generated_at": "2026-05-05T14:02:36.349Z",
   "releases": [
     {
       "id": "golden-dawn",
@@ -15,7 +15,7 @@
       "bandcamp_url": "https://morphics.bandcamp.com/track/golden-dawn",
       "min_price_cents": 100,
       "track_count": 1,
-      "has_masters": false,
+      "has_masters": true,
       "tracks": [
         {
           "id": "gd-1",
@@ -24,7 +24,7 @@
           "isrc": "GBRKQ2604793",
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": null
+          "master_filename": "Morphics - Golden Dawn Soundcloud.wav"
         }
       ]
     },
@@ -150,7 +150,7 @@
       "bandcamp_url": "https://morphics.bandcamp.com/album/dark-side-of-the-mind-2",
       "min_price_cents": 300,
       "track_count": 6,
-      "has_masters": false,
+      "has_masters": true,
       "tracks": [
         {
           "id": "dsotm-1",
@@ -159,7 +159,7 @@
           "isrc": "GBRKQ2605022",
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": null
+          "master_filename": "Morphics - Solve Coagula.wav"
         },
         {
           "id": "dsotm-2",
@@ -177,7 +177,7 @@
           "isrc": "GBRKQ2605031",
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": null
+          "master_filename": "Morphics - Top Steppa.wav"
         },
         {
           "id": "dsotm-4",
@@ -186,7 +186,7 @@
           "isrc": "GBRKQ2605034",
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": null
+          "master_filename": "Morphics - Recluse.wav"
         },
         {
           "id": "dsotm-5",
@@ -195,7 +195,7 @@
           "isrc": "GBRKQ2605036",
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": null
+          "master_filename": "Morphics - New Magick.wav"
         },
         {
           "id": "dsotm-6",
@@ -204,7 +204,7 @@
           "isrc": "GBRKQ2605039",
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": null
+          "master_filename": "Morphics - Goetia.wav"
         }
       ]
     },
@@ -222,7 +222,7 @@
       "bandcamp_url": "https://morphics.bandcamp.com/track/phormless",
       "min_price_cents": 100,
       "track_count": 1,
-      "has_masters": false,
+      "has_masters": true,
       "tracks": [
         {
           "id": "phormless-1",
@@ -249,7 +249,7 @@
       "bandcamp_url": "https://morphics.bandcamp.com/track/evolution",
       "min_price_cents": 100,
       "track_count": 1,
-      "has_masters": false,
+      "has_masters": true,
       "tracks": [
         {
           "id": "evolution-1",
@@ -258,7 +258,7 @@
           "isrc": "GBRKQ2604984",
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": null
+          "master_filename": "Evolution.wav"
         }
       ]
     },
@@ -438,7 +438,7 @@
       "bandcamp_url": "https://morphics.bandcamp.com/track/slang",
       "min_price_cents": 100,
       "track_count": 1,
-      "has_masters": false,
+      "has_masters": true,
       "tracks": [
         {
           "id": "slang-1",
@@ -447,7 +447,7 @@
           "isrc": "QZK6N1933224",
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": null
+          "master_filename": "SlangFinish.wav"
         }
       ]
     },
@@ -465,7 +465,7 @@
       "bandcamp_url": "https://morphics.bandcamp.com/album/heart-of-the-sun",
       "min_price_cents": 300,
       "track_count": 7,
-      "has_masters": false,
+      "has_masters": true,
       "tracks": [
         {
           "id": "hots-1",
@@ -483,7 +483,7 @@
           "isrc": "QZDA71959130",
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": null
+          "master_filename": "CompassionFin.aif"
         },
         {
           "id": "hots-3",
@@ -501,7 +501,7 @@
           "isrc": "QZDA71959132",
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": null
+          "master_filename": "Dreamerfin).aif"
         },
         {
           "id": "hots-5",
@@ -510,7 +510,7 @@
           "isrc": "QZDA71959133",
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": null
+          "master_filename": "MORPHICS - ORGANIC.aif"
         },
         {
           "id": "hots-6",
@@ -519,7 +519,7 @@
           "isrc": "QZDA71959134",
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": null
+          "master_filename": "FloatingFin.aif"
         },
         {
           "id": "hots-7",
@@ -528,7 +528,7 @@
           "isrc": "QZDA71959135",
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": null
+          "master_filename": "FusionFin.aif"
         }
       ]
     },
@@ -546,7 +546,7 @@
       "bandcamp_url": "https://morphics.bandcamp.com/track/cicada",
       "min_price_cents": 100,
       "track_count": 1,
-      "has_masters": false,
+      "has_masters": true,
       "tracks": [
         {
           "id": "cicada-1",
@@ -555,7 +555,7 @@
           "isrc": "QZDA81835691",
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": null
+          "master_filename": "MorphicsCicadaFULLFINAL (1).aif"
         }
       ]
     },
@@ -573,7 +573,7 @@
       "bandcamp_url": "https://morphics.bandcamp.com/track/livevil",
       "min_price_cents": 100,
       "track_count": 1,
-      "has_masters": false,
+      "has_masters": true,
       "tracks": [
         {
           "id": "livevil-1",
@@ -582,7 +582,7 @@
           "isrc": "QZDA71882636",
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": null
+          "master_filename": "LIVEVIL.wav"
         }
       ]
     },
@@ -600,7 +600,7 @@
       "bandcamp_url": "https://morphics.bandcamp.com/album/eye-within",
       "min_price_cents": 300,
       "track_count": 4,
-      "has_masters": false,
+      "has_masters": true,
       "tracks": [
         {
           "id": "ew-1",
@@ -627,7 +627,7 @@
           "isrc": "QM4DW1801033",
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": null
+          "master_filename": "Morphics - Lies.aif"
         },
         {
           "id": "ew-4",
@@ -636,7 +636,7 @@
           "isrc": "QM4DW1801034",
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": null
+          "master_filename": "Morphics - Get Bit.wav"
         }
       ]
     },
@@ -654,7 +654,7 @@
       "bandcamp_url": "https://morphics.bandcamp.com/track/distort",
       "min_price_cents": 100,
       "track_count": 1,
-      "has_masters": false,
+      "has_masters": true,
       "tracks": [
         {
           "id": "distort-1",
@@ -663,7 +663,7 @@
           "isrc": "QZBRF1812409",
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": null
+          "master_filename": "Distort.mp3"
         }
       ]
     },
@@ -681,7 +681,7 @@
       "bandcamp_url": "https://morphics.bandcamp.com/track/properly-gassed-up",
       "min_price_cents": 100,
       "track_count": 1,
-      "has_masters": false,
+      "has_masters": true,
       "tracks": [
         {
           "id": "pgu-1",
@@ -708,7 +708,7 @@
       "bandcamp_url": "https://morphics.bandcamp.com/album/perception",
       "min_price_cents": 700,
       "track_count": 13,
-      "has_masters": false,
+      "has_masters": true,
       "tracks": [
         {
           "id": "perc-1",
@@ -726,7 +726,7 @@
           "isrc": "GBRKQ2615893",
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": null
+          "master_filename": "Morphics - Blindly 6.wav"
         },
         {
           "id": "perc-3",
@@ -735,7 +735,7 @@
           "isrc": "GBRKQ2615895",
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": null
+          "master_filename": "Morphics - Corruption 7.wav"
         },
         {
           "id": "perc-4",
@@ -744,7 +744,7 @@
           "isrc": "GBRKQ2615896",
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": null
+          "master_filename": "Morphics - Crystal K 6.wav"
         },
         {
           "id": "perc-5",
@@ -753,7 +753,7 @@
           "isrc": "GBRKQ2615899",
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": null
+          "master_filename": "Morphics - Disolve 3.wav"
         },
         {
           "id": "perc-6",
@@ -762,7 +762,7 @@
           "isrc": "GBRKQ2615904",
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": null
+          "master_filename": "Morphics - Infinity 3.wav"
         },
         {
           "id": "perc-7",
@@ -771,7 +771,7 @@
           "isrc": "GBRKQ2615907",
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": null
+          "master_filename": "Morphics - Metamorphosis.wav"
         },
         {
           "id": "perc-8",
@@ -780,7 +780,7 @@
           "isrc": "GBRKQ2615912",
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": null
+          "master_filename": "Morphics - Oligarchy.wav"
         },
         {
           "id": "perc-9",
@@ -789,7 +789,7 @@
           "isrc": "GBRKQ2615918",
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": null
+          "master_filename": "Morphics - Resonate.wav"
         },
         {
           "id": "perc-10",
@@ -798,7 +798,7 @@
           "isrc": "GBRKQ2615924",
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": null
+          "master_filename": "Morphics - Saturate.wav"
         },
         {
           "id": "perc-11",
@@ -807,7 +807,7 @@
           "isrc": "GBRKQ2615927",
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": null
+          "master_filename": "Morphics - Stimulate.wav"
         },
         {
           "id": "perc-12",
@@ -816,7 +816,7 @@
           "isrc": "GBRKQ2615931",
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": null
+          "master_filename": "Morphics - Venom 4.wav"
         },
         {
           "id": "perc-13",
@@ -825,7 +825,7 @@
           "isrc": "GBRKQ2615937",
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": null
+          "master_filename": "Rivka - Swim High (Morphics Reslime).wav"
         }
       ]
     },
@@ -843,7 +843,7 @@
       "bandcamp_url": null,
       "min_price_cents": 100,
       "track_count": 1,
-      "has_masters": false,
+      "has_masters": true,
       "tracks": [
         {
           "id": "slt-1",
@@ -852,7 +852,7 @@
           "isrc": "QZ9Y21711266",
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": null
+          "master_filename": "Morphics - Sup Like This (Final).aif"
         }
       ]
     },
@@ -870,7 +870,7 @@
       "bandcamp_url": "https://morphics.bandcamp.com/album/mellifluous",
       "min_price_cents": 300,
       "track_count": 6,
-      "has_masters": false,
+      "has_masters": true,
       "tracks": [
         {
           "id": "mell-1",
@@ -888,7 +888,7 @@
           "isrc": "QZ9Y21711240",
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": null
+          "master_filename": "MorphicsUnwind.aif"
         },
         {
           "id": "mell-3",
@@ -897,7 +897,7 @@
           "isrc": "QZ9Y21711241",
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": null
+          "master_filename": "MorphicsDrifting.aif"
         },
         {
           "id": "mell-4",
@@ -906,7 +906,7 @@
           "isrc": "QZ9Y21711242",
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": null
+          "master_filename": "MorphicsScarab.aif"
         },
         {
           "id": "mell-5",
