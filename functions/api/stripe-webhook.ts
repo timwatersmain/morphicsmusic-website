@@ -148,10 +148,17 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, waitUnti
   }
 
   const session = event.data.object as Stripe.Checkout.Session;
-  // Re-fetch with shipping_details expanded — present on completed sessions.
-  const full = await stripe.checkout.sessions.retrieve(session.id, {
-    expand: ['line_items', 'customer_details', 'shipping_details'],
-  });
+  // The event payload already contains customer_details and metadata.
+  // Only re-fetch when we actually need shipping_details that may not be
+  // expanded — required for physical merch fulfillment, not for music.
+  let fulfillmentRaw = '';
+  try { fulfillmentRaw = session.metadata?.fulfillment || ''; } catch {}
+  const needsShipping = fulfillmentRaw.includes('"merch"');
+  const full = needsShipping
+    ? await stripe.checkout.sessions.retrieve(session.id, {
+        expand: ['line_items', 'customer_details', 'shipping_details'],
+      })
+    : session;
 
   let fulfillment: FulfillmentEntry[] = [];
   try {
