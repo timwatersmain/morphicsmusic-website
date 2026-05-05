@@ -1,0 +1,126 @@
+---
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import merch from '../../../data/merch.json';
+
+export function getStaticPaths() {
+  return merch.map(item => ({ params: { slug: item.slug }, props: { item } }));
+}
+
+const { item } = Astro.props;
+const variants = item.variants || [];
+const sizes = item.sizes || [];
+const colors = item.colors || [];
+const fmtPrice = (lo: number, hi: number) =>
+  lo === hi ? `$${lo.toFixed(0)}` : `$${lo.toFixed(0)}–$${hi.toFixed(0)}`;
+---
+
+<BaseLayout title={item.name} currentPage="/store">
+  <div class="max-w-[1400px] mx-auto">
+    <a href="/store" class="inline-flex items-center gap-2 font-mono text-[10px] text-white/40 hover:text-secondary uppercase tracking-widest mb-8">
+      <span class="material-symbols-outlined text-sm">arrow_back</span> Back to store
+    </a>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+      <div class="relative bg-surface-container-low border border-white/5 overflow-hidden">
+        <img src={item.thumbnail} alt={item.name} class="w-full aspect-square object-cover" />
+      </div>
+
+      <div>
+        <span class="font-mono text-[10px] text-secondary uppercase tracking-widest">Merch</span>
+        <h1 class="font-headline font-bold text-4xl md:text-5xl text-primary uppercase tracking-tight mt-2 mb-4 leading-none">
+          {item.name}
+        </h1>
+        <div class="font-mono text-2xl text-secondary mb-8">{fmtPrice(item.price_low, item.price_high)}</div>
+
+        <form id="variant-form" class="space-y-6">
+          {sizes.length > 0 && (
+            <div>
+              <label class="block font-mono text-[10px] text-white/40 uppercase tracking-widest mb-3">Size</label>
+              <div class="flex flex-wrap gap-2">
+                {sizes.map((s, i) => (
+                  <label class="cursor-pointer">
+                    <input type="radio" name="size" value={s} class="sr-only peer" checked={i === 0} />
+                    <span class="block px-4 py-2 border border-white/10 peer-checked:border-secondary peer-checked:text-secondary font-mono text-xs hover:border-white/30 transition-colors">{s}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {colors.length > 0 && (
+            <div>
+              <label class="block font-mono text-[10px] text-white/40 uppercase tracking-widest mb-3">Color</label>
+              <div class="flex flex-wrap gap-2">
+                {colors.map((c, i) => (
+                  <label class="cursor-pointer">
+                    <input type="radio" name="color" value={c} class="sr-only peer" checked={i === 0} />
+                    <span class="block px-4 py-2 border border-white/10 peer-checked:border-secondary peer-checked:text-secondary font-mono text-xs hover:border-white/30 transition-colors">{c}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <button
+            type="submit"
+            class="w-full py-4 bg-primary text-on-primary font-mono text-[11px] tracking-widest uppercase hover:bg-secondary hover:text-on-secondary transition-colors"
+            id="add-btn"
+          >
+            Add to Cart
+          </button>
+          <p id="variant-error" class="hidden font-mono text-[10px] text-red-400"></p>
+        </form>
+
+        <div class="mt-8 pt-6 border-t border-white/10 font-mono text-[10px] text-white/40 leading-relaxed space-y-1">
+          <div>Worldwide shipping via Printful · 5–10 business days</div>
+          <div>Made-to-order · Returns within 30 days</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="application/json" id="variants-data" set:html={JSON.stringify(variants)} />
+  <script type="application/json" id="item-data" set:html={JSON.stringify({ slug: item.slug, name: item.name, thumbnail: item.thumbnail })} />
+
+  <script>
+    import '../../../scripts/cart.js';
+    const variants = JSON.parse(document.getElementById('variants-data')!.textContent || '[]');
+    const item = JSON.parse(document.getElementById('item-data')!.textContent || '{}');
+    const form = document.getElementById('variant-form') as HTMLFormElement;
+    const err = document.getElementById('variant-error')!;
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const fd = new FormData(form);
+      const size = fd.get('size');
+      const color = fd.get('color');
+
+      const match = variants.find((v: any) =>
+        (size ? v.size === size : true) && (color ? v.color === color : true) && v.available,
+      );
+
+      if (!match) {
+        err.textContent = 'That combination is unavailable.';
+        err.classList.remove('hidden');
+        return;
+      }
+      err.classList.add('hidden');
+
+      const subtitle = [match.size, match.color].filter(Boolean).join(' · ');
+      (window as any).morphicsCart.add({
+        type: 'merch',
+        sku: `merch:${item.slug}:${match.variant_id}`,
+        title: item.name,
+        subtitle,
+        image: item.thumbnail,
+        unit_amount: Math.round(match.retail_price * 100),
+        qty: 1,
+        metadata: {
+          printful_variant_id: match.variant_id,
+          sku: match.sku,
+        },
+      });
+      (window as any).morphicsCart.open();
+    });
+  </script>
+</BaseLayout>

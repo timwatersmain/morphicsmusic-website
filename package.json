@@ -7,8 +7,10 @@
   },
   "scripts": {
     "dev": "astro dev",
-    "sync": "node scripts/sync-from-brain.mjs",
-    "prebuild": "node scripts/sync-from-brain.mjs && node scripts/fetch-bandcamp.mjs",
+    "sync": "node scripts/sync-from-brain.mjs && node scripts/sync-music-catalog.mjs",
+    "sync:printful": "node scripts/sync-printful.mjs",
+    "upload:masters": "node scripts/upload-masters.mjs",
+    "prebuild": "node scripts/sync-from-brain.mjs && node scripts/sync-music-catalog.mjs && node scripts/fetch-bandcamp.mjs",
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro"
@@ -16,6 +18,7 @@
   "dependencies": {
     "@tailwindcss/vite": "^4.2.2",
     "astro": "^6.1.1",
+    "stripe": "^22.1.0",
     "tailwindcss": "^4.2.2",
     "three": "^0.183.2"
   }

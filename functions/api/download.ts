@@ -1,0 +1,106 @@
+// /api/download
+//   GET ?token=...&action=list   → JSON: { releases: [{slug, title, files:[{key, filename, size, ext}]}] }
+//   GET ?token=...&key=<r2-key>  → streams the audio file from R2
+//
+// A token grants access to a fixed list of release slugs for 7 days / 5 uses
+// total. We bump `uses` on every successful download to discourage sharing.
+
+import manifest from '../../src/data/masters-manifest.json';
+import catalog from '../../src/data/music-catalog.json';
+
+interface DownloadGrant {
+  email: string;
+  release_slugs: string[];
+  created_at: number;
+  expires_at: number;
+  uses: number;
+}
+
+interface Env {
+  DOWNLOADS: KVNamespace;
+  MASTERS: R2Bucket;
+}
+
+const MAX_USES = 5;
+
+const MIME: Record<string, string> = {
+  flac: 'audio/flac',
+  wav: 'audio/wav',
+  aif: 'audio/aiff',
+  aiff: 'audio/aiff',
+  mp3: 'audio/mpeg',
+};
+
+async function loadGrant(env: Env, token: string): Promise<DownloadGrant | null> {
+  const raw = await env.DOWNLOADS.get(`grant:${token}`);
+  if (!raw) return null;
+  const g: DownloadGrant = JSON.parse(raw);
+  if (g.expires_at < Math.floor(Date.now() / 1000)) return null;
+  return g;
+}
+
+export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
+  const url = new URL(request.url);
+  const token = url.searchParams.get('token');
+  const action = url.searchParams.get('action');
+  const key = url.searchParams.get('key');
+
+  if (!token) return new Response('missing token', { status: 400 });
+
+  const grant = await loadGrant(env, token);
+  if (!grant) return new Response('expired or invalid', { status: 404 });
+
+  if (action === 'list' || (!key && !action)) {
+    const slugs = new Set(grant.release_slugs);
+    const releases = (catalog as any).releases
+      .filter((r: any) => slugs.has(r.slug))
+      .map((r: any) => ({
+        slug: r.slug,
+        title: r.title,
+        artwork: r.artwork,
+        files: ((manifest as any).releases[r.slug] || []),
+      }));
+    return new Response(JSON.stringify({
+      email: grant.email,
+      expires_at: grant.expires_at,
+      uses: grant.uses,
+      max_uses: MAX_USES,
+      releases,
+    }), { headers: { 'Content-Type': 'application/json' } });
+  }
+
+  if (!key) return new Response('missing key', { status: 400 });
+
+  // Verify the requested key belongs to a granted release.
+  // Keys are shaped like "masters/<release-slug>/<filename>" — pull the slug
+  // from the second segment when a prefix is present, otherwise the first.
+  const parts = key.split('/');
+  const slug = parts[0] === 'masters' ? parts[1] : parts[0];
+  if (!grant.release_slugs.includes(slug)) {
+    return new Response('not in your grant', { status: 403 });
+  }
+
+  if (grant.uses >= MAX_USES) {
+    return new Response('download limit reached', { status: 429 });
+  }
+
+  const obj = await env.MASTERS.get(key);
+  if (!obj) return new Response('file not found', { status: 404 });
+
+  // Bump uses (best-effort).
+  grant.uses += 1;
+  await env.DOWNLOADS.put(`grant:${token}`, JSON.stringify(grant), {
+    expirationTtl: Math.max(60, grant.expires_at - Math.floor(Date.now() / 1000)),
+  });
+
+  const ext = (key.split('.').pop() || '').toLowerCase();
+  const filename = key.split('/').pop() || 'download';
+  return new Response(obj.body, {
+    headers: {
+      'Content-Type': MIME[ext] || 'application/octet-stream',
+      'Content-Length': String(obj.size),
+      'Content-Disposition': `attachment; filename="${filename}"`,
+      'Cache-Control': 'private, no-store',
+    },
+  });
+};

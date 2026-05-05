@@ -1,22 +1,15 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-import storeData from '../data/store.json';
 import merchItems from '../data/merch.json';
+import catalog from '../data/music-catalog.json';
 
-const musicItems = storeData.filter(item => item.type === 'music');
-
-const platformIcons: Record<string, string> = {
-  bandcamp: 'album',
-  store: 'storefront',
-};
+const releases = catalog.releases;
 
 const formatPrice = (lo: number | null, hi: number | null) => {
   if (lo == null) return '';
   if (hi == null || hi === lo) return `$${lo.toFixed(0)}`;
   return `$${lo.toFixed(0)}–$${hi.toFixed(0)}`;
 };
-
-const orderEmail = 'morphicsmusic@gmail.com';
 ---
 
 <BaseLayout title="STORE" currentPage="/store">
@@ -32,135 +25,130 @@ const orderEmail = 'morphicsmusic@gmail.com';
       </h1>
     </div>
     <p class="max-w-xl text-on-surface-variant font-body leading-relaxed">
-      Music releases &middot; Merch
+      Music releases &middot; Merch &middot; Direct from the artist
     </p>
   </header>
 
-  <!-- Merch — products pulled from Printful, ordered via email until checkout is wired -->
-  <section class="max-w-[1400px] mx-auto mb-24">
-    <div class="flex items-baseline gap-4 mb-8">
-      <span class="font-mono text-xs text-secondary uppercase">Merch</span>
-      <div class="h-[1px] flex-1 bg-outline-variant/30"></div>
-    </div>
-    <div class="mb-8 px-4 py-3 border border-secondary/20 bg-secondary/5">
-      <p class="font-mono text-[11px] text-secondary/80 leading-relaxed">
-        Storefront getting rebuilt — to order, email <a href={`mailto:${orderEmail}?subject=Morphics%20merch%20order`} class="underline hover:text-secondary">{orderEmail}</a> with the item, size, and color. Worldwide shipping via Printful.
-      </p>
-    </div>
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-      {merchItems.map(item => {
-        const subject = encodeURIComponent(`Morphics merch order — ${item.name}`);
-        const sizesLine = item.sizes.length ? `Size: ${item.sizes.join(' / ')}` : '';
-        const colorsLine = item.colors.length ? `Color: ${item.colors.join(' / ')}` : '';
-        const body = encodeURIComponent(
-          `Item: ${item.name}\nPrice: ${formatPrice(item.price_low, item.price_high)}\n${sizesLine}\n${colorsLine}\n\nShipping address:\n`
-        );
-        const mailto = `mailto:${orderEmail}?subject=${subject}&body=${body}`;
-        return (
-          <div class="group relative bg-surface-container-low border border-white/5 transition-all duration-500 hover:border-secondary/30 terminal-glow block">
-            <div class="relative overflow-hidden">
-              <img
-                src={item.thumbnail}
-                alt={item.name}
-                class="w-full aspect-square object-cover grayscale opacity-50 group-hover:grayscale-0 group-hover:scale-105 group-hover:opacity-100 transition-all duration-700"
-                loading="lazy"
-              />
-              <div class="absolute inset-0 bg-gradient-to-t from-background to-transparent opacity-60"></div>
-              <div class="absolute bottom-4 left-4 font-mono text-[10px] space-y-1">
-                <div class="flex items-center gap-2 bg-background/80 px-2 py-1 backdrop-blur-md text-secondary">
-                  <span class="material-symbols-outlined text-sm">checkroom</span>
-                  MERCH
-                </div>
-                <div class="flex items-center gap-2 bg-background/80 px-2 py-1 backdrop-blur-md text-primary">
-                  {formatPrice(item.price_low, item.price_high)}
-                </div>
-              </div>
-            </div>
-            <div class="p-6">
-              <h3 class="font-headline text-xl text-primary group-hover:text-secondary transition-colors uppercase tracking-tight mb-2">{item.name}</h3>
-              <div class="flex flex-wrap gap-2 mb-4">
-                {item.sizes.map(s => (
-                  <span class="px-2 py-1 bg-white/5 text-[9px] font-mono text-primary border border-primary/10">{s}</span>
-                ))}
-                {item.colors.map(c => (
-                  <span class="px-2 py-1 bg-white/5 text-[9px] font-mono text-secondary border border-secondary/10">{c}</span>
-                ))}
-              </div>
-              <a href={mailto} class="block w-full py-3 border border-primary/20 hover:bg-primary hover:text-on-primary font-mono text-[10px] tracking-widest transition-all uppercase text-center group-hover:border-primary/40">
-                EMAIL TO ORDER
-              </a>
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  </section>
-
-  <!-- Music Section -->
+  <!-- Music -->
   <section class="max-w-[1400px] mx-auto mb-24">
     <div class="flex items-baseline gap-4 mb-8">
       <span class="font-mono text-xs text-secondary uppercase">Music</span>
       <div class="h-[1px] flex-1 bg-outline-variant/30"></div>
+      <span class="font-mono text-[10px] text-white/30">{releases.length}</span>
     </div>
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-      {musicItems.map(item => (
-        <a href={item.url} class="group relative bg-surface-container-low border border-white/5 transition-all duration-500 hover:border-secondary/30 terminal-glow block">
+      {releases.map(r => (
+        <a href={`/store/music/${r.slug}`} class="group relative bg-surface-container-low border border-white/5 transition-all duration-500 hover:border-secondary/30 terminal-glow block">
           <div class="relative overflow-hidden">
             <img
-              src={item.image}
-              alt={item.title}
+              src={r.artwork}
+              alt={r.title}
               loading="lazy"
               decoding="async"
               class="w-full aspect-square object-cover grayscale opacity-50 group-hover:grayscale-0 group-hover:scale-105 group-hover:opacity-100 transition-all duration-700"
             />
             <div class="absolute inset-0 bg-gradient-to-t from-background to-transparent opacity-60"></div>
             <div class="absolute bottom-4 left-4 font-mono text-[10px] space-y-1">
-              <div class="flex items-center gap-2 bg-background/80 px-2 py-1 backdrop-blur-md text-secondary">
-                <span class="material-symbols-outlined text-sm">{platformIcons[item.platform]}</span>
-                {item.platform.toUpperCase()}
+              <div class="flex items-center gap-2 bg-background/80 px-2 py-1 backdrop-blur-md text-secondary uppercase">
+                <span class="material-symbols-outlined text-sm">album</span>
+                {r.type}
               </div>
               <div class="flex items-center gap-2 bg-background/80 px-2 py-1 backdrop-blur-md text-primary">
-                {item.price}
+                ${(r.min_price_cents / 100).toFixed(0)}+
               </div>
             </div>
+            {!r.has_masters && (
+              <div class="absolute top-3 right-3 bg-background/80 backdrop-blur-md px-2 py-1 font-mono text-[9px] text-white/50 uppercase tracking-widest">
+                Soon
+              </div>
+            )}
           </div>
           <div class="p-6">
-            <h3 class="font-headline text-xl text-primary group-hover:text-secondary transition-colors uppercase tracking-tight mb-2">{item.title}</h3>
-            <p class="font-mono text-[11px] text-white/40 leading-relaxed mb-4">{item.description}</p>
-            <div class="flex flex-wrap gap-2 mb-6">
-              {item.tags.map(t => (
-                <span class="px-2 py-1 bg-white/5 text-[9px] font-mono text-primary border border-primary/10">#{t.toUpperCase()}</span>
+            <h3 class="font-headline text-xl text-primary group-hover:text-secondary transition-colors uppercase tracking-tight mb-2">{r.title}</h3>
+            {r.description && <p class="font-mono text-[11px] text-white/40 leading-relaxed mb-4 line-clamp-2">{r.description}</p>}
+            <div class="flex flex-wrap gap-2 mb-4">
+              {r.genre.slice(0, 3).map(g => (
+                <span class="px-2 py-1 bg-white/5 text-[9px] font-mono text-primary border border-primary/10 uppercase">#{g}</span>
               ))}
             </div>
-            <button class="w-full py-3 border border-primary/20 hover:bg-primary hover:text-on-primary font-mono text-[10px] tracking-widest transition-all uppercase group-hover:border-primary/40">
-              GET ON {item.platform.toUpperCase()}
-            </button>
+            <div class="w-full py-3 border border-primary/20 group-hover:border-primary/60 group-hover:bg-primary/5 font-mono text-[10px] tracking-widest transition-all uppercase text-center text-primary">
+              {r.has_masters ? 'Buy + Download' : 'Preview'}
+            </div>
           </div>
         </a>
       ))}
     </div>
   </section>
 
-  <!-- Footer divider -->
+  <!-- Merch -->
+  <section class="max-w-[1400px] mx-auto mb-24">
+    <div class="flex items-baseline gap-4 mb-8">
+      <span class="font-mono text-xs text-secondary uppercase">Merch</span>
+      <div class="h-[1px] flex-1 bg-outline-variant/30"></div>
+      <span class="font-mono text-[10px] text-white/30">{merchItems.length}</span>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+      {merchItems.map(item => (
+        <a href={`/store/merch/${item.slug}`} class="group relative bg-surface-container-low border border-white/5 transition-all duration-500 hover:border-secondary/30 terminal-glow block">
+          <div class="relative overflow-hidden">
+            <img
+              src={item.thumbnail}
+              alt={item.name}
+              class="w-full aspect-square object-cover grayscale opacity-50 group-hover:grayscale-0 group-hover:scale-105 group-hover:opacity-100 transition-all duration-700"
+              loading="lazy"
+            />
+            <div class="absolute inset-0 bg-gradient-to-t from-background to-transparent opacity-60"></div>
+            <div class="absolute bottom-4 left-4 font-mono text-[10px] space-y-1">
+              <div class="flex items-center gap-2 bg-background/80 px-2 py-1 backdrop-blur-md text-secondary">
+                <span class="material-symbols-outlined text-sm">checkroom</span>
+                MERCH
+              </div>
+              <div class="flex items-center gap-2 bg-background/80 px-2 py-1 backdrop-blur-md text-primary">
+                {formatPrice(item.price_low, item.price_high)}
+              </div>
+            </div>
+          </div>
+          <div class="p-6">
+            <h3 class="font-headline text-xl text-primary group-hover:text-secondary transition-colors uppercase tracking-tight mb-2">{item.name}</h3>
+            <div class="flex flex-wrap gap-2 mb-4">
+              {item.sizes.slice(0, 6).map(s => (
+                <span class="px-2 py-1 bg-white/5 text-[9px] font-mono text-primary border border-primary/10">{s}</span>
+              ))}
+              {item.colors.slice(0, 4).map(c => (
+                <span class="px-2 py-1 bg-white/5 text-[9px] font-mono text-secondary border border-secondary/10">{c}</span>
+              ))}
+            </div>
+            <div class="w-full py-3 border border-primary/20 group-hover:border-primary/60 group-hover:bg-primary/5 font-mono text-[10px] tracking-widest transition-all uppercase text-center text-primary">
+              View · Pick size
+            </div>
+          </div>
+        </a>
+      ))}
+    </div>
+  </section>
+
   <div class="brand-divider brand-divider--wide mt-12 mb-0 max-w-[1400px] mx-auto">
     <img src="/images/brand/morph-line-j.png" alt="" loading="lazy" />
   </div>
 
-  <!-- Footer Stats -->
   <footer class="max-w-[1400px] mx-auto mt-4 pt-12 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-8">
     <div class="flex gap-12">
       <div>
         <div class="font-mono text-[9px] text-white/20 uppercase mb-1">Releases</div>
-        <div class="font-headline text-lg text-primary">{musicItems.length}</div>
+        <div class="font-headline text-lg text-primary">{releases.length}</div>
       </div>
       <div>
-        <div class="font-mono text-[9px] text-white/20 uppercase mb-1">Digital Formats</div>
-        <div class="font-headline text-lg text-primary">FLAC / WAV / MP3</div>
+        <div class="font-mono text-[9px] text-white/20 uppercase mb-1">Merch</div>
+        <div class="font-headline text-lg text-primary">{merchItems.length}</div>
+      </div>
+      <div>
+        <div class="font-mono text-[9px] text-white/20 uppercase mb-1">Formats</div>
+        <div class="font-headline text-lg text-primary">FLAC / MP3</div>
       </div>
     </div>
     <div class="flex gap-4">
       <span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
-      <span class="font-mono text-[10px] text-white/40 uppercase tracking-widest">Store Online...</span>
+      <span class="font-mono text-[10px] text-white/40 uppercase tracking-widest">Store Online</span>
     </div>
   </footer>
 </BaseLayout>

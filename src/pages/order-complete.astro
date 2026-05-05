@@ -1,0 +1,33 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="THANK YOU" currentPage="">
+  <div class="max-w-2xl mx-auto text-center pt-12">
+    <span class="font-mono text-xs text-secondary uppercase tracking-widest">Order received</span>
+    <h1 class="font-headline font-bold text-5xl md:text-7xl text-primary uppercase tracking-tighter leading-none mt-4 mb-8">
+      THANK YOU
+    </h1>
+    <div class="space-y-6 text-on-surface-variant font-body leading-relaxed max-w-lg mx-auto">
+      <p>Your support keeps Morphics running. Every purchase goes directly to making more music and visuals.</p>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8 text-left">
+        <div class="border border-white/10 p-6">
+          <div class="font-mono text-[10px] text-secondary uppercase tracking-widest mb-2">Digital</div>
+          <p class="font-mono text-[11px] text-white/60 leading-relaxed">Download link sent to your email. If you don't see it, check spam.</p>
+        </div>
+        <div class="border border-white/10 p-6">
+          <div class="font-mono text-[10px] text-secondary uppercase tracking-widest mb-2">Merch</div>
+          <p class="font-mono text-[11px] text-white/60 leading-relaxed">Made-to-order via Printful. Tracking will arrive in your email.</p>
+        </div>
+      </div>
+      <div class="pt-8 flex justify-center gap-4">
+        <a href="/store" class="px-6 py-3 border border-primary/20 hover:border-primary/60 hover:bg-primary/5 font-mono text-[10px] tracking-widest uppercase text-primary">
+          Back to store
+        </a>
+        <a href="/" class="px-6 py-3 border border-white/10 hover:border-white/30 font-mono text-[10px] tracking-widest uppercase text-white/60">
+          Home
+        </a>
+      </div>
+    </div>
+  </div>
+</BaseLayout>

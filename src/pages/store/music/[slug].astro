@@ -1,0 +1,140 @@
+---
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import catalog from '../../../data/music-catalog.json';
+
+export function getStaticPaths() {
+  return catalog.releases.map(r => ({ params: { slug: r.slug }, props: { release: r } }));
+}
+
+const { release } = Astro.props;
+const minPriceDollars = (release.min_price_cents / 100).toFixed(0);
+
+function fmtDuration(seconds: number | null) {
+  if (!seconds) return '—';
+  const m = Math.floor(seconds / 60);
+  const s = String(seconds % 60).padStart(2, '0');
+  return `${m}:${s}`;
+}
+---
+
+<BaseLayout title={release.title} currentPage="/store">
+  <div class="max-w-[1400px] mx-auto">
+    <a href="/store" class="inline-flex items-center gap-2 font-mono text-[10px] text-white/40 hover:text-secondary uppercase tracking-widest mb-8">
+      <span class="material-symbols-outlined text-sm">arrow_back</span> Back to store
+    </a>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+      <div class="relative bg-surface-container-low border border-white/5 overflow-hidden">
+        <img src={release.artwork} alt={release.title} class="w-full aspect-square object-cover" />
+      </div>
+
+      <div>
+        <span class="font-mono text-[10px] text-secondary uppercase tracking-widest">{release.type}</span>
+        <h1 class="font-headline font-bold text-4xl md:text-5xl text-primary uppercase tracking-tight mt-2 mb-4 leading-none">
+          {release.title}
+        </h1>
+        {release.description && (
+          <p class="font-mono text-[11px] text-white/50 leading-relaxed mb-6">{release.description}</p>
+        )}
+        <div class="flex flex-wrap gap-2 mb-8">
+          {release.genre.map(g => (
+            <span class="px-2 py-1 bg-white/5 text-[9px] font-mono text-primary border border-primary/10 uppercase">#{g}</span>
+          ))}
+        </div>
+
+        <form id="release-form" class="space-y-6">
+          <div>
+            <label class="block font-mono text-[10px] text-white/40 uppercase tracking-widest mb-3">
+              Name your price · Minimum ${minPriceDollars}
+            </label>
+            <div class="relative">
+              <span class="absolute left-4 top-1/2 -translate-y-1/2 font-mono text-secondary">$</span>
+              <input
+                type="number"
+                name="price"
+                min={minPriceDollars}
+                step="1"
+                value={minPriceDollars}
+                class="w-full pl-10 pr-4 py-4 bg-surface-container-low border border-white/10 focus:border-secondary outline-none font-mono text-2xl text-primary"
+                required
+              />
+            </div>
+            <p class="font-mono text-[9px] text-white/30 mt-2">FLAC + MP3 download · Delivered by email after purchase</p>
+          </div>
+          <button
+            type="submit"
+            class="w-full py-4 bg-primary text-on-primary font-mono text-[11px] tracking-widest uppercase hover:bg-secondary hover:text-on-secondary transition-colors disabled:opacity-30"
+            disabled={!release.has_masters}
+          >
+            {release.has_masters ? `Buy ${release.type === 'single' ? 'track' : 'release'}` : 'Coming soon'}
+          </button>
+          {!release.has_masters && (
+            <p class="font-mono text-[10px] text-white/40">Master files not yet uploaded for this release.</p>
+          )}
+        </form>
+
+        {release.bandcamp_url && (
+          <a href={release.bandcamp_url} target="_blank" rel="noopener" class="block mt-4 text-center py-3 border border-white/10 hover:border-secondary/40 font-mono text-[10px] text-white/60 hover:text-secondary uppercase tracking-widest transition-colors">
+            Or get on Bandcamp →
+          </a>
+        )}
+      </div>
+    </div>
+
+    {release.tracks.length > 0 && (
+      <section class="mt-16">
+        <div class="flex items-baseline gap-4 mb-6">
+          <span class="font-mono text-xs text-secondary uppercase">Tracks</span>
+          <div class="h-[1px] flex-1 bg-outline-variant/30"></div>
+          <span class="font-mono text-[10px] text-white/30">{release.tracks.length}</span>
+        </div>
+        <ol class="divide-y divide-white/5">
+          {release.tracks.map(t => (
+            <li class="flex items-center gap-4 py-3 group">
+              <span class="font-mono text-[10px] text-white/30 w-8">{String(t.track_number).padStart(2, '0')}</span>
+              <span class="flex-1 font-headline text-primary uppercase tracking-tight">{t.title}</span>
+              <span class="font-mono text-[10px] text-white/40">{fmtDuration(t.duration_seconds)}</span>
+            </li>
+          ))}
+        </ol>
+      </section>
+    )}
+  </div>
+
+  <script type="application/json" id="release-data" set:html={JSON.stringify({
+    slug: release.slug,
+    title: release.title,
+    image: release.artwork,
+    min_cents: release.min_price_cents,
+    track_count: release.track_count,
+    type: release.type,
+  })} />
+
+  <script>
+    import '../../../scripts/cart.js';
+    const release = JSON.parse(document.getElementById('release-data')!.textContent || '{}');
+    const form = document.getElementById('release-form') as HTMLFormElement;
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const fd = new FormData(form);
+      const dollars = parseFloat(String(fd.get('price') || '0'));
+      const cents = Math.round(dollars * 100);
+      if (cents < release.min_cents) return;
+
+      (window as any).morphicsCart.add({
+        type: 'music',
+        sku: `music:${release.slug}`,
+        title: release.title,
+        subtitle: `${release.type.toUpperCase()} · ${release.track_count} track${release.track_count === 1 ? '' : 's'} · digital`,
+        image: release.image,
+        unit_amount: cents,
+        qty: 1,
+        metadata: {
+          release_slug: release.slug,
+        },
+      });
+      (window as any).morphicsCart.open();
+    });
+  </script>
+</BaseLayout>

@@ -1,0 +1,92 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="DOWNLOAD" currentPage="">
+  <div class="max-w-3xl mx-auto">
+    <header class="mb-12">
+      <span class="font-mono text-xs text-secondary uppercase">Library</span>
+      <h1 class="font-headline font-bold text-5xl md:text-7xl text-primary uppercase tracking-tighter leading-none mt-2">DOWNLOAD</h1>
+    </header>
+
+    <div id="dl-loading" class="font-mono text-[11px] text-white/40">Loading your downloads…</div>
+    <div id="dl-error" class="hidden font-mono text-sm text-red-400"></div>
+    <div id="dl-content" class="hidden space-y-12"></div>
+
+    <p class="mt-16 font-mono text-[10px] text-white/30 leading-relaxed">
+      Bookmark this page or save the email — link is good for 7 days and 5 downloads total.
+      Need a fresh link? Email <a href="mailto:morphicsmusic@gmail.com" class="underline hover:text-secondary">morphicsmusic@gmail.com</a>.
+    </p>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(location.search);
+    const token = params.get('token');
+    const loading = document.getElementById('dl-loading')!;
+    const errEl = document.getElementById('dl-error')!;
+    const content = document.getElementById('dl-content')!;
+
+    function fail(msg: string) {
+      loading.classList.add('hidden');
+      errEl.textContent = msg;
+      errEl.classList.remove('hidden');
+    }
+
+    function fmtSize(bytes: number) {
+      if (bytes > 1e9) return (bytes / 1e9).toFixed(2) + ' GB';
+      if (bytes > 1e6) return (bytes / 1e6).toFixed(1) + ' MB';
+      return Math.ceil(bytes / 1024) + ' KB';
+    }
+
+    if (!token) {
+      fail('No token in URL. Use the link from your purchase email.');
+    } else {
+      fetch(`/api/download?action=list&token=${encodeURIComponent(token)}`)
+        .then(async r => {
+          if (!r.ok) throw new Error(await r.text());
+          return r.json();
+        })
+        .then((data: any) => {
+          loading.classList.add('hidden');
+          content.classList.remove('hidden');
+
+          const expiresAt = new Date(data.expires_at * 1000).toLocaleString();
+          const usesLeft = data.max_uses - data.uses;
+
+          content.innerHTML = `
+            <div class="flex flex-wrap gap-x-8 gap-y-2 pb-6 border-b border-white/10 font-mono text-[10px] text-white/40 uppercase tracking-widest">
+              <div>Email: <span class="text-primary normal-case tracking-normal">${data.email}</span></div>
+              <div>Expires: <span class="text-primary normal-case tracking-normal">${expiresAt}</span></div>
+              <div>Uses left: <span class="text-primary">${usesLeft} / ${data.max_uses}</span></div>
+            </div>
+          ` + data.releases.map((r: any) => `
+            <section>
+              <div class="flex items-center gap-4 mb-4">
+                <img src="${r.artwork}" alt="" class="w-16 h-16 object-cover bg-white/5" />
+                <div>
+                  <div class="font-mono text-[10px] text-secondary uppercase tracking-widest">Release</div>
+                  <h2 class="font-headline text-2xl text-primary uppercase tracking-tight">${r.title}</h2>
+                </div>
+              </div>
+              ${r.files.length === 0 ? `<p class="font-mono text-[11px] text-white/30">Files not yet uploaded — check back shortly.</p>` :
+                `<ul class="divide-y divide-white/5 border-y border-white/5">
+                  ${r.files.map((f: any) => `
+                    <li class="flex items-center gap-4 py-3">
+                      <span class="font-mono text-[10px] text-white/30 uppercase">${f.ext}</span>
+                      <span class="flex-1 font-mono text-[11px] text-white/80 truncate">${f.filename}</span>
+                      <span class="font-mono text-[10px] text-white/40">${fmtSize(f.size)}</span>
+                      <a href="/api/download?token=${encodeURIComponent(token)}&key=${encodeURIComponent(f.key)}"
+                         class="px-3 py-2 border border-primary/20 hover:border-primary/60 hover:bg-primary/5 font-mono text-[10px] tracking-widest uppercase text-primary">
+                        Download
+                      </a>
+                    </li>
+                  `).join('')}
+                </ul>`
+              }
+            </section>
+          `).join('');
+        })
+        .catch((e: any) => fail('Could not load downloads: ' + e.message));
+    }
+  </script>
+</BaseLayout>

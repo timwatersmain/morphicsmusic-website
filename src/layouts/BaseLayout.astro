@@ -3,6 +3,7 @@ import TopNav from '../components/TopNav.astro';
 import BottomNav from '../components/BottomNav.astro';
 import CornerAccents from '../components/CornerAccents.astro';
 import ParticleBackground from '../components/ParticleBackground.astro';
+import Cart from '../components/Cart.astro';
 import '../styles/global.css';
 
 interface Props {
@@ -38,5 +39,6 @@ const { title, currentPage = '' } = Astro.props;
   </main>
 
   <BottomNav currentPage={currentPage} />
+  <Cart />
 </body>
 </html>

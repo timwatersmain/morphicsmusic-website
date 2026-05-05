@@ -1,19 +1,196 @@
 [
   {
-    "id": "45fa3e12-7465-4be0-a765-20ade5c342ee",
+    "id": "14d68549-d7a1-4064-8a80-28b7bde9b8c6",
+    "title": "BEEN WORKING ON A MULTI-FX VST THE PAST FEW MONTHS. WILL HOP",
+    "type": "text",
+    "mediaUrl": "",
+    "thumbnail": "",
+    "caption": "Been working on a multi-fx vst the past few months. Will hopefully be able to get it out soon just need to figure out some of the logistics for user accounts and updates. Plan on this being my only plugin ever so its going to get alot of love until its a beautiful polished plugin. ",
+    "date": "2026-04-29",
+    "platform": "bluesky",
+    "url": "https://bsky.app/profile/morphics.bsky.social/post/3mkndexqzue2q",
+    "originalPlatforms": [
+      "bluesky",
+      "facebook",
+      "twitter"
+    ]
+  },
+  {
+    "id": "sc_repost_2311139210",
+    "title": "REPOSTED: MORPHIA — DUBTECHRE",
+    "type": "audio",
+    "mediaUrl": "https://i1.sndcdn.com/artworks-VxC7O1ncZ2wLBacc-LTMmcQ-t500x500.jpg",
+    "thumbnail": "",
+    "caption": "Reposted: Morphia — Dubtechre",
+    "date": "2026-04-29",
+    "platform": "soundcloud",
+    "url": "https://soundcloud.com/morphiasound/dubtechre",
+    "originalPlatforms": [
+      "soundcloud"
+    ]
+  },
+  {
+    "id": "manual_tiktok_20260429203601",
+    "title": "YEAHHH #DJ #LIVEMUSIC #MIXING #EDM #EDMTIKTOK",
+    "type": "video",
+    "mediaUrl": "",
+    "thumbnail": "",
+    "caption": "Yeahhh #dj #livemusic #mixing #edm #edmtiktok",
+    "date": "2026-04-28",
+    "platform": "tiktok",
+    "url": "https://www.tiktok.com/@skratchwax/video/7633877727577148703",
+    "originalPlatforms": [
+      "tiktok"
+    ]
+  },
+  {
+    "id": "3aec7769-b963-4e5a-85f8-ad1efb6158ab",
+    "title": "SOMEONE MAKE ME PUT MUSIC OUT",
+    "type": "video",
+    "mediaUrl": "https://pub-a0375585d55c403e96807f495afed472.r2.dev/0c4d830afa2748f39e35c2a4a42615d3.mp4",
+    "thumbnail": "",
+    "caption": "Someone make me put music out",
+    "date": "2026-04-28",
+    "platform": "youtube",
+    "url": "https://www.youtube.com/watch?v=839nA0ECY-Y",
+    "originalPlatforms": [
+      "youtube",
+      "instagram",
+      "bluesky",
+      "facebook"
+    ]
+  },
+  {
+    "id": "1eb5f457-7935-47a0-888c-412cd78caa3a",
+    "title": "DISCOGRAPHY IS ALMOST FULLY ORGANIZED! SHOULD I START RELEAS",
+    "type": "text",
+    "mediaUrl": "",
+    "thumbnail": "",
+    "caption": "Discography is almost fully organized! Should I start releasing some new music? ",
+    "date": "2026-04-18",
+    "platform": "bluesky",
+    "url": "https://bsky.app/profile/morphics.bsky.social/post/3mjs2uz3zlr2j",
+    "originalPlatforms": [
+      "bluesky",
+      "facebook",
+      "twitter"
+    ]
+  },
+  {
+    "id": "05453aa9-112a-44be-88c9-9e339f2d3758",
+    "title": "BACK AT IT",
+    "type": "video",
+    "mediaUrl": "https://pub-a0375585d55c403e96807f495afed472.r2.dev/f2ee158ba3d4412b8b6ce7a505aa7723_original.mp4",
+    "thumbnail": "",
+    "caption": "back at it",
+    "date": "2026-04-13",
+    "platform": "tiktok",
+    "url": "https://www.tiktok.com/@skratchwax/video/7628254789331193118",
+    "originalPlatforms": [
+      "tiktok"
+    ]
+  },
+  {
+    "id": "c1a0a347-71e4-43d3-a92a-a8091a715d66",
+    "title": "GETTING BACK INTO IT",
+    "type": "video",
+    "mediaUrl": "https://pub-a0375585d55c403e96807f495afed472.r2.dev/4b97db871cdf413298191a85da12c10b.mp4",
+    "thumbnail": "",
+    "caption": "Getting back into it",
+    "date": "2026-04-12",
+    "platform": "instagram",
+    "url": "https://www.instagram.com/p/18575708551012293/",
+    "originalPlatforms": [
+      "instagram",
+      "bluesky",
+      "facebook",
+      "discord"
+    ]
+  },
+  {
+    "id": "98379edb-147d-4ddf-aaa3-949da3bd6496",
+    "title": "",
+    "type": "video",
+    "mediaUrl": "",
+    "thumbnail": "",
+    "caption": "",
+    "date": "2026-04-11",
+    "platform": "tiktok",
+    "url": "https://www.tiktok.com/@skratchwax/video/7182918793969143086",
+    "originalPlatforms": [
+      "tiktok"
+    ]
+  },
+  {
+    "id": "8e4f6b83-f87e-4b55-9139-1e08e58b5bb8",
+    "title": "NO AI BRAINROT HERE. JUST HANDCRAFTED AUDIO VISUAL ART. 🫠",
+    "type": "video",
+    "mediaUrl": "https://pub-a0375585d55c403e96807f495afed472.r2.dev/a6faaf94b2524612871ea910beec610e.mp4",
+    "thumbnail": "",
+    "caption": "No AI brainrot here. Just handcrafted audio visual art. 🫠",
+    "date": "2026-04-10",
+    "platform": "bluesky",
+    "url": "https://bsky.app/profile/morphics.bsky.social/post/3mj57q2r7ey2n",
+    "originalPlatforms": [
+      "bluesky"
+    ]
+  },
+  {
+    "id": "5719daac-f1b6-4de1-8c48-eddfb1ce788b",
+    "title": "SOUND CHECK",
+    "type": "text",
+    "mediaUrl": "",
+    "thumbnail": "",
+    "caption": "Sound Check",
+    "date": "2026-04-03",
+    "platform": "twitter",
+    "url": "https://x.com/MorphicsMusic/status/2040175959840629167",
+    "originalPlatforms": [
+      "twitter"
+    ]
+  },
+  {
+    "id": "e36b0da4-4fd4-4734-ae89-2dbe172f3588",
+    "title": "NEVER BEEN MORE LOCKED IN",
+    "type": "text",
+    "mediaUrl": "",
+    "thumbnail": "",
+    "caption": "Never been more locked in",
+    "date": "2026-04-03",
+    "platform": "bluesky",
+    "url": "https://bsky.app/profile/morphics.bsky.social/post/3mimhanzfjc2z",
+    "originalPlatforms": [
+      "bluesky"
+    ]
+  },
+  {
+    "id": "183fa7f5-7139-4200-9420-b219cc86b6be",
+    "title": "THREE EYES. ALL OF THEM OPEN.\n",
+    "type": "video",
+    "mediaUrl": "https://pub-a0375585d55c403e96807f495afed472.r2.dev/faa4706ad78244438809332ccda9784d.mp4",
+    "thumbnail": "",
+    "caption": "three eyes. all of them open.\n",
+    "date": "2026-04-02",
+    "platform": "youtube",
+    "url": "https://www.youtube.com/watch?v=0g7x8Orp0js",
+    "originalPlatforms": [
+      "youtube",
+      "bluesky"
+    ]
+  },
+  {
+    "id": "ca7eebf6-185c-4fbd-a761-154eedcaf331",
     "title": "WATCHING STRUCTURES DISSOLVE AND REBUILD.",
     "type": "video",
     "mediaUrl": "https://pub-a0375585d55c403e96807f495afed472.r2.dev/f8eeb359dda64e74a5fce87100e2f207.mp4",
     "thumbnail": "",
     "caption": "watching structures dissolve and rebuild.",
     "date": "2026-03-28",
-    "platform": "youtube",
-    "url": "https://www.youtube.com/watch?v=jldVB1NjQto",
+    "platform": "instagram",
+    "url": "https://www.instagram.com/reel/DWbjKuzlI2l/",
     "originalPlatforms": [
-      "youtube",
       "instagram",
-      "bluesky",
-      "facebook"
+      "bluesky"
     ]
   }
 ]
