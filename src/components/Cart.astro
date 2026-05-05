@@ -4,8 +4,9 @@
 
 <button
   id="cart-button"
-  class="fixed top-6 right-6 z-50 w-12 h-12 flex items-center justify-center bg-background/80 border border-white/10 backdrop-blur-md hover:border-secondary/40 transition-all group"
+  class="fixed top-6 right-6 z-[70] w-12 h-12 flex items-center justify-center bg-background/80 border border-white/10 backdrop-blur-md hover:border-secondary/40 transition-all group"
   aria-label="Open cart"
+  onclick="document.dispatchEvent(new CustomEvent('cart:open'))"
 >
   <span class="material-symbols-outlined text-primary group-hover:text-secondary">shopping_bag</span>
   <span
@@ -16,7 +17,7 @@
 
 <div
   id="cart-drawer"
-  class="fixed inset-0 z-[60] pointer-events-none"
+  class="fixed inset-0 z-[80] pointer-events-none"
   aria-hidden="true"
 >
   <div id="cart-backdrop" class="absolute inset-0 bg-black/60 opacity-0 transition-opacity duration-300"></div>
@@ -88,10 +89,13 @@
     panel.style.transform = 'translateX(100%)';
   }
 
-  button.addEventListener('click', open);
+  // The button has an inline onclick that dispatches cart:open — relying on
+  // the document-level listener below means even if module init races the
+  // first click, the bubbled event reopens the drawer correctly.
   closeBtn.addEventListener('click', close);
   backdrop.addEventListener('click', close);
   document.addEventListener('cart:open', open);
+  console.log('[cart] wired:', { button: !!button, drawer: !!drawer, panel: !!panel });
 
   function render() {
     const items = cart.items();
