@@ -19,8 +19,12 @@ const SITE_PATH = resolve(import.meta.dirname, '..');
 const MASTERS_DIR = join(os.homedir(), 'Desktop', 'Morphics Masters');
 
 function query(sql) {
-  const raw = execSync(`sqlite3 -json "${BRAIN_DB}" "${sql.replace(/"/g, '\\"')}"`, { encoding: 'utf-8' });
-  return JSON.parse(raw || '[]');
+  try {
+    const raw = execSync(`sqlite3 -json "${BRAIN_DB}" "${sql.replace(/"/g, '\\"')}"`, { encoding: 'utf-8' });
+    return JSON.parse(raw || '[]');
+  } catch {
+    return null;
+  }
 }
 
 // Tiered minimum pricing (cents). Name-your-price — buyer can pay >= min.
@@ -65,10 +69,18 @@ const releases = query(
   `SELECT id, title, type, release_date, artwork_path, bandcamp_url, genre, description
    FROM releases ORDER BY release_date DESC`,
 );
+
+// On a build server (Cloudflare Pages, etc.) the brain DB won't exist —
+// keep whatever music-catalog.json was last committed and exit cleanly.
+if (releases === null) {
+  console.log('• brain DB unreachable — leaving src/data/music-catalog.json as committed');
+  process.exit(0);
+}
+
 const tracks = query(
   `SELECT id, release_id, track_number, title, isrc, duration_seconds
    FROM tracks ORDER BY release_id, track_number`,
-);
+) || [];
 
 const tracksByRelease = {};
 for (const t of tracks) {
