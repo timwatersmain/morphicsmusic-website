@@ -44,12 +44,27 @@ function slugify(s) {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
 
+// Slugs to skip when syncing — products that exist on Printful but Tim
+// doesn't want listed in the on-site store. To re-enable, remove from this set.
+const HIDE_SLUGS = new Set([
+  'morphics-logo-t-shirt',
+  'morphics-grafitti-hoodie',
+  'grafitti-hoodie',
+  'sound-experiments-t-shirt',
+  'morphics-premium-heavyweight-tee',
+]);
+
 console.log('• fetching Printful store products...');
 const products = await pf('/store/products');
 console.log(`  ${products.length} products`);
 
 const out = [];
 for (const p of products) {
+  const slug = slugify(p.name);
+  if (HIDE_SLUGS.has(slug)) {
+    console.log(`• ${p.name} (hidden — skipped)`);
+    continue;
+  }
   console.log(`• ${p.name}`);
   const detail = await pf(`/store/products/${p.id}`);
   const variants = detail.sync_variants.map(v => ({
@@ -71,7 +86,7 @@ for (const p of products) {
 
   out.push({
     id: p.id,
-    slug: slugify(p.name),
+    slug,
     name: p.name,
     thumbnail: p.thumbnail_url,
     price_low: Math.min(...prices),

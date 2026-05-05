@@ -1,89 +1,11 @@
 [
   {
-    "id": 305708269,
-    "slug": "morphics-logo-t-shirt",
-    "name": "Morphics Logo T Shirt",
-    "thumbnail": "https://files.cdn.printful.com/files/3f4/3f4b82d7cb9b3f4de8222d91d220a76e_preview.png",
-    "price_low": 15.0,
-    "price_high": 15.0,
-    "currency": "USD",
-    "sizes": [
-      "M",
-      "L",
-      "XL",
-      "2XL"
-    ],
-    "colors": [
-      "Black"
-    ],
-    "variant_count": 4
-  },
-  {
-    "id": 305444405,
-    "slug": "morphics-grafitti-hoodie",
-    "name": "Morphics Grafitti Hoodie",
-    "thumbnail": "https://files.cdn.printful.com/files/63a/63a46f3f82e6e1380c473fda6995cd8d_preview.png",
-    "price_low": 35.0,
-    "price_high": 35.0,
-    "currency": "USD",
-    "sizes": [
-      "M",
-      "L",
-      "XL",
-      "2XL"
-    ],
-    "colors": [
-      "Black"
-    ],
-    "variant_count": 4
-  },
-  {
-    "id": 305443335,
-    "slug": "sound-experiments-t-shirt",
-    "name": "Sound Experiments T Shirt",
-    "thumbnail": "https://files.cdn.printful.com/files/094/09416cb01a99612b746ffbb122d1ef55_preview.png",
-    "price_low": 25.0,
-    "price_high": 25.0,
-    "currency": "USD",
-    "sizes": [
-      "M",
-      "L",
-      "XL",
-      "2XL"
-    ],
-    "colors": [
-      "Black"
-    ],
-    "variant_count": 4
-  },
-  {
-    "id": 302467027,
-    "slug": "grafitti-hoodie",
-    "name": "Grafitti Hoodie",
-    "thumbnail": "https://files.cdn.printful.com/files/29d/29d3b3bb39a878bb749688eb02041b2a_preview.png",
-    "price_low": 40.0,
-    "price_high": 47.0,
-    "currency": "USD",
-    "sizes": [
-      "S",
-      "M",
-      "L",
-      "XL",
-      "2XL",
-      "3XL"
-    ],
-    "colors": [
-      "Black"
-    ],
-    "variant_count": 6
-  },
-  {
     "id": 294214965,
     "slug": "morphics-embroidered-beanie",
-    "name": "Morphics \u2014 Embroidered Beanie",
+    "name": "Morphics — Embroidered Beanie",
     "thumbnail": "https://files.cdn.printful.com/files/f0a/f0a7771ef0f786c6e2ac220ceca3a0a9_preview.png",
-    "price_low": 20.0,
-    "price_high": 20.0,
+    "price_low": 20,
+    "price_high": 20,
     "currency": "USD",
     "sizes": [
       "One size"
@@ -92,26 +14,5 @@
       "Black"
     ],
     "variant_count": 1
-  },
-  {
-    "id": 294214863,
-    "slug": "morphics-premium-heavyweight-tee",
-    "name": "Morphics \u2014 Premium Heavyweight Tee",
-    "thumbnail": "https://files.cdn.printful.com/files/d11/d112cc568f8b20afc28cc750fbe04326_preview.png",
-    "price_low": 27.5,
-    "price_high": 27.5,
-    "currency": "USD",
-    "sizes": [
-      "S",
-      "M",
-      "L",
-      "XL",
-      "2XL",
-      "3XL"
-    ],
-    "colors": [
-      "Black"
-    ],
-    "variant_count": 6
   }
 ]
