@@ -30,8 +30,28 @@ const navItems = [
     ))}
   </nav>
   <div class="flex items-center space-x-4">
+    <a id="account-link" href="/login" class="hidden md:inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-white/40 hover:text-secondary transition-colors">
+      <span class="material-symbols-outlined text-base">person</span>
+      <span id="account-link-label">Sign in</span>
+    </a>
     <a href="/" class="hover:scale-105 transition-all duration-[400ms]">
       <img src="/images/logos/emblem-circle.png" alt="Morphics" class="h-12 w-12 object-contain" />
     </a>
   </div>
 </header>
+
+<script>
+  // If a session cookie is valid, the link points to /library and shows the
+  // word "Library" instead of "Sign in".
+  fetch('/api/auth/me', { credentials: 'include' })
+    .then(r => r.json())
+    .then((data: any) => {
+      if (data && data.email) {
+        const a = document.getElementById('account-link') as HTMLAnchorElement;
+        const lbl = document.getElementById('account-link-label')!;
+        a.href = '/library';
+        lbl.textContent = 'Library';
+      }
+    })
+    .catch(() => {});
+</script>

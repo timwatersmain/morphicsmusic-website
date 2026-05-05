@@ -97,6 +97,68 @@ async function issueDownloadGrant(env: Env, email: string, releaseSlugs: string[
   return token;
 }
 
+interface CustomerPurchase {
+  purchased_at: number;
+  stripe_session_id: string;
+  music_release_slugs: string[];
+  merch_items: Array<{ printful_variant_id?: number; quantity: number }>;
+  amount_total: number;
+  currency: string;
+}
+
+interface CustomerRecord {
+  email: string;
+  name?: string | null;
+  first_seen_at: number;
+  last_seen_at: number;
+  purchases: CustomerPurchase[];
+}
+
+// Append a purchase to the customer record. Used by /library to show the
+// buyer everything they've ever bought, regardless of email-link expiry.
+async function recordCustomerPurchase(
+  env: Env,
+  email: string,
+  name: string | null | undefined,
+  session: Stripe.Checkout.Session,
+  fulfillment: FulfillmentEntry[],
+) {
+  const lower = email.toLowerCase().trim();
+  const key = `customer:${lower}`;
+  const now = Math.floor(Date.now() / 1000);
+  const existing = await env.DOWNLOADS.get(key);
+  let record: CustomerRecord;
+  if (existing) {
+    try { record = JSON.parse(existing); } catch { record = {} as CustomerRecord; }
+  } else {
+    record = {
+      email: lower,
+      name: name || null,
+      first_seen_at: now,
+      last_seen_at: now,
+      purchases: [],
+    };
+  }
+  record.last_seen_at = now;
+  if (name && !record.name) record.name = name;
+  record.purchases = record.purchases || [];
+  record.purchases.push({
+    purchased_at: now,
+    stripe_session_id: session.id,
+    music_release_slugs: fulfillment
+      .filter(f => f.type === 'music')
+      .map(f => f.release_slug!)
+      .filter(Boolean),
+    merch_items: fulfillment
+      .filter(f => f.type === 'merch')
+      .map(f => ({ printful_variant_id: f.printful_variant_id, quantity: f.quantity })),
+    amount_total: session.amount_total || 0,
+    currency: session.currency || 'usd',
+  });
+  // No TTL — customer records persist permanently.
+  await env.DOWNLOADS.put(key, JSON.stringify(record));
+}
+
 async function sendDownloadEmail(env: Env, to: string, downloadUrl: string, releaseTitles: string[]) {
   if (!env.RESEND_API_KEY) {
     console.warn('RESEND_API_KEY missing — skipping email');
@@ -169,12 +231,18 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, waitUnti
   const merchItems = fulfillment.filter(f => f.type === 'merch');
   const musicItems = fulfillment.filter(f => f.type === 'music');
   const email = full.customer_details?.email;
+  const name = full.customer_details?.name;
 
   // Run side-effects after responding so Stripe gets a 200 within its window.
   waitUntil((async () => {
     try {
       if (merchItems.length > 0) {
         await createPrintfulOrder(env, full, fulfillment);
+      }
+      if (email) {
+        // Persist a permanent customer record so /library can show every
+        // past order — separate from the 7-day download-grant tokens.
+        await recordCustomerPurchase(env, email, name, full, fulfillment);
       }
       if (musicItems.length > 0 && email) {
         const slugs = musicItems.map(m => m.release_slug!).filter(Boolean);

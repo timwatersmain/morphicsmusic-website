@@ -1,12 +1,19 @@
 // /api/download
-//   GET ?token=...&action=list   → JSON: { releases: [{slug, title, files:[{key, filename, size, ext}]}] }
-//   GET ?token=...&key=<r2-key>  → streams the audio file from R2
+//   GET ?token=...&action=list   → JSON: { releases: [...] }
+//   GET ?token=...&key=<r2-key>  → streams the file
+//   GET ?key=<r2-key>            → ALSO works if the caller has a valid
+//                                  session cookie + the slug is in their
+//                                  customer record. No expiry, no use cap.
 //
-// A token grants access to a fixed list of release slugs for 7 days / 5 uses
-// total. We bump `uses` on every successful download to discourage sharing.
+// Email-link tokens stay 7-day / 5-use; logged-in customers download freely.
 
 import manifest from '../../src/data/masters-manifest.json';
 import catalog from '../../src/data/music-catalog.json';
+import { readCookie, verifySession } from '../_lib/auth';
+
+interface CustomerRecord {
+  purchases?: Array<{ music_release_slugs?: string[] }>;
+}
 
 interface DownloadGrant {
   email: string;
@@ -19,6 +26,7 @@ interface DownloadGrant {
 interface Env {
   DOWNLOADS: KVNamespace;
   MASTERS: R2Bucket;
+  AUTH_SECRET: string;
 }
 
 const MAX_USES = 5;
@@ -44,6 +52,34 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
   const token = url.searchParams.get('token');
   const action = url.searchParams.get('action');
   const key = url.searchParams.get('key');
+
+  // Cookie-authenticated path (logged-in customer hitting /library files).
+  if (!token && key) {
+    const cookie = readCookie(request, 'morphics_auth') || '';
+    const email = await verifySession(env.AUTH_SECRET, cookie);
+    if (!email) return new Response('unauthorized', { status: 401 });
+    const raw = await env.DOWNLOADS.get(`customer:${email}`);
+    if (!raw) return new Response('no purchases', { status: 403 });
+    let rec: CustomerRecord;
+    try { rec = JSON.parse(raw); } catch { return new Response('corrupt record', { status: 500 }); }
+    const owned = new Set<string>();
+    for (const p of (rec.purchases || [])) for (const s of (p.music_release_slugs || [])) owned.add(s);
+    const parts = key.split('/');
+    const slug = parts[0] === 'masters' ? parts[1] : parts[0];
+    if (!owned.has(slug)) return new Response('not in your library', { status: 403 });
+    const obj = await env.MASTERS.get(key);
+    if (!obj) return new Response('file not found', { status: 404 });
+    const ext = (key.split('.').pop() || '').toLowerCase();
+    const filename = key.split('/').pop() || 'download';
+    return new Response(obj.body, {
+      headers: {
+        'Content-Type': MIME[ext] || 'application/octet-stream',
+        'Content-Length': String(obj.size),
+        'Content-Disposition': `attachment; filename="${filename}"`,
+        'Cache-Control': 'private, no-store',
+      },
+    });
+  }
 
   if (!token) return new Response('missing token', { status: 400 });
 

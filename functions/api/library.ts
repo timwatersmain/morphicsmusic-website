@@ -1,0 +1,63 @@
+// GET /api/library  — returns the logged-in customer's full order history,
+// joined with the music catalog + masters manifest so /library can render
+// download buttons without separately calling the catalog endpoints.
+import { readCookie, verifySession } from '../_lib/auth';
+import manifest from '../../src/data/masters-manifest.json';
+import catalog from '../../src/data/music-catalog.json';
+
+interface CustomerRecord {
+  email: string;
+  name?: string | null;
+  first_seen_at: number;
+  last_seen_at: number;
+  purchases: Array<{
+    purchased_at: number;
+    stripe_session_id: string;
+    music_release_slugs: string[];
+    merch_items: Array<{ printful_variant_id?: number; quantity: number }>;
+    amount_total: number;
+    currency: string;
+  }>;
+}
+
+interface Env {
+  AUTH_SECRET: string;
+  DOWNLOADS: KVNamespace;
+}
+
+export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
+  const cookie = readCookie(request, 'morphics_auth') || '';
+  const email = await verifySession(env.AUTH_SECRET, cookie);
+  if (!email) return new Response(JSON.stringify({ error: 'unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+
+  const raw = await env.DOWNLOADS.get(`customer:${email}`);
+  if (!raw) {
+    return new Response(JSON.stringify({ email, purchases: [], releases: [] }), { headers: { 'Content-Type': 'application/json' } });
+  }
+  let record: CustomerRecord;
+  try { record = JSON.parse(raw); } catch { record = { email, first_seen_at: 0, last_seen_at: 0, purchases: [] } as CustomerRecord; }
+
+  // Roll up music releases the customer has access to (deduped across orders).
+  const ownedSlugs = new Set<string>();
+  for (const p of record.purchases || []) {
+    for (const slug of (p.music_release_slugs || [])) ownedSlugs.add(slug);
+  }
+  const releases = (catalog as any).releases
+    .filter((r: any) => ownedSlugs.has(r.slug))
+    .map((r: any) => ({
+      slug: r.slug,
+      title: r.title,
+      type: r.type,
+      artwork: r.artwork,
+      track_count: r.track_count,
+      files: ((manifest as any).releases?.[r.slug] || []),
+    }));
+
+  return new Response(JSON.stringify({
+    email: record.email,
+    name: record.name || null,
+    first_seen_at: record.first_seen_at,
+    purchases: record.purchases,
+    releases,
+  }), { headers: { 'Content-Type': 'application/json' } });
+};

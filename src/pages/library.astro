@@ -1,0 +1,134 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="LIBRARY" currentPage="">
+  <div class="max-w-4xl mx-auto">
+    <header class="mb-12 flex flex-wrap items-end justify-between gap-4">
+      <div>
+        <span class="font-mono text-xs text-secondary uppercase tracking-widest">Your account</span>
+        <h1 class="font-headline font-bold text-5xl md:text-7xl text-primary uppercase tracking-tighter leading-none mt-2">LIBRARY</h1>
+        <p id="lib-email" class="font-mono text-[11px] text-white/50 mt-4"></p>
+      </div>
+      <button id="logout-btn" class="font-mono text-[10px] text-white/40 hover:text-secondary uppercase tracking-widest border border-white/10 hover:border-secondary/30 px-4 py-2">
+        Sign out
+      </button>
+    </header>
+
+    <div id="lib-loading" class="font-mono text-[11px] text-white/40">Loading your library…</div>
+    <div id="lib-empty" class="hidden p-8 border border-white/10 text-center">
+      <p class="font-mono text-[11px] text-white/40 leading-relaxed">
+        No purchases yet. Browse the <a href="/store" class="text-secondary underline">store</a> — your library populates the moment you buy something.
+      </p>
+    </div>
+    <div id="lib-content" class="hidden space-y-12"></div>
+  </div>
+
+  <script>
+    const loading = document.getElementById('lib-loading')!;
+    const empty = document.getElementById('lib-empty')!;
+    const content = document.getElementById('lib-content')!;
+    const emailEl = document.getElementById('lib-email')!;
+    const logoutBtn = document.getElementById('logout-btn')!;
+
+    function fmtSize(b: number) {
+      if (b > 1e9) return (b / 1e9).toFixed(2) + ' GB';
+      if (b > 1e6) return (b / 1e6).toFixed(1) + ' MB';
+      return Math.ceil(b / 1024) + ' KB';
+    }
+    function fmtDate(unix: number) {
+      return new Date(unix * 1000).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+    }
+
+    fetch('/api/library', { credentials: 'include' })
+      .then(async r => {
+        if (r.status === 401) {
+          location.href = '/login?redirect=' + encodeURIComponent('/library');
+          return null;
+        }
+        if (!r.ok) throw new Error(await r.text());
+        return r.json();
+      })
+      .then((data: any) => {
+        if (!data) return;
+        loading.classList.add('hidden');
+        emailEl.textContent = data.email;
+
+        if (!data.releases.length && !(data.purchases && data.purchases.length)) {
+          empty.classList.remove('hidden');
+          return;
+        }
+        content.classList.remove('hidden');
+
+        // Music releases section
+        if (data.releases.length) {
+          const releasesHtml = data.releases.map((r: any) => `
+            <section class="border border-white/5 p-6">
+              <div class="flex items-center gap-4 mb-4">
+                <img src="${r.artwork}" alt="" class="w-16 h-16 object-cover bg-white/5" />
+                <div class="flex-1">
+                  <div class="font-mono text-[10px] text-secondary uppercase tracking-widest">${r.type}</div>
+                  <h2 class="font-headline text-2xl text-primary uppercase tracking-tight">${r.title}</h2>
+                </div>
+              </div>
+              ${r.files.length === 0
+                ? `<p class="font-mono text-[11px] text-white/30">Files coming soon — check back shortly.</p>`
+                : `<ul class="divide-y divide-white/5 border-y border-white/5">
+                    ${r.files.map((f: any) => `
+                      <li class="flex items-center gap-4 py-3">
+                        <span class="font-mono text-[10px] text-white/30 uppercase">${f.ext}</span>
+                        <span class="flex-1 font-mono text-[11px] text-white/80 truncate">${f.filename}</span>
+                        <span class="font-mono text-[10px] text-white/40">${fmtSize(f.size)}</span>
+                        <a href="/api/download?key=${encodeURIComponent(f.key)}"
+                           class="px-3 py-2 border border-primary/20 hover:border-primary/60 hover:bg-primary/5 font-mono text-[10px] tracking-widest uppercase text-primary">
+                          Download
+                        </a>
+                      </li>
+                    `).join('')}
+                  </ul>`
+              }
+            </section>
+          `).join('');
+          content.innerHTML += `
+            <div>
+              <div class="flex items-baseline gap-3 mb-4">
+                <span class="font-mono text-xs text-secondary uppercase">Music · permanent access</span>
+                <div class="h-[1px] flex-1 bg-outline-variant/30"></div>
+              </div>
+              <div class="space-y-4">${releasesHtml}</div>
+            </div>`;
+        }
+
+        // Order history
+        if (data.purchases && data.purchases.length) {
+          content.innerHTML += `
+            <div>
+              <div class="flex items-baseline gap-3 mb-4">
+                <span class="font-mono text-xs text-secondary uppercase">Order history</span>
+                <div class="h-[1px] flex-1 bg-outline-variant/30"></div>
+              </div>
+              <ol class="divide-y divide-white/5 border-y border-white/5">
+                ${data.purchases.slice().reverse().map((p: any) => `
+                  <li class="flex items-center gap-4 py-3">
+                    <span class="font-mono text-[10px] text-white/40 w-24">${fmtDate(p.purchased_at)}</span>
+                    <span class="flex-1 font-mono text-[11px] text-white/70">
+                      ${(p.music_release_slugs || []).map((s: string) => s.toUpperCase().replace(/-/g,' ')).join(', ') || '(merch)'}
+                    </span>
+                    <span class="font-mono text-[11px] text-secondary tabular-nums">$${(p.amount_total / 100).toFixed(2)}</span>
+                  </li>`).join('')}
+              </ol>
+            </div>`;
+        }
+      })
+      .catch(e => {
+        loading.classList.add('hidden');
+        empty.classList.remove('hidden');
+        empty.querySelector('p')!.textContent = 'Could not load library: ' + e.message;
+      });
+
+    logoutBtn.addEventListener('click', async () => {
+      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+      location.href = '/login';
+    });
+  </script>
+</BaseLayout>
