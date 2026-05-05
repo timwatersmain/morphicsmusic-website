@@ -2,9 +2,10 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import signalData from '../data/signal.json';
 
-const videoPosts = signalData.filter(p => p.type === 'video');
-const photoPosts = signalData.filter(p => p.type === 'image' || p.type === 'visual' || p.type === 'photo');
-const textPosts = signalData.filter(p => p.type === 'text' || p.type === 'track' || (!p.mediaUrl && !p.thumbnail));
+// Cap each column so the feed stays a tidy, evenly-sized grid.
+const videoPosts = signalData.filter(p => p.type === 'video').slice(0, 2);
+const photoPosts = signalData.filter(p => p.type === 'image' || p.type === 'visual' || p.type === 'photo').slice(0, 4);
+const textPosts = signalData.filter(p => p.type === 'text' || p.type === 'track' || (!p.mediaUrl && !p.thumbnail)).slice(0, 4);
 
 const platforms = [
   { name: 'BANDCAMP', icon: 'album', url: 'https://morphics.bandcamp.com/' },
@@ -37,7 +38,7 @@ const typeIcons: Record<string, string> = {
 };
 ---
 
-<BaseLayout title="SIGNAL" currentPage="/signal">
+<BaseLayout title="SOCIAL" currentPage="/social">
   <header class="mb-20">
     <div class="flex items-baseline gap-4 mb-2">
       <span class="font-mono text-xs text-secondary uppercase">Social</span>
@@ -247,6 +248,35 @@ const typeIcons: Record<string, string> = {
     background: var(--surface-container-low);
     transition: all 0.4s;
     overflow: hidden;
+    /* Uniform card size across all media types — feed reads as a clean grid. */
+    aspect-ratio: 4 / 3;
+    display: flex;
+    flex-direction: column;
+  }
+  /* Media area takes the top portion, caption locked to bottom. */
+  .signal-card > .relative {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+  .signal-card > .relative > video,
+  .signal-card > .relative > img {
+    width: 100%;
+    height: 100%;
+    aspect-ratio: auto !important;
+    object-fit: cover;
+  }
+  .signal-card > .p-4,
+  .signal-card > .p-5 {
+    flex: 0 0 auto;
+  }
+  .signal-card p {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .signal-card--text p {
+    -webkit-line-clamp: 5;
   }
   .signal-card:hover {
     border-color: rgba(var(--primary-rgb, 0, 204, 168), 0.3);
