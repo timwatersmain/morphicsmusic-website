@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-05T13:12:54.636Z",
+  "generated_at": "2026-05-05T13:13:59.581Z",
   "releases": [
     {
       "id": "golden-dawn",
@@ -302,14 +302,41 @@
       "description": "",
       "bandcamp_url": "https://morphics.bandcamp.com/album/nexus",
       "min_price_cents": 300,
-      "track_count": 1,
+      "track_count": 4,
       "has_masters": false,
       "tracks": [
         {
-          "id": "nexus-1",
+          "id": "nexus-telepathine",
           "track_number": 1,
-          "title": "Nexus",
-          "isrc": "USLZJ2296483",
+          "title": "Telepathine",
+          "isrc": null,
+          "duration_seconds": null,
+          "min_price_cents": 100,
+          "master_filename": null
+        },
+        {
+          "id": "nexus-phantom",
+          "track_number": 2,
+          "title": "Phantom",
+          "isrc": null,
+          "duration_seconds": null,
+          "min_price_cents": 100,
+          "master_filename": null
+        },
+        {
+          "id": "nexus-lucent",
+          "track_number": 3,
+          "title": "Lucent",
+          "isrc": null,
+          "duration_seconds": null,
+          "min_price_cents": 100,
+          "master_filename": null
+        },
+        {
+          "id": "nexus-numinous",
+          "track_number": 4,
+          "title": "Numinous",
+          "isrc": null,
           "duration_seconds": null,
           "min_price_cents": 100,
           "master_filename": null
