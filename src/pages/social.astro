@@ -41,22 +41,19 @@ const typeIcons: Record<string, string> = {
 ---
 
 <BaseLayout title="SOCIAL" currentPage="/social">
-  <header class="mb-20">
+  <header class="mb-6">
     <div class="flex items-baseline gap-4 mb-2">
       <span class="font-mono text-xs text-secondary uppercase">Social</span>
       <div class="h-[1px] flex-1 bg-outline-variant/30"></div>
     </div>
-    <h1 class="text-6xl md:text-8xl font-headline font-bold text-primary tracking-tighter leading-none mb-6">
+    <h1 class="text-6xl md:text-8xl font-headline font-bold text-primary tracking-tighter leading-none">
       SOCIAL
     </h1>
-    <p class="max-w-xl text-on-surface-variant font-body leading-relaxed">
-      Latest posts and updates across all platforms.
-    </p>
   </header>
 
   <!-- Platform Nodes (Particle Array) -->
   <div class="mb-4 relative">
-    <div class="flex flex-wrap items-center justify-center gap-12 relative py-8">
+    <div class="flex flex-wrap items-center justify-center gap-12 relative py-2">
       {platforms.map((platform, i) => (
         <a
           href={platform.url}
@@ -76,7 +73,7 @@ const typeIcons: Record<string, string> = {
 
 
   <!-- Feed divider -->
-  <div class="brand-divider brand-divider--wide mb-12">
+  <div class="brand-divider brand-divider--wide mt-2 mb-6">
     <img src="/images/brand/morph-line-n.png" alt="" loading="lazy" />
   </div>
 
