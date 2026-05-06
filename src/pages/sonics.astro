@@ -1,7 +1,25 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-import releases from '../data/releases.json';
+import catalog from '../data/music-catalog.json';
 import bandcamp from '../data/bandcamp-latest.json';
+import { existsSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
+
+const publicDir = fileURLToPath(new URL('../../public', import.meta.url));
+function resolveArtwork(path: string) {
+  if (!path) return null;
+  if (path.startsWith('http')) return path;
+  const local = join(publicDir, path.replace(/^\//, ''));
+  return existsSync(local) ? path : null;
+}
+const releases = catalog.releases.map(r => ({
+  ...r,
+  artwork: resolveArtwork(r.artwork),
+  date: r.release_date || '',
+  genre: r.genre || [],
+  minPriceDollars: ((r.min_price_cents || 0) / 100).toFixed(0),
+}));
 ---
 
 <BaseLayout title="SONICS" currentPage="/sonics">
@@ -56,17 +74,17 @@ import bandcamp from '../data/bandcamp-latest.json';
   <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
     {releases.map(release => (
       <div class="group relative bg-surface-container-low border border-white/5 transition-all duration-500 hover:border-secondary/30 terminal-glow">
-        <div class="relative overflow-hidden">
+        <a href={`/store/music/${release.slug}`} class="block relative overflow-hidden">
           <img
             src={release.artwork}
             alt={release.title}
             class="w-full aspect-square object-cover grayscale opacity-50 group-hover:grayscale-0 group-hover:scale-105 group-hover:opacity-100 transition-all duration-700"
           />
           <div class="absolute inset-0 bg-gradient-to-t from-background to-transparent opacity-60"></div>
-        </div>
+        </a>
         <div class="p-6">
           <div class="flex items-baseline justify-between mb-2">
-            <h3 class="font-headline text-xl text-primary group-hover:text-secondary transition-colors uppercase tracking-tight">{release.title}</h3>
+            <a href={`/store/music/${release.slug}`} class="font-headline text-xl text-primary group-hover:text-secondary transition-colors uppercase tracking-tight">{release.title}</a>
             <span class="font-mono text-[9px] text-secondary">{release.type.toUpperCase()}</span>
           </div>
           <div class="font-mono text-[10px] text-white/30 mb-4">{release.date}</div>
@@ -75,20 +93,55 @@ import bandcamp from '../data/bandcamp-latest.json';
               <span class="px-2 py-1 bg-white/5 text-[9px] font-mono text-primary border border-primary/10">#{g.toUpperCase()}</span>
             ))}
           </div>
-          <div class="flex flex-wrap gap-2">
-            {Object.entries(release.links).map(([platform, url]) => (
-              <a
-                href={url}
-                class="flex-1 min-w-0 py-3 border border-primary/20 hover:bg-primary hover:text-on-primary font-mono text-[10px] tracking-widest transition-all uppercase text-center text-primary"
-              >
-                {platform.toUpperCase()}
-              </a>
-            ))}
-          </div>
+          <button
+            type="button"
+            class="release-add-btn w-full py-3 border border-primary/20 hover:bg-primary hover:text-on-primary font-mono text-[10px] tracking-widest transition-all uppercase text-center text-primary disabled:opacity-30 disabled:cursor-not-allowed"
+            data-slug={release.slug}
+            data-title={release.title}
+            data-image={release.artwork}
+            data-min-cents={release.min_price_cents}
+            data-track-count={release.track_count}
+            data-type={release.type}
+            disabled={!release.has_masters}
+          >
+            {release.has_masters ? `Add to cart · $${release.minPriceDollars}+` : 'Coming soon'}
+          </button>
+          <a href={`/store/music/${release.slug}`} class="block text-center mt-2 font-mono text-[9px] text-white/30 hover:text-secondary uppercase tracking-widest transition-colors">
+            Name your price &rarr;
+          </a>
         </div>
       </div>
     ))}
   </div>
+
+  <script>
+    import '../scripts/cart.js';
+    document.querySelectorAll<HTMLButtonElement>('.release-add-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (btn.disabled) return;
+        const minCents = parseInt(btn.dataset.minCents || '0', 10);
+        const trackCount = parseInt(btn.dataset.trackCount || '0', 10);
+        const type = btn.dataset.type || '';
+        (window as any).morphicsCart.add({
+          type: 'music',
+          sku: `music:${btn.dataset.slug}`,
+          title: btn.dataset.title,
+          subtitle: `${type.toUpperCase()} · ${trackCount} track${trackCount === 1 ? '' : 's'} · digital`,
+          image: btn.dataset.image,
+          unit_amount: minCents,
+          qty: 1,
+          metadata: { release_slug: btn.dataset.slug },
+        });
+        const orig = btn.textContent;
+        btn.textContent = '✓ Added';
+        btn.classList.add('bg-secondary', 'text-on-secondary');
+        setTimeout(() => {
+          btn.textContent = orig;
+          btn.classList.remove('bg-secondary', 'text-on-secondary');
+        }, 1600);
+      });
+    });
+  </script>
 
   <!-- Footer divider -->
   <div class="brand-divider brand-divider--wide mt-32 mb-0">
@@ -101,6 +154,7 @@ import bandcamp from '../data/bandcamp-latest.json';
         <div class="font-mono text-[9px] text-white/20 uppercase mb-1">Total Releases</div>
         <div class="font-headline text-lg text-primary">{releases.length}</div>
       </div>
+
       <div>
         <div class="font-mono text-[9px] text-white/20 uppercase mb-1">Format</div>
         <div class="font-headline text-lg text-secondary">LOSSLESS</div>

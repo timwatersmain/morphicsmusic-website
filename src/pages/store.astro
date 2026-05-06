@@ -1,41 +1,6 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import merchItems from '../data/merch.json';
-import catalog from '../data/music-catalog.json';
-import { existsSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import { join } from 'node:path';
-
-// Resolve which releases have real cover art on disk; the rest get a styled
-// placeholder card so the grid never shows broken-image icons.
-const publicDir = fileURLToPath(new URL('../../public', import.meta.url));
-function resolveArtwork(path: string) {
-  if (!path) return null;
-  if (path.startsWith('http')) return path;
-  const local = join(publicDir, path.replace(/^\//, ''));
-  return existsSync(local) ? path : null;
-}
-const releases = catalog.releases.map(r => ({
-  ...r,
-  artwork: resolveArtwork(r.artwork),
-}));
-
-// Group by release type for the list view. Order follows what feels right
-// when browsing: full-lengths first, EPs, singles, then everything else.
-const TYPE_ORDER = ['album', 'ep', 'single', 'mix'];
-const TYPE_LABEL: Record<string, string> = {
-  album: 'Albums',
-  ep: 'EPs',
-  single: 'Singles',
-  mix: 'Mixes',
-};
-const grouped = TYPE_ORDER
-  .map(t => ({ type: t, label: TYPE_LABEL[t] || t.toUpperCase(), items: releases.filter(r => r.type === t) }))
-  .filter(g => g.items.length > 0);
-// Catch any unexpected types so nothing silently disappears.
-const known = new Set(TYPE_ORDER);
-const other = releases.filter(r => !known.has(r.type));
-if (other.length) grouped.push({ type: 'other', label: 'Other', items: other });
 
 const formatPrice = (lo: number | null, hi: number | null) => {
   if (lo == null) return '';
@@ -104,61 +69,6 @@ const formatPrice = (lo: number | null, hi: number | null) => {
     </div>
   </section>
 
-  <!-- Brand divider between merch and music -->
-  <div class="brand-divider brand-divider--wide max-w-[1400px] mx-auto my-16">
-    <img src="/images/brand/morph-line-j.png" alt="" loading="lazy" />
-  </div>
-
-  <!-- Music -->
-  <section class="max-w-[1400px] mx-auto mb-24">
-    <div class="flex items-baseline gap-4 mb-8">
-      <span class="font-mono text-xs text-secondary uppercase">Music</span>
-      <div class="h-[1px] flex-1 bg-outline-variant/30"></div>
-      <span class="font-mono text-[10px] text-white/30">{releases.length}</span>
-    </div>
-    <div class="space-y-10">
-      {grouped.map(g => (
-        <div>
-          <div class="flex items-baseline gap-3 mb-3 pb-2 border-b border-white/10">
-            <span class="font-mono text-[10px] text-white/40 uppercase tracking-widest">{g.label}</span>
-            <span class="font-mono text-[9px] text-white/20">{g.items.length}</span>
-          </div>
-          <ul class="divide-y divide-white/5">
-            {g.items.map(r => (
-              <li>
-                <a href={`/store/music/${r.slug}`} class="group flex items-center gap-4 py-2.5 hover:bg-white/[0.02] transition-colors px-2 -mx-2">
-                  {r.artwork ? (
-                    <img
-                      src={r.artwork}
-                      alt=""
-                      loading="lazy"
-                      class="w-10 h-10 object-cover flex-shrink-0 grayscale opacity-70 group-hover:grayscale-0 group-hover:opacity-100 transition-all"
-                    />
-                  ) : (
-                    <span class="w-10 h-10 flex-shrink-0 border border-white/10 group-hover:border-secondary/30 transition-colors flex items-center justify-center font-mono text-[8px] text-white/30 uppercase tracking-widest">
-                      {r.type.slice(0, 3)}
-                    </span>
-                  )}
-                  <div class="flex-1 min-w-0">
-                    <div class="font-headline text-base text-primary group-hover:text-secondary transition-colors uppercase tracking-tight truncate leading-tight">{r.title}</div>
-                    {r.track_count > 1 && (
-                      <div class="font-mono text-[9px] text-white/30 uppercase tracking-widest mt-0.5">{r.track_count} tracks</div>
-                    )}
-                  </div>
-                  {!r.has_masters && (
-                    <span class="font-mono text-[9px] text-white/30 uppercase tracking-widest hidden sm:inline">Soon</span>
-                  )}
-                  <span class="font-mono text-[11px] text-secondary tabular-nums">${(r.min_price_cents / 100).toFixed(0)}+</span>
-                  <span class="material-symbols-outlined text-base text-white/20 group-hover:text-secondary transition-colors">chevron_right</span>
-                </a>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ))}
-    </div>
-  </section>
-
   <div class="brand-divider brand-divider--wide mt-12 mb-0 max-w-[1400px] mx-auto">
     <img src="/images/brand/morph-line-j.png" alt="" loading="lazy" />
   </div>
@@ -166,16 +76,8 @@ const formatPrice = (lo: number | null, hi: number | null) => {
   <footer class="max-w-[1400px] mx-auto mt-4 pt-12 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-8">
     <div class="flex gap-12">
       <div>
-        <div class="font-mono text-[9px] text-white/20 uppercase mb-1">Releases</div>
-        <div class="font-headline text-lg text-primary">{releases.length}</div>
-      </div>
-      <div>
         <div class="font-mono text-[9px] text-white/20 uppercase mb-1">Merch</div>
         <div class="font-headline text-lg text-primary">{merchItems.length}</div>
-      </div>
-      <div>
-        <div class="font-mono text-[9px] text-white/20 uppercase mb-1">Formats</div>
-        <div class="font-headline text-lg text-primary">FLAC / MP3</div>
       </div>
     </div>
     <div class="flex gap-4">
