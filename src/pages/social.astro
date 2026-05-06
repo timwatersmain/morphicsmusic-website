@@ -5,7 +5,15 @@ import signalData from '../data/signal.json';
 // Cap each column so the feed stays a tidy, evenly-sized grid.
 const videoPosts = signalData.filter(p => p.type === 'video').slice(0, 2);
 const photoPosts = signalData.filter(p => p.type === 'image' || p.type === 'visual' || p.type === 'photo').slice(0, 4);
-const textPosts = signalData.filter(p => p.type === 'text' || p.type === 'track' || (!p.mediaUrl && !p.thumbnail)).slice(0, 4);
+// Only true text/track posts — never let a media post fall through here just
+// because its mediaUrl is empty (TikTok video URLs aren't directly embeddable
+// by file, but they're still videos and belong in the video column).
+const textPosts = signalData.filter(p => p.type === 'text' || p.type === 'track').slice(0, 4);
+
+function tiktokVideoId(url: string): string | null {
+  const m = url.match(/\/video\/(\d+)/);
+  return m ? m[1] : null;
+}
 
 const platforms = [
   { name: 'BANDCAMP', icon: 'album', url: 'https://morphics.bandcamp.com/' },
@@ -89,12 +97,23 @@ const typeIcons: Record<string, string> = {
       {videoPosts.length > 0 ? videoPosts.map(post => (
         <a href={post.url} class="signal-card group block" target="_blank" rel="noopener">
           <div class="relative overflow-hidden">
-            <video
-              src={post.mediaUrl}
-              class="w-full aspect-video object-cover opacity-60 group-hover:opacity-90 transition-all duration-500"
-              muted loop playsinline preload="metadata" data-hover-play
-            />
-            <div class="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent"></div>
+            {post.platform === 'tiktok' && tiktokVideoId(post.url) ? (
+              <iframe
+                src={`https://www.tiktok.com/embed/v2/${tiktokVideoId(post.url)}`}
+                class="w-full h-full"
+                allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowfullscreen
+                loading="lazy"
+                referrerpolicy="strict-origin-when-cross-origin"
+              ></iframe>
+            ) : (
+              <video
+                src={post.mediaUrl}
+                class="w-full aspect-video object-cover opacity-60 group-hover:opacity-90 transition-all duration-500"
+                muted loop playsinline preload="metadata" data-hover-play
+              />
+            )}
+            <div class="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent pointer-events-none"></div>
             <div class="absolute top-3 right-3">
               <div class="bg-background/80 px-2 py-1 backdrop-blur-md flex items-center gap-1.5">
                 <span class="material-symbols-outlined text-sm text-primary">{platformIcons[post.platform]}</span>
