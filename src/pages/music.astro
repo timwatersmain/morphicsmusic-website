@@ -67,31 +67,37 @@ const releases = catalog.releases.map(r => ({
     <div class="h-[1px] flex-1 bg-outline-variant/30"></div>
   </div>
 
-  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+  <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
     {releases.map(release => (
       <div class="group relative bg-surface-container-low border border-white/5 transition-all duration-500 hover:border-secondary/30 terminal-glow">
-        <a href={`/store/music/${release.slug}`} class="block relative overflow-hidden">
-          <img
-            src={release.artwork}
-            alt={release.title}
-            class="w-full aspect-square object-cover grayscale opacity-50 group-hover:grayscale-0 group-hover:scale-105 group-hover:opacity-100 transition-all duration-700"
-          />
-          <div class="absolute inset-0 bg-gradient-to-t from-background to-transparent opacity-60"></div>
+        <a href={`/store/music/${release.slug}`} class="block relative overflow-hidden aspect-square">
+          {release.artwork ? (
+            <img
+              src={release.artwork}
+              alt={release.title}
+              class="w-full h-full object-cover grayscale opacity-50 group-hover:grayscale-0 group-hover:scale-105 group-hover:opacity-100 transition-all duration-700"
+            />
+          ) : (
+            <div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-white/[0.03] to-white/[0.01] border-b border-white/5">
+              <span class="font-mono text-[9px] text-white/20 tracking-widest uppercase">No artwork</span>
+            </div>
+          )}
+          <div class="absolute inset-0 bg-gradient-to-t from-background to-transparent opacity-60 pointer-events-none"></div>
         </a>
-        <div class="p-6">
-          <div class="flex items-baseline justify-between mb-2">
-            <a href={`/store/music/${release.slug}`} class="font-headline text-xl text-primary group-hover:text-secondary transition-colors uppercase tracking-tight">{release.title}</a>
-            <span class="font-mono text-[9px] text-secondary">{release.type.toUpperCase()}</span>
+        <div class="p-4">
+          <div class="flex items-baseline justify-between gap-2 mb-1">
+            <a href={`/store/music/${release.slug}`} class="font-headline text-base text-primary group-hover:text-secondary transition-colors uppercase tracking-tight truncate">{release.title}</a>
+            <span class="font-mono text-[8px] text-secondary shrink-0">{release.type.toUpperCase()}</span>
           </div>
-          <div class="font-mono text-[10px] text-white/30 mb-4">{release.date}</div>
-          <div class="flex flex-wrap gap-2 mb-6">
+          <div class="font-mono text-[9px] text-white/30 mb-3">{release.date}</div>
+          <div class="flex flex-wrap gap-1 mb-4">
             {release.genre.map(g => (
-              <span class="px-2 py-1 bg-white/5 text-[9px] font-mono text-primary border border-primary/10">#{g.toUpperCase()}</span>
+              <span class="px-1.5 py-0.5 bg-white/5 text-[8px] font-mono text-primary border border-primary/10">#{g.toUpperCase()}</span>
             ))}
           </div>
           <button
             type="button"
-            class="release-add-btn w-full py-3 border border-primary/20 hover:bg-primary hover:text-on-primary font-mono text-[10px] tracking-widest transition-all uppercase text-center text-primary disabled:opacity-30 disabled:cursor-not-allowed"
+            class="release-add-btn w-full py-2 border border-primary/20 hover:bg-primary hover:text-on-primary font-mono text-[9px] tracking-widest transition-all uppercase text-center text-primary disabled:opacity-30 disabled:cursor-not-allowed"
             data-slug={release.slug}
             data-title={release.title}
             data-image={release.artwork}
@@ -102,7 +108,7 @@ const releases = catalog.releases.map(r => ({
           >
             {release.has_masters ? `Add to cart · $${release.minPriceDollars}+` : 'Coming soon'}
           </button>
-          <a href={`/store/music/${release.slug}`} class="block text-center mt-2 font-mono text-[9px] text-white/30 hover:text-secondary uppercase tracking-widest transition-colors">
+          <a href={`/store/music/${release.slug}`} class="block text-center mt-2 font-mono text-[8px] text-white/30 hover:text-secondary uppercase tracking-widest transition-colors">
             Name your price &rarr;
           </a>
         </div>
