@@ -96,9 +96,9 @@ const typeIcons: Record<string, string> = {
       </div>
       {videoPosts.length > 0 ? videoPosts.map(post => (
         <a href={post.url} class="signal-card group block" target="_blank" rel="noopener">
-          <div class="relative overflow-hidden bg-black">
+          <div class="relative overflow-hidden bg-black tiktok-frame">
             {post.platform === 'tiktok' && tiktokVideoId(post.url) ? (
-              <div class="relative w-full aspect-[9/16] mx-auto bg-black overflow-hidden">
+              <div class="relative w-full h-full bg-[#0A0A0A]">
                 <iframe
                   src={`https://www.tiktok.com/embed/v2/${tiktokVideoId(post.url)}`}
                   class="absolute inset-0 w-full h-full"
@@ -107,8 +107,9 @@ const typeIcons: Record<string, string> = {
                   loading="lazy"
                   referrerpolicy="strict-origin-when-cross-origin"
                 ></iframe>
-                <div class="pointer-events-none absolute inset-y-0 left-0 w-12 bg-gradient-to-r from-background to-transparent"></div>
-                <div class="pointer-events-none absolute inset-y-0 right-0 w-12 bg-gradient-to-l from-background to-transparent"></div>
+                <!-- Solid masks covering TikTok's internal white pillarbox (iframe is cross-origin so we can't restyle it). -->
+                <div class="pointer-events-none absolute inset-y-0 left-0 w-[22%] bg-[#0A0A0A]"></div>
+                <div class="pointer-events-none absolute inset-y-0 right-0 w-[22%] bg-[#0A0A0A]"></div>
               </div>
             ) : (
               <video
