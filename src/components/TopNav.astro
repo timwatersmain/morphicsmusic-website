@@ -11,8 +11,8 @@ const navItems = [
 ---
 
 <header class="fixed top-0 w-full z-50 bg-[#0A0A0A]/80 backdrop-blur-2xl flex justify-between items-center px-8 py-6">
-  <a href="/">
-    <img src="/images/logos/morphics-text-white.png" alt="MORPHICS" class="h-6 w-auto" />
+  <a href="/" class="hover:scale-105 transition-all duration-[400ms]">
+    <img src="/images/logos/emblem-circle.png" alt="Morphics" class="h-12 w-12 object-contain" />
   </a>
   <nav class="hidden md:flex space-x-12">
     {navItems.map(item => (
@@ -33,22 +33,6 @@ const navItems = [
     <a id="account-link" href="/login" class="hidden md:inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-white/40 hover:text-secondary transition-colors">
       <span class="material-symbols-outlined text-base">person</span>
       <span id="account-link-label">Sign in</span>
-    </a>
-    <button
-      id="cart-button"
-      type="button"
-      class="relative w-10 h-10 flex items-center justify-center border border-white/10 hover:border-secondary/40 transition-colors group"
-      aria-label="Open cart"
-      onclick="document.dispatchEvent(new CustomEvent('cart:open'))"
-    >
-      <span class="material-symbols-outlined text-primary group-hover:text-secondary text-xl">shopping_bag</span>
-      <span
-        id="cart-badge"
-        class="hidden absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-secondary text-on-secondary text-[10px] font-mono font-bold rounded-full flex items-center justify-center"
-      >0</span>
-    </button>
-    <a href="/" class="hover:scale-105 transition-all duration-[400ms]">
-      <img src="/images/logos/emblem-circle.png" alt="Morphics" class="h-12 w-12 object-contain" />
     </a>
   </div>
 </header>
