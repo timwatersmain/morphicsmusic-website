@@ -2,20 +2,10 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import catalog from '../data/music-catalog.json';
 import bandcamp from '../data/bandcamp-latest.json';
-import { existsSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import { join } from 'node:path';
 
-const publicDir = fileURLToPath(new URL('../../public', import.meta.url));
-function resolveArtwork(path: string) {
-  if (!path) return null;
-  if (path.startsWith('http')) return path;
-  const local = join(publicDir, path.replace(/^\//, ''));
-  return existsSync(local) ? path : null;
-}
 const releases = catalog.releases.map(r => ({
   ...r,
-  artwork: resolveArtwork(r.artwork),
+  artwork: r.artwork || null,
   date: r.release_date || '',
   genre: r.genre || [],
   minPriceDollars: ((r.min_price_cents || 0) / 100).toFixed(0),
