@@ -70,7 +70,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
     const obj = await env.MASTERS.get(key);
     if (!obj) return new Response('file not found', { status: 404 });
     const ext = (key.split('.').pop() || '').toLowerCase();
-    const filename = key.split('/').pop() || 'download';
+    const filename = (key.split('/').pop() || 'download').replace(/[^\w.\- ]/g, '_');
     return new Response(obj.body, {
       headers: {
         'Content-Type': MIME[ext] || 'application/octet-stream',

@@ -46,8 +46,18 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   let hasPhysical = false;
   let hasDigital = false;
 
+  // Sanity ceiling on cart size — prevents creating absurdly large Stripe
+  // sessions that would just be rejected anyway.
+  if (body.items.length > 50) return new Response('Cart too large', { status: 400 });
+
   for (const item of body.items) {
-    if (item.qty <= 0 || item.qty > 10) return new Response('Bad qty', { status: 400 });
+    if (!Number.isInteger(item.qty) || item.qty <= 0 || item.qty > 10) {
+      return new Response('Bad qty', { status: 400 });
+    }
+    if (!Number.isInteger(item.unit_amount) || item.unit_amount < 0 || item.unit_amount > 100000) {
+      // $1000 cap. Anything legitimate is well below this.
+      return new Response('Bad amount', { status: 400 });
+    }
 
     if (item.type === 'merch') {
       const product = (merchData as any[]).find(p => p.slug === item.sku.split(':')[1]);

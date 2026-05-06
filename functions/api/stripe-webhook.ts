@@ -209,6 +209,14 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, waitUnti
     return new Response('ignored', { status: 200 });
   }
 
+  // Idempotency: Stripe retries events on transient failures. Without this,
+  // a retry would create a second Printful order and a second download grant
+  // for the same payment.
+  const seenKey = `webhook:seen:${event.id}`;
+  const already = await env.DOWNLOADS.get(seenKey);
+  if (already) return new Response('duplicate', { status: 200 });
+  await env.DOWNLOADS.put(seenKey, '1', { expirationTtl: 60 * 60 * 24 * 30 }); // 30 days
+
   const session = event.data.object as Stripe.Checkout.Session;
   // The event payload already contains customer_details and metadata.
   // Only re-fetch when we actually need shipping_details that may not be

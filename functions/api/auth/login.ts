@@ -9,14 +9,44 @@ interface Env {
   PUBLIC_SITE_URL?: string;
 }
 
+// Only accept same-origin path redirects to prevent the magic link from
+// being weaponized into an authed open-redirect for phishing.
+function safeRedirect(input: string | undefined): string | undefined {
+  if (!input) return undefined;
+  if (typeof input !== 'string') return undefined;
+  if (input.length > 256) return undefined;
+  if (!input.startsWith('/')) return undefined;
+  if (input.startsWith('//') || input.startsWith('/\\')) return undefined;
+  return input;
+}
+
+async function checkRateLimit(env: Env, key: string, limit: number, windowSec: number): Promise<boolean> {
+  const raw = await env.DOWNLOADS.get(`rl:${key}`);
+  const count = raw ? parseInt(raw, 10) || 0 : 0;
+  if (count >= limit) return false;
+  await env.DOWNLOADS.put(`rl:${key}`, String(count + 1), { expirationTtl: windowSec });
+  return true;
+}
+
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   let body: { email?: string; redirect?: string };
   try { body = await request.json(); } catch { return new Response('Invalid JSON', { status: 400 }); }
   const email = (body.email || '').trim().toLowerCase();
-  if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+  if (!email || email.length > 254 || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
     return new Response(JSON.stringify({ error: 'invalid email' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
   }
-  const token = await issueLoginToken(env, email, body.redirect);
+
+  // Rate limit: 5 / 10 min per IP, 3 / hour per email. Always-200 below means
+  // we silently succeed when limits hit so we don't leak enumeration signals.
+  const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+  const ipOk = await checkRateLimit(env, `login:ip:${ip}`, 5, 600);
+  const emailOk = await checkRateLimit(env, `login:em:${email}`, 3, 3600);
+  if (!ipOk || !emailOk) {
+    return new Response(JSON.stringify({ ok: true }), { headers: { 'Content-Type': 'application/json' } });
+  }
+
+  const redirect = safeRedirect(body.redirect);
+  const token = await issueLoginToken(env, email, redirect);
   const origin = env.PUBLIC_SITE_URL || new URL(request.url).origin;
   const url = `${origin}/api/auth/verify?token=${encodeURIComponent(token)}`;
   if (env.RESEND_API_KEY) {
