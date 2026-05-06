@@ -303,7 +303,7 @@
       "bandcamp_url": "https://morphics.bandcamp.com/album/nexus",
       "min_price_cents": 300,
       "track_count": 4,
-      "has_masters": false,
+      "has_masters": true,
       "tracks": [
         {
           "id": "nexus-telepathine",
@@ -312,7 +312,7 @@
           "isrc": null,
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": null
+          "master_filename": "teleppo.wav"
         },
         {
           "id": "nexus-phantom",
@@ -330,7 +330,7 @@
           "isrc": null,
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": null
+          "master_filename": "Lucent 24bt.wav"
         },
         {
           "id": "nexus-numinous",
@@ -384,7 +384,7 @@
       "bandcamp_url": null,
       "min_price_cents": 100,
       "track_count": 1,
-      "has_masters": false,
+      "has_masters": true,
       "tracks": [
         {
           "id": "lucent-1",
@@ -393,7 +393,7 @@
           "isrc": "USLZJ2232816",
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": null
+          "master_filename": "Lucent 24bt.wav"
         }
       ]
     },
