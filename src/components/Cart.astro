@@ -2,19 +2,6 @@
 // Floating cart icon + slide-out drawer. Mount once in BaseLayout.
 ---
 
-<button
-  id="cart-button"
-  class="fixed top-6 right-[92px] z-[70] w-12 h-12 flex items-center justify-center bg-background/80 border border-white/10 backdrop-blur-md hover:border-secondary/40 transition-all group"
-  aria-label="Open cart"
-  onclick="document.dispatchEvent(new CustomEvent('cart:open'))"
->
-  <span class="material-symbols-outlined text-primary group-hover:text-secondary">shopping_bag</span>
-  <span
-    id="cart-badge"
-    class="hidden absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-secondary text-on-secondary text-[10px] font-mono font-bold rounded-full flex items-center justify-center"
-  >0</span>
-</button>
-
 <div
   id="cart-drawer"
   class="cart-drawer"
