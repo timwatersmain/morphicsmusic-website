@@ -46,19 +46,15 @@ const formatPrice = (lo: number | null, hi: number | null) => {
 
 <BaseLayout title="STORE" currentPage="/store">
   <header class="mb-20 max-w-[1400px] mx-auto">
-    <div class="flex items-baseline gap-4 mb-2">
-      <span class="font-mono text-xs text-secondary uppercase">Shop</span>
-      <div class="h-[1px] flex-1 bg-outline-variant/30"></div>
-    </div>
-    <div class="flex items-center gap-4">
+    <div class="flex items-end gap-6 flex-wrap">
       <img src="/images/brand/morph-line-k.png" alt="" class="w-[3px] h-20 md:h-28 object-contain opacity-15 invert rotate-90" loading="lazy" />
-      <h1 class="text-6xl md:text-8xl font-headline font-bold text-primary tracking-tighter leading-none mb-6">
+      <h1 class="text-6xl md:text-8xl font-headline font-bold text-primary tracking-tighter leading-none">
         STORE
       </h1>
+      <p class="text-on-surface-variant font-body leading-relaxed pb-3">
+        Music releases &middot; Merch &middot; Direct from the artist
+      </p>
     </div>
-    <p class="max-w-xl text-on-surface-variant font-body leading-relaxed">
-      Music releases &middot; Merch &middot; Direct from the artist
-    </p>
   </header>
 
   <!-- Merch -->
