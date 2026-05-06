@@ -107,9 +107,10 @@ const typeIcons: Record<string, string> = {
                   loading="lazy"
                   referrerpolicy="strict-origin-when-cross-origin"
                 ></iframe>
-                <!-- Solid masks covering TikTok's internal white pillarbox (iframe is cross-origin so we can't restyle it). -->
+                <!-- Solid masks covering TikTok's internal white pillarbox + top hairline (iframe is cross-origin so we can't restyle it). -->
                 <div class="pointer-events-none absolute inset-y-0 left-0 w-[22%] bg-[#0A0A0A]"></div>
                 <div class="pointer-events-none absolute inset-y-0 right-0 w-[22%] bg-[#0A0A0A]"></div>
+                <div class="pointer-events-none absolute inset-x-0 top-0 h-2 bg-[#0A0A0A]"></div>
               </div>
             ) : (
               <video
