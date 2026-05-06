@@ -32,10 +32,10 @@ const releases = catalog.releases.map(r => ({
     </p>
   </header>
 
-  <!-- Embedded Player -->
+  <!-- Latest Release -->
   <div class="mb-20 max-w-4xl">
     <div class="flex items-baseline gap-4 mb-6">
-      <span class="font-mono text-xs text-secondary uppercase">Preview</span>
+      <span class="font-mono text-xs text-secondary uppercase">Latest Release</span>
       <div class="h-[1px] flex-1 bg-outline-variant/30"></div>
     </div>
     <div class="bg-surface-container-low border border-white/5 p-6">
@@ -46,24 +46,11 @@ const releases = catalog.releases.map(r => ({
       >
         <a href={bandcamp.pageUrl}>{bandcamp.title} on Bandcamp</a>
       </iframe>
-      <div class="flex items-center justify-between mt-3">
-        <p class="font-mono text-[9px] text-white/20 tracking-widest uppercase">
-          Now playing: {bandcamp.title}
-        </p>
-        <a href="https://morphics.bandcamp.com/" target="_blank" rel="noopener" class="font-mono text-[9px] text-primary/40 hover:text-primary tracking-widest uppercase transition-colors">
-          Full catalog &rarr;
-        </a>
-      </div>
     </div>
   </div>
 
-  <!-- Releases divider -->
-  <div class="brand-divider brand-divider--wide mb-12">
-    <img src="/images/brand/morph-line-g.png" alt="" loading="lazy" />
-  </div>
-
   <div class="flex items-baseline gap-4 mb-8">
-    <span class="font-mono text-xs text-secondary uppercase">All Releases</span>
+    <span class="font-mono text-xs text-secondary uppercase">Discography</span>
     <div class="h-[1px] flex-1 bg-outline-variant/30"></div>
   </div>
 
@@ -145,26 +132,4 @@ const releases = catalog.releases.map(r => ({
     });
   </script>
 
-  <!-- Footer divider -->
-  <div class="brand-divider brand-divider--wide mt-32 mb-0">
-    <img src="/images/brand/morph-line-t.png" alt="" loading="lazy" />
-  </div>
-
-  <footer class="mt-4 pt-12 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-8">
-    <div class="flex gap-12">
-      <div>
-        <div class="font-mono text-[9px] text-white/20 uppercase mb-1">Total Releases</div>
-        <div class="font-headline text-lg text-primary">{releases.length}</div>
-      </div>
-
-      <div>
-        <div class="font-mono text-[9px] text-white/20 uppercase mb-1">Format</div>
-        <div class="font-headline text-lg text-secondary">LOSSLESS</div>
-      </div>
-    </div>
-    <div class="flex gap-6">
-      <a class="text-white/30 hover:text-primary transition-colors" href="#"><span class="material-symbols-outlined">share</span></a>
-      <a class="text-white/30 hover:text-primary transition-colors" href="#"><span class="material-symbols-outlined">download</span></a>
-    </div>
-  </footer>
 </BaseLayout>
