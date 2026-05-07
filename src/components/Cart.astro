@@ -143,22 +143,27 @@
       return;
     }
 
+    const esc = (s: any) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
+    const safeImg = (s: any) => {
+      const v = String(s ?? '');
+      return /^(https?:|\/)/.test(v) ? v : '';
+    };
     itemsEl.innerHTML = items.map((i: any) => `
       <div class="flex gap-4 pb-4 border-b border-white/5 last:border-0">
-        <img src="${i.image || ''}" alt="" class="w-16 h-16 object-cover bg-white/5 grayscale" />
+        <img src="${esc(safeImg(i.image))}" alt="" class="w-16 h-16 object-cover bg-white/5 grayscale" />
         <div class="flex-1 min-w-0">
-          <div class="font-headline text-sm text-primary uppercase tracking-tight truncate">${i.title}</div>
-          ${i.subtitle ? `<div class="font-mono text-[10px] text-white/40 mt-0.5">${i.subtitle}</div>` : ''}
+          <div class="font-headline text-sm text-primary uppercase tracking-tight truncate">${esc(i.title)}</div>
+          ${i.subtitle ? `<div class="font-mono text-[10px] text-white/40 mt-0.5">${esc(i.subtitle)}</div>` : ''}
           <div class="flex items-center justify-between mt-2">
             <div class="flex items-center gap-2">
-              <button data-qty-down="${i.sku}" class="w-6 h-6 border border-white/10 hover:border-primary/40 text-white/60 hover:text-primary text-xs">−</button>
-              <span class="font-mono text-xs text-primary w-6 text-center">${i.qty}</span>
-              <button data-qty-up="${i.sku}" class="w-6 h-6 border border-white/10 hover:border-primary/40 text-white/60 hover:text-primary text-xs">+</button>
+              <button data-qty-down="${esc(i.sku)}" class="w-6 h-6 border border-white/10 hover:border-primary/40 text-white/60 hover:text-primary text-xs">−</button>
+              <span class="font-mono text-xs text-primary w-6 text-center">${esc(i.qty)}</span>
+              <button data-qty-up="${esc(i.sku)}" class="w-6 h-6 border border-white/10 hover:border-primary/40 text-white/60 hover:text-primary text-xs">+</button>
             </div>
-            <div class="font-mono text-xs text-secondary">${fmt(i.unit_amount * i.qty)}</div>
+            <div class="font-mono text-xs text-secondary">${esc(fmt(i.unit_amount * i.qty))}</div>
           </div>
         </div>
-        <button data-remove="${i.sku}" class="text-white/30 hover:text-red-400 self-start" aria-label="Remove">
+        <button data-remove="${esc(i.sku)}" class="text-white/30 hover:text-red-400 self-start" aria-label="Remove">
           <span class="material-symbols-outlined text-[18px]">close</span>
         </button>
       </div>

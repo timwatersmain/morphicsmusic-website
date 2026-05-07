@@ -14,3 +14,22 @@
   Access-Control-Allow-Origin: https://morphicsmusic.com
   Access-Control-Allow-Credentials: true
   Cache-Control: no-store
+
+# Personalized / authenticated pages must never be cached by browsers or
+# intermediaries — they contain per-user purchase data.
+/library
+  Cache-Control: no-store
+/library/*
+  Cache-Control: no-store
+/download
+  Cache-Control: no-store
+/download/*
+  Cache-Control: no-store
+/order-complete
+  Cache-Control: no-store
+/order-complete/*
+  Cache-Control: no-store
+/login
+  Cache-Control: no-store
+/login/*
+  Cache-Control: no-store

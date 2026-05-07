@@ -31,6 +31,12 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     const emailEl = document.getElementById('lib-email')!;
     const logoutBtn = document.getElementById('logout-btn')!;
 
+    const esc = (s: any) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
+    const safeImg = (s: any) => {
+      const v = String(s ?? '');
+      return /^(https?:|\/)/.test(v) ? v : '';
+    };
+
     function fmtSize(b: number) {
       if (b > 1e9) return (b / 1e9).toFixed(2) + ' GB';
       if (b > 1e6) return (b / 1e6).toFixed(1) + ' MB';
@@ -52,7 +58,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       .then((data: any) => {
         if (!data) return;
         loading.classList.add('hidden');
-        emailEl.textContent = data.email;
+        emailEl.textContent = String(data.email || '');
 
         if (!data.releases.length && !(data.purchases && data.purchases.length)) {
           empty.classList.remove('hidden');
@@ -65,10 +71,10 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           const releasesHtml = data.releases.map((r: any) => `
             <section class="border border-white/5 p-6">
               <div class="flex items-center gap-4 mb-4">
-                <img src="${r.artwork}" alt="" class="w-16 h-16 object-cover bg-white/5" />
+                <img src="${esc(safeImg(r.artwork))}" alt="" class="w-16 h-16 object-cover bg-white/5" />
                 <div class="flex-1">
-                  <div class="font-mono text-[10px] text-secondary uppercase tracking-widest">${r.type}</div>
-                  <h2 class="font-headline text-2xl text-primary uppercase tracking-tight">${r.title}</h2>
+                  <div class="font-mono text-[10px] text-secondary uppercase tracking-widest">${esc(r.type)}</div>
+                  <h2 class="font-headline text-2xl text-primary uppercase tracking-tight">${esc(r.title)}</h2>
                 </div>
               </div>
               ${r.files.length === 0
@@ -76,9 +82,9 @@ import BaseLayout from '../layouts/BaseLayout.astro';
                 : `<ul class="divide-y divide-white/5 border-y border-white/5">
                     ${r.files.map((f: any) => `
                       <li class="flex items-center gap-4 py-3">
-                        <span class="font-mono text-[10px] text-white/30 uppercase">${f.ext}</span>
-                        <span class="flex-1 font-mono text-[11px] text-white/80 truncate">${f.filename}</span>
-                        <span class="font-mono text-[10px] text-white/40">${fmtSize(f.size)}</span>
+                        <span class="font-mono text-[10px] text-white/30 uppercase">${esc(f.ext)}</span>
+                        <span class="flex-1 font-mono text-[11px] text-white/80 truncate">${esc(f.filename)}</span>
+                        <span class="font-mono text-[10px] text-white/40">${esc(fmtSize(f.size))}</span>
                         <a href="/api/download?key=${encodeURIComponent(f.key)}"
                            class="px-3 py-2 border border-primary/20 hover:border-primary/60 hover:bg-primary/5 font-mono text-[10px] tracking-widest uppercase text-primary">
                           Download
@@ -110,11 +116,11 @@ import BaseLayout from '../layouts/BaseLayout.astro';
               <ol class="divide-y divide-white/5 border-y border-white/5">
                 ${data.purchases.slice().reverse().map((p: any) => `
                   <li class="flex items-center gap-4 py-3">
-                    <span class="font-mono text-[10px] text-white/40 w-24">${fmtDate(p.purchased_at)}</span>
+                    <span class="font-mono text-[10px] text-white/40 w-24">${esc(fmtDate(p.purchased_at))}</span>
                     <span class="flex-1 font-mono text-[11px] text-white/70">
-                      ${(p.music_release_slugs || []).map((s: string) => s.toUpperCase().replace(/-/g,' ')).join(', ') || '(merch)'}
+                      ${esc((p.music_release_slugs || []).map((s: string) => s.toUpperCase().replace(/-/g,' ')).join(', ') || '(merch)')}
                     </span>
-                    <span class="font-mono text-[11px] text-secondary tabular-nums">$${(p.amount_total / 100).toFixed(2)}</span>
+                    <span class="font-mono text-[11px] text-secondary tabular-nums">$${esc((p.amount_total / 100).toFixed(2))}</span>
                   </li>`).join('')}
               </ol>
             </div>`;
