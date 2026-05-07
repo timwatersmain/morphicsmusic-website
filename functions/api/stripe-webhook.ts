@@ -218,23 +218,25 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, waitUnti
   await env.DOWNLOADS.put(seenKey, '1', { expirationTtl: 60 * 60 * 24 * 30 }); // 30 days
 
   const session = event.data.object as Stripe.Checkout.Session;
-  // The event payload already contains customer_details and metadata.
-  // Only re-fetch when we actually need shipping_details that may not be
-  // expanded — required for physical merch fulfillment, not for music.
-  let fulfillmentRaw = '';
-  try { fulfillmentRaw = session.metadata?.fulfillment || ''; } catch {}
-  const needsShipping = fulfillmentRaw.includes('"merch"');
+
+  // Read the full fulfillment plan from KV (written by checkout.ts under the
+  // session.id key). This avoids Stripe's 500-char metadata truncation that
+  // would otherwise drop items silently for larger carts.
+  let fulfillment: FulfillmentEntry[] = [];
+  try {
+    const raw = await env.DOWNLOADS.get(`fulfillment:${session.id}`);
+    if (raw) fulfillment = JSON.parse(raw);
+  } catch {}
+  if (fulfillment.length === 0) return new Response('no fulfillment data', { status: 200 });
+
+  // Only re-fetch the session when we actually need shipping_details
+  // (physical merch). Skip for digital-only orders to save a Stripe round-trip.
+  const needsShipping = fulfillment.some(f => f.type === 'merch');
   const full = needsShipping
     ? await stripe.checkout.sessions.retrieve(session.id, {
         expand: ['line_items', 'customer_details', 'shipping_details'],
       })
     : session;
-
-  let fulfillment: FulfillmentEntry[] = [];
-  try {
-    fulfillment = JSON.parse(full.metadata?.fulfillment || '[]');
-  } catch {}
-  if (fulfillment.length === 0) return new Response('no fulfillment data', { status: 200 });
 
   const merchItems = fulfillment.filter(f => f.type === 'merch');
   const musicItems = fulfillment.filter(f => f.type === 'music');

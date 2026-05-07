@@ -28,9 +28,24 @@ interface CartItem {
 interface Env {
   STRIPE_SECRET_KEY: string;
   PUBLIC_SITE_URL?: string;
+  DOWNLOADS: KVNamespace;
+}
+
+async function checkRateLimit(env: Env, key: string, limit: number, windowSec: number): Promise<boolean> {
+  const raw = await env.DOWNLOADS.get(`rl:${key}`);
+  const count = raw ? parseInt(raw, 10) || 0 : 0;
+  if (count >= limit) return false;
+  await env.DOWNLOADS.put(`rl:${key}`, String(count + 1), { expirationTtl: windowSec });
+  return true;
 }
 
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
+  // Rate limit: 20 sessions per IP per 10 min. Genuine cart usage is well
+  // below this; spammers hit it instantly.
+  const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+  const ok = await checkRateLimit(env, `checkout:ip:${ip}`, 20, 600);
+  if (!ok) return new Response('Too many checkout attempts', { status: 429 });
+
   let body: { items: CartItem[] };
   try {
     body = await request.json();
@@ -115,6 +130,14 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
 
   const origin = env.PUBLIC_SITE_URL || new URL(request.url).origin;
 
+  // Compact summary that's safe to put in Stripe metadata (≤500 char limit).
+  // Webhook reads the full fulfillment from KV by session_id below; this is
+  // just a human-readable hint for the Stripe dashboard.
+  const summary = fulfillment
+    .map(f => f.type === 'music' ? `music:${f.release_slug}x${f.quantity}` : `merch:${f.printful_variant_id}x${f.quantity}`)
+    .join(',')
+    .slice(0, 480);
+
   const params: Stripe.Checkout.SessionCreateParams = {
     mode: 'payment',
     line_items: lineItems,
@@ -122,13 +145,8 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     cancel_url: `${origin}/store`,
     payment_method_types: ['card'],
     automatic_tax: { enabled: false },
-    metadata: {
-      // Stripe metadata values are strings ≤500 chars. Keep fulfillment compact.
-      fulfillment: JSON.stringify(fulfillment).slice(0, 500),
-    },
-    payment_intent_data: {
-      metadata: { fulfillment: JSON.stringify(fulfillment).slice(0, 500) },
-    },
+    metadata: { summary },
+    payment_intent_data: { metadata: { summary } },
   };
 
   if (hasPhysical) {
@@ -154,6 +172,15 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
 
   try {
     const session = await stripe.checkout.sessions.create(params);
+    // Store the full fulfillment plan in KV keyed by session.id. The webhook
+    // reads it on checkout.session.completed. KV has no 500-char ceiling, so
+    // this avoids the silent truncation bug that would let large carts pay
+    // successfully but receive nothing.
+    await env.DOWNLOADS.put(
+      `fulfillment:${session.id}`,
+      JSON.stringify(fulfillment),
+      { expirationTtl: 60 * 60 * 24 * 7 }, // 7 days — covers webhook retries
+    );
     return new Response(JSON.stringify({ url: session.url }), {
       headers: { 'Content-Type': 'application/json' },
     });
