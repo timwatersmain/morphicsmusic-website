@@ -32,6 +32,12 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       errEl.classList.remove('hidden');
     }
 
+    const esc = (s: any) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
+    const safeImg = (s: any) => {
+      const v = String(s ?? '');
+      return /^(https?:|\/)/.test(v) ? v : '';
+    };
+
     function fmtSize(bytes: number) {
       if (bytes > 1e9) return (bytes / 1e9).toFixed(2) + ' GB';
       if (bytes > 1e6) return (bytes / 1e6).toFixed(1) + ' MB';
@@ -55,26 +61,26 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
           content.innerHTML = `
             <div class="flex flex-wrap gap-x-8 gap-y-2 pb-6 border-b border-white/10 font-mono text-[10px] text-white/40 uppercase tracking-widest">
-              <div>Email: <span class="text-primary normal-case tracking-normal">${data.email}</span></div>
-              <div>Expires: <span class="text-primary normal-case tracking-normal">${expiresAt}</span></div>
-              <div>Uses left: <span class="text-primary">${usesLeft} / ${data.max_uses}</span></div>
+              <div>Email: <span class="text-primary normal-case tracking-normal">${esc(data.email)}</span></div>
+              <div>Expires: <span class="text-primary normal-case tracking-normal">${esc(expiresAt)}</span></div>
+              <div>Uses left: <span class="text-primary">${esc(usesLeft)} / ${esc(data.max_uses)}</span></div>
             </div>
           ` + data.releases.map((r: any) => `
             <section>
               <div class="flex items-center gap-4 mb-4">
-                <img src="${r.artwork}" alt="" class="w-16 h-16 object-cover bg-white/5" />
+                <img src="${esc(safeImg(r.artwork))}" alt="" class="w-16 h-16 object-cover bg-white/5" />
                 <div>
                   <div class="font-mono text-[10px] text-secondary uppercase tracking-widest">Release</div>
-                  <h2 class="font-headline text-2xl text-primary uppercase tracking-tight">${r.title}</h2>
+                  <h2 class="font-headline text-2xl text-primary uppercase tracking-tight">${esc(r.title)}</h2>
                 </div>
               </div>
               ${r.files.length === 0 ? `<p class="font-mono text-[11px] text-white/30">Files not yet uploaded — check back shortly.</p>` :
                 `<ul class="divide-y divide-white/5 border-y border-white/5">
                   ${r.files.map((f: any) => `
                     <li class="flex items-center gap-4 py-3">
-                      <span class="font-mono text-[10px] text-white/30 uppercase">${f.ext}</span>
-                      <span class="flex-1 font-mono text-[11px] text-white/80 truncate">${f.filename}</span>
-                      <span class="font-mono text-[10px] text-white/40">${fmtSize(f.size)}</span>
+                      <span class="font-mono text-[10px] text-white/30 uppercase">${esc(f.ext)}</span>
+                      <span class="flex-1 font-mono text-[11px] text-white/80 truncate">${esc(f.filename)}</span>
+                      <span class="font-mono text-[10px] text-white/40">${esc(fmtSize(f.size))}</span>
                       <a href="/api/download?token=${encodeURIComponent(token)}&key=${encodeURIComponent(f.key)}"
                          class="px-3 py-2 border border-primary/20 hover:border-primary/60 hover:bg-primary/5 font-mono text-[10px] tracking-widest uppercase text-primary">
                         Download

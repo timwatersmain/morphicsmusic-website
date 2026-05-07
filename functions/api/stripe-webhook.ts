@@ -209,13 +209,19 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, waitUnti
     return new Response('ignored', { status: 200 });
   }
 
-  // Idempotency: Stripe retries events on transient failures. Without this,
-  // a retry would create a second Printful order and a second download grant
-  // for the same payment.
-  const seenKey = `webhook:seen:${event.id}`;
-  const already = await env.DOWNLOADS.get(seenKey);
-  if (already) return new Response('duplicate', { status: 200 });
-  await env.DOWNLOADS.put(seenKey, '1', { expirationTtl: 60 * 60 * 24 * 30 }); // 30 days
+  // Two-stage idempotency: Stripe retries events on transient failures.
+  // - "completed:<id>" is set ONLY after fulfillment succeeds — durable for
+  //   30 days and short-circuits all subsequent retries.
+  // - "in_progress:<id>" with a 5-min TTL guards against two near-simultaneous
+  //   retries racing through fulfillment side-effects.
+  // If a worker dies mid-flight, the in-progress key expires and Stripe
+  // retries cleanly, vs. the previous design where setting "seen" upfront
+  // would lock the customer into a no-fulfillment state forever.
+  const completedKey = `webhook:completed:${event.id}`;
+  const inProgressKey = `webhook:in_progress:${event.id}`;
+  if (await env.DOWNLOADS.get(completedKey)) return new Response('duplicate', { status: 200 });
+  if (await env.DOWNLOADS.get(inProgressKey)) return new Response('in progress', { status: 200 });
+  await env.DOWNLOADS.put(inProgressKey, '1', { expirationTtl: 300 });
 
   const session = event.data.object as Stripe.Checkout.Session;
 
@@ -244,6 +250,9 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, waitUnti
   const name = full.customer_details?.name;
 
   // Run side-effects after responding so Stripe gets a 200 within its window.
+  // On success → set completed key (30 days) so future retries short-circuit.
+  // On failure → leave in_progress key to expire (5 min) so Stripe's next
+  // retry attempt actually re-runs fulfillment cleanly.
   waitUntil((async () => {
     try {
       if (merchItems.length > 0) {
@@ -260,8 +269,10 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, waitUnti
         const url = `${env.PUBLIC_SITE_URL || new URL(request.url).origin}/download?token=${token}`;
         await sendDownloadEmail(env, email, url, slugs.map(s => s.toUpperCase().replace(/-/g, ' ')));
       }
+      await env.DOWNLOADS.put(completedKey, '1', { expirationTtl: 60 * 60 * 24 * 30 });
     } catch (e) {
       console.error('fulfillment error:', e);
+      // Don't mark completed — Stripe will retry once the in_progress key expires.
     }
   })());
 
