@@ -2,7 +2,7 @@
 // session cookies. No DB beyond KV; sessions are stateless HMAC-signed JWT-
 // shaped strings so we don't have to store anything per logged-in user.
 
-const SESSION_TTL_DAYS = 30;
+const SESSION_TTL_DAYS = 365;
 const LOGIN_TTL_MINUTES = 15;
 
 function b64url(bytes: Uint8Array): string {
