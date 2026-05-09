@@ -1,6 +1,5 @@
 ---
 import TopNav from '../components/TopNav.astro';
-import BottomNav from '../components/BottomNav.astro';
 import CornerAccents from '../components/CornerAccents.astro';
 import ParticleBackground from '../components/ParticleBackground.astro';
 import Cart from '../components/Cart.astro';
@@ -34,11 +33,10 @@ const { title, currentPage = '' } = Astro.props;
   <TopNav currentPage={currentPage} />
   <CornerAccents />
 
-  <main class="relative z-10 pt-32 pb-24 px-8">
+  <main class="relative z-10 pt-24 pb-24 px-8">
     <slot />
   </main>
 
-  <BottomNav currentPage={currentPage} />
   <Cart />
 </body>
 </html>

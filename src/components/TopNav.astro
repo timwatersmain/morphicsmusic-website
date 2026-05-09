@@ -2,38 +2,37 @@
 const { currentPage = '' } = Astro.props;
 
 const navItems = [
-  { label: 'MUSIC', href: '/music' },
-  { label: 'VISUALS', href: '/visuals' },
-  { label: 'STORE', href: '/store' },
-  { label: 'SOCIAL', href: '/social' },
+  { label: 'MUSIC',   href: '/music',   icon: 'graphic_eq' },
+  { label: 'VISUALS', href: '/visuals', icon: 'grid_view' },
+  { label: 'STORE',   href: '/store',   icon: 'storefront' },
+  { label: 'SOCIAL',  href: '/social',  icon: 'sensors' },
 ];
 ---
 
-<header class="fixed top-0 w-full z-50 bg-[#0A0A0A]/80 backdrop-blur-2xl flex justify-between items-center px-8 py-6">
-  <a href="/" class="hover:scale-105 transition-all duration-[400ms]">
-    <img src="/images/logos/emblem-circle.png" alt="Morphics" class="h-12 w-12 object-contain" />
+<header class="fixed top-0 w-full z-50 bg-[#0A0A0A]/85 backdrop-blur-2xl flex items-center gap-3 px-4 md:px-8 py-3 md:py-6">
+  <a href="/" class="flex-shrink-0 hover:scale-105 transition-all duration-[400ms]">
+    <img src="/images/logos/emblem-circle.png" alt="Morphics" class="h-10 w-10 md:h-12 md:w-12 object-contain" />
   </a>
-  <nav class="hidden md:flex space-x-12">
+  <nav class="flex-1 flex items-center justify-around md:justify-end md:gap-12 pr-14 md:pr-0">
     {navItems.map(item => (
       <a
         href={item.href}
         class:list={[
-          "font-headline uppercase tracking-[0.2em] text-[0.75rem] hover:text-primary hover:scale-105 transition-all duration-[400ms]",
+          "flex flex-col md:flex-row items-center md:gap-0 hover:text-primary hover:md:scale-105 transition-all duration-[400ms]",
           currentPage === item.href
-            ? "text-primary drop-shadow-[0_0_5px_#00F0FF] border-b border-primary/30"
+            ? "text-primary drop-shadow-[0_0_5px_#00F0FF]"
             : "text-primary/50"
         ]}
       >
-        {item.label}
+        <span class="material-symbols-outlined md:hidden text-[22px] leading-none">{item.icon}</span>
+        <span class="font-headline uppercase tracking-[0.2em] text-[8px] md:text-[0.75rem] mt-1 md:mt-0 leading-none">{item.label}</span>
       </a>
     ))}
   </nav>
-  <div class="flex items-center space-x-4 mr-16">
-    <a id="account-link" href="/login" class="hidden md:inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-white/40 hover:text-secondary transition-colors">
-      <span class="material-symbols-outlined text-base">person</span>
-      <span id="account-link-label">Sign in</span>
-    </a>
-  </div>
+  <a id="account-link" href="/login" class="hidden md:inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-white/40 hover:text-secondary transition-colors mr-16">
+    <span class="material-symbols-outlined text-base">person</span>
+    <span id="account-link-label">Sign in</span>
+  </a>
 </header>
 
 <script>

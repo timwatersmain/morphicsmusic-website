@@ -3,8 +3,9 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 ---
 
 <BaseLayout title="MORPHICS" currentPage="/">
-  <!-- Hero Section -->
-  <section class="relative h-screen w-full flex flex-col items-center justify-center px-6 overflow-hidden">
+  <!-- Hero Section — fills the viewport between the top nav and the footer
+       and centers the wordmark + tagline in the visible area on every device. -->
+  <section class="relative min-h-[calc(100dvh-12rem)] w-full flex flex-col items-center justify-center px-6 overflow-hidden">
     <div class="relative z-10 text-center max-w-4xl px-4">
       <h1 class="mb-6">
         <img
