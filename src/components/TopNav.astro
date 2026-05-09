@@ -18,13 +18,13 @@ const navItems = [
       <a
         href={item.href}
         class:list={[
-          "flex flex-col md:flex-row items-center md:gap-0 hover:text-primary hover:md:scale-105 transition-all duration-[400ms]",
+          "flex flex-col md:flex-row items-center md:gap-2 hover:text-primary hover:md:scale-105 transition-all duration-[400ms]",
           currentPage === item.href
             ? "text-primary drop-shadow-[0_0_5px_#00F0FF]"
             : "text-primary/50"
         ]}
       >
-        <span class="material-symbols-outlined md:hidden text-[22px] leading-none">{item.icon}</span>
+        <span class="material-symbols-outlined text-[22px] md:text-base leading-none">{item.icon}</span>
         <span class="font-headline uppercase tracking-[0.2em] text-[8px] md:text-[0.75rem] mt-1 md:mt-0 leading-none">{item.label}</span>
       </a>
     ))}
@@ -33,9 +33,9 @@ const navItems = [
       type="button"
       aria-label="Open cart"
       onclick="document.dispatchEvent(new CustomEvent('cart:open'))"
-      class="relative flex flex-col md:flex-row items-center text-primary/50 hover:text-primary hover:md:scale-105 transition-all duration-[400ms]"
+      class="relative flex flex-col md:flex-row items-center md:gap-2 text-primary/50 hover:text-primary hover:md:scale-105 transition-all duration-[400ms]"
     >
-      <span class="material-symbols-outlined md:hidden text-[22px] leading-none">shopping_bag</span>
+      <span class="material-symbols-outlined text-[22px] md:text-base leading-none">shopping_bag</span>
       <span class="font-headline uppercase tracking-[0.2em] text-[8px] md:text-[0.75rem] mt-1 md:mt-0 leading-none">Cart</span>
       <span
         id="cart-badge"
