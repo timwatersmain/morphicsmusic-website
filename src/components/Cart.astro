@@ -87,7 +87,9 @@
   const checkoutBtn = document.getElementById('cart-checkout') as HTMLButtonElement;
   const itemsEl = document.getElementById('cart-items')!;
   const subtotalEl = document.getElementById('cart-subtotal')!;
-  const badge = document.getElementById('cart-badge')!;
+  // Both the mobile (inline) and desktop (right-cluster) cart buttons carry
+  // a .cart-badge — update every match so they stay in sync.
+  const badges = document.querySelectorAll<HTMLElement>('.cart-badge');
   const countText = document.getElementById('cart-count-text')!;
 
   const cart = (window as any).morphicsCart;
@@ -116,8 +118,10 @@
   function render() {
     const items = cart.items();
     const count = cart.count();
-    badge.classList.toggle('hidden', count === 0);
-    badge.textContent = String(count);
+    badges.forEach(b => {
+      b.classList.toggle('hidden', count === 0);
+      b.textContent = String(count);
+    });
     countText.textContent = count === 0 ? 'Empty' : `${count} item${count === 1 ? '' : 's'}`;
     checkoutBtn.disabled = count === 0;
     subtotalEl.textContent = fmt(cart.subtotal());

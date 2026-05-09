@@ -9,11 +9,15 @@ const navItems = [
 ];
 ---
 
-<header class="fixed top-0 w-full z-50 bg-[#0A0A0A]/85 backdrop-blur-2xl flex items-center gap-3 px-4 md:px-8 py-3 md:py-6">
+<header class="fixed top-0 w-full z-50 bg-[#0A0A0A]/85 backdrop-blur-2xl grid grid-cols-[auto_1fr_auto] items-center gap-3 px-4 md:px-8 py-3 md:py-6">
   <a href="/" class="flex-shrink-0 hover:scale-105 transition-all duration-[400ms]">
     <img src="/images/logos/emblem-circle.png" alt="Morphics" class="h-10 w-10 md:h-12 md:w-12 object-contain" />
   </a>
-  <nav class="flex-1 flex items-center justify-around md:justify-end md:gap-12">
+
+  <!-- Centered main nav. Mobile keeps cart inline at the right end of the
+       row; desktop uses a true centered layout (grid middle column) with
+       cart + sign-in living in the right cluster for balance. -->
+  <nav class="flex items-center justify-around md:justify-center md:gap-14">
     {navItems.map(item => (
       <a
         href={item.href}
@@ -28,25 +32,39 @@ const navItems = [
         <span class="font-headline uppercase tracking-[0.2em] text-[8px] md:text-[0.75rem] mt-1 md:mt-0 leading-none">{item.label}</span>
       </a>
     ))}
+    <!-- Mobile cart (inline with nav row). Desktop variant lives in the
+         right cluster below so the centered nav stays balanced. -->
+    <button
+      type="button"
+      aria-label="Open cart"
+      onclick="document.dispatchEvent(new CustomEvent('cart:open'))"
+      class="md:hidden relative flex flex-col items-center text-primary/50 hover:text-primary transition-all duration-[400ms]"
+    >
+      <span class="material-symbols-outlined text-[22px] leading-none">shopping_bag</span>
+      <span class="font-headline uppercase tracking-[0.2em] text-[8px] mt-1 leading-none">Cart</span>
+      <span class="cart-badge hidden absolute -top-1 -right-2 min-w-[16px] h-[16px] px-1 bg-secondary text-on-secondary text-[9px] font-mono font-bold rounded-full items-center justify-center">0</span>
+    </button>
+  </nav>
+
+  <!-- Desktop right cluster: Cart + Sign in. Hidden on mobile because
+       the mobile cart sits inline in the nav row above. -->
+  <div class="hidden md:flex items-center gap-6 flex-shrink-0">
     <button
       id="cart-button"
       type="button"
       aria-label="Open cart"
       onclick="document.dispatchEvent(new CustomEvent('cart:open'))"
-      class="relative flex flex-col md:flex-row items-center md:gap-2 text-primary/50 hover:text-primary hover:md:scale-105 transition-all duration-[400ms]"
+      class="relative flex flex-row items-center gap-2 text-primary/50 hover:text-primary hover:scale-105 transition-all duration-[400ms]"
     >
-      <span class="material-symbols-outlined text-[22px] md:text-base leading-none">shopping_bag</span>
-      <span class="font-headline uppercase tracking-[0.2em] text-[8px] md:text-[0.75rem] mt-1 md:mt-0 leading-none">Cart</span>
-      <span
-        id="cart-badge"
-        class="hidden absolute -top-1 -right-2 min-w-[16px] h-[16px] px-1 bg-secondary text-on-secondary text-[9px] font-mono font-bold rounded-full items-center justify-center"
-      >0</span>
+      <span class="material-symbols-outlined text-base leading-none">shopping_bag</span>
+      <span class="font-headline uppercase tracking-[0.2em] text-[0.75rem] leading-none">Cart</span>
+      <span id="cart-badge" class="cart-badge hidden absolute -top-1 -right-2 min-w-[16px] h-[16px] px-1 bg-secondary text-on-secondary text-[9px] font-mono font-bold rounded-full items-center justify-center">0</span>
     </button>
-  </nav>
-  <a id="account-link" href="/login" class="hidden md:inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-white/40 hover:text-secondary transition-colors">
-    <span class="material-symbols-outlined text-base">person</span>
-    <span id="account-link-label">Sign in</span>
-  </a>
+    <a id="account-link" href="/login" class="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-white/40 hover:text-secondary transition-colors">
+      <span class="material-symbols-outlined text-base">person</span>
+      <span id="account-link-label">Sign in</span>
+    </a>
+  </div>
 </header>
 
 <script>

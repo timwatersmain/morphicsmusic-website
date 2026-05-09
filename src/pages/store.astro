@@ -17,7 +17,8 @@ const formatPrice = (lo: number | null, hi: number | null) => {
     </h1>
   </header>
 
-  <!-- Plugins -->
+  <!-- Catalog grid: plugins and merch share the same row so a card sits
+       beside its neighbour rather than stacked in two separate sections. -->
   <section class="max-w-[1400px] mx-auto mb-24">
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
       {pluginItems.map(item => (
@@ -52,12 +53,7 @@ const formatPrice = (lo: number | null, hi: number | null) => {
           </div>
         </div>
       ))}
-    </div>
-  </section>
 
-  <!-- Merch -->
-  <section class="max-w-[1400px] mx-auto mb-24">
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
       {merchItems.map(item => (
         <a href={`/store/merch/${item.slug}`} class="group relative bg-surface-container-low border border-white/5 transition-all duration-500 hover:border-secondary/30 terminal-glow block">
           <div class="relative overflow-hidden">
