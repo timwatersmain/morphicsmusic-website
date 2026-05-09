@@ -144,11 +144,21 @@ function syncSignal() {
     const best = group[0];
     const allPlatforms = [...new Set(group.map(p => p.platform?.toLowerCase()).filter(Boolean))];
 
+    // Rewrite raw r2.dev URLs to the same-origin proxy at
+    // /api/social-media/<filename>. The R2 bucket no longer exposes its
+    // public r2.dev domain (so paid masters under masters/ stay private);
+    // social-media files are served via the proxy function with an
+    // allow-list regex that rejects anything resembling a master path.
+    const rawUrl = best.media_url || '';
+    const proxiedUrl = rawUrl.startsWith('https://pub-')
+      ? `/api/social-media/${rawUrl.split('/').pop()}`
+      : rawUrl;
+
     return {
       id: best.id || '',
       title: (best.youtube_title || best.caption || '').substring(0, 60).toUpperCase(),
       type: best.media_type || 'visual',
-      mediaUrl: best.media_url || '',
+      mediaUrl: proxiedUrl,
       thumbnail: '',
       caption: best.caption || '',
       date: best.published_at?.split('T')[0] || '',
