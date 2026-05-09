@@ -9,6 +9,7 @@
 import Stripe from 'stripe';
 import merchData from '../../src/data/merch.json';
 import musicData from '../../src/data/music-catalog.json';
+import { corsHandler, preflight } from '../_lib/cors';
 
 interface CartItem {
   type: 'merch' | 'music';
@@ -39,7 +40,9 @@ async function checkRateLimit(env: Env, key: string, limit: number, windowSec: n
   return true;
 }
 
-export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
+export const onRequestOptions: PagesFunction<Env> = async ({ request }) => preflight(request);
+
+export const onRequestPost: PagesFunction<Env> = corsHandler<Env>(async ({ request, env }) => {
   // Rate limit: 20 sessions per IP per 10 min. Genuine cart usage is well
   // below this; spammers hit it instantly.
   const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
@@ -187,4 +190,4 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   } catch (e: any) {
     return new Response(`Stripe error: ${e.message}`, { status: 500 });
   }
-};
+});

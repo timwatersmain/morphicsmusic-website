@@ -2,6 +2,7 @@
 // joined with the music catalog + masters manifest so /library can render
 // download buttons without separately calling the catalog endpoints.
 import { readCookie, verifySession } from '../_lib/auth';
+import { corsHandler, preflight } from '../_lib/cors';
 import manifest from '../../src/data/masters-manifest.json';
 import catalog from '../../src/data/music-catalog.json';
 
@@ -25,7 +26,9 @@ interface Env {
   DOWNLOADS: KVNamespace;
 }
 
-export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
+export const onRequestOptions: PagesFunction<Env> = async ({ request }) => preflight(request);
+
+export const onRequestGet: PagesFunction<Env> = corsHandler<Env>(async ({ request, env }) => {
   const cookie = readCookie(request, 'morphics_auth') || '';
   const email = await verifySession(env.AUTH_SECRET, cookie);
   if (!email) return new Response(JSON.stringify({ error: 'unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
@@ -53,11 +56,20 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
       files: ((manifest as any).releases?.[r.slug] || []),
     }));
 
+  // Strip stripe_session_id and merch_items from the client-facing payload —
+  // they're operational identifiers the page never renders.
+  const purchases = (record.purchases || []).map(p => ({
+    purchased_at: p.purchased_at,
+    music_release_slugs: p.music_release_slugs,
+    amount_total: p.amount_total,
+    currency: p.currency,
+  }));
+
   return new Response(JSON.stringify({
     email: record.email,
     name: record.name || null,
     first_seen_at: record.first_seen_at,
-    purchases: record.purchases,
+    purchases,
     releases,
   }), { headers: { 'Content-Type': 'application/json' } });
-};
+});

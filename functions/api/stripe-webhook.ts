@@ -1,12 +1,12 @@
 // POST /api/stripe-webhook
-// Verifies Stripe signature, then on checkout.session.completed:
-//  - creates a Printful order for any physical line items
-//  - issues a download token for any digital music line items
-//  - emails the buyer their download link via Resend
+// Verifies Stripe signature, then routes by event type:
+//  - checkout.session.completed     → fulfill (Printful + download token + email)
+//  - charge.refunded                → revoke download grant + prune customer record
+//  - charge.dispute.created         → same revoke as refund (chargeback opened)
+//  - charge.dispute.funds_withdrawn → same revoke (funds actually pulled)
 //
-// Stripe → set this URL in Dashboard → Developers → Webhooks. Listen for:
-//   checkout.session.completed
-// Copy the signing secret into env STRIPE_WEBHOOK_SECRET.
+// Stripe → set this URL in Dashboard → Developers → Webhooks. Listen for
+// all four event types above. Copy the signing secret into STRIPE_WEBHOOK_SECRET.
 
 import Stripe from 'stripe';
 
@@ -81,7 +81,7 @@ async function createPrintfulOrder(env: Env, session: Stripe.Checkout.Session, i
   return await res.json();
 }
 
-async function issueDownloadGrant(env: Env, email: string, releaseSlugs: string[]) {
+async function issueDownloadGrant(env: Env, email: string, releaseSlugs: string[], sessionId: string) {
   const token = tokenHex();
   const now = Math.floor(Date.now() / 1000);
   const grant: DownloadGrant = {
@@ -92,6 +92,11 @@ async function issueDownloadGrant(env: Env, email: string, releaseSlugs: string[
     uses: 0,
   };
   await env.DOWNLOADS.put(`grant:${token}`, JSON.stringify(grant), {
+    expirationTtl: SEVEN_DAYS_SEC,
+  });
+  // Reverse index so the refund/dispute handler can find this token from
+  // the original Stripe session id and delete it on revocation.
+  await env.DOWNLOADS.put(`grant_session:${sessionId}`, token, {
     expirationTtl: SEVEN_DAYS_SEC,
   });
   return token;
@@ -157,6 +162,44 @@ async function recordCustomerPurchase(
   });
   // No TTL — customer records persist permanently.
   await env.DOWNLOADS.put(key, JSON.stringify(record));
+
+  // Reverse index by payment_intent so the refund/dispute handler — which
+  // only receives the charge/payment_intent — can map back to the email +
+  // session id without listing all customer records.
+  const pi = typeof session.payment_intent === 'string'
+    ? session.payment_intent
+    : session.payment_intent?.id;
+  if (pi) {
+    await env.DOWNLOADS.put(
+      `pi:${pi}`,
+      JSON.stringify({ email: lower, session_id: session.id }),
+    );
+  }
+}
+
+// Revoke access for a session that's been refunded or charged-back. Deletes
+// the active download grant (so the email link stops working) and removes
+// the matching purchase entry from the customer's record (so /library and
+// the cookie-auth download path no longer treat it as owned).
+async function revokeAccessForSession(env: Env, sessionId: string, email: string) {
+  // Kill the active 7-day download grant if it still exists.
+  const grantToken = await env.DOWNLOADS.get(`grant_session:${sessionId}`);
+  if (grantToken) {
+    await env.DOWNLOADS.delete(`grant:${grantToken}`);
+    await env.DOWNLOADS.delete(`grant_session:${sessionId}`);
+  }
+  // Prune the matching purchase from the permanent customer record.
+  const lower = email.toLowerCase().trim();
+  const key = `customer:${lower}`;
+  const raw = await env.DOWNLOADS.get(key);
+  if (!raw) return;
+  let record: CustomerRecord;
+  try { record = JSON.parse(raw); } catch { return; }
+  const before = (record.purchases || []).length;
+  record.purchases = (record.purchases || []).filter(p => p.stripe_session_id !== sessionId);
+  if (record.purchases.length !== before) {
+    await env.DOWNLOADS.put(key, JSON.stringify(record));
+  }
 }
 
 async function sendDownloadEmail(env: Env, to: string, downloadUrl: string, releaseTitles: string[]) {
@@ -203,6 +246,46 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, waitUnti
     event = await stripe.webhooks.constructEventAsync(body, sig, env.STRIPE_WEBHOOK_SECRET);
   } catch (e: any) {
     return new Response(`Bad signature: ${e.message}`, { status: 400 });
+  }
+
+  // Refund / dispute events revoke access. They share the same revocation
+  // logic — full refund or chargeback both mean "the buyer no longer paid
+  // for this", so pull the grant and the customer-record entry.
+  const REVOKE_EVENTS = new Set([
+    'charge.refunded',
+    'charge.dispute.created',
+    'charge.dispute.funds_withdrawn',
+  ]);
+  if (REVOKE_EVENTS.has(event.type)) {
+    const charge = event.data.object as Stripe.Charge | Stripe.Dispute;
+    const pi = typeof (charge as any).payment_intent === 'string'
+      ? (charge as any).payment_intent
+      : (charge as any).payment_intent?.id;
+    if (!pi) return new Response('no payment_intent on event', { status: 200 });
+    const completedKey = `webhook:completed:${event.id}`;
+    if (await env.DOWNLOADS.get(completedKey)) return new Response('duplicate', { status: 200 });
+    waitUntil((async () => {
+      try {
+        const raw = await env.DOWNLOADS.get(`pi:${pi}`);
+        if (!raw) {
+          // Webhook may have arrived before the original session.completed
+          // wrote the index. Fall back to the Stripe API.
+          const sessions = await stripe.checkout.sessions.list({ payment_intent: pi, limit: 1 });
+          const s = sessions.data[0];
+          if (s?.id && s.customer_details?.email) {
+            await revokeAccessForSession(env, s.id, s.customer_details.email);
+          }
+        } else {
+          const { email, session_id } = JSON.parse(raw) as { email: string; session_id: string };
+          await revokeAccessForSession(env, session_id, email);
+        }
+        await env.DOWNLOADS.put(completedKey, '1', { expirationTtl: 60 * 60 * 24 * 30 });
+      } catch (e) {
+        console.error('revocation error:', e);
+        // Don't mark completed — Stripe will retry.
+      }
+    })());
+    return new Response('revoking', { status: 200 });
   }
 
   if (event.type !== 'checkout.session.completed') {
@@ -265,7 +348,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, waitUnti
       }
       if (musicItems.length > 0 && email) {
         const slugs = musicItems.map(m => m.release_slug!).filter(Boolean);
-        const token = await issueDownloadGrant(env, email, slugs);
+        const token = await issueDownloadGrant(env, email, slugs, full.id);
         const url = `${env.PUBLIC_SITE_URL || new URL(request.url).origin}/download?token=${token}`;
         await sendDownloadEmail(env, email, url, slugs.map(s => s.toUpperCase().replace(/-/g, ' ')));
       }

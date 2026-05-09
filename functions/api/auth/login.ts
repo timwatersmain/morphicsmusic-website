@@ -1,6 +1,7 @@
 // POST /api/auth/login  { email, redirect? }
 // Sends a magic-link email. Token expires after 15 min, single-use.
 import { issueLoginToken } from '../../_lib/auth';
+import { corsHandler, preflight } from '../../_lib/cors';
 
 interface Env {
   DOWNLOADS: KVNamespace;
@@ -28,7 +29,9 @@ async function checkRateLimit(env: Env, key: string, limit: number, windowSec: n
   return true;
 }
 
-export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
+export const onRequestOptions: PagesFunction<Env> = async ({ request }) => preflight(request);
+
+export const onRequestPost: PagesFunction<Env> = corsHandler<Env>(async ({ request, env }) => {
   let body: { email?: string; redirect?: string };
   try { body = await request.json(); } catch { return new Response('Invalid JSON', { status: 400 }); }
   const email = (body.email || '').trim().toLowerCase();
@@ -72,4 +75,4 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   }
   // Always 200 — don't leak whether the email exists in any system.
   return new Response(JSON.stringify({ ok: true }), { headers: { 'Content-Type': 'application/json' } });
-};
+});
