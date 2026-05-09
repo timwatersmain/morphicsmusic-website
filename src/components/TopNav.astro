@@ -13,7 +13,7 @@ const navItems = [
   <a href="/" class="flex-shrink-0 hover:scale-105 transition-all duration-[400ms]">
     <img src="/images/logos/emblem-circle.png" alt="Morphics" class="h-10 w-10 md:h-12 md:w-12 object-contain" />
   </a>
-  <nav class="flex-1 flex items-center justify-around md:justify-end md:gap-12 pr-14 md:pr-0">
+  <nav class="flex-1 flex items-center justify-around md:justify-end md:gap-12">
     {navItems.map(item => (
       <a
         href={item.href}
@@ -28,8 +28,23 @@ const navItems = [
         <span class="font-headline uppercase tracking-[0.2em] text-[8px] md:text-[0.75rem] mt-1 md:mt-0 leading-none">{item.label}</span>
       </a>
     ))}
+    <button
+      id="cart-button"
+      type="button"
+      aria-label="Open cart"
+      onclick="document.dispatchEvent(new CustomEvent('cart:open'))"
+      class="relative flex flex-col md:flex-row items-center md:gap-0 text-primary/50 hover:text-primary hover:md:scale-105 transition-all duration-[400ms]"
+    >
+      <span class="material-symbols-outlined md:hidden text-[22px] leading-none">shopping_bag</span>
+      <span class="hidden md:inline-block material-symbols-outlined text-base leading-none">shopping_bag</span>
+      <span class="font-headline uppercase tracking-[0.2em] text-[8px] md:text-[0.75rem] mt-1 md:mt-0 md:ml-2 leading-none">Cart</span>
+      <span
+        id="cart-badge"
+        class="hidden absolute -top-1 -right-2 min-w-[16px] h-[16px] px-1 bg-secondary text-on-secondary text-[9px] font-mono font-bold rounded-full items-center justify-center"
+      >0</span>
+    </button>
   </nav>
-  <a id="account-link" href="/login" class="hidden md:inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-white/40 hover:text-secondary transition-colors mr-16">
+  <a id="account-link" href="/login" class="hidden md:inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-white/40 hover:text-secondary transition-colors">
     <span class="material-symbols-outlined text-base">person</span>
     <span id="account-link-label">Sign in</span>
   </a>
