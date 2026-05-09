@@ -1,7 +1,7 @@
 // GET /api/library  — returns the logged-in customer's full order history,
 // joined with the music catalog + masters manifest so /library can render
 // download buttons without separately calling the catalog endpoints.
-import { readCookie, verifySession } from '../_lib/auth';
+import { readCookie, verifySession, SESSION_COOKIE, LEGACY_SESSION_COOKIE } from '../_lib/auth';
 import { corsHandler, preflight } from '../_lib/cors';
 import manifest from '../../src/data/masters-manifest.json';
 import catalog from '../../src/data/music-catalog.json';
@@ -29,8 +29,11 @@ interface Env {
 export const onRequestOptions: PagesFunction<Env> = async ({ request }) => preflight(request);
 
 export const onRequestGet: PagesFunction<Env> = corsHandler<Env>(async ({ request, env }) => {
-  const cookie = readCookie(request, 'morphics_auth') || '';
-  const email = await verifySession(env.AUTH_SECRET, cookie);
+  const cookie =
+    readCookie(request, SESSION_COOKIE) ||
+    readCookie(request, LEGACY_SESSION_COOKIE) ||
+    '';
+  const email = await verifySession(env.AUTH_SECRET, cookie, env);
   if (!email) return new Response(JSON.stringify({ error: 'unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
 
   const raw = await env.DOWNLOADS.get(`customer:${email}`);

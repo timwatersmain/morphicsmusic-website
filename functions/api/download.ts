@@ -9,7 +9,7 @@
 
 import manifest from '../../src/data/masters-manifest.json';
 import catalog from '../../src/data/music-catalog.json';
-import { readCookie, verifySession } from '../_lib/auth';
+import { readCookie, verifySession, SESSION_COOKIE, LEGACY_SESSION_COOKIE } from '../_lib/auth';
 import { corsHandler, preflight } from '../_lib/cors';
 
 interface CustomerRecord {
@@ -87,8 +87,11 @@ export const onRequestGet: PagesFunction<Env> = corsHandler<Env>(async ({ reques
 
   // Cookie-authenticated path (logged-in customer hitting /library files).
   if (!token && key) {
-    const cookie = readCookie(request, 'morphics_auth') || '';
-    const email = await verifySession(env.AUTH_SECRET, cookie);
+    const cookie =
+      readCookie(request, SESSION_COOKIE) ||
+      readCookie(request, LEGACY_SESSION_COOKIE) ||
+      '';
+    const email = await verifySession(env.AUTH_SECRET, cookie, env);
     if (!email) return new Response('unauthorized', { status: 401 });
     const raw = await env.DOWNLOADS.get(`customer:${email}`);
     if (!raw) return new Response('no purchases', { status: 403 });
@@ -151,15 +154,25 @@ export const onRequestGet: PagesFunction<Env> = corsHandler<Env>(async ({ reques
     return new Response('download limit reached', { status: 429 });
   }
 
-  // Increment uses BEFORE serving the file. KV has no CAS, so concurrent
-  // requests with the same token can each see uses=N and all pass the gate;
-  // the cap is therefore best-effort. Bumping pre-stream at least makes
-  // sequential requests respect the limit and shrinks the race window
-  // versus the previous post-stream order.
-  grant.uses += 1;
-  await env.DOWNLOADS.put(`grant:${token}`, JSON.stringify(grant), {
-    expirationTtl: Math.max(60, grant.expires_at - Math.floor(Date.now() / 1000)),
-  });
+  // Debounce duplicate requests for the same token+key pair: link-preview
+  // bots (Slack/Discord/Gmail) often pre-fetch URLs the user shares, which
+  // would otherwise burn the 5-use quota before the buyer ever clicks.
+  // Within a 60s window we serve the file but skip the counter bump.
+  const debounceKey = `dl_recent:${token}:${parsed.slug}/${parsed.filename}`;
+  const recent = await env.DOWNLOADS.get(debounceKey);
+
+  if (!recent) {
+    // Increment uses BEFORE serving the file. KV has no CAS, so concurrent
+    // requests with the same token can each see uses=N and all pass the
+    // gate; the cap is therefore best-effort. Bumping pre-stream at least
+    // makes sequential requests respect the limit and shrinks the race
+    // window versus the previous post-stream order.
+    grant.uses += 1;
+    await env.DOWNLOADS.put(`grant:${token}`, JSON.stringify(grant), {
+      expirationTtl: Math.max(60, grant.expires_at - Math.floor(Date.now() / 1000)),
+    });
+    await env.DOWNLOADS.put(debounceKey, '1', { expirationTtl: 60 });
+  }
 
   const obj = await env.MASTERS.get(key);
   if (!obj) return new Response('file not found', { status: 404 });

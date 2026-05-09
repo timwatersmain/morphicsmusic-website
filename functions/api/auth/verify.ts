@@ -1,12 +1,23 @@
 // GET /api/auth/verify?token=xxx
 // Consumes a magic-link token, sets the session cookie, redirects to /library
 // (or to whatever ?redirect= path was originally requested).
-import { consumeLoginToken, signSession, sessionCookieHeader } from '../../_lib/auth';
+import { consumeLoginToken, signSession, sessionCookieHeader, getSessionVer } from '../../_lib/auth';
 
 interface Env {
   DOWNLOADS: KVNamespace;
   AUTH_SECRET: string;
   PUBLIC_SITE_URL?: string;
+}
+
+// Same allow-list as login.ts safeRedirect — re-validate post-consume in
+// case any future code path writes a LoginGrant with an unsanitized
+// redirect, so the magic link can never be turned into an open redirect.
+function safeRedirect(input: string | undefined): string | undefined {
+  if (!input || typeof input !== 'string') return undefined;
+  if (input.length > 256) return undefined;
+  if (!input.startsWith('/')) return undefined;
+  if (input.startsWith('//') || input.startsWith('/\\')) return undefined;
+  return input;
 }
 
 export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
@@ -17,15 +28,18 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
   if (!grant) {
     return Response.redirect(`${env.PUBLIC_SITE_URL || url.origin}/login?expired=1`, 302);
   }
-  const session = await signSession(env.AUTH_SECRET, grant.email);
-  const dest = grant.redirect || '/library';
+  const ver = await getSessionVer(env, grant.email);
+  const session = await signSession(env.AUTH_SECRET, grant.email, ver);
+  const dest = safeRedirect(grant.redirect) || '/library';
   // Use a 303 response body to set Set-Cookie reliably (Response.redirect
-  // doesn't preserve headers consistently across edge runtimes).
+  // doesn't preserve headers consistently across edge runtimes). Strip
+  // Referer so the consumed token can't leak to anything on /library.
   return new Response(null, {
     status: 303,
     headers: {
       Location: dest,
       'Set-Cookie': sessionCookieHeader(session),
+      'Referrer-Policy': 'no-referrer',
     },
   });
 };

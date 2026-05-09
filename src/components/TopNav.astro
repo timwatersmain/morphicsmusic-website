@@ -36,8 +36,8 @@ const navItems = [
          right cluster below so the centered nav stays balanced. -->
     <button
       type="button"
+      data-cart-open
       aria-label="Open cart"
-      onclick="document.dispatchEvent(new CustomEvent('cart:open'))"
       class="md:hidden relative flex flex-col items-center text-primary/50 hover:text-primary transition-all duration-[400ms]"
     >
       <span class="material-symbols-outlined text-[22px] leading-none">shopping_bag</span>
@@ -52,8 +52,8 @@ const navItems = [
     <button
       id="cart-button"
       type="button"
+      data-cart-open
       aria-label="Open cart"
-      onclick="document.dispatchEvent(new CustomEvent('cart:open'))"
       class="relative flex flex-row items-center gap-2 text-primary/50 hover:text-primary hover:scale-105 transition-all duration-[400ms]"
     >
       <span class="material-symbols-outlined text-base leading-none">shopping_bag</span>
@@ -68,16 +68,26 @@ const navItems = [
 </header>
 
 <script>
-  // If a session cookie is valid, the link points to /library and shows the
-  // word "Library" instead of "Sign in".
+  // Cart trigger wiring — kept out of inline onclick= so script-src can
+  // drop 'unsafe-inline'. Both the mobile and desktop buttons carry the
+  // [data-cart-open] hook and dispatch the same custom event the drawer
+  // already listens for.
+  document.querySelectorAll<HTMLButtonElement>('[data-cart-open]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.dispatchEvent(new CustomEvent('cart:open'));
+    });
+  });
+
+  // If a session cookie is valid, the account link points to /library and
+  // shows "Library" instead of "Sign in".
   fetch('/api/auth/me', { credentials: 'include' })
     .then(r => r.json())
     .then((data: any) => {
       if (data && data.email) {
         const a = document.getElementById('account-link') as HTMLAnchorElement;
         const lbl = document.getElementById('account-link-label')!;
-        a.href = '/library';
-        lbl.textContent = 'Library';
+        if (a) a.href = '/library';
+        if (lbl) lbl.textContent = 'Library';
       }
     })
     .catch(() => {});

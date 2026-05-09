@@ -31,7 +31,7 @@ async function checkRateLimit(env: Env, key: string, limit: number, windowSec: n
 
 export const onRequestOptions: PagesFunction<Env> = async ({ request }) => preflight(request);
 
-export const onRequestPost: PagesFunction<Env> = corsHandler<Env>(async ({ request, env }) => {
+export const onRequestPost: PagesFunction<Env> = corsHandler<Env>(async ({ request, env, waitUntil }) => {
   let body: { email?: string; redirect?: string };
   try { body = await request.json(); } catch { return new Response('Invalid JSON', { status: 400 }); }
   const email = (body.email || '').trim().toLowerCase();
@@ -52,26 +52,37 @@ export const onRequestPost: PagesFunction<Env> = corsHandler<Env>(async ({ reque
   const token = await issueLoginToken(env, email, redirect);
   const origin = env.PUBLIC_SITE_URL || new URL(request.url).origin;
   const url = `${origin}/api/auth/verify?token=${encodeURIComponent(token)}`;
+  // Fire-and-forget the email via waitUntil so the response time on the
+  // happy path matches the rate-limited path — closes a timing oracle that
+  // would otherwise let an attacker tell whether the limit had triggered.
+  // 5s timeout so a slow Resend doesn't hang the worker indefinitely.
   if (env.RESEND_API_KEY) {
     const from = env.ORDER_FROM_EMAIL || 'onboarding@resend.dev';
-    await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        from: `Morphics <${from}>`,
-        to: [email],
-        subject: 'Your Morphics login link',
-        html: `
-          <div style="font-family:-apple-system,sans-serif;background:#0a0a0f;color:#e8e8ec;padding:32px;max-width:560px;margin:auto">
-            <h1 style="font-weight:700;letter-spacing:-0.02em">Sign in to Morphics</h1>
-            <p>Click below to access your library — purchases, downloads, and future updates.</p>
-            <p style="margin:24px 0">
-              <a href="${url}" style="background:#fff;color:#000;padding:14px 24px;text-decoration:none;font-family:monospace;letter-spacing:0.1em;text-transform:uppercase;font-size:11px">Sign in</a>
-            </p>
-            <p style="opacity:0.4;font-size:11px;margin-top:32px">Link expires in 15 minutes. If you didn't request this, ignore the email.</p>
-          </div>`,
-      }),
-    });
+    waitUntil((async () => {
+      try {
+        await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            from: `Morphics <${from}>`,
+            to: [email],
+            subject: 'Your Morphics login link',
+            html: `
+              <div style="font-family:-apple-system,sans-serif;background:#0a0a0f;color:#e8e8ec;padding:32px;max-width:560px;margin:auto">
+                <h1 style="font-weight:700;letter-spacing:-0.02em">Sign in to Morphics</h1>
+                <p>Click below to access your library — purchases, downloads, and future updates.</p>
+                <p style="margin:24px 0">
+                  <a href="${url}" style="background:#fff;color:#000;padding:14px 24px;text-decoration:none;font-family:monospace;letter-spacing:0.1em;text-transform:uppercase;font-size:11px">Sign in</a>
+                </p>
+                <p style="opacity:0.4;font-size:11px;margin-top:32px">Link expires in 15 minutes. If you didn't request this, ignore the email.</p>
+              </div>`,
+          }),
+          signal: AbortSignal.timeout(5000),
+        });
+      } catch (e) {
+        console.error('login email send failed:', e);
+      }
+    })());
   }
   // Always 200 — don't leak whether the email exists in any system.
   return new Response(JSON.stringify({ ok: true }), { headers: { 'Content-Type': 'application/json' } });

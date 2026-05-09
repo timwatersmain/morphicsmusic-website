@@ -1,9 +1,17 @@
 // Shared auth helpers — magic-link issuance + verification, plus signed
-// session cookies. No DB beyond KV; sessions are stateless HMAC-signed JWT-
-// shaped strings so we don't have to store anything per logged-in user.
+// session cookies. Sessions are HMAC-signed strings so we don't store one
+// row per logged-in user, but a per-email session_ver counter in KV gives
+// us a kill-switch: bumping it (e.g. from /api/auth/logout) invalidates
+// every session that was issued before the bump, even ones still inside
+// their TTL.
 
-const SESSION_TTL_DAYS = 365;
+const SESSION_TTL_DAYS = 30;
 const LOGIN_TTL_MINUTES = 15;
+const COOKIE_NAME = '__Host-morphics_auth';
+const LEGACY_COOKIE_NAME = 'morphics_auth';
+
+export const SESSION_COOKIE = COOKIE_NAME;
+export const LEGACY_SESSION_COOKIE = LEGACY_COOKIE_NAME;
 
 function b64url(bytes: Uint8Array): string {
   let bin = '';
@@ -36,14 +44,37 @@ function constantTimeEqual(a: Uint8Array, b: Uint8Array): boolean {
 }
 
 // ── Session cookies ─────────────────────────────────────────────────────
-export async function signSession(secret: string, email: string): Promise<string> {
+// Payload is `email|exp|ver`. ver is an integer that must match the latest
+// session_ver:<email> stored in KV; bumping it invalidates every cookie
+// issued before the bump.
+export async function signSession(secret: string, email: string, ver: number): Promise<string> {
   const exp = Math.floor(Date.now() / 1000) + SESSION_TTL_DAYS * 86400;
-  const payload = `${email}|${exp}`;
+  const payload = `${email}|${exp}|${ver}`;
   const sig = await hmac(secret, payload);
   return `${b64url(new TextEncoder().encode(payload))}.${b64url(sig)}`;
 }
 
-export async function verifySession(secret: string, cookieValue: string): Promise<string | null> {
+// Read the current session version for an email (defaults to 0 if never set).
+export async function getSessionVer(env: { DOWNLOADS: KVNamespace }, email: string): Promise<number> {
+  const raw = await env.DOWNLOADS.get(`session_ver:${email.toLowerCase().trim()}`);
+  const n = raw ? parseInt(raw, 10) : 0;
+  return Number.isFinite(n) && n >= 0 ? n : 0;
+}
+
+// Bump the session version for an email — invalidates every cookie minted
+// against an older value. Called by /api/auth/logout (and on suspected
+// compromise from any other surface).
+export async function bumpSessionVer(env: { DOWNLOADS: KVNamespace }, email: string): Promise<number> {
+  const next = (await getSessionVer(env, email)) + 1;
+  await env.DOWNLOADS.put(`session_ver:${email.toLowerCase().trim()}`, String(next));
+  return next;
+}
+
+export async function verifySession(
+  secret: string,
+  cookieValue: string,
+  env?: { DOWNLOADS: KVNamespace },
+): Promise<string | null> {
   if (!cookieValue) return null;
   const parts = cookieValue.split('.');
   if (parts.length !== 2) return null;
@@ -53,17 +84,36 @@ export async function verifySession(secret: string, cookieValue: string): Promis
   if (!sigBytes) return null;
   const expected = await hmac(secret, payload);
   if (!constantTimeEqual(sigBytes, expected)) return null;
-  const [email, expStr] = payload.split('|');
-  if (!email || !expStr) return null;
+  const fields = payload.split('|');
+  // Old 2-field payloads (email|exp) are no longer accepted — they predate
+  // the ver field and so can't be revoked. Forces re-login post-deploy.
+  if (fields.length !== 3) return null;
+  const [email, expStr, verStr] = fields;
+  if (!email || !expStr || !verStr) return null;
   const exp = parseInt(expStr, 10);
-  if (!exp || exp < Math.floor(Date.now() / 1000)) return null;
+  if (!Number.isFinite(exp) || exp < Math.floor(Date.now() / 1000)) return null;
+  const cookieVer = parseInt(verStr, 10);
+  if (!Number.isFinite(cookieVer) || cookieVer < 0) return null;
+  // env is optional only so callers that already failed cookie integrity
+  // can short-circuit without a KV roundtrip — but in practice every
+  // production caller passes env, and we require it to enforce ver.
+  if (env) {
+    const currentVer = await getSessionVer(env, email);
+    if (cookieVer !== currentVer) return null;
+  }
   return email;
 }
 
-export function sessionCookieHeader(value: string, opts: { maxAge?: number; clear?: boolean } = {}): string {
+export function sessionCookieHeader(value: string, opts: { maxAge?: number; clear?: boolean; legacy?: boolean } = {}): string {
   const maxAge = opts.clear ? 0 : (opts.maxAge ?? SESSION_TTL_DAYS * 86400);
+  // __Host- prefix browsers will reject if Domain= is set or Path != / or
+  // Secure missing — that's the entire point: it pins the cookie to this
+  // exact host and stops any subdomain (waters., portfolio.) from ever
+  // overwriting it via a sibling-set cookie. Use `legacy:true` to clear
+  // the pre-prefix cookie that older deploys minted.
+  const name = opts.legacy ? LEGACY_COOKIE_NAME : COOKIE_NAME;
   return [
-    `morphics_auth=${value}`,
+    `${name}=${value}`,
     `Path=/`,
     `HttpOnly`,
     `Secure`,
