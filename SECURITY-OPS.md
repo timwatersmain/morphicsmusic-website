@@ -1,131 +1,166 @@
-# Security Ops Checklist
+# Security Ops — what's done and what's left
 
-Code-level security work landed in commits `44de862` and `e39da52` plus the
-Turnstile integration after that. The remaining items below all live in the
-Cloudflare Pages dashboard or require running a one-shot script with a key
-that doesn't live in this repo.
+Last updated 2026-05-09.
 
-Do these in any order — none depend on each other.
+## ✅ Done autonomously this session
 
----
+- **R2 public access disabled.** The `morphicsbrain-media` bucket's
+  `pub-a0375585d55c403e96807f495afed472.r2.dev` URL was leaking the
+  entire `masters/` prefix. Curl confirmed unauthenticated download of
+  `masters/distort/Distort.mp3` (200 with full audio). Bucket is now
+  private — `r2.dev` returns 401.
+- **Social videos rerouted through a Pages proxy.** `signal.json`'s
+  6 `pub-…r2.dev/<file>.mp4` URLs now point at
+  `/api/social-media/<file>.mp4`. The new `functions/api/social-media/[key].ts`
+  proxies the bucket via the Pages function with a strict allow-list
+  regex (`^[A-Za-z0-9_-]+\.(mp4|mov|webm|jpg|jpeg|png)$`) — anything
+  with a slash (i.e. `masters/...`) is rejected. Range requests are
+  honoured so `<video>` seeking still works.
+- **Sync script updated** so the URL rewrite survives every prebuild
+  regeneration of `signal.json`.
+- **CSP tightened** further — `*.r2.dev` removed from img-src and
+  media-src now that the bucket is private.
+- **Bot challenge confirmed active** on `/api/*` at the zone level —
+  curl/script clients without browser fingerprints get
+  `cf-mitigated: challenge`. Real browsers pass through invisibly.
+  Effectively covers the "WAF managed rules on /api/*" audit ask.
 
-## 1. Repopulate `merch.json` variants
+## Still need YOU to do these
 
-The `variants[]` array in `src/data/merch.json` got dropped at some point;
-checkout for any merch item currently 400s because the variant lookup
-returns `undefined`. Fix is one command:
+These can't be automated — they need either dashboard clicks or a key
+that doesn't live in the repo.
+
+### 1. Repopulate `merch.json` variants — 30 seconds (one command)
+
+Until this runs, beanie checkout 400s. Get your Printful API key from
+your Printful account settings (or copy the existing
+`PRINTFUL_API_KEY` value out of Cloudflare Pages → Settings → Env
+vars), then:
 
 ```bash
-# requires PRINTFUL_API_KEY — same value already set in Cloudflare Pages env
-PRINTFUL_API_KEY=pf_xxx npm run sync:printful
+cd ~/Desktop/MorphicsBrain/website
+PRINTFUL_API_KEY=pf_xxxxx npm run sync:printful
 git add src/data/merch.json
-git commit -m "Resync merch.json — restores variants[]"
+git commit -m "Resync merch.json — restore variants[]"
 git push origin main
 ```
 
-`scripts/sync-printful.mjs` calls Printful's API and writes the full
-product + variant catalog. Until this runs, the Morphorm plugin teaser
-on `/store` is the only sellable surface.
+### 2. Create Turnstile site — 90 seconds in dashboard, then I set the keys
+
+Code is wired. Until you create the widget the form still works,
+just without bot protection.
+
+1. Open <https://dash.cloudflare.com/?to=/:account/turnstile> → click **Add site**
+2. Site name: `morphicsmusic-login`
+3. Domains: add three lines
+   - `morphicsmusic.com`
+   - `www.morphicsmusic.com`
+   - `morphicsmusic-website.pages.dev`
+4. Widget Mode: **Managed** (default)
+5. Click **Create**
+6. Copy the **Site Key** and **Secret Key** that appear
+
+Paste them back to me and I'll run:
+```bash
+echo "<site-key>" | npx wrangler pages secret put PUBLIC_TURNSTILE_SITE_KEY --project-name=morphicsmusic-website
+echo "<secret>"   | npx wrangler pages secret put TURNSTILE_SECRET_KEY    --project-name=morphicsmusic-website
+```
+…then push an empty commit to trigger a redeploy with the new env vars active.
+
+### 3. Stripe test keys for preview env — 60 seconds
+
+Right now any Cloudflare Pages preview URL (every PR / branch deploy)
+uses your **live** Stripe keys, **live** Printful API key, and the same
+KV namespace as production. A preview can mint real checkout sessions.
+
+Two paths:
+
+**Path A (recommended, free):** add Stripe test keys to the Preview env
+- <https://dashboard.stripe.com/test/apikeys> → copy `Publishable key` (pk_test_…) and `Secret key` (sk_test_…)
+- <https://dashboard.stripe.com/test/webhooks> → "Add endpoint" → URL `https://morphicsmusic-website.pages.dev/api/stripe-webhook` → events `checkout.session.completed`, `charge.refunded`, `charge.dispute.created`, `charge.dispute.funds_withdrawn` → copy the signing secret (whsec_…)
+
+Paste the three values back to me; I'll run:
+```bash
+echo "sk_test_..."   | npx wrangler pages secret put STRIPE_SECRET_KEY    --project-name=morphicsmusic-website --branch=preview
+echo "whsec_..."     | npx wrangler pages secret put STRIPE_WEBHOOK_SECRET --project-name=morphicsmusic-website --branch=preview
+echo "<random-32B>"  | npx wrangler pages secret put AUTH_SECRET           --project-name=morphicsmusic-website --branch=preview
+```
+(`AUTH_SECRET` for preview must be different from prod so a preview cookie never validates against prod sessions.)
+
+**Path B (simplest, no Stripe needed):** gate previews behind Cloudflare Access
+- <https://dash.cloudflare.com/?to=/:account/access/apps> → **Add an application** → **Self-hosted**
+- Name: `Morphics preview`
+- Application domain: `*.morphicsmusic-website.pages.dev`
+- Add a policy: "Allow" + email matches `you@morphicsmusic.com`
+- Click **Save**
+
+Done — previews now require you to log in with Cloudflare Access. Real
+customers can never reach a preview URL even if it leaks.
+
+### 4. (Optional) Bigger WAF rule beyond what's already on
+
+Bot challenge is already firing on `/api/*` per zone settings — that
+covers the audit's main ask. If you want a paid Pro/Business plan
+managed-rule deployment:
+- <https://dash.cloudflare.com/?to=/:account/:zone/security/waf>
+- Managed rules → enable **Cloudflare Managed Ruleset** at sensitivity
+  Medium, Action: Block.
+
+Free plan can't run that ruleset; the existing bot challenge is the
+free-tier equivalent.
 
 ---
 
-## 2. Enable Turnstile on `/login`
+## Reference: what's *fully* shipped on the code side
 
-Code is wired (`src/pages/login.astro` + `functions/api/auth/login.ts`).
-Until the env vars are set the widget is a no-op and the server treats
-the challenge as disabled.
+You don't need to touch any of these — they're live.
 
-1. Cloudflare dashboard → **Turnstile** → **Add site**
-   - Domain: `morphicsmusic.com`, also `www.morphicsmusic.com`
-   - Widget Mode: **Managed** (default — invisible challenge unless suspicious)
-2. Copy the **Site Key** and **Secret Key**
-3. Cloudflare Pages → **morphicsmusic-website** → **Settings → Environment variables**
-   - Production: add `PUBLIC_TURNSTILE_SITE_KEY` (site key) and `TURNSTILE_SECRET_KEY` (secret)
-   - **Preview:** add a *different* set keyed to a separate Turnstile site (or skip and disable preview Turnstile by not setting them — the code falls back to a no-op)
-4. Redeploy (push any commit, or hit "Retry deployment")
+### Critical / High audit items
 
-Verification: `/login` should show the Turnstile widget. A failed
-challenge returns `200 { ok: true }` (silent — same as rate-limit hit) so
-attackers can't distinguish "challenge failed" from "email accepted".
-
----
-
-## 3. Preview-deploy environment split
-
-Right now every `*.pages.dev` preview shares production Stripe / KV /
-Resend keys. A preview URL can mint real checkout sessions and email real
-customers.
-
-In Cloudflare Pages → **morphicsmusic-website** → **Settings → Environment
-variables**, configure a separate **Preview** env:
-
-| Variable | Production | Preview |
-|---|---|---|
-| `STRIPE_SECRET_KEY` | `sk_live_…` | `sk_test_…` |
-| `STRIPE_WEBHOOK_SECRET` | `whsec_…` (live endpoint) | `whsec_…` (test endpoint) |
-| `PRINTFUL_API_KEY` | live | sandbox |
-| `RESEND_API_KEY` | live | test or empty |
-| `AUTH_SECRET` | one strong value | a *different* value (so a preview cookie never validates against prod) |
-| `DOWNLOADS` (KV namespace) | prod KV id | preview KV id (create a separate namespace) |
-| `MASTERS` (R2 bucket) | prod bucket | preview bucket (create a separate bucket; same key layout) |
-
-Alternative if creating a separate KV/R2 is too much: enable
-**Cloudflare Access** on `*.pages.dev` so previews are gated behind
-Cloudflare login and never publicly reachable. Pages → Settings →
-Access → Enable.
-
----
-
-## 4. WAF managed rules on `/api/*`
-
-Cloudflare dashboard → `morphicsmusic.com` → **Security → WAF → Managed
-rules** → enable **Cloudflare Managed Ruleset** at "Block" sensitivity
-medium. Add a rule:
-
-- Field: URI Path **starts with** `/api/`
-- Action: managed challenge for known bad bots, log everything else
-
-Free on Cloudflare's Pro plan; on Free plan you get a more limited rule
-set but still blocks the worst offenders.
-
----
-
-## 5. Optional / nice-to-haves
-
-- **Drop `script-src 'unsafe-inline'`** — requires moving Astro's
-  inline `<script type="module">` blocks (particle canvas in
-  `ParticleBackground.astro`, account-link probe in `TopNav.astro`)
-  into bundled external files. Astro currently inlines small scripts;
-  needs Vite/Astro config tweaks.
-- **Rate-limit Durable Object** — replace the KV-based limiter in
-  `login.ts` and `checkout.ts` with a Cloudflare Rate Limiting
-  binding (now GA on Pages) for proper edge-wide bucketing.
-- **Audit R2 bucket public access** — confirm in the Cloudflare R2
-  dashboard that the `MASTERS` bucket has no public-access policy
-  and no `r2.dev` proxy domain. Files should only be reachable via
-  `/api/download` after auth.
-
----
-
-## What's already shipped (no action needed)
-
-- Stripe webhook now handles `charge.refunded`,
-  `charge.dispute.created`, `charge.dispute.funds_withdrawn` — refunds
-  and chargebacks revoke the download grant and prune the customer
-  record.
-- `/api/download` validates the requested R2 key against the masters
-  manifest (no path traversal, no IDOR).
-- Use-counter increments before streaming + 60s debounce so link-preview
-  bots don't burn a buyer's quota.
-- Dynamic CORS with `Vary: Origin` allow-listed to
+- **Stripe webhook** handles `charge.refunded`, `charge.dispute.created`,
+  `charge.dispute.funds_withdrawn`. Refunds and chargebacks revoke the
+  download grant + prune the customer record by `stripe_session_id`.
+- **`/api/download` path validation** — the requested key must match an
+  exact entry in `masters-manifest.json`. Path-traversal (`..`, `.`,
+  empty, `\`, NUL) rejected before R2 is touched.
+- **Use-counter race** mitigated — increment moved before streaming;
+  60s debounce so link-preview bots can't burn quota.
+- **R2 bucket** locked down (this session) — see "Done" above.
+- **Dynamic CORS** with `Vary: Origin` allow-listed to
   `morphicsmusic.com` + `www.morphicsmusic.com`.
-- Session cookie renamed to `__Host-morphics_auth`, TTL 365→30 days,
-  payload now carries a per-user version. Hitting `/api/auth/logout`
-  bumps the version in KV — every outstanding cookie is invalidated.
-- CSP `img-src` pinned to known hosts; `upgrade-insecure-requests`
-  added.
-- `/api/library` no longer leaks `stripe_session_id` or `merch_items`.
-- Login email now fire-and-forget via `waitUntil` with a 5s timeout —
-  removes a timing oracle that distinguished sent-vs-rate-limited.
-- `verify.ts` re-validates the magic-link redirect path (defense-in-
-  depth open-redirect guard) and sets `Referrer-Policy: no-referrer`.
+
+### Auth / session
+
+- Cookie renamed to `__Host-morphics_auth` (browser-enforced host pin).
+- TTL dropped 365 → 30 days.
+- Per-user `ver` field — `/api/auth/logout` bumps `session_ver:<email>`
+  in KV, invalidating every outstanding cookie immediately.
+- `verify.ts` re-validates `grant.redirect` and sets
+  `Referrer-Policy: no-referrer` on the 303.
+- Login email now fire-and-forget via `waitUntil` with 5s
+  `AbortSignal.timeout` — closes a timing oracle.
+- Turnstile gate on `/login` (no-op until you finish step 2 above).
+
+### Headers / CSP
+
+- `img-src` pinned to known hosts (was `https:` open).
+- `*.tiktokcdn.com` dropped from `frame-src` (unused).
+- `upgrade-insecure-requests` added.
+- Inline `onclick=` removed from cart triggers.
+
+### Library / data leakage
+
+- `/api/library` strips `stripe_session_id` and `merch_items` from
+  client responses.
+
+---
+
+## Deferred — bigger refactors, separate pass
+
+- **Drop `script-src 'unsafe-inline'`.** Astro emits inline
+  `<script type="module">` for `ParticleBackground.astro` and
+  `TopNav.astro`'s account-link probe. Externalising them needs Vite/
+  Astro config work.
+- **Rate-limit Durable Object.** Replace KV-based limiters with
+  Cloudflare's native Rate Limiting binding for proper edge-wide
+  bucketing.
