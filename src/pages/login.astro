@@ -1,5 +1,11 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+
+// Turnstile site key is public — fine to ship in HTML. The matching
+// secret key lives in Cloudflare Pages env var TURNSTILE_SECRET_KEY and
+// is verified server-side in functions/api/auth/login.ts. If unset, the
+// widget falls back to a no-op so the site still works in local dev.
+const TURNSTILE_SITE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || '';
 ---
 
 <BaseLayout title="SIGN IN" currentPage="">
@@ -24,6 +30,14 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           class="w-full px-4 py-4 bg-surface-container-low border border-white/10 focus:border-secondary outline-none font-mono text-base text-primary"
         >
       </div>
+      {TURNSTILE_SITE_KEY && (
+        <div
+          class="cf-turnstile flex justify-center"
+          data-sitekey={TURNSTILE_SITE_KEY}
+          data-theme="dark"
+          data-size="flexible"
+        ></div>
+      )}
       <button
         type="submit"
         id="submit-btn"
@@ -32,6 +46,10 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         Send sign-in link
       </button>
     </form>
+
+    {TURNSTILE_SITE_KEY && (
+      <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+    )}
 
     <div id="status" class="hidden mt-8 p-6 border border-secondary/30 bg-secondary/5">
       <div class="font-mono text-[10px] text-secondary uppercase tracking-widest mb-2">Check your email</div>
@@ -69,6 +87,10 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       btn.textContent = 'Sending…';
       const fd = new FormData(form);
       const email = String(fd.get('email') || '').trim();
+      // Turnstile drops a hidden cf-turnstile-response input into the form
+      // when the widget is present; if not (no site key) we just send an
+      // empty token and the server treats it as "challenge disabled".
+      const turnstileToken = String(fd.get('cf-turnstile-response') || '');
       try {
         const r = await fetch('/api/auth/login', {
           method: 'POST',
@@ -76,6 +98,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           body: JSON.stringify({
             email,
             redirect: params.get('redirect') || '/library',
+            turnstile: turnstileToken,
           }),
         });
         if (!r.ok) {
