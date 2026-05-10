@@ -54,42 +54,66 @@ const formatPrice = (lo: number | null, hi: number | null) => {
         </div>
       ))}
 
-      {merchItems.map(item => (
-        <a href={`/store/merch/${item.slug}`} class="group relative bg-surface-container-low border border-white/5 transition-all duration-500 hover:border-secondary/30 terminal-glow block">
-          <div class="relative overflow-hidden">
-            <img
-              src={item.thumbnail}
-              alt={item.name}
-              class="w-full aspect-square object-cover grayscale opacity-50 group-hover:grayscale-0 group-hover:scale-105 group-hover:opacity-100 transition-all duration-700"
-              loading="lazy"
-            />
-            <div class="absolute inset-0 bg-gradient-to-t from-background to-transparent opacity-60"></div>
-            <div class="absolute bottom-4 left-4 font-mono text-[10px] space-y-1">
-              <div class="flex items-center gap-2 bg-background/80 px-2 py-1 backdrop-blur-md text-secondary">
-                <span class="material-symbols-outlined text-sm">checkroom</span>
-                MERCH
+      {merchItems.map(item => {
+        const available = Array.isArray((item as any).variants) && (item as any).variants.length > 0;
+        const inner = (
+          <div class="relative">
+            <div class="relative overflow-hidden">
+              <img
+                src={item.thumbnail}
+                alt={item.name}
+                class:list={[
+                  "w-full aspect-square object-cover transition-all duration-700",
+                  available
+                    ? "grayscale opacity-50 group-hover:grayscale-0 group-hover:scale-105 group-hover:opacity-100"
+                    : "grayscale opacity-30",
+                ]}
+                loading="lazy"
+              />
+              <div class="absolute inset-0 bg-gradient-to-t from-background to-transparent opacity-60"></div>
+              <div class="absolute bottom-4 left-4 font-mono text-[10px] space-y-1">
+                <div class="flex items-center gap-2 bg-background/80 px-2 py-1 backdrop-blur-md text-secondary">
+                  <span class="material-symbols-outlined text-sm">checkroom</span>
+                  MERCH
+                </div>
+                <div class="flex items-center gap-2 bg-background/80 px-2 py-1 backdrop-blur-md text-primary">
+                  {formatPrice(item.price_low, item.price_high)}
+                </div>
               </div>
-              <div class="flex items-center gap-2 bg-background/80 px-2 py-1 backdrop-blur-md text-primary">
-                {formatPrice(item.price_low, item.price_high)}
+              {!available && (
+                <div class="absolute top-4 right-4 font-mono text-[9px] tracking-[0.25em] uppercase px-2 py-1 bg-secondary/15 text-secondary border border-secondary/30 backdrop-blur-md">
+                  Restocking
+                </div>
+              )}
+            </div>
+            <div class="p-6">
+              <h3 class:list={["font-headline text-xl uppercase tracking-tight mb-2 transition-colors", available ? "text-primary group-hover:text-secondary" : "text-primary"]}>{item.name}</h3>
+              <div class="flex flex-wrap gap-2 mb-4">
+                {item.sizes.slice(0, 6).map(s => (
+                  <span class="px-2 py-1 bg-white/5 text-[9px] font-mono text-primary border border-primary/10">{s}</span>
+                ))}
+                {item.colors.slice(0, 4).map(c => (
+                  <span class="px-2 py-1 bg-white/5 text-[9px] font-mono text-secondary border border-secondary/10">{c}</span>
+                ))}
               </div>
+              {available ? (
+                <div class="w-full py-3 border border-primary/20 group-hover:border-primary/60 group-hover:bg-primary/5 font-mono text-[10px] tracking-widest transition-all uppercase text-center text-primary">
+                  View · Pick size
+                </div>
+              ) : (
+                <div class="w-full py-3 border border-white/10 font-mono text-[10px] tracking-widest uppercase text-center text-white/40">
+                  Restocking soon
+                </div>
+              )}
             </div>
           </div>
-          <div class="p-6">
-            <h3 class="font-headline text-xl text-primary group-hover:text-secondary transition-colors uppercase tracking-tight mb-2">{item.name}</h3>
-            <div class="flex flex-wrap gap-2 mb-4">
-              {item.sizes.slice(0, 6).map(s => (
-                <span class="px-2 py-1 bg-white/5 text-[9px] font-mono text-primary border border-primary/10">{s}</span>
-              ))}
-              {item.colors.slice(0, 4).map(c => (
-                <span class="px-2 py-1 bg-white/5 text-[9px] font-mono text-secondary border border-secondary/10">{c}</span>
-              ))}
-            </div>
-            <div class="w-full py-3 border border-primary/20 group-hover:border-primary/60 group-hover:bg-primary/5 font-mono text-[10px] tracking-widest transition-all uppercase text-center text-primary">
-              View · Pick size
-            </div>
-          </div>
-        </a>
-      ))}
+        );
+        return available ? (
+          <a href={`/store/merch/${item.slug}`} class="group relative bg-surface-container-low border border-white/5 transition-all duration-500 hover:border-secondary/30 terminal-glow block">{inner}</a>
+        ) : (
+          <div class="group relative bg-surface-container-low border border-white/5 block cursor-default">{inner}</div>
+        );
+      })}
     </div>
   </section>
 
