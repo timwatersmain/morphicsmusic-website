@@ -29,12 +29,6 @@ interface DownloadGrant {
 interface Env {
   STRIPE_SECRET_KEY: string;
   STRIPE_WEBHOOK_SECRET: string;
-  // Optional. Allows synthetic test events from Stripe test-mode webhook
-  // endpoints to reach prod for end-to-end testing without paying a real
-  // charge. Test-mode events carry livemode=false, which we additionally
-  // gate on so an attacker who somehow learned the test secret still
-  // cannot replay against a real live event.
-  STRIPE_WEBHOOK_SECRET_TEST?: string;
   PRINTFUL_API_KEY: string;
   RESEND_API_KEY: string;
   PUBLIC_SITE_URL?: string;
@@ -228,12 +222,16 @@ async function sendDownloadEmail(env: Env, to: string, downloadUrl: string, rele
       html: `
         <div style="font-family:-apple-system,sans-serif;background:#0a0a0f;color:#e8e8ec;padding:32px;max-width:560px;margin:auto">
           <h1 style="font-weight:700;letter-spacing:-0.02em">Thanks for supporting Morphics.</h1>
-          <p>Your download is ready. The link is good for 7 days and 5 downloads.</p>
+          <p>You now own this music — your access is permanent. Download from the link below right away, or sign in to your library any time to grab the files.</p>
           <p style="margin:24px 0">
-            <a href="${downloadUrl}" style="background:#fff;color:#000;padding:14px 24px;text-decoration:none;font-family:monospace;letter-spacing:0.1em;text-transform:uppercase;font-size:11px">Download</a>
+            <a href="${downloadUrl}" style="background:#fff;color:#000;padding:14px 24px;text-decoration:none;font-family:monospace;letter-spacing:0.1em;text-transform:uppercase;font-size:11px">Download now</a>
+          </p>
+          <p style="opacity:0.7;font-size:13px;margin:24px 0">
+            Lifetime access: <a href="https://morphicsmusic.com/library" style="color:#e8e8ec">morphicsmusic.com/library</a><br/>
+            Sign in with this email address — no password needed.
           </p>
           <p style="opacity:0.5;font-size:12px">Releases: ${titles}</p>
-          <p style="opacity:0.4;font-size:11px;margin-top:32px">If the link expires, reply to this email and I'll send a fresh one. — Morphics</p>
+          <p style="opacity:0.4;font-size:11px;margin-top:32px">The direct link above is valid for 7 days. After that, sign in to your library to keep downloading. — Morphics</p>
         </div>`,
     }),
   });
@@ -250,22 +248,8 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, waitUnti
   let event: Stripe.Event;
   try {
     event = await stripe.webhooks.constructEventAsync(body, sig, env.STRIPE_WEBHOOK_SECRET);
-  } catch (liveErr: any) {
-    if (!env.STRIPE_WEBHOOK_SECRET_TEST) {
-      return new Response(`Bad signature: ${liveErr.message}`, { status: 400 });
-    }
-    try {
-      event = await stripe.webhooks.constructEventAsync(body, sig, env.STRIPE_WEBHOOK_SECRET_TEST);
-    } catch (testErr: any) {
-      return new Response(`Bad signature: ${testErr.message}`, { status: 400 });
-    }
-    // Defense in depth: only accept the test signature for events that are
-    // explicitly tagged livemode=false, so a leaked test secret can never be
-    // used to forge a real-money event.
-    if (event.livemode !== false) {
-      return new Response('Bad signature: test secret accepted but event is livemode', { status: 400 });
-    }
-    console.log(`webhook: accepted via TEST secret, event ${event.id} type ${event.type}`);
+  } catch (e: any) {
+    return new Response(`Bad signature: ${e.message}`, { status: 400 });
   }
 
   // Refund / dispute events revoke access. They share the same revocation
