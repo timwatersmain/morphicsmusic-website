@@ -161,6 +161,28 @@ You don't need to touch any of these — they're live.
   `<script type="module">` for `ParticleBackground.astro` and
   `TopNav.astro`'s account-link probe. Externalising them needs Vite/
   Astro config work.
-- **Rate-limit Durable Object.** Replace KV-based limiters with
-  Cloudflare's native Rate Limiting binding for proper edge-wide
-  bucketing.
+- **Rate-limit binding.** Cloudflare Pages does not support the native
+  Rate Limiting binding (Workers-only); upgrading would require a full
+  Pages → Workers + Static Assets migration. Keep the KV-based per-
+  endpoint limiter (`functions/_lib/ratelimit.ts`) until that migration
+  is in scope.
+
+---
+
+## 2026-05-10 — Per-endpoint rate limits
+
+- Shared library `functions/_lib/ratelimit.ts` returns
+  `{ ok, retryAfter, remaining }` and ships matching `429 + Retry-After`
+  helpers (JSON for clients, plain text for binary endpoints).
+- All `/api/*` endpoints have explicit limits (per IP unless noted):
+  - `login` 5/10min + 3/hr per email (silent-200 on hit, no enumeration)
+  - `verify` 30/min (redirects to `/login?expired=1` on hit)
+  - `me` 120/min, `library` 60/min, `download` 60/min,
+    `social-media/[key]` 120/min, `checkout` 20/10min
+  - `stripe-webhook` and `logout` deliberately unlimited
+- The dashboard `api-throttle` Block rule that previously IP-banned the
+  whole site for any `/api/*` burst was retired/demoted on 2026-05-10
+  because it produced "owner has banned you" pages for legitimate users
+  (NAT'd, multi-tab, or sharing IPs). App-layer 429s are now the primary
+  defense; if a backstop is desired, recreate the rule with action set
+  to **Managed Challenge** rather than Block.
