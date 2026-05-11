@@ -16,16 +16,16 @@
     "featured": true
   },
   {
-    "id": "timeline-01",
-    "title": "TIMELINE 01",
+    "id": "macro-experiment-01",
+    "title": "MACRO EXPERIMENT 01",
     "image": "/images/visuals/timeline-01.jpg",
     "tags": ["macro", "chemistry"],
     "size": "wide",
     "featured": true
   },
   {
-    "id": "timeline-03",
-    "title": "TIMELINE 03",
+    "id": "macro-experiment-03",
+    "title": "MACRO EXPERIMENT 03",
     "image": "/images/visuals/timeline-03.jpg",
     "tags": ["macro", "chemistry"],
     "size": "square",
@@ -104,8 +104,8 @@
     "featured": false
   },
   {
-    "id": "timeline-02",
-    "title": "TIMELINE 02",
+    "id": "macro-experiment-02",
+    "title": "MACRO EXPERIMENT 02",
     "image": "/images/visuals/timeline-02.jpg",
     "tags": ["macro", "chemistry"],
     "size": "standard",
@@ -153,7 +153,7 @@
   },
   {
     "id": "datamind-3",
-    "title": "TIMELINE WIDE",
+    "title": "MACRO EXPERIMENT WIDE",
     "image": "/images/visuals/datamind-3.jpg",
     "tags": ["macro", "chemistry"],
     "size": "wide",
