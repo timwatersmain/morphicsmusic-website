@@ -10,20 +10,8 @@ const navItems = [
 ---
 
 <header class="fixed top-0 w-full z-50 bg-[#0A0A0A]/85 backdrop-blur-2xl grid grid-cols-[auto_1fr_auto] items-center gap-3 px-4 md:px-8 py-3 md:py-6">
-  <a href="/" class="flex-shrink-0 hover:scale-105 transition-all duration-[400ms]" aria-label="Morphics — home">
-    <video
-      autoplay
-      muted
-      loop
-      playsinline
-      preload="auto"
-      aria-hidden="true"
-      data-logo-video
-      class="h-10 w-10 md:h-12 md:w-12 object-contain"
-    >
-      <source src="/videos/logo.webm" type="video/webm" />
-      <img src="/images/logos/emblem-still.webp" alt="Morphics" class="h-full w-full object-contain" />
-    </video>
+  <a href="/" class="flex-shrink-0 hover:scale-105 transition-all duration-[400ms]">
+    <img src="/images/logos/emblem-circle.png" alt="Morphics" class="h-10 w-10 md:h-12 md:w-12 object-contain" />
   </a>
 
   <!-- Centered main nav. Mobile keeps cart inline at the right end of the
@@ -105,22 +93,3 @@ const navItems = [
     .catch(() => {});
 </script>
 
-<script is:inline>
-  // Sync the 3D logo video's playback position to the wall clock so
-  // navigating between pages doesn't snap it back to frame 0 — every load
-  // seeks to (now mod loop-duration). Period must equal the source clip
-  // duration; the current encode is a 10s loop.
-  (function () {
-    var vid = document.querySelector('video[data-logo-video]');
-    if (!vid) return;
-    var LOOP = 10;
-    function sync() {
-      try {
-        var t = (Date.now() / 1000) % LOOP;
-        if (Math.abs(vid.currentTime - t) > 0.05) vid.currentTime = t;
-      } catch (_) {}
-    }
-    if (vid.readyState >= 1) sync();
-    else vid.addEventListener('loadedmetadata', sync, { once: true });
-  })();
-</script>
