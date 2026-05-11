@@ -29,6 +29,12 @@ interface DownloadGrant {
 interface Env {
   STRIPE_SECRET_KEY: string;
   STRIPE_WEBHOOK_SECRET: string;
+  // Optional. Allows synthetic test events from Stripe test-mode webhook
+  // endpoints to reach prod for end-to-end testing without paying a real
+  // charge. Test-mode events carry livemode=false, which we additionally
+  // gate on so an attacker who somehow learned the test secret still
+  // cannot replay against a real live event.
+  STRIPE_WEBHOOK_SECRET_TEST?: string;
   PRINTFUL_API_KEY: string;
   RESEND_API_KEY: string;
   PUBLIC_SITE_URL?: string;
@@ -244,8 +250,22 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, waitUnti
   let event: Stripe.Event;
   try {
     event = await stripe.webhooks.constructEventAsync(body, sig, env.STRIPE_WEBHOOK_SECRET);
-  } catch (e: any) {
-    return new Response(`Bad signature: ${e.message}`, { status: 400 });
+  } catch (liveErr: any) {
+    if (!env.STRIPE_WEBHOOK_SECRET_TEST) {
+      return new Response(`Bad signature: ${liveErr.message}`, { status: 400 });
+    }
+    try {
+      event = await stripe.webhooks.constructEventAsync(body, sig, env.STRIPE_WEBHOOK_SECRET_TEST);
+    } catch (testErr: any) {
+      return new Response(`Bad signature: ${testErr.message}`, { status: 400 });
+    }
+    // Defense in depth: only accept the test signature for events that are
+    // explicitly tagged livemode=false, so a leaked test secret can never be
+    // used to forge a real-money event.
+    if (event.livemode !== false) {
+      return new Response('Bad signature: test secret accepted but event is livemode', { status: 400 });
+    }
+    console.log(`webhook: accepted via TEST secret, event ${event.id} type ${event.type}`);
   }
 
   // Refund / dispute events revoke access. They share the same revocation
