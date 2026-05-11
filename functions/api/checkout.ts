@@ -10,6 +10,7 @@ import Stripe from 'stripe';
 import merchData from '../../src/data/merch.json';
 import musicData from '../../src/data/music-catalog.json';
 import { corsHandler, preflight } from '../_lib/cors';
+import { rateLimit, rateLimitedJson, clientIp } from '../_lib/ratelimit';
 
 interface CartItem {
   type: 'merch' | 'music';
@@ -32,22 +33,13 @@ interface Env {
   DOWNLOADS: KVNamespace;
 }
 
-async function checkRateLimit(env: Env, key: string, limit: number, windowSec: number): Promise<boolean> {
-  const raw = await env.DOWNLOADS.get(`rl:${key}`);
-  const count = raw ? parseInt(raw, 10) || 0 : 0;
-  if (count >= limit) return false;
-  await env.DOWNLOADS.put(`rl:${key}`, String(count + 1), { expirationTtl: windowSec });
-  return true;
-}
-
 export const onRequestOptions: PagesFunction<Env> = async ({ request }) => preflight(request);
 
 export const onRequestPost: PagesFunction<Env> = corsHandler<Env>(async ({ request, env }) => {
-  // Rate limit: 20 sessions per IP per 10 min. Genuine cart usage is well
-  // below this; spammers hit it instantly.
-  const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
-  const ok = await checkRateLimit(env, `checkout:ip:${ip}`, 20, 600);
-  if (!ok) return new Response('Too many checkout attempts', { status: 429 });
+  // 20 sessions per IP per 10 min. Genuine cart usage is well below this;
+  // spammers hit it instantly.
+  const rl = await rateLimit(env, 'checkout', 'ip', clientIp(request), 20, 600);
+  if (!rl.ok) return rateLimitedJson(rl);
 
   let body: { items: CartItem[] };
   try {

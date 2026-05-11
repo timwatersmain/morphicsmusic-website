@@ -5,8 +5,11 @@
 // file matching the expected hash.mp4 pattern, never anything under the
 // masters/ prefix — that's gated by /api/download with auth.
 
+import { rateLimit, rateLimitedText, clientIp } from '../../_lib/ratelimit';
+
 interface Env {
   MASTERS: R2Bucket;
+  DOWNLOADS: KVNamespace;
 }
 
 const MIME: Record<string, string> = {
@@ -28,6 +31,11 @@ function isSafeKey(key: string): boolean {
 }
 
 export const onRequestGet: PagesFunction<Env> = async ({ params, env, request }) => {
+  // 120/min/IP — most legit hits are CDN-served and never reach this
+  // function, so the limit only kicks in for cache-busting probes.
+  const rl = await rateLimit(env, 'social', 'ip', clientIp(request), 120, 60);
+  if (!rl.ok) return rateLimitedText(rl);
+
   const key = String(params.key || '');
   if (!isSafeKey(key)) return new Response('invalid key', { status: 400 });
 

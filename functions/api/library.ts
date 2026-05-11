@@ -3,6 +3,7 @@
 // download buttons without separately calling the catalog endpoints.
 import { readCookie, verifySession, SESSION_COOKIE, LEGACY_SESSION_COOKIE } from '../_lib/auth';
 import { corsHandler, preflight } from '../_lib/cors';
+import { rateLimit, rateLimitedJson, clientIp } from '../_lib/ratelimit';
 import manifest from '../../src/data/masters-manifest.json';
 import catalog from '../../src/data/music-catalog.json';
 
@@ -29,6 +30,10 @@ interface Env {
 export const onRequestOptions: PagesFunction<Env> = async ({ request }) => preflight(request);
 
 export const onRequestGet: PagesFunction<Env> = corsHandler<Env>(async ({ request, env }) => {
+  // 60/min/IP — generous; /library page render does one call, refresh costs one.
+  const rl = await rateLimit(env, 'library', 'ip', clientIp(request), 60, 60);
+  if (!rl.ok) return rateLimitedJson(rl);
+
   const cookie =
     readCookie(request, SESSION_COOKIE) ||
     readCookie(request, LEGACY_SESSION_COOKIE) ||

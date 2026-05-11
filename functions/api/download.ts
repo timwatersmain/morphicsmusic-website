@@ -11,6 +11,7 @@ import manifest from '../../src/data/masters-manifest.json';
 import catalog from '../../src/data/music-catalog.json';
 import { readCookie, verifySession, SESSION_COOKIE, LEGACY_SESSION_COOKIE } from '../_lib/auth';
 import { corsHandler, preflight } from '../_lib/cors';
+import { rateLimit, rateLimitedText, clientIp } from '../_lib/ratelimit';
 
 interface CustomerRecord {
   purchases?: Array<{ music_release_slugs?: string[] }>;
@@ -80,6 +81,11 @@ function safeContentDispositionName(filename: string): string {
 export const onRequestOptions: PagesFunction<Env> = async ({ request }) => preflight(request);
 
 export const onRequestGet: PagesFunction<Env> = corsHandler<Env>(async ({ request, env }) => {
+  // 60/min/IP — covers a full album re-download (10-20 tracks) without
+  // tripping for a real buyer; bots scraping the endpoint hit it fast.
+  const rl = await rateLimit(env, 'download', 'ip', clientIp(request), 60, 60);
+  if (!rl.ok) return rateLimitedText(rl);
+
   const url = new URL(request.url);
   const token = url.searchParams.get('token');
   const action = url.searchParams.get('action');

@@ -2,6 +2,7 @@
 // Sends a magic-link email. Token expires after 15 min, single-use.
 import { issueLoginToken } from '../../_lib/auth';
 import { corsHandler, preflight } from '../../_lib/cors';
+import { rateLimit, clientIp } from '../../_lib/ratelimit';
 
 interface Env {
   DOWNLOADS: KVNamespace;
@@ -47,14 +48,6 @@ function safeRedirect(input: string | undefined): string | undefined {
   return input;
 }
 
-async function checkRateLimit(env: Env, key: string, limit: number, windowSec: number): Promise<boolean> {
-  const raw = await env.DOWNLOADS.get(`rl:${key}`);
-  const count = raw ? parseInt(raw, 10) || 0 : 0;
-  if (count >= limit) return false;
-  await env.DOWNLOADS.put(`rl:${key}`, String(count + 1), { expirationTtl: windowSec });
-  return true;
-}
-
 export const onRequestOptions: PagesFunction<Env> = async ({ request }) => preflight(request);
 
 export const onRequestPost: PagesFunction<Env> = corsHandler<Env>(async ({ request, env, waitUntil }) => {
@@ -65,7 +58,7 @@ export const onRequestPost: PagesFunction<Env> = corsHandler<Env>(async ({ reque
     return new Response(JSON.stringify({ error: 'invalid email' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
   }
 
-  const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+  const ip = clientIp(request);
 
   // Turnstile gate: the site key in the page must produce a token that
   // siteverify accepts. Treated like a rate-limit hit — silent 200 — so
@@ -76,11 +69,11 @@ export const onRequestPost: PagesFunction<Env> = corsHandler<Env>(async ({ reque
     return new Response(JSON.stringify({ ok: true }), { headers: { 'Content-Type': 'application/json' } });
   }
 
-  // Rate limit: 5 / 10 min per IP, 3 / hour per email. Always-200 below means
-  // we silently succeed when limits hit so we don't leak enumeration signals.
-  const ipOk = await checkRateLimit(env, `login:ip:${ip}`, 5, 600);
-  const emailOk = await checkRateLimit(env, `login:em:${email}`, 3, 3600);
-  if (!ipOk || !emailOk) {
+  // 5 / 10 min per IP, 3 / hour per email. Always-200 below means we silently
+  // succeed when limits hit so we don't leak enumeration signals.
+  const ipOk = await rateLimit(env, 'login', 'ip', ip, 5, 600);
+  const emailOk = await rateLimit(env, 'login', 'em', email, 3, 3600);
+  if (!ipOk.ok || !emailOk.ok) {
     return new Response(JSON.stringify({ ok: true }), { headers: { 'Content-Type': 'application/json' } });
   }
 

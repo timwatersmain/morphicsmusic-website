@@ -2,6 +2,7 @@
 // Consumes a magic-link token, sets the session cookie, redirects to /library
 // (or to whatever ?redirect= path was originally requested).
 import { consumeLoginToken, signSession, sessionCookieHeader, getSessionVer } from '../../_lib/auth';
+import { rateLimit, clientIp } from '../../_lib/ratelimit';
 
 interface Env {
   DOWNLOADS: KVNamespace;
@@ -22,6 +23,13 @@ function safeRedirect(input: string | undefined): string | undefined {
 
 export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
   const url = new URL(request.url);
+  // 30 verifies per IP per minute. Tokens are 256-bit cryptographic randoms
+  // so brute-force is infeasible; this just stops grinding attacks against KV.
+  // On hit we redirect to /login?expired=1 — same UX as a stale token.
+  const rl = await rateLimit(env, 'verify', 'ip', clientIp(request), 30, 60);
+  if (!rl.ok) {
+    return Response.redirect(`${env.PUBLIC_SITE_URL || url.origin}/login?expired=1`, 302);
+  }
   const token = url.searchParams.get('token');
   if (!token) return new Response('missing token', { status: 400 });
   const grant = await consumeLoginToken(env, token);
