@@ -13,6 +13,7 @@ import { writeFileSync, existsSync, readdirSync, statSync } from 'fs';
 import { join, resolve } from 'path';
 import { execSync } from 'child_process';
 import os from 'os';
+import { releaseSlug, releaseDateFor, minPriceCentsFor } from './catalog-helpers.mjs';
 
 const BRAIN_DB = '/Users/morphics/Desktop/MorphicsBrain/data/morphicsbrain.db';
 const SITE_PATH = resolve(import.meta.dirname, '..');
@@ -25,15 +26,6 @@ function query(sql) {
   } catch {
     return null;
   }
-}
-
-// Tiered minimum pricing (cents). Name-your-price — buyer can pay >= min.
-function minPriceCentsFor(type, trackCount) {
-  if (type === 'single') return 100;          // $1
-  if (type === 'ep') return 300;              // $3
-  if (type === 'mix') return 200;             // $2
-  if (trackCount >= 8) return 700;            // album, full-length
-  return 500;                                 // album default
 }
 
 // Find the on-disk master folder for a release. Title-match (case-insensitive).
@@ -66,8 +58,9 @@ function findMasterFile(folder, trackNumber, trackTitle) {
 }
 
 const releases = query(
-  `SELECT id, title, type, release_date, artwork_path, bandcamp_url, genre, description
-   FROM releases ORDER BY release_date DESC`,
+  `SELECT id, title, type, release_date, scheduled_release_date, artwork_path, bandcamp_url, genre, description
+   FROM releases
+   ORDER BY COALESCE(NULLIF(release_date,''), scheduled_release_date) DESC`,
 );
 
 // On a build server (Cloudflare Pages, etc.) the brain DB won't exist —
@@ -90,7 +83,7 @@ for (const t of tracks) {
 const catalog = {
   generated_at: new Date().toISOString(),
   releases: releases.map(r => {
-    const slug = r.id;
+    const slug = releaseSlug(r.id, r.title);
     const releaseTracks = tracksByRelease[r.id] || [];
     const masterFolder = findMasterFolder(r.title);
 
@@ -99,7 +92,7 @@ const catalog = {
       slug,
       title: r.title.toUpperCase(),
       type: r.type,
-      release_date: r.release_date,
+      release_date: releaseDateFor(r.release_date, r.scheduled_release_date),
       artwork: r.artwork_path || `/images/albums/${slug}.jpg`,
       genre: r.genre ? r.genre.split(',').map(s => s.trim()) : ['electronic'],
       description: r.description || '',
