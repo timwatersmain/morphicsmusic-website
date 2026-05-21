@@ -9,6 +9,7 @@
 import Stripe from 'stripe';
 import merchData from '../../src/data/merch.json';
 import musicData from '../../src/data/music-catalog.json';
+import { isReleased } from '../_lib/release-gate.mjs';
 import { corsHandler, preflight } from '../_lib/cors';
 import { rateLimit, rateLimitedJson, clientIp } from '../_lib/ratelimit';
 
@@ -101,6 +102,9 @@ export const onRequestPost: PagesFunction<Env> = corsHandler<Env>(async ({ reque
       if (!release) return new Response(`Unknown release ${item.sku}`, { status: 400 });
       if (item.unit_amount < release.min_price_cents) {
         return new Response(`Below minimum for ${release.slug}`, { status: 400 });
+      }
+      if (!isReleased(release.release_date)) {
+        return new Response(`Not yet released: ${release.slug}`, { status: 403 });
       }
 
       hasDigital = true;
