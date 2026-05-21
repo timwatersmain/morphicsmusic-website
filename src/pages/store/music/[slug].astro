@@ -62,12 +62,18 @@ function fmtDuration(seconds: number | null) {
             <p class="font-mono text-[9px] text-white/30 mt-2">FLAC + MP3 download · Delivered by email after purchase</p>
           </div>
           <button
+            id="release-submit"
             type="submit"
             class="w-full py-4 bg-primary text-on-primary font-mono text-[11px] tracking-widest uppercase hover:bg-secondary hover:text-on-secondary transition-colors disabled:opacity-30"
-            disabled={!release.has_masters}
+            disabled={!release.has_masters || (!!release.release_date && new Date(release.release_date) > new Date())}
           >
             {release.has_masters ? 'Add to Cart' : 'Coming soon'}
           </button>
+          {release.release_date && new Date(release.release_date) > new Date() && (
+            <p id="release-countdown" class="font-mono text-[10px] text-secondary uppercase tracking-widest mt-2" data-release-date={release.release_date}>
+              Releases {release.release_date}
+            </p>
+          )}
           {!release.has_masters && (
             <p class="font-mono text-[10px] text-white/40">Master files not yet uploaded for this release.</p>
           )}
@@ -108,15 +114,35 @@ function fmtDuration(seconds: number | null) {
     min_cents: release.min_price_cents,
     track_count: release.track_count,
     type: release.type,
+    release_date: release.release_date,
   })} />
 
   <script>
     import '../../../scripts/cart.js';
+    import { goLiveUtcMs, isReleased } from '../../../../functions/_lib/release-gate.mjs';
     const release = JSON.parse(document.getElementById('release-data')!.textContent || '{}');
     const form = document.getElementById('release-form') as HTMLFormElement;
 
     const submitBtn = form.querySelector('button[type="submit"]') as HTMLButtonElement;
     const originalLabel = submitBtn.textContent;
+
+    const cdEl = document.getElementById('release-countdown');
+    const liveAt = goLiveUtcMs(release.release_date || '');
+    if (cdEl && Number.isFinite(liveAt)) {
+      const tick = () => {
+        if (isReleased(release.release_date)) {
+          cdEl.style.display = 'none';
+          if (submitBtn) submitBtn.disabled = false;
+          clearInterval(timer);
+          return;
+        }
+        const s = Math.max(0, Math.floor((liveAt - Date.now()) / 1000));
+        const d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600), m = Math.floor((s % 3600) / 60);
+        cdEl.textContent = `Releases in ${d}d ${h}h ${m}m`;
+      };
+      var timer = setInterval(tick, 1000);
+      tick();
+    }
 
     form.addEventListener('submit', (e) => {
       e.preventDefault();

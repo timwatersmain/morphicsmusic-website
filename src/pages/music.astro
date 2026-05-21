@@ -48,10 +48,20 @@ const latest = [...releases]
             data-min-cents={latest.min_price_cents}
             data-track-count={latest.track_count}
             data-type={latest.type}
-            disabled={!latest.has_masters}
+            data-live-label={`Add ${latest.title} to cart · $${latest.minPriceDollars}+`}
+            disabled={!latest.has_masters || (!!latest.release_date && new Date(latest.release_date) > new Date())}
           >
-            {latest.has_masters ? `Add ${latest.title} to cart · $${latest.minPriceDollars}+` : 'Coming soon'}
+            {!latest.has_masters
+              ? 'Coming soon'
+              : (!!latest.release_date && new Date(latest.release_date) > new Date())
+                ? 'Coming soon'
+                : `Add ${latest.title} to cart · $${latest.minPriceDollars}+`}
           </button>
+          {latest.release_date && new Date(latest.release_date) > new Date() && (
+            <div class="release-countdown flex-1 text-center font-mono text-[9px] text-secondary uppercase tracking-widest" data-release-date={latest.release_date}>
+              <span class="countdown-label">Releases {latest.release_date}</span>
+            </div>
+          )}
           <a href={`/store/music/${latest.slug}`} class="px-4 py-3 font-mono text-[10px] text-white/40 hover:text-secondary uppercase tracking-widest transition-colors">
             Name your price &rarr;
           </a>
@@ -102,10 +112,20 @@ const latest = [...releases]
             data-min-cents={release.min_price_cents}
             data-track-count={release.track_count}
             data-type={release.type}
-            disabled={!release.has_masters}
+            data-live-label={`Add to cart · $${release.minPriceDollars}+`}
+            disabled={!release.has_masters || (!!release.release_date && new Date(release.release_date) > new Date())}
           >
-            {release.has_masters ? `Add to cart · $${release.minPriceDollars}+` : 'Coming soon'}
+            {!release.has_masters
+              ? 'Coming soon'
+              : (!!release.release_date && new Date(release.release_date) > new Date())
+                ? 'Coming soon'
+                : `Add to cart · $${release.minPriceDollars}+`}
           </button>
+          {release.release_date && new Date(release.release_date) > new Date() && (
+            <div class="release-countdown mt-2 text-center font-mono text-[9px] text-secondary uppercase tracking-widest" data-release-date={release.release_date}>
+              <span class="countdown-label">Releases {release.release_date}</span>
+            </div>
+          )}
           <a href={`/store/music/${release.slug}`} class="block text-center mt-2 font-mono text-[8px] text-white/30 hover:text-secondary uppercase tracking-widest transition-colors">
             Name your price &rarr;
           </a>
@@ -115,6 +135,7 @@ const latest = [...releases]
   </div>
 
   <script>
+    import '../scripts/release-countdown.js';
     import '../scripts/cart.js';
     document.querySelectorAll<HTMLButtonElement>('.release-add-btn').forEach(btn => {
       btn.addEventListener('click', () => {
