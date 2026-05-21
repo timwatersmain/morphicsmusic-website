@@ -9,6 +9,7 @@
 
 import manifest from '../../src/data/masters-manifest.json';
 import catalog from '../../src/data/music-catalog.json';
+import { isReleased } from '../_lib/release-gate.mjs';
 import { readCookie, verifySession, SESSION_COOKIE, LEGACY_SESSION_COOKIE } from '../_lib/auth';
 import { corsHandler, preflight } from '../_lib/cors';
 import { rateLimit, rateLimitedText, clientIp } from '../_lib/ratelimit';
@@ -105,6 +106,10 @@ export const onRequestGet: PagesFunction<Env> = corsHandler<Env>(async ({ reques
     try { rec = JSON.parse(raw); } catch { return new Response('corrupt record', { status: 500 }); }
     const parsed = parseAndValidateKey(key, manifest);
     if (!parsed) return new Response('invalid key', { status: 400 });
+    const rel = (catalog as any).releases.find((r: any) => r.slug === parsed.slug);
+    if (rel && !isReleased(rel.release_date)) {
+      return new Response('not yet released', { status: 403 });
+    }
     const owned = new Set<string>();
     for (const p of (rec.purchases || [])) for (const s of (p.music_release_slugs || [])) owned.add(s);
     if (!owned.has(parsed.slug)) return new Response('not in your library', { status: 403 });
@@ -152,6 +157,10 @@ export const onRequestGet: PagesFunction<Env> = corsHandler<Env>(async ({ reques
   // Path-traversal segments are rejected before we ever touch R2.
   const parsed = parseAndValidateKey(key, manifest);
   if (!parsed) return new Response('invalid key', { status: 400 });
+  const rel = (catalog as any).releases.find((r: any) => r.slug === parsed.slug);
+  if (rel && !isReleased(rel.release_date)) {
+    return new Response('not yet released', { status: 403 });
+  }
   if (!grant.release_slugs.includes(parsed.slug)) {
     return new Response('not in your grant', { status: 403 });
   }
