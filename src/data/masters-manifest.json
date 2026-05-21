@@ -1,6 +1,6 @@
 {
   "bucket": "morphicsbrain-media",
-  "generated_at": "2026-05-05T15:13:24.756Z",
+  "generated_at": "2026-05-21T19:03:49.202Z",
   "releases": {
     "cicada": [
       {
@@ -303,6 +303,12 @@
       }
     ],
     "slang": [
+      {
+        "filename": "01 Slang.wav",
+        "key": "masters/slang/01_Slang.wav",
+        "size": 51156044,
+        "ext": "wav"
+      },
       {
         "filename": "SlangFinish.wav",
         "key": "masters/slang/SlangFinish.wav",

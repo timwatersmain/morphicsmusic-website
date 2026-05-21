@@ -1,6 +1,42 @@
 {
-  "generated_at": "2026-05-06T03:15:44.862Z",
+  "generated_at": "2026-05-21T19:01:35.852Z",
   "releases": [
+    {
+      "id": "edb40167312d42adbed12c13da2f65fa",
+      "slug": "swamp-logic",
+      "title": "SWAMP LOGIC",
+      "type": "ep",
+      "release_date": "2026-05-23",
+      "artwork": "https://pub-a0375585d55c403e96807f495afed472.r2.dev/eec9412ae31d4fb0b4266ab0e726af8b.jpg",
+      "genre": [
+        "Acid"
+      ],
+      "description": "",
+      "bandcamp_url": null,
+      "min_price_cents": 200,
+      "track_count": 2,
+      "has_masters": false,
+      "tracks": [
+        {
+          "id": "ec4f1ee2296b40e087c9097dc130baea",
+          "track_number": 1,
+          "title": "Synaptic Acid",
+          "isrc": "GBWUL2613346",
+          "duration_seconds": 203,
+          "min_price_cents": 100,
+          "master_filename": null
+        },
+        {
+          "id": "d85ec648b8e14dfca3a686af0a8ec6b9",
+          "track_number": 2,
+          "title": "Croaky Acid",
+          "isrc": "GBWUL2613347",
+          "duration_seconds": 243,
+          "min_price_cents": 100,
+          "master_filename": null
+        }
+      ]
+    },
     {
       "id": "golden-dawn",
       "slug": "golden-dawn",
@@ -42,7 +78,7 @@
       "bandcamp_url": null,
       "min_price_cents": 100,
       "track_count": 1,
-      "has_masters": true,
+      "has_masters": false,
       "tracks": [
         {
           "id": "befuddled-1",
@@ -51,7 +87,7 @@
           "isrc": "GBRKQ2489937",
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": "Morphics - Befuddled.wav"
+          "master_filename": null
         }
       ]
     },
@@ -69,7 +105,7 @@
       "bandcamp_url": null,
       "min_price_cents": 100,
       "track_count": 1,
-      "has_masters": true,
+      "has_masters": false,
       "tracks": [
         {
           "id": "druid-1",
@@ -78,7 +114,7 @@
           "isrc": "QZS642440853",
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": "Druid Final.wav"
+          "master_filename": null
         }
       ]
     },
@@ -96,7 +132,7 @@
       "bandcamp_url": null,
       "min_price_cents": 100,
       "track_count": 1,
-      "has_masters": true,
+      "has_masters": false,
       "tracks": [
         {
           "id": "crave-1",
@@ -105,7 +141,7 @@
           "isrc": "QZS632467089",
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": "Morphics - Crave.wav"
+          "master_filename": null
         }
       ]
     },
@@ -123,7 +159,7 @@
       "bandcamp_url": null,
       "min_price_cents": 100,
       "track_count": 1,
-      "has_masters": true,
+      "has_masters": false,
       "tracks": [
         {
           "id": "mysterium-1",
@@ -132,7 +168,7 @@
           "isrc": "QZS662417051",
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": "Mysterium.wav"
+          "master_filename": null
         }
       ]
     },
@@ -148,7 +184,7 @@
       ],
       "description": "",
       "bandcamp_url": "https://morphics.bandcamp.com/album/dark-side-of-the-mind-2",
-      "min_price_cents": 300,
+      "min_price_cents": 600,
       "track_count": 6,
       "has_masters": true,
       "tracks": [
@@ -168,7 +204,7 @@
           "isrc": "GBRKQ2605027",
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": "Morphics - Eartoy.wav"
+          "master_filename": null
         },
         {
           "id": "dsotm-3",
@@ -214,7 +250,7 @@
       "title": "PHORMLESS",
       "type": "single",
       "release_date": "2024-01-01",
-      "artwork": "/images/albums/phormless.jpg",
+      "artwork": "/Users/morphics/Desktop/New Folder With Items 2/Phormless copy/Formless Art.PNG",
       "genre": [
         "Electronic"
       ],
@@ -231,7 +267,7 @@
           "isrc": "GBRKQ2605011",
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": "Formless.wav"
+          "master_filename": null
         }
       ]
     },
@@ -276,7 +312,7 @@
       "bandcamp_url": "https://morphics.bandcamp.com/track/morpheus",
       "min_price_cents": 100,
       "track_count": 1,
-      "has_masters": true,
+      "has_masters": false,
       "tracks": [
         {
           "id": "morpheus-1",
@@ -285,7 +321,7 @@
           "isrc": "QZTRX2216313",
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": "MORPHICS - MORPHEUS.wav"
+          "master_filename": null
         }
       ]
     },
@@ -301,9 +337,9 @@
       ],
       "description": "",
       "bandcamp_url": "https://morphics.bandcamp.com/album/nexus",
-      "min_price_cents": 300,
+      "min_price_cents": 400,
       "track_count": 4,
-      "has_masters": true,
+      "has_masters": false,
       "tracks": [
         {
           "id": "nexus-telepathine",
@@ -312,7 +348,7 @@
           "isrc": null,
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": "teleppo.wav"
+          "master_filename": null
         },
         {
           "id": "nexus-phantom",
@@ -321,7 +357,7 @@
           "isrc": null,
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": "Phantom.wav"
+          "master_filename": null
         },
         {
           "id": "nexus-lucent",
@@ -330,7 +366,7 @@
           "isrc": null,
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": "Lucent 24bt.wav"
+          "master_filename": null
         },
         {
           "id": "nexus-numinous",
@@ -339,7 +375,88 @@
           "isrc": null,
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": "Numinous MASTERING.wav"
+          "master_filename": null
+        }
+      ]
+    },
+    {
+      "id": "phantom",
+      "slug": "phantom",
+      "title": "PHANTOM",
+      "type": "single",
+      "release_date": "2022-04-29",
+      "artwork": "/images/albums/phantom.jpg",
+      "genre": [
+        "electronic"
+      ],
+      "description": "",
+      "bandcamp_url": null,
+      "min_price_cents": 100,
+      "track_count": 1,
+      "has_masters": false,
+      "tracks": [
+        {
+          "id": "phantom-1",
+          "track_number": 1,
+          "title": "Phantom",
+          "isrc": "USLZJ2254210",
+          "duration_seconds": null,
+          "min_price_cents": 100,
+          "master_filename": null
+        }
+      ]
+    },
+    {
+      "id": "lucent",
+      "slug": "lucent",
+      "title": "LUCENT",
+      "type": "single",
+      "release_date": "2022-04-15",
+      "artwork": "/images/albums/lucent.jpg",
+      "genre": [
+        "electronic"
+      ],
+      "description": "",
+      "bandcamp_url": null,
+      "min_price_cents": 100,
+      "track_count": 1,
+      "has_masters": false,
+      "tracks": [
+        {
+          "id": "lucent-1",
+          "track_number": 1,
+          "title": "Lucent",
+          "isrc": "USLZJ2232816",
+          "duration_seconds": null,
+          "min_price_cents": 100,
+          "master_filename": null
+        }
+      ]
+    },
+    {
+      "id": "numinous",
+      "slug": "numinous",
+      "title": "NUMINOUS",
+      "type": "single",
+      "release_date": "2022-04-01",
+      "artwork": "/images/albums/numinous.jpg",
+      "genre": [
+        "electronic"
+      ],
+      "description": "",
+      "bandcamp_url": null,
+      "min_price_cents": 100,
+      "track_count": 1,
+      "has_masters": false,
+      "tracks": [
+        {
+          "id": "numinous-1",
+          "track_number": 1,
+          "title": "Numinous",
+          "isrc": "USLZJ2213689",
+          "duration_seconds": null,
+          "min_price_cents": 100,
+          "master_filename": null
         }
       ]
     },
@@ -349,7 +466,7 @@
       "title": "SLANG",
       "type": "single",
       "release_date": "2019-12-13",
-      "artwork": "/images/albums/slang.jpg",
+      "artwork": "/Users/morphics/Desktop/New Folder With Items 3/Slang copy/slang final.jpg",
       "genre": [
         "electronic"
       ],
@@ -366,7 +483,7 @@
           "isrc": "QZK6N1933224",
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": "SlangFinish.wav"
+          "master_filename": "01 Slang.wav"
         }
       ]
     },
@@ -376,13 +493,13 @@
       "title": "HEART OF THE SUN",
       "type": "ep",
       "release_date": "2019-02-14",
-      "artwork": "/images/albums/heart-of-the-sun.jpg",
+      "artwork": "/Users/morphics/Desktop/New Folder With Items 3/Heart of the Sun copy/HOTS_3000.jpg",
       "genre": [
         "electronic"
       ],
       "description": "",
       "bandcamp_url": "https://morphics.bandcamp.com/album/heart-of-the-sun",
-      "min_price_cents": 300,
+      "min_price_cents": 700,
       "track_count": 7,
       "has_masters": true,
       "tracks": [
@@ -393,7 +510,7 @@
           "isrc": "QZDA71959129",
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": "heartofthesunfin.aif"
+          "master_filename": null
         },
         {
           "id": "hots-2",
@@ -411,7 +528,7 @@
           "isrc": "QZDA71959131",
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": "SynthFin.aif"
+          "master_filename": null
         },
         {
           "id": "hots-4",
@@ -457,7 +574,7 @@
       "title": "CICADA",
       "type": "single",
       "release_date": "2018-08-13",
-      "artwork": "/images/albums/cicada.jpg",
+      "artwork": "/Users/morphics/Desktop/New Folder With Items 3/Cicada copy/pJhZ9oRR.jpg",
       "genre": [
         "electronic"
       ],
@@ -484,7 +601,7 @@
       "title": "LIVEVIL",
       "type": "single",
       "release_date": "2018-07-19",
-      "artwork": "/images/albums/livevil.jpg",
+      "artwork": "/Users/morphics/Desktop/New Folder With Items 3/livevil copy/livevil_3000.jpg",
       "genre": [
         "electronic"
       ],
@@ -511,13 +628,13 @@
       "title": "EYE WITHIN",
       "type": "ep",
       "release_date": "2018-03-21",
-      "artwork": "/images/albums/eye-within.jpg",
+      "artwork": "/Users/morphics/Desktop/New Folder With Items 3/Eye Within copy/Eye within cover.jpg",
       "genre": [
         "electronic"
       ],
       "description": "",
       "bandcamp_url": "https://morphics.bandcamp.com/album/eye-within",
-      "min_price_cents": 300,
+      "min_price_cents": 400,
       "track_count": 4,
       "has_masters": true,
       "tracks": [
@@ -528,7 +645,7 @@
           "isrc": "QM4DW1801031",
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": "MorphicsTheEyeWithin.aif"
+          "master_filename": null
         },
         {
           "id": "ew-2",
@@ -537,7 +654,7 @@
           "isrc": "QM4DW1801032",
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": "MorphicsThe6thSense.wav"
+          "master_filename": null
         },
         {
           "id": "ew-3",
@@ -565,7 +682,7 @@
       "title": "DISTORT",
       "type": "single",
       "release_date": "2018-02-28",
-      "artwork": "/images/albums/distort.jpg",
+      "artwork": "/Users/morphics/Desktop/New Folder With Items 3/Distort copy/rvsxGinb.jpg",
       "genre": [
         "electronic"
       ],
@@ -592,7 +709,7 @@
       "title": "PROPERLY GASSED UP",
       "type": "single",
       "release_date": "2018-01-05",
-      "artwork": "/images/albums/properly-gassed-up.jpg",
+      "artwork": "/Users/morphics/Desktop/New Folder With Items 3/Properly Gassed Up copy/PGUUU.jpg",
       "genre": [
         "electronic"
       ],
@@ -609,7 +726,7 @@
           "isrc": "QZAPG1818568",
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": "MorphicsProperlyGassedUp.aif"
+          "master_filename": null
         }
       ]
     },
@@ -619,7 +736,7 @@
       "title": "PERCEPTION",
       "type": "album",
       "release_date": "2018-01-01",
-      "artwork": "/images/albums/perception.jpg",
+      "artwork": "/Users/morphics/Desktop/New Folder With Items 3/Perception copy/?erce?tion.jpg",
       "genre": [
         "electronic"
       ],
@@ -636,7 +753,7 @@
           "isrc": "GBRKQ2615890",
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": "Morphics - _erce_tion.wav"
+          "master_filename": null
         },
         {
           "id": "perc-2",
@@ -754,7 +871,7 @@
       "title": "SUP LIKE THIS",
       "type": "single",
       "release_date": "2017-10-06",
-      "artwork": "/images/albums/sup-like-this.jpg",
+      "artwork": "/Users/morphics/Desktop/New Folder With Items 3/Sup Like this copy/SUP LIKE THIS.jpg",
       "genre": [
         "electronic"
       ],
@@ -781,13 +898,13 @@
       "title": "MELLIFLUOUS",
       "type": "ep",
       "release_date": "2017-10-06",
-      "artwork": "/images/albums/mellifluous.jpg",
+      "artwork": "/Users/morphics/Desktop/New Folder With Items 3/Mellifluous copy/Morphics first album.jpg",
       "genre": [
         "electronic"
       ],
       "description": "",
       "bandcamp_url": "https://morphics.bandcamp.com/album/mellifluous",
-      "min_price_cents": 300,
+      "min_price_cents": 600,
       "track_count": 6,
       "has_masters": true,
       "tracks": [
@@ -798,7 +915,7 @@
           "isrc": "QZ9Y21711239",
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": "MorphicsMelliflous (1).aif"
+          "master_filename": null
         },
         {
           "id": "mell-2",
@@ -834,7 +951,7 @@
           "isrc": "QZ9Y21711243",
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": "MorphicsFluffyL.aif"
+          "master_filename": null
         },
         {
           "id": "mell-6",
@@ -843,7 +960,7 @@
           "isrc": "QZ9Y21711244",
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": "MorphicsSweetDeams.aif"
+          "master_filename": null
         }
       ]
     }
