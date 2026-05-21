@@ -1,6 +1,6 @@
 {
   "bucket": "morphicsbrain-media",
-  "generated_at": "2026-05-21T19:03:49.202Z",
+  "generated_at": "2026-05-21T19:36:06.044Z",
   "releases": {
     "cicada": [
       {
@@ -105,6 +105,48 @@
       }
     ],
     "heart-of-the-sun": [
+      {
+        "filename": "01 Heart of the Sun.aif",
+        "key": "masters/heart-of-the-sun/01_Heart_of_the_Sun.aif",
+        "size": 58542806,
+        "ext": "aif"
+      },
+      {
+        "filename": "02 Compassion.aif",
+        "key": "masters/heart-of-the-sun/02_Compassion.aif",
+        "size": 48263094,
+        "ext": "aif"
+      },
+      {
+        "filename": "03 Synthesis.aif",
+        "key": "masters/heart-of-the-sun/03_Synthesis.aif",
+        "size": 42336054,
+        "ext": "aif"
+      },
+      {
+        "filename": "04 Dreamer.aif",
+        "key": "masters/heart-of-the-sun/04_Dreamer.aif",
+        "size": 60328854,
+        "ext": "aif"
+      },
+      {
+        "filename": "05 Organic.aif",
+        "key": "masters/heart-of-the-sun/05_Organic.aif",
+        "size": 71500854,
+        "ext": "aif"
+      },
+      {
+        "filename": "06 Floating.aif",
+        "key": "masters/heart-of-the-sun/06_Floating.aif",
+        "size": 45864054,
+        "ext": "aif"
+      },
+      {
+        "filename": "07 Fusion.aif",
+        "key": "masters/heart-of-the-sun/07_Fusion.aif",
+        "size": 44717454,
+        "ext": "aif"
+      },
       {
         "filename": "CompassionFin.aif",
         "key": "masters/heart-of-the-sun/CompassionFin.aif",
@@ -322,6 +364,20 @@
         "key": "masters/sup-like-this/Morphics_-_Sup_Like_This_Final_.aif",
         "size": 43394454,
         "ext": "aif"
+      }
+    ],
+    "swamp-logic": [
+      {
+        "filename": "01 Synaptic Acid.wav",
+        "key": "masters/swamp-logic/01_Synaptic_Acid.wav",
+        "size": 35876732,
+        "ext": "wav"
+      },
+      {
+        "filename": "02 Croaky Acid.wav",
+        "key": "masters/swamp-logic/02_Croaky_Acid.wav",
+        "size": 43013456,
+        "ext": "wav"
       }
     ]
   }

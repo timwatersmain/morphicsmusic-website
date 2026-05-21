@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-21T19:01:35.852Z",
+  "generated_at": "2026-05-21T19:18:47.033Z",
   "releases": [
     {
       "id": "edb40167312d42adbed12c13da2f65fa",
@@ -15,7 +15,7 @@
       "bandcamp_url": null,
       "min_price_cents": 200,
       "track_count": 2,
-      "has_masters": false,
+      "has_masters": true,
       "tracks": [
         {
           "id": "ec4f1ee2296b40e087c9097dc130baea",
@@ -24,7 +24,7 @@
           "isrc": "GBWUL2613346",
           "duration_seconds": 203,
           "min_price_cents": 100,
-          "master_filename": null
+          "master_filename": "01 Synaptic Acid.wav"
         },
         {
           "id": "d85ec648b8e14dfca3a686af0a8ec6b9",
@@ -33,7 +33,7 @@
           "isrc": "GBWUL2613347",
           "duration_seconds": 243,
           "min_price_cents": 100,
-          "master_filename": null
+          "master_filename": "02 Croaky Acid.wav"
         }
       ]
     },
@@ -510,7 +510,7 @@
           "isrc": "QZDA71959129",
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": null
+          "master_filename": "01 Heart of the Sun.aif"
         },
         {
           "id": "hots-2",
@@ -519,7 +519,7 @@
           "isrc": "QZDA71959130",
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": "CompassionFin.aif"
+          "master_filename": "02 Compassion.aif"
         },
         {
           "id": "hots-3",
@@ -528,7 +528,7 @@
           "isrc": "QZDA71959131",
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": null
+          "master_filename": "03 Synthesis.aif"
         },
         {
           "id": "hots-4",
@@ -537,7 +537,7 @@
           "isrc": "QZDA71959132",
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": "Dreamerfin).aif"
+          "master_filename": "04 Dreamer.aif"
         },
         {
           "id": "hots-5",
@@ -546,7 +546,7 @@
           "isrc": "QZDA71959133",
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": "MORPHICS - ORGANIC.aif"
+          "master_filename": "05 Organic.aif"
         },
         {
           "id": "hots-6",
@@ -555,7 +555,7 @@
           "isrc": "QZDA71959134",
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": "FloatingFin.aif"
+          "master_filename": "06 Floating.aif"
         },
         {
           "id": "hots-7",
@@ -564,7 +564,7 @@
           "isrc": "QZDA71959135",
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": "FusionFin.aif"
+          "master_filename": "07 Fusion.aif"
         }
       ]
     },
