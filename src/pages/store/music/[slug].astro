@@ -1,6 +1,7 @@
 ---
 import BaseLayout from '../../../layouts/BaseLayout.astro';
 import catalog from '../../../data/music-catalog.json';
+import previews from '../../../data/previews.json';
 
 export function getStaticPaths() {
   return catalog.releases.map(r => ({ params: { slug: r.slug }, props: { release: r } }));
@@ -8,6 +9,14 @@ export function getStaticPaths() {
 
 const { release } = Astro.props;
 const minPriceDollars = (release.min_price_cents / 100).toFixed(0);
+
+// track_number → preview R2 key for this release (if a preview exists).
+const previewByTrack: Record<number, string> = {};
+for (const p of ((previews as any).previews?.[release.slug] || [])) {
+  if (p.track_number != null && p.key) previewByTrack[p.track_number] = p.key;
+}
+// Fall back to first preview for the release-level quick play.
+const firstPreviewKey = ((previews as any).previews?.[release.slug] || [])[0]?.key || null;
 
 function fmtDuration(seconds: number | null) {
   if (!seconds) return '—';
@@ -24,8 +33,18 @@ function fmtDuration(seconds: number | null) {
     </a>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
-      <div class="relative bg-surface-container-low border border-white/5 overflow-hidden">
+      <div class="relative bg-surface-container-low border border-white/5 overflow-hidden group">
         <img src={release.artwork} alt={release.title} class="w-full aspect-square object-cover" />
+        {firstPreviewKey && (
+          <button
+            type="button"
+            data-preview-key={firstPreviewKey}
+            aria-label="Play preview"
+            class="preview-btn absolute bottom-4 right-4 w-14 h-14 flex items-center justify-center bg-primary/90 text-on-primary hover:bg-secondary hover:text-on-secondary backdrop-blur-sm transition-colors shadow-lg"
+          >
+            <span class="material-symbols-outlined text-3xl leading-none">play_arrow</span>
+          </button>
+        )}
       </div>
 
       <div>
@@ -97,7 +116,18 @@ function fmtDuration(seconds: number | null) {
         <ol class="divide-y divide-white/5">
           {release.tracks.map(t => (
             <li class="flex items-center gap-4 py-3 group">
-              <span class="font-mono text-[10px] text-white/30 w-8">{String(t.track_number).padStart(2, '0')}</span>
+              {previewByTrack[t.track_number] ? (
+                <button
+                  type="button"
+                  data-preview-key={previewByTrack[t.track_number]}
+                  aria-label={`Play preview of ${t.title}`}
+                  class="preview-btn shrink-0 w-8 h-8 flex items-center justify-center border border-primary/20 text-primary hover:bg-primary hover:text-on-primary transition-colors"
+                >
+                  <span class="material-symbols-outlined text-base leading-none">play_arrow</span>
+                </button>
+              ) : (
+                <span class="font-mono text-[10px] text-white/30 w-8 text-center">{String(t.track_number).padStart(2, '0')}</span>
+              )}
               <span class="flex-1 font-headline text-primary uppercase tracking-tight">{t.title}</span>
               <span class="font-mono text-[10px] text-white/40">{fmtDuration(t.duration_seconds)}</span>
             </li>
@@ -119,6 +149,7 @@ function fmtDuration(seconds: number | null) {
 
   <script>
     import '../../../scripts/cart.js';
+    import '../../../scripts/preview-player.js';
     import { goLiveUtcMs, isReleased } from '../../../../functions/_lib/release-gate.mjs';
     const release = JSON.parse(document.getElementById('release-data')!.textContent || '{}');
     const form = document.getElementById('release-form') as HTMLFormElement;

@@ -1,0 +1,442 @@
+{
+  "bucket": "morphicsbrain-media",
+  "generated_at": "2026-05-24T13:51:13.553Z",
+  "previews": {
+    "cicada": [
+      {
+        "track_number": 1,
+        "key": "previews/cicada/MorphicsCicadaFULLFINAL_1_.mp3",
+        "filename": "MorphicsCicadaFULLFINAL (1).aif",
+        "size": 4327175,
+        "duration_seconds": 270
+      }
+    ],
+    "dark-side-of-the-mind": [
+      {
+        "track_number": 1,
+        "key": "previews/dark-side-of-the-mind/Morphics_-_Solve_Coagula.mp3",
+        "filename": "Morphics - Solve Coagula.wav",
+        "size": 3481226,
+        "duration_seconds": 218
+      },
+      {
+        "track_number": 2,
+        "key": "previews/dark-side-of-the-mind/Morphics_-_Eartoy.mp3",
+        "filename": "Morphics - Eartoy.wav",
+        "size": 2602257,
+        "duration_seconds": 163
+      },
+      {
+        "track_number": 3,
+        "key": "previews/dark-side-of-the-mind/Morphics_-_Top_Steppa.mp3",
+        "filename": "Morphics - Top Steppa.wav",
+        "size": 2228184,
+        "duration_seconds": 139
+      },
+      {
+        "track_number": 4,
+        "key": "previews/dark-side-of-the-mind/Morphics_-_Recluse.mp3",
+        "filename": "Morphics - Recluse.wav",
+        "size": 1592050,
+        "duration_seconds": 99
+      },
+      {
+        "track_number": 5,
+        "key": "previews/dark-side-of-the-mind/Morphics_-_New_Magick.mp3",
+        "filename": "Morphics - New Magick.wav",
+        "size": 3987792,
+        "duration_seconds": 249
+      },
+      {
+        "track_number": 6,
+        "key": "previews/dark-side-of-the-mind/Morphics_-_Goetia.mp3",
+        "filename": "Morphics - Goetia.wav",
+        "size": 3292308,
+        "duration_seconds": 206
+      }
+    ],
+    "distort": [
+      {
+        "track_number": 1,
+        "key": "previews/distort/Distort.mp3",
+        "filename": "Distort.mp3",
+        "size": 2970479,
+        "duration_seconds": 186
+      },
+      {
+        "track_number": 1,
+        "key": "previews/distort/Distort.mp3",
+        "filename": "Distort.wav",
+        "size": 2970479,
+        "duration_seconds": 186
+      }
+    ],
+    "evolution": [
+      {
+        "track_number": 1,
+        "key": "previews/evolution/Evolution.mp3",
+        "filename": "Evolution.wav",
+        "size": 2679998,
+        "duration_seconds": 167
+      }
+    ],
+    "eye-within": [
+      {
+        "track_number": 1,
+        "key": "previews/eye-within/MorphicsTheEyeWithin.mp3",
+        "filename": "MorphicsTheEyeWithin.aif",
+        "size": 3925098,
+        "duration_seconds": 245
+      },
+      {
+        "track_number": 2,
+        "key": "previews/eye-within/MorphicsThe6thSense.mp3",
+        "filename": "MorphicsThe6thSense.wav",
+        "size": 3072879,
+        "duration_seconds": 192
+      },
+      {
+        "track_number": 3,
+        "key": "previews/eye-within/Morphics_-_Lies.mp3",
+        "filename": "Morphics - Lies.aif",
+        "size": 2937461,
+        "duration_seconds": 184
+      },
+      {
+        "track_number": 4,
+        "key": "previews/eye-within/Morphics_-_Get_Bit.mp3",
+        "filename": "Morphics - Get Bit.wav",
+        "size": 3305265,
+        "duration_seconds": 207
+      }
+    ],
+    "golden-dawn": [
+      {
+        "track_number": 1,
+        "key": "previews/golden-dawn/Morphics_-_Golden_Dawn_Soundcloud.mp3",
+        "filename": "Morphics - Golden Dawn Soundcloud.wav",
+        "size": 2881036,
+        "duration_seconds": 180
+      }
+    ],
+    "heart-of-the-sun": [
+      {
+        "track_number": 1,
+        "key": "previews/heart-of-the-sun/01_Heart_of_the_Sun.mp3",
+        "filename": "01 Heart of the Sun.aif",
+        "size": 5311051,
+        "duration_seconds": 332
+      },
+      {
+        "track_number": 1,
+        "key": "previews/heart-of-the-sun/heartofthesunfin.mp3",
+        "filename": "heartofthesunfin.aif",
+        "size": 5311051,
+        "duration_seconds": 332
+      },
+      {
+        "track_number": 2,
+        "key": "previews/heart-of-the-sun/02_Compassion.mp3",
+        "filename": "02 Compassion.aif",
+        "size": 4378584,
+        "duration_seconds": 274
+      },
+      {
+        "track_number": 2,
+        "key": "previews/heart-of-the-sun/CompassionFin.mp3",
+        "filename": "CompassionFin.aif",
+        "size": 4378584,
+        "duration_seconds": 274
+      },
+      {
+        "track_number": 3,
+        "key": "previews/heart-of-the-sun/03_Synthesis.mp3",
+        "filename": "03 Synthesis.aif",
+        "size": 3841088,
+        "duration_seconds": 240
+      },
+      {
+        "track_number": 4,
+        "key": "previews/heart-of-the-sun/04_Dreamer.mp3",
+        "filename": "04 Dreamer.aif",
+        "size": 5473219,
+        "duration_seconds": 342
+      },
+      {
+        "track_number": 4,
+        "key": "previews/heart-of-the-sun/Dreamerfin_.mp3",
+        "filename": "Dreamerfin).aif",
+        "size": 5473219,
+        "duration_seconds": 342
+      },
+      {
+        "track_number": 5,
+        "key": "previews/heart-of-the-sun/05_Organic.mp3",
+        "filename": "05 Organic.aif",
+        "size": 4324667,
+        "duration_seconds": 270
+      },
+      {
+        "track_number": 5,
+        "key": "previews/heart-of-the-sun/MORPHICS_-_ORGANIC.mp3",
+        "filename": "MORPHICS - ORGANIC.aif",
+        "size": 4324667,
+        "duration_seconds": 270
+      },
+      {
+        "track_number": 6,
+        "key": "previews/heart-of-the-sun/06_Floating.mp3",
+        "filename": "06 Floating.aif",
+        "size": 4161245,
+        "duration_seconds": 260
+      },
+      {
+        "track_number": 6,
+        "key": "previews/heart-of-the-sun/FloatingFin.mp3",
+        "filename": "FloatingFin.aif",
+        "size": 4161245,
+        "duration_seconds": 260
+      },
+      {
+        "track_number": 7,
+        "key": "previews/heart-of-the-sun/07_Fusion.mp3",
+        "filename": "07 Fusion.aif",
+        "size": 4057173,
+        "duration_seconds": 254
+      },
+      {
+        "track_number": 7,
+        "key": "previews/heart-of-the-sun/FusionFin.mp3",
+        "filename": "FusionFin.aif",
+        "size": 4057173,
+        "duration_seconds": 254
+      },
+      {
+        "track_number": null,
+        "key": "previews/heart-of-the-sun/SynthFin.mp3",
+        "filename": "SynthFin.aif",
+        "size": 3841088,
+        "duration_seconds": 240
+      }
+    ],
+    "livevil": [
+      {
+        "track_number": 1,
+        "key": "previews/livevil/LIVEVIL.mp3",
+        "filename": "LIVEVIL.wav",
+        "size": 2410832,
+        "duration_seconds": 151
+      },
+      {
+        "track_number": 1,
+        "key": "previews/livevil/Morphics_-_livevil_Final.mp3",
+        "filename": "Morphics - livevil Final.aif",
+        "size": 4163335,
+        "duration_seconds": 260
+      },
+      {
+        "track_number": 1,
+        "key": "previews/livevil/MorphicslivevilFinal.mp3",
+        "filename": "MorphicslivevilFinal.aif",
+        "size": 4163335,
+        "duration_seconds": 260
+      }
+    ],
+    "mellifluous": [
+      {
+        "track_number": 1,
+        "key": "previews/mellifluous/MorphicsMelliflous_1_.mp3",
+        "filename": "MorphicsMelliflous (1).aif",
+        "size": 3292308,
+        "duration_seconds": 206
+      },
+      {
+        "track_number": 2,
+        "key": "previews/mellifluous/MorphicsUnwind.mp3",
+        "filename": "MorphicsUnwind.aif",
+        "size": 3740778,
+        "duration_seconds": 234
+      },
+      {
+        "track_number": 3,
+        "key": "previews/mellifluous/MorphicsDrifting.mp3",
+        "filename": "MorphicsDrifting.aif",
+        "size": 4170022,
+        "duration_seconds": 261
+      },
+      {
+        "track_number": 4,
+        "key": "previews/mellifluous/MorphicsScarab.mp3",
+        "filename": "MorphicsScarab.aif",
+        "size": 3950594,
+        "duration_seconds": 247
+      },
+      {
+        "track_number": 5,
+        "key": "previews/mellifluous/MorphicsFluffyL.mp3",
+        "filename": "MorphicsFluffyL.aif",
+        "size": 3950594,
+        "duration_seconds": 247
+      },
+      {
+        "track_number": 6,
+        "key": "previews/mellifluous/MorphicsSweetDeams.mp3",
+        "filename": "MorphicsSweetDeams.aif",
+        "size": 4001167,
+        "duration_seconds": 250
+      }
+    ],
+    "perception": [
+      {
+        "track_number": 1,
+        "key": "previews/perception/Morphics_-__erce_tion.mp3",
+        "filename": "Morphics - _erce_tion.wav",
+        "size": 5237490,
+        "duration_seconds": 327
+      },
+      {
+        "track_number": 2,
+        "key": "previews/perception/Morphics_-_Blindly_6.mp3",
+        "filename": "Morphics - Blindly 6.wav",
+        "size": 4011616,
+        "duration_seconds": 251
+      },
+      {
+        "track_number": 3,
+        "key": "previews/perception/Morphics_-_Corruption_7.mp3",
+        "filename": "Morphics - Corruption 7.wav",
+        "size": 3553115,
+        "duration_seconds": 222
+      },
+      {
+        "track_number": 4,
+        "key": "previews/perception/Morphics_-_Crystal_K_6.mp3",
+        "filename": "Morphics - Crystal K 6.wav",
+        "size": 4161245,
+        "duration_seconds": 260
+      },
+      {
+        "track_number": 5,
+        "key": "previews/perception/Morphics_-_Disolve_3.mp3",
+        "filename": "Morphics - Disolve 3.wav",
+        "size": 3508811,
+        "duration_seconds": 219
+      },
+      {
+        "track_number": 6,
+        "key": "previews/perception/Morphics_-_Infinity_3.mp3",
+        "filename": "Morphics - Infinity 3.wav",
+        "size": 3456984,
+        "duration_seconds": 216
+      },
+      {
+        "track_number": 7,
+        "key": "previews/perception/Morphics_-_Metamorphosis.mp3",
+        "filename": "Morphics - Metamorphosis.wav",
+        "size": 4161245,
+        "duration_seconds": 260
+      },
+      {
+        "track_number": 8,
+        "key": "previews/perception/Morphics_-_Oligarchy.mp3",
+        "filename": "Morphics - Oligarchy.wav",
+        "size": 3194506,
+        "duration_seconds": 200
+      },
+      {
+        "track_number": 9,
+        "key": "previews/perception/Morphics_-_Resonate.mp3",
+        "filename": "Morphics - Resonate.wav",
+        "size": 3230032,
+        "duration_seconds": 202
+      },
+      {
+        "track_number": 10,
+        "key": "previews/perception/Morphics_-_Saturate.mp3",
+        "filename": "Morphics - Saturate.wav",
+        "size": 4491015,
+        "duration_seconds": 281
+      },
+      {
+        "track_number": 11,
+        "key": "previews/perception/Morphics_-_Stimulate.mp3",
+        "filename": "Morphics - Stimulate.wav",
+        "size": 4132406,
+        "duration_seconds": 258
+      },
+      {
+        "track_number": 12,
+        "key": "previews/perception/Morphics_-_Venom_4.mp3",
+        "filename": "Morphics - Venom 4.wav",
+        "size": 3840671,
+        "duration_seconds": 240
+      },
+      {
+        "track_number": 13,
+        "key": "previews/perception/Rivka_-_Swim_High_Morphics_Reslime_.mp3",
+        "filename": "Rivka - Swim High (Morphics Reslime).wav",
+        "size": 3456984,
+        "duration_seconds": 216
+      }
+    ],
+    "phormless": [
+      {
+        "track_number": 1,
+        "key": "previews/phormless/Formless.mp3",
+        "filename": "Formless.wav",
+        "size": 2621484,
+        "duration_seconds": 164
+      }
+    ],
+    "properly-gassed-up": [
+      {
+        "track_number": 1,
+        "key": "previews/properly-gassed-up/MorphicsProperlyGassedUp.mp3",
+        "filename": "MorphicsProperlyGassedUp.aif",
+        "size": 4111508,
+        "duration_seconds": 257
+      }
+    ],
+    "slang": [
+      {
+        "track_number": 1,
+        "key": "previews/slang/01_Slang.mp3",
+        "filename": "01 Slang.wav",
+        "size": 4641062,
+        "duration_seconds": 290
+      },
+      {
+        "track_number": 1,
+        "key": "previews/slang/SlangFinish.mp3",
+        "filename": "SlangFinish.wav",
+        "size": 4641062,
+        "duration_seconds": 290
+      }
+    ],
+    "sup-like-this": [
+      {
+        "track_number": 1,
+        "key": "previews/sup-like-this/Morphics_-_Sup_Like_This_Final_.mp3",
+        "filename": "Morphics - Sup Like This (Final).aif",
+        "size": 3937219,
+        "duration_seconds": 246
+      }
+    ],
+    "swamp-logic": [
+      {
+        "track_number": 1,
+        "key": "previews/swamp-logic/01_Synaptic_Acid.mp3",
+        "filename": "01 Synaptic Acid.wav",
+        "size": 3255110,
+        "duration_seconds": 203
+      },
+      {
+        "track_number": 2,
+        "key": "previews/swamp-logic/02_Croaky_Acid.mp3",
+        "filename": "02 Croaky Acid.wav",
+        "size": 3902528,
+        "duration_seconds": 244
+      }
+    ]
+  }
+}
