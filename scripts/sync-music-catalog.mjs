@@ -93,7 +93,11 @@ const catalog = {
       title: r.title.toUpperCase(),
       type: r.type,
       release_date: releaseDateFor(r.release_date, r.scheduled_release_date),
-      artwork: r.artwork_path || `/images/albums/${slug}.jpg`,
+      // artwork_path in the brain DB is a brain-internal reference (an R2 key /
+      // pub-*.r2.dev URL, which is 401, or a host filesystem path) — never a
+      // web-servable URL. The site always uses the static album-art convention;
+      // the publish pipeline materializes <slug>.jpg into public/images/albums/.
+      artwork: `/images/albums/${slug}.jpg`,
       genre: r.genre ? r.genre.split(',').map(s => s.trim()) : ['electronic'],
       description: r.description || '',
       bandcamp_url: r.bandcamp_url || null,

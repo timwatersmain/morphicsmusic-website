@@ -1,7 +1,6 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import catalog from '../data/music-catalog.json';
-import bandcamp from '../data/bandcamp-latest.json';
 
 const releases = catalog.releases.map(r => ({
   ...r,
@@ -30,41 +29,59 @@ const latest = [...releases]
         <span class="font-mono text-xs text-secondary uppercase">Latest Release</span>
         <div class="h-[1px] flex-1 bg-outline-variant/30"></div>
       </div>
-      <div class="bg-surface-container-low border border-white/5 p-6">
-        <iframe
-          style="border: 0; width: 100%; height: 120px;"
-          src={bandcamp.embedUrl}
-          seamless
-        >
-          <a href={bandcamp.pageUrl}>{bandcamp.title} on Bandcamp</a>
-        </iframe>
-        <div class="flex items-center gap-3 mt-4">
-          <button
-            type="button"
-            class="release-add-btn flex-1 py-3 border border-primary/30 hover:bg-primary hover:text-on-primary font-mono text-[10px] tracking-widest transition-all uppercase text-center text-primary disabled:opacity-30 disabled:cursor-not-allowed"
-            data-slug={latest.slug}
-            data-title={latest.title}
-            data-image={latest.artwork}
-            data-min-cents={latest.min_price_cents}
-            data-track-count={latest.track_count}
-            data-type={latest.type}
-            data-live-label={`Add ${latest.title} to cart · $${latest.minPriceDollars}+`}
-            disabled={!latest.has_masters || (!!latest.release_date && new Date(latest.release_date) > new Date())}
-          >
-            {!latest.has_masters
-              ? 'Coming soon'
-              : (!!latest.release_date && new Date(latest.release_date) > new Date())
-                ? 'Coming soon'
-                : `Add ${latest.title} to cart · $${latest.minPriceDollars}+`}
-          </button>
-          {latest.release_date && new Date(latest.release_date) > new Date() && (
-            <div class="release-countdown flex-1 text-center font-mono text-[9px] text-secondary uppercase tracking-widest" data-release-date={latest.release_date}>
-              <span class="countdown-label">Releases {latest.release_date}</span>
+      <div class="bg-surface-container-low border border-white/5 p-6 md:flex md:gap-6 md:items-center">
+        <a href={`/store/music/${latest.slug}`} class="group block shrink-0 w-full md:w-48 aspect-square overflow-hidden mb-4 md:mb-0">
+          {latest.artwork ? (
+            <img
+              src={latest.artwork}
+              alt={latest.title}
+              class="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700"
+            />
+          ) : (
+            <div class="w-full h-full flex items-center justify-center bg-white/[0.03] border border-white/5">
+              <span class="font-mono text-[9px] text-white/20 tracking-widest uppercase">No artwork</span>
             </div>
           )}
-          <a href={`/store/music/${latest.slug}`} class="px-4 py-3 font-mono text-[10px] text-white/40 hover:text-secondary uppercase tracking-widest transition-colors">
-            Name your price &rarr;
-          </a>
+        </a>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-baseline gap-3 mb-1">
+            <a href={`/store/music/${latest.slug}`} class="font-headline text-2xl md:text-3xl text-primary hover:text-secondary transition-colors uppercase tracking-tight truncate">{latest.title}</a>
+            <span class="font-mono text-[9px] text-secondary shrink-0">{latest.type.toUpperCase()}</span>
+          </div>
+          <div class="font-mono text-[10px] text-white/30 mb-3">{latest.date}</div>
+          <div class="flex flex-wrap gap-1 mb-5">
+            {latest.genre.map(g => (
+              <span class="px-1.5 py-0.5 bg-white/5 text-[8px] font-mono text-primary border border-primary/10">#{g.toUpperCase()}</span>
+            ))}
+          </div>
+          <div class="flex items-center gap-3">
+            <button
+              type="button"
+              class="release-add-btn flex-1 py-3 border border-primary/30 hover:bg-primary hover:text-on-primary font-mono text-[10px] tracking-widest transition-all uppercase text-center text-primary disabled:opacity-30 disabled:cursor-not-allowed"
+              data-slug={latest.slug}
+              data-title={latest.title}
+              data-image={latest.artwork}
+              data-min-cents={latest.min_price_cents}
+              data-track-count={latest.track_count}
+              data-type={latest.type}
+              data-live-label={`Add ${latest.title} to cart · $${latest.minPriceDollars}+`}
+              disabled={!latest.has_masters || (!!latest.release_date && new Date(latest.release_date) > new Date())}
+            >
+              {!latest.has_masters
+                ? 'Coming soon'
+                : (!!latest.release_date && new Date(latest.release_date) > new Date())
+                  ? 'Coming soon'
+                  : `Add ${latest.title} to cart · $${latest.minPriceDollars}+`}
+            </button>
+            {latest.release_date && new Date(latest.release_date) > new Date() && (
+              <div class="release-countdown flex-1 text-center font-mono text-[9px] text-secondary uppercase tracking-widest" data-release-date={latest.release_date}>
+                <span class="countdown-label">Releases {latest.release_date}</span>
+              </div>
+            )}
+            <a href={`/store/music/${latest.slug}`} class="px-4 py-3 font-mono text-[10px] text-white/40 hover:text-secondary uppercase tracking-widest transition-colors">
+              Name your price &rarr;
+            </a>
+          </div>
         </div>
       </div>
     </div>

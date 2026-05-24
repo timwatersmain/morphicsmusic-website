@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-21T19:18:47.033Z",
+  "generated_at": "2026-05-24T12:04:16.624Z",
   "releases": [
     {
       "id": "edb40167312d42adbed12c13da2f65fa",
@@ -7,7 +7,7 @@
       "title": "SWAMP LOGIC",
       "type": "ep",
       "release_date": "2026-05-23",
-      "artwork": "https://pub-a0375585d55c403e96807f495afed472.r2.dev/eec9412ae31d4fb0b4266ab0e726af8b.jpg",
+      "artwork": "/images/albums/swamp-logic.jpg",
       "genre": [
         "Acid"
       ],
@@ -250,7 +250,7 @@
       "title": "PHORMLESS",
       "type": "single",
       "release_date": "2024-01-01",
-      "artwork": "/Users/morphics/Desktop/New Folder With Items 2/Phormless copy/Formless Art.PNG",
+      "artwork": "/images/albums/phormless.jpg",
       "genre": [
         "Electronic"
       ],
@@ -466,7 +466,7 @@
       "title": "SLANG",
       "type": "single",
       "release_date": "2019-12-13",
-      "artwork": "/Users/morphics/Desktop/New Folder With Items 3/Slang copy/slang final.jpg",
+      "artwork": "/images/albums/slang.jpg",
       "genre": [
         "electronic"
       ],
@@ -493,7 +493,7 @@
       "title": "HEART OF THE SUN",
       "type": "ep",
       "release_date": "2019-02-14",
-      "artwork": "/Users/morphics/Desktop/New Folder With Items 3/Heart of the Sun copy/HOTS_3000.jpg",
+      "artwork": "/images/albums/heart-of-the-sun.jpg",
       "genre": [
         "electronic"
       ],
@@ -574,7 +574,7 @@
       "title": "CICADA",
       "type": "single",
       "release_date": "2018-08-13",
-      "artwork": "/Users/morphics/Desktop/New Folder With Items 3/Cicada copy/pJhZ9oRR.jpg",
+      "artwork": "/images/albums/cicada.jpg",
       "genre": [
         "electronic"
       ],
@@ -601,7 +601,7 @@
       "title": "LIVEVIL",
       "type": "single",
       "release_date": "2018-07-19",
-      "artwork": "/Users/morphics/Desktop/New Folder With Items 3/livevil copy/livevil_3000.jpg",
+      "artwork": "/images/albums/livevil.jpg",
       "genre": [
         "electronic"
       ],
@@ -628,7 +628,7 @@
       "title": "EYE WITHIN",
       "type": "ep",
       "release_date": "2018-03-21",
-      "artwork": "/Users/morphics/Desktop/New Folder With Items 3/Eye Within copy/Eye within cover.jpg",
+      "artwork": "/images/albums/eye-within.jpg",
       "genre": [
         "electronic"
       ],
@@ -682,7 +682,7 @@
       "title": "DISTORT",
       "type": "single",
       "release_date": "2018-02-28",
-      "artwork": "/Users/morphics/Desktop/New Folder With Items 3/Distort copy/rvsxGinb.jpg",
+      "artwork": "/images/albums/distort.jpg",
       "genre": [
         "electronic"
       ],
@@ -709,7 +709,7 @@
       "title": "PROPERLY GASSED UP",
       "type": "single",
       "release_date": "2018-01-05",
-      "artwork": "/Users/morphics/Desktop/New Folder With Items 3/Properly Gassed Up copy/PGUUU.jpg",
+      "artwork": "/images/albums/properly-gassed-up.jpg",
       "genre": [
         "electronic"
       ],
@@ -736,7 +736,7 @@
       "title": "PERCEPTION",
       "type": "album",
       "release_date": "2018-01-01",
-      "artwork": "/Users/morphics/Desktop/New Folder With Items 3/Perception copy/?erce?tion.jpg",
+      "artwork": "/images/albums/perception.jpg",
       "genre": [
         "electronic"
       ],
@@ -871,7 +871,7 @@
       "title": "SUP LIKE THIS",
       "type": "single",
       "release_date": "2017-10-06",
-      "artwork": "/Users/morphics/Desktop/New Folder With Items 3/Sup Like this copy/SUP LIKE THIS.jpg",
+      "artwork": "/images/albums/sup-like-this.jpg",
       "genre": [
         "electronic"
       ],
@@ -898,7 +898,7 @@
       "title": "MELLIFLUOUS",
       "type": "ep",
       "release_date": "2017-10-06",
-      "artwork": "/Users/morphics/Desktop/New Folder With Items 3/Mellifluous copy/Morphics first album.jpg",
+      "artwork": "/images/albums/mellifluous.jpg",
       "genre": [
         "electronic"
       ],
