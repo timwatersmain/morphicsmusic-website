@@ -99,8 +99,8 @@ const PRIOR = (() => {
   try { return existsSync(OUT) ? JSON.parse(readFileSync(OUT, 'utf8')).previews || {} : {}; }
   catch { return {}; }
 })();
-function priorDuration(slug, key) {
-  return (PRIOR[slug] || []).find(e => e.key === key)?.duration_seconds ?? null;
+function priorEntry(slug, key) {
+  return (PRIOR[slug] || []).find(e => e.key === key) || null;
 }
 
 function previewKeyFor(slug, filename) {
@@ -192,19 +192,18 @@ try {
         rmSync(outFile, { force: true });
       } else {
         console.log(`    ✓ preview exists — skip ${pkey}`);
-        entries.push({ track_number: tn, key: pkey, filename: f.filename, duration_seconds: priorDuration(slug, pkey) });
+        const prior = priorEntry(slug, pkey);
+        entries.push({ track_number: tn, key: pkey, filename: f.filename, size: prior?.size, duration_seconds: prior?.duration_seconds ?? null });
       }
     }
     entries.sort((a, b) => (a.track_number ?? 1e9) - (b.track_number ?? 1e9));
     previews[slug] = entries;
   }
 
-  // When only re-doing one slug (or manifest-only), preserve existing entries.
+  // When only re-doing one slug (or manifest-only), keep every other release's
+  // previews intact (merge the freshly-built slug(s) over the prior file).
   if (ONLY_SLUG || MANIFEST_ONLY) {
-    try {
-      const prev = JSON.parse(execSync(`cat "${OUT}"`, { encoding: 'utf8' }));
-      previews = Object.assign({}, prev.previews, previews); // eslint-disable-line
-    } catch { /* no prior file */ }
+    previews = Object.assign({}, PRIOR, previews);
   }
 
   const out = { bucket: BUCKET, generated_at: new Date().toISOString(), previews };
