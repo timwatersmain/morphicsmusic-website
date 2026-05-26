@@ -1,6 +1,6 @@
 {
   "bucket": "morphicsbrain-media",
-  "generated_at": "2026-05-24T13:51:13.553Z",
+  "generated_at": "2026-05-26T18:37:49.479Z",
   "previews": {
     "cicada": [
       {
@@ -436,6 +436,36 @@
         "filename": "02 Croaky Acid.wav",
         "size": 3902528,
         "duration_seconds": 244
+      }
+    ],
+    "nexus": [
+      {
+        "track_number": 1,
+        "key": "previews/nexus/1_Telepathine.mp3",
+        "filename": "1 Telepathine.wav",
+        "size": 3566907,
+        "duration_seconds": 223
+      },
+      {
+        "track_number": 2,
+        "key": "previews/nexus/2_Phantom.mp3",
+        "filename": "2 Phantom.wav",
+        "size": 3169010,
+        "duration_seconds": 198
+      },
+      {
+        "track_number": 3,
+        "key": "previews/nexus/3_Lucent.mp3",
+        "filename": "3 Lucent.wav",
+        "size": 2761082,
+        "duration_seconds": 173
+      },
+      {
+        "track_number": 4,
+        "key": "previews/nexus/4_Numinous.mp3",
+        "filename": "4 Numinous.wav",
+        "size": 2881036,
+        "duration_seconds": 180
       }
     ]
   }

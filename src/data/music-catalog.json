@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-24T12:04:16.624Z",
+  "generated_at": "2026-05-26T18:37:58.655Z",
   "releases": [
     {
       "id": "edb40167312d42adbed12c13da2f65fa",
@@ -339,7 +339,7 @@
       "bandcamp_url": "https://morphics.bandcamp.com/album/nexus",
       "min_price_cents": 400,
       "track_count": 4,
-      "has_masters": false,
+      "has_masters": true,
       "tracks": [
         {
           "id": "nexus-telepathine",
@@ -348,7 +348,7 @@
           "isrc": null,
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": null
+          "master_filename": "1 Telepathine.wav"
         },
         {
           "id": "nexus-phantom",
@@ -357,7 +357,7 @@
           "isrc": null,
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": null
+          "master_filename": "2 Phantom.wav"
         },
         {
           "id": "nexus-lucent",
@@ -366,7 +366,7 @@
           "isrc": null,
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": null
+          "master_filename": "3 Lucent.wav"
         },
         {
           "id": "nexus-numinous",
@@ -375,7 +375,7 @@
           "isrc": null,
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": null
+          "master_filename": "4 Numinous.wav"
         }
       ]
     },

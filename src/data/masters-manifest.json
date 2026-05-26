@@ -1,6 +1,6 @@
 {
   "bucket": "morphicsbrain-media",
-  "generated_at": "2026-05-21T19:36:06.044Z",
+  "generated_at": "2026-05-26T18:25:09.886Z",
   "releases": {
     "cicada": [
       {
@@ -246,6 +246,32 @@
         "key": "masters/mellifluous/MorphicsUnwind.aif",
         "size": 41237239,
         "ext": "aif"
+      }
+    ],
+    "nexus": [
+      {
+        "filename": "1 Telepathine.wav",
+        "key": "masters/nexus/1_Telepathine.wav",
+        "size": 39312044,
+        "ext": "wav"
+      },
+      {
+        "filename": "2 Phantom.wav",
+        "key": "masters/nexus/2_Phantom.wav",
+        "size": 34927244,
+        "ext": "wav"
+      },
+      {
+        "filename": "3 Lucent.wav",
+        "key": "masters/nexus/3_Lucent.wav",
+        "size": 30429044,
+        "ext": "wav"
+      },
+      {
+        "filename": "4 Numinous.wav",
+        "key": "masters/nexus/4_Numinous.wav",
+        "size": 47628044,
+        "ext": "wav"
       }
     ],
     "perception": [
