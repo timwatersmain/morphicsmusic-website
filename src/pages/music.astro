@@ -7,12 +7,14 @@ import previews from '../data/previews.json';
 // (so the player bar names the track, e.g. "Synaptic Acid", not the release).
 const firstPreviewBySlug: Record<string, string> = {};
 const firstTrackTitleBySlug: Record<string, string> = {};
+const firstTrackNumBySlug: Record<string, number> = {};
 for (const r of catalog.releases) {
   const first = ((previews as any).previews?.[r.slug] || [])[0];
   if (!first?.key) continue;
   firstPreviewBySlug[r.slug] = first.key;
   const t = (r.tracks || []).find((tr: any) => tr.track_number === first.track_number);
   firstTrackTitleBySlug[r.slug] = t?.title || r.title;
+  firstTrackNumBySlug[r.slug] = first.track_number || 1;
 }
 
 const isBuyable = (r: any) =>
@@ -73,6 +75,7 @@ const latest = [...releases]
               data-cart-count={latest.track_count}
               data-cart-cents={latest.min_price_cents}
               data-cart-buyable={isBuyable(latest) ? '1' : '0'}
+              data-track-num={firstTrackNumBySlug[latest.slug]}
               aria-label={`Play preview of ${firstTrackTitleBySlug[latest.slug]}`}
               class="preview-btn absolute bottom-2 right-2 w-11 h-11 flex items-center justify-center bg-primary/90 text-on-primary hover:bg-secondary hover:text-on-secondary backdrop-blur-sm transition-colors shadow-lg"
             >
@@ -160,6 +163,7 @@ const latest = [...releases]
               data-cart-count={release.track_count}
               data-cart-cents={release.min_price_cents}
               data-cart-buyable={isBuyable(release) ? '1' : '0'}
+              data-track-num={firstTrackNumBySlug[release.slug]}
               aria-label={`Play preview of ${firstTrackTitleBySlug[release.slug]}`}
               class="preview-btn absolute bottom-2 right-2 w-9 h-9 flex items-center justify-center bg-primary/90 text-on-primary hover:bg-secondary hover:text-on-secondary backdrop-blur-sm transition-all shadow-lg opacity-0 group-hover:opacity-100 focus:opacity-100"
             >

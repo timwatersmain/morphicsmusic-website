@@ -54,6 +54,7 @@ function fmtDuration(seconds: number | null) {
             data-cart-count={release.track_count}
             data-cart-cents={release.min_price_cents}
             data-cart-buyable={buyable ? '1' : '0'}
+            data-track-num={firstPreview?.track_number || 1}
             aria-label="Play preview"
             class="preview-btn absolute bottom-4 right-4 w-14 h-14 flex items-center justify-center bg-primary/90 text-on-primary hover:bg-secondary hover:text-on-secondary backdrop-blur-sm transition-colors shadow-lg"
           >
@@ -130,7 +131,7 @@ function fmtDuration(seconds: number | null) {
         </div>
         <ol class="divide-y divide-white/5">
           {release.tracks.map(t => (
-            <li class="flex items-center gap-4 py-3 group">
+            <li id={`track-${t.track_number}`} class="flex items-center gap-4 py-3 group scroll-mt-28 target:bg-secondary/5">
               {previewByTrack[t.track_number] ? (
                 <button
                   type="button"
@@ -144,6 +145,7 @@ function fmtDuration(seconds: number | null) {
                   data-cart-count={release.track_count}
                   data-cart-cents={release.min_price_cents}
                   data-cart-buyable={buyable ? '1' : '0'}
+                  data-track-num={t.track_number}
                   aria-label={`Play preview of ${t.title}`}
                   class="preview-btn shrink-0 w-8 h-8 flex items-center justify-center border border-primary/20 text-primary hover:bg-primary hover:text-on-primary transition-colors"
                 >

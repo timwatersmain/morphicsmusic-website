@@ -83,6 +83,11 @@ function hideBar() {
   bar.setAttribute('aria-hidden', 'true');
 }
 
+function setHref(el, href) {
+  if (!el) return;
+  if (href) el.setAttribute('href', href); else el.removeAttribute('href');
+}
+
 function setMeta(meta) {
   meta = meta || {};
   const t = $('pb-title'), s = $('pb-sub'), img = $('pb-art');
@@ -92,6 +97,13 @@ function setMeta(meta) {
     if (meta.art) { img.src = meta.art; img.style.visibility = 'visible'; }
     else { img.removeAttribute('src'); img.style.visibility = 'hidden'; }
   }
+  // Art + release name link to the release page; the title links to the
+  // specific track (anchored to its row on the release page).
+  const releaseUrl = meta.slug ? `/store/music/${meta.slug}` : null;
+  const trackUrl = releaseUrl && meta.trackNum ? `${releaseUrl}#track-${meta.trackNum}` : releaseUrl;
+  setHref($('pb-art-link'), releaseUrl);
+  setHref(s, releaseUrl);
+  setHref(t, trackUrl);
   setCart(meta.cart);
 }
 
@@ -323,6 +335,8 @@ document.addEventListener('click', (e) => {
     title: btn.getAttribute('data-preview-title'),
     sub: btn.getAttribute('data-preview-sub') || 'PREVIEW',
     art,
+    slug: cartSlug,
+    trackNum: btn.getAttribute('data-track-num'),
     cart: cartSlug ? {
       slug: cartSlug,
       title: btn.getAttribute('data-cart-title'),

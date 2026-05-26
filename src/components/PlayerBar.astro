@@ -8,10 +8,12 @@
 <div id="player-bar" class="player-bar is-hidden" aria-hidden="true">
   <div class="pb-inner">
     <div class="pb-meta">
-      <img id="pb-art" class="pb-art" alt="" />
+      <a id="pb-art-link" class="pb-art-link" aria-label="Go to release">
+        <img id="pb-art" class="pb-art" alt="" />
+      </a>
       <div class="pb-text">
-        <div id="pb-title" class="pb-title">—</div>
-        <div id="pb-sub" class="pb-sub">PREVIEW</div>
+        <a id="pb-title" class="pb-title">—</a>
+        <a id="pb-sub" class="pb-sub">PREVIEW</a>
       </div>
     </div>
 
@@ -73,16 +75,20 @@
     min-width: 0;
     flex-shrink: 0;
   }
+  .pb-art-link { display: block; flex-shrink: 0; line-height: 0; }
+  .pb-art-link[href] { cursor: pointer; }
   .pb-art {
     width: 48px;
     height: 48px;
     object-fit: cover;
-    flex-shrink: 0;
     border: 1px solid rgba(255, 255, 255, 0.08);
     background: #1c1b1b;
+    transition: border-color 160ms ease;
   }
+  .pb-art-link[href]:hover .pb-art { border-color: rgba(125, 255, 179, 0.6); }
   .pb-text { min-width: 0; }
   .pb-title {
+    display: block;
     font-family: "Rubik", sans-serif;
     font-weight: 600;
     text-transform: uppercase;
@@ -93,8 +99,13 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    text-decoration: none;
+    transition: color 160ms ease;
   }
+  .pb-title[href] { cursor: pointer; }
+  .pb-title[href]:hover { color: #7dffb3; text-decoration: underline; text-underline-offset: 3px; }
   .pb-sub {
+    display: block;
     font-family: "Geist Mono", monospace;
     font-size: 0.55rem;
     letter-spacing: 0.18em;
@@ -104,7 +115,11 @@
     overflow: hidden;
     text-overflow: ellipsis;
     margin-top: 2px;
+    text-decoration: none;
+    transition: color 160ms ease;
   }
+  .pb-sub[href] { cursor: pointer; }
+  .pb-sub[href]:hover { color: #7dffb3; text-decoration: underline; text-underline-offset: 2px; }
 
   .pb-toggle {
     flex-shrink: 0;
