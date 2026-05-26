@@ -39,6 +39,9 @@ function fmtDuration(seconds: number | null) {
           <button
             type="button"
             data-preview-key={firstPreviewKey}
+            data-preview-title={release.title}
+            data-preview-sub={release.type}
+            data-preview-art={release.artwork}
             aria-label="Play preview"
             class="preview-btn absolute bottom-4 right-4 w-14 h-14 flex items-center justify-center bg-primary/90 text-on-primary hover:bg-secondary hover:text-on-secondary backdrop-blur-sm transition-colors shadow-lg"
           >
@@ -120,6 +123,9 @@ function fmtDuration(seconds: number | null) {
                 <button
                   type="button"
                   data-preview-key={previewByTrack[t.track_number]}
+                  data-preview-title={t.title}
+                  data-preview-sub={release.title}
+                  data-preview-art={release.artwork}
                   aria-label={`Play preview of ${t.title}`}
                   class="preview-btn shrink-0 w-8 h-8 flex items-center justify-center border border-primary/20 text-primary hover:bg-primary hover:text-on-primary transition-colors"
                 >

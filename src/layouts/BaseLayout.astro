@@ -3,6 +3,7 @@ import TopNav from '../components/TopNav.astro';
 import CornerAccents from '../components/CornerAccents.astro';
 import ParticleBackground from '../components/ParticleBackground.astro';
 import Cart from '../components/Cart.astro';
+import PlayerBar from '../components/PlayerBar.astro';
 import '../styles/global.css';
 
 interface Props {
@@ -39,5 +40,10 @@ const { title, currentPage = '', clean = false } = Astro.props;
   </main>
 
   <Cart />
+  <PlayerBar />
+
+  <script>
+    import '../scripts/preview-player.js';
+  </script>
 </body>
 </html>

@@ -1,0 +1,164 @@
+---
+// Persistent Bandcamp-style player bar. Lives at the bottom of every page so
+// the current preview is always visible and controllable. Driven entirely by
+// src/scripts/preview-player.js (one shared <audio> element, one track at a
+// time). Hidden until the first track is played, then stays put.
+---
+
+<div id="player-bar" class="player-bar is-hidden" aria-hidden="true">
+  <div class="pb-inner">
+    <div class="pb-meta">
+      <img id="pb-art" class="pb-art" alt="" />
+      <div class="pb-text">
+        <div id="pb-title" class="pb-title">—</div>
+        <div id="pb-sub" class="pb-sub">PREVIEW</div>
+      </div>
+    </div>
+
+    <button id="pb-toggle" class="pb-toggle" type="button" aria-label="Play / pause">
+      <span class="material-symbols-outlined">play_arrow</span>
+    </button>
+
+    <span id="pb-cur" class="pb-time">0:00</span>
+    <div id="pb-wave-wrap" class="pb-wave-wrap" role="slider" aria-label="Seek" tabindex="0">
+      <canvas id="pb-wave" class="pb-wave"></canvas>
+    </div>
+    <span id="pb-dur" class="pb-time">0:00</span>
+
+    <button id="pb-close" class="pb-close" type="button" aria-label="Close player">
+      <span class="material-symbols-outlined">close</span>
+    </button>
+  </div>
+</div>
+
+<style is:global>
+  .player-bar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 60;
+    background: rgba(10, 10, 10, 0.88);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-top: 1px solid rgba(125, 255, 179, 0.18);
+    transition: transform 360ms cubic-bezier(0.32, 0.72, 0, 1);
+    will-change: transform;
+  }
+  .player-bar.is-hidden {
+    transform: translateY(110%);
+    pointer-events: none;
+  }
+
+  .pb-inner {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0.6rem 1rem;
+    height: 72px;
+  }
+
+  .pb-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    width: 220px;
+    min-width: 0;
+    flex-shrink: 0;
+  }
+  .pb-art {
+    width: 48px;
+    height: 48px;
+    object-fit: cover;
+    flex-shrink: 0;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: #1c1b1b;
+  }
+  .pb-text { min-width: 0; }
+  .pb-title {
+    font-family: "Rubik", sans-serif;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: -0.01em;
+    color: #dbfcff;
+    font-size: 0.82rem;
+    line-height: 1.1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .pb-sub {
+    font-family: "Geist Mono", monospace;
+    font-size: 0.55rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: rgba(125, 255, 179, 0.7);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 2px;
+  }
+
+  .pb-toggle {
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #dbfcff;
+    color: #00363a;
+    border: none;
+    cursor: pointer;
+    transition: background 160ms ease, color 160ms ease;
+  }
+  .pb-toggle:hover { background: #7dffb3; color: #003d1a; }
+  .pb-toggle .material-symbols-outlined { font-size: 28px; line-height: 1; }
+  .pb-toggle.is-loading .material-symbols-outlined { animation: pb-spin 900ms linear infinite; }
+  @keyframes pb-spin { to { transform: rotate(360deg); } }
+
+  .pb-time {
+    font-family: "Geist Mono", monospace;
+    font-size: 0.62rem;
+    color: rgba(255, 255, 255, 0.45);
+    flex-shrink: 0;
+    width: 34px;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .pb-wave-wrap {
+    flex: 1;
+    height: 44px;
+    min-width: 0;
+    cursor: pointer;
+    touch-action: none;
+  }
+  .pb-wave-wrap:focus-visible { outline: 1px solid rgba(125, 255, 179, 0.5); }
+  .pb-wave { display: block; width: 100%; height: 100%; }
+
+  .pb-close {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.4);
+    border: none;
+    cursor: pointer;
+    transition: color 160ms ease;
+  }
+  .pb-close:hover { color: #7dffb3; }
+  .pb-close .material-symbols-outlined { font-size: 20px; }
+
+  @media (max-width: 640px) {
+    .pb-meta { width: auto; flex: 1 1 0; }
+    .pb-time { display: none; }
+    .pb-wave-wrap { flex: 2 1 0; }
+    .pb-inner { gap: 0.6rem; padding: 0.5rem 0.75rem; }
+  }
+</style>
