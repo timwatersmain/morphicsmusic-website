@@ -16,7 +16,13 @@ for (const p of ((previews as any).previews?.[release.slug] || [])) {
   if (p.track_number != null && p.key) previewByTrack[p.track_number] = p.key;
 }
 // Fall back to first preview for the release-level quick play.
-const firstPreviewKey = ((previews as any).previews?.[release.slug] || [])[0]?.key || null;
+const firstPreview = ((previews as any).previews?.[release.slug] || [])[0];
+const firstPreviewKey = firstPreview?.key || null;
+const firstTrackTitle =
+  release.tracks.find((t: any) => t.track_number === firstPreview?.track_number)?.title || release.title;
+
+const buyable =
+  !!release.has_masters && (!release.release_date || new Date(release.release_date) <= new Date());
 
 function fmtDuration(seconds: number | null) {
   if (!seconds) return '—';
@@ -39,9 +45,15 @@ function fmtDuration(seconds: number | null) {
           <button
             type="button"
             data-preview-key={firstPreviewKey}
-            data-preview-title={release.title}
-            data-preview-sub={release.type}
+            data-preview-title={firstTrackTitle}
+            data-preview-sub={release.title}
             data-preview-art={release.artwork}
+            data-cart-slug={release.slug}
+            data-cart-title={release.title}
+            data-cart-type={release.type}
+            data-cart-count={release.track_count}
+            data-cart-cents={release.min_price_cents}
+            data-cart-buyable={buyable ? '1' : '0'}
             aria-label="Play preview"
             class="preview-btn absolute bottom-4 right-4 w-14 h-14 flex items-center justify-center bg-primary/90 text-on-primary hover:bg-secondary hover:text-on-secondary backdrop-blur-sm transition-colors shadow-lg"
           >
@@ -126,6 +138,12 @@ function fmtDuration(seconds: number | null) {
                   data-preview-title={t.title}
                   data-preview-sub={release.title}
                   data-preview-art={release.artwork}
+                  data-cart-slug={release.slug}
+                  data-cart-title={release.title}
+                  data-cart-type={release.type}
+                  data-cart-count={release.track_count}
+                  data-cart-cents={release.min_price_cents}
+                  data-cart-buyable={buyable ? '1' : '0'}
                   aria-label={`Play preview of ${t.title}`}
                   class="preview-btn shrink-0 w-8 h-8 flex items-center justify-center border border-primary/20 text-primary hover:bg-primary hover:text-on-primary transition-colors"
                 >

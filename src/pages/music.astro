@@ -3,12 +3,20 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import catalog from '../data/music-catalog.json';
 import previews from '../data/previews.json';
 
-// slug → first preview key (release-level quick play).
+// slug → first preview key + the title of the track that key actually plays
+// (so the player bar names the track, e.g. "Synaptic Acid", not the release).
 const firstPreviewBySlug: Record<string, string> = {};
-for (const [slug, arr] of Object.entries((previews as any).previews || {})) {
-  const k = (arr as any[])[0]?.key;
-  if (k) firstPreviewBySlug[slug] = k;
+const firstTrackTitleBySlug: Record<string, string> = {};
+for (const r of catalog.releases) {
+  const first = ((previews as any).previews?.[r.slug] || [])[0];
+  if (!first?.key) continue;
+  firstPreviewBySlug[r.slug] = first.key;
+  const t = (r.tracks || []).find((tr: any) => tr.track_number === first.track_number);
+  firstTrackTitleBySlug[r.slug] = t?.title || r.title;
 }
+
+const isBuyable = (r: any) =>
+  !!r.has_masters && (!r.release_date || new Date(r.release_date) <= new Date());
 
 const releases = catalog.releases.map(r => ({
   ...r,
@@ -56,10 +64,16 @@ const latest = [...releases]
             <button
               type="button"
               data-preview-key={firstPreviewBySlug[latest.slug]}
-              data-preview-title={latest.title}
-              data-preview-sub={latest.type}
+              data-preview-title={firstTrackTitleBySlug[latest.slug]}
+              data-preview-sub={latest.title}
               data-preview-art={latest.artwork}
-              aria-label={`Play preview of ${latest.title}`}
+              data-cart-slug={latest.slug}
+              data-cart-title={latest.title}
+              data-cart-type={latest.type}
+              data-cart-count={latest.track_count}
+              data-cart-cents={latest.min_price_cents}
+              data-cart-buyable={isBuyable(latest) ? '1' : '0'}
+              aria-label={`Play preview of ${firstTrackTitleBySlug[latest.slug]}`}
               class="preview-btn absolute bottom-2 right-2 w-11 h-11 flex items-center justify-center bg-primary/90 text-on-primary hover:bg-secondary hover:text-on-secondary backdrop-blur-sm transition-colors shadow-lg"
             >
               <span class="material-symbols-outlined text-2xl leading-none">play_arrow</span>
@@ -137,10 +151,16 @@ const latest = [...releases]
             <button
               type="button"
               data-preview-key={firstPreviewBySlug[release.slug]}
-              data-preview-title={release.title}
-              data-preview-sub={release.type}
+              data-preview-title={firstTrackTitleBySlug[release.slug]}
+              data-preview-sub={release.title}
               data-preview-art={release.artwork}
-              aria-label={`Play preview of ${release.title}`}
+              data-cart-slug={release.slug}
+              data-cart-title={release.title}
+              data-cart-type={release.type}
+              data-cart-count={release.track_count}
+              data-cart-cents={release.min_price_cents}
+              data-cart-buyable={isBuyable(release) ? '1' : '0'}
+              aria-label={`Play preview of ${firstTrackTitleBySlug[release.slug]}`}
               class="preview-btn absolute bottom-2 right-2 w-9 h-9 flex items-center justify-center bg-primary/90 text-on-primary hover:bg-secondary hover:text-on-secondary backdrop-blur-sm transition-all shadow-lg opacity-0 group-hover:opacity-100 focus:opacity-100"
             >
               <span class="material-symbols-outlined text-xl leading-none">play_arrow</span>

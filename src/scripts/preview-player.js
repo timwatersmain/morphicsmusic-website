@@ -12,6 +12,7 @@
 let audio = null;
 let currentKey = null;
 let currentBtn = null;
+let currentCart = null; // cart payload for the release the playing track belongs to
 let rafId = null;
 
 const RES = 480; // waveform resolution (peaks per track)
@@ -90,6 +91,21 @@ function setMeta(meta) {
   if (img) {
     if (meta.art) { img.src = meta.art; img.style.visibility = 'visible'; }
     else { img.removeAttribute('src'); img.style.visibility = 'hidden'; }
+  }
+  setCart(meta.cart);
+}
+
+function setCart(cart) {
+  currentCart = cart && cart.slug && cart.buyable ? cart : null;
+  const btn = $('pb-cart');
+  if (!btn) return;
+  btn.classList.remove('is-added');
+  if (!currentCart) { btn.hidden = true; return; }
+  btn.hidden = false;
+  const label = $('pb-cart-label');
+  if (label) {
+    const dollars = Math.round((currentCart.cents || 0) / 100);
+    label.textContent = dollars > 0 ? `Add · $${dollars}` : 'Add';
   }
 }
 
@@ -233,6 +249,34 @@ function wireBar() {
     });
   }
 
+  const cartBtn = $('pb-cart');
+  if (cartBtn && !cartBtn.__wired) {
+    cartBtn.__wired = true;
+    cartBtn.addEventListener('click', () => {
+      const c = currentCart;
+      if (!c || !window.morphicsCart) return;
+      const count = Number(c.count) || 1;
+      window.morphicsCart.add({
+        type: 'music',
+        sku: `music:${c.slug}`,
+        title: c.title,
+        subtitle: `${String(c.type || '').toUpperCase()} · ${count} track${count === 1 ? '' : 's'} · digital`,
+        image: c.art,
+        unit_amount: Number(c.cents) || 0,
+        qty: 1,
+        metadata: { release_slug: c.slug },
+      });
+      cartBtn.classList.add('is-added');
+      const label = $('pb-cart-label');
+      const prev = label && label.textContent;
+      if (label) label.textContent = 'Added ✓';
+      setTimeout(() => {
+        cartBtn.classList.remove('is-added');
+        if (label && prev) label.textContent = prev;
+      }, 1600);
+    });
+  }
+
   const closeBtn = $('pb-close');
   if (closeBtn && !closeBtn.__wired) {
     closeBtn.__wired = true;
@@ -273,10 +317,21 @@ document.addEventListener('click', (e) => {
   e.preventDefault();
   const key = btn.getAttribute('data-preview-key');
   if (!key) return;
+  const art = btn.getAttribute('data-preview-art');
+  const cartSlug = btn.getAttribute('data-cart-slug');
   toggle(key, btn, {
     title: btn.getAttribute('data-preview-title'),
     sub: btn.getAttribute('data-preview-sub') || 'PREVIEW',
-    art: btn.getAttribute('data-preview-art'),
+    art,
+    cart: cartSlug ? {
+      slug: cartSlug,
+      title: btn.getAttribute('data-cart-title'),
+      type: btn.getAttribute('data-cart-type'),
+      count: btn.getAttribute('data-cart-count'),
+      cents: btn.getAttribute('data-cart-cents'),
+      buyable: btn.getAttribute('data-cart-buyable') === '1',
+      art,
+    } : null,
   });
 });
 

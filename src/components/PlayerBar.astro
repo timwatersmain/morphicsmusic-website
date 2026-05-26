@@ -25,6 +25,11 @@
     </div>
     <span id="pb-dur" class="pb-time">0:00</span>
 
+    <button id="pb-cart" class="pb-cart" type="button" aria-label="Add to cart" hidden>
+      <span class="material-symbols-outlined">add_shopping_cart</span>
+      <span id="pb-cart-label" class="pb-cart-label">Add</span>
+    </button>
+
     <button id="pb-close" class="pb-close" type="button" aria-label="Close player">
       <span class="material-symbols-outlined">close</span>
     </button>
@@ -139,6 +144,28 @@
   .pb-wave-wrap:focus-visible { outline: 1px solid rgba(125, 255, 179, 0.5); }
   .pb-wave { display: block; width: 100%; height: 100%; }
 
+  .pb-cart {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    height: 40px;
+    padding: 0 0.9rem;
+    background: transparent;
+    border: 1px solid rgba(125, 255, 179, 0.35);
+    color: #7dffb3;
+    font-family: "Geist Mono", monospace;
+    font-size: 0.62rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 160ms ease, color 160ms ease, border-color 160ms ease;
+  }
+  .pb-cart:hover { background: #7dffb3; color: #003d1a; }
+  .pb-cart.is-added { background: #7dffb3; color: #003d1a; border-color: #7dffb3; }
+  .pb-cart .material-symbols-outlined { font-size: 18px; }
+
   .pb-close {
     flex-shrink: 0;
     width: 36px;
@@ -160,5 +187,7 @@
     .pb-time { display: none; }
     .pb-wave-wrap { flex: 2 1 0; }
     .pb-inner { gap: 0.6rem; padding: 0.5rem 0.75rem; }
+    .pb-cart { padding: 0 0.6rem; }
+    .pb-cart-label { display: none; }
   }
 </style>
