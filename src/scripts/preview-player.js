@@ -349,4 +349,13 @@ document.addEventListener('click', (e) => {
   });
 });
 
+// Keyboard support for non-button play targets (e.g. track rows).
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  const el = e.target.closest('[data-preview-key][role="button"]');
+  if (!el) return;
+  e.preventDefault();
+  el.click();
+});
+
 wireBar();
