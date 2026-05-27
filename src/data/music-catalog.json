@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-26T18:37:58.655Z",
+  "generated_at": "2026-05-27T00:52:20.431Z",
   "releases": [
     {
       "id": "edb40167312d42adbed12c13da2f65fa",
@@ -78,7 +78,7 @@
       "bandcamp_url": null,
       "min_price_cents": 100,
       "track_count": 1,
-      "has_masters": false,
+      "has_masters": true,
       "tracks": [
         {
           "id": "befuddled-1",
@@ -87,7 +87,7 @@
           "isrc": "GBRKQ2489937",
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": null
+          "master_filename": "Morphics - Befuddled.wav"
         }
       ]
     },
@@ -132,7 +132,7 @@
       "bandcamp_url": null,
       "min_price_cents": 100,
       "track_count": 1,
-      "has_masters": false,
+      "has_masters": true,
       "tracks": [
         {
           "id": "crave-1",
@@ -141,7 +141,7 @@
           "isrc": "QZS632467089",
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": null
+          "master_filename": "Morphics - Crave.wav"
         }
       ]
     },
@@ -312,7 +312,7 @@
       "bandcamp_url": "https://morphics.bandcamp.com/track/morpheus",
       "min_price_cents": 100,
       "track_count": 1,
-      "has_masters": false,
+      "has_masters": true,
       "tracks": [
         {
           "id": "morpheus-1",
@@ -321,7 +321,7 @@
           "isrc": "QZTRX2216313",
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": null
+          "master_filename": "MORPHICS - MORPHEUS.wav"
         }
       ]
     },
@@ -393,7 +393,7 @@
       "bandcamp_url": null,
       "min_price_cents": 100,
       "track_count": 1,
-      "has_masters": false,
+      "has_masters": true,
       "tracks": [
         {
           "id": "phantom-1",
@@ -402,7 +402,7 @@
           "isrc": "USLZJ2254210",
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": null
+          "master_filename": "Phantom.wav"
         }
       ]
     },
@@ -420,7 +420,7 @@
       "bandcamp_url": null,
       "min_price_cents": 100,
       "track_count": 1,
-      "has_masters": false,
+      "has_masters": true,
       "tracks": [
         {
           "id": "lucent-1",
@@ -429,7 +429,7 @@
           "isrc": "USLZJ2232816",
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": null
+          "master_filename": "Lucent.wav"
         }
       ]
     },
@@ -447,7 +447,7 @@
       "bandcamp_url": null,
       "min_price_cents": 100,
       "track_count": 1,
-      "has_masters": false,
+      "has_masters": true,
       "tracks": [
         {
           "id": "numinous-1",
@@ -456,7 +456,7 @@
           "isrc": "USLZJ2213689",
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": null
+          "master_filename": "Numinous.wav"
         }
       ]
     },
@@ -699,7 +699,7 @@
           "isrc": "QZBRF1812409",
           "duration_seconds": null,
           "min_price_cents": 100,
-          "master_filename": "Distort.mp3"
+          "master_filename": "Distort.wav"
         }
       ]
     },

@@ -1,7 +1,16 @@
 {
   "bucket": "morphicsbrain-media",
-  "generated_at": "2026-05-26T18:37:49.479Z",
+  "generated_at": "2026-05-27T01:24:41.904Z",
   "previews": {
+    "befuddled": [
+      {
+        "track_number": 1,
+        "key": "previews/befuddled/Morphics_-_Befuddled.mp3",
+        "filename": "Morphics - Befuddled.wav",
+        "size": 3662620,
+        "duration_seconds": 229
+      }
+    ],
     "cicada": [
       {
         "track_number": 1,
@@ -9,6 +18,15 @@
         "filename": "MorphicsCicadaFULLFINAL (1).aif",
         "size": 4327175,
         "duration_seconds": 270
+      }
+    ],
+    "crave": [
+      {
+        "track_number": 1,
+        "key": "previews/crave/Morphics_-_Crave.mp3",
+        "filename": "Morphics - Crave.wav",
+        "size": 2560879,
+        "duration_seconds": 160
       }
     ],
     "dark-side-of-the-mind": [
@@ -56,13 +74,6 @@
       }
     ],
     "distort": [
-      {
-        "track_number": 1,
-        "key": "previews/distort/Distort.mp3",
-        "filename": "Distort.mp3",
-        "size": 2970479,
-        "duration_seconds": 186
-      },
       {
         "track_number": 1,
         "key": "previews/distort/Distort.mp3",
@@ -128,23 +139,9 @@
         "duration_seconds": 332
       },
       {
-        "track_number": 1,
-        "key": "previews/heart-of-the-sun/heartofthesunfin.mp3",
-        "filename": "heartofthesunfin.aif",
-        "size": 5311051,
-        "duration_seconds": 332
-      },
-      {
         "track_number": 2,
         "key": "previews/heart-of-the-sun/02_Compassion.mp3",
         "filename": "02 Compassion.aif",
-        "size": 4378584,
-        "duration_seconds": 274
-      },
-      {
-        "track_number": 2,
-        "key": "previews/heart-of-the-sun/CompassionFin.mp3",
-        "filename": "CompassionFin.aif",
         "size": 4378584,
         "duration_seconds": 274
       },
@@ -163,23 +160,9 @@
         "duration_seconds": 342
       },
       {
-        "track_number": 4,
-        "key": "previews/heart-of-the-sun/Dreamerfin_.mp3",
-        "filename": "Dreamerfin).aif",
-        "size": 5473219,
-        "duration_seconds": 342
-      },
-      {
         "track_number": 5,
         "key": "previews/heart-of-the-sun/05_Organic.mp3",
         "filename": "05 Organic.aif",
-        "size": 4324667,
-        "duration_seconds": 270
-      },
-      {
-        "track_number": 5,
-        "key": "previews/heart-of-the-sun/MORPHICS_-_ORGANIC.mp3",
-        "filename": "MORPHICS - ORGANIC.aif",
         "size": 4324667,
         "duration_seconds": 270
       },
@@ -191,32 +174,11 @@
         "duration_seconds": 260
       },
       {
-        "track_number": 6,
-        "key": "previews/heart-of-the-sun/FloatingFin.mp3",
-        "filename": "FloatingFin.aif",
-        "size": 4161245,
-        "duration_seconds": 260
-      },
-      {
         "track_number": 7,
         "key": "previews/heart-of-the-sun/07_Fusion.mp3",
         "filename": "07 Fusion.aif",
         "size": 4057173,
         "duration_seconds": 254
-      },
-      {
-        "track_number": 7,
-        "key": "previews/heart-of-the-sun/FusionFin.mp3",
-        "filename": "FusionFin.aif",
-        "size": 4057173,
-        "duration_seconds": 254
-      },
-      {
-        "track_number": null,
-        "key": "previews/heart-of-the-sun/SynthFin.mp3",
-        "filename": "SynthFin.aif",
-        "size": 3841088,
-        "duration_seconds": 240
       }
     ],
     "livevil": [
@@ -226,20 +188,15 @@
         "filename": "LIVEVIL.wav",
         "size": 2410832,
         "duration_seconds": 151
-      },
+      }
+    ],
+    "lucent": [
       {
         "track_number": 1,
-        "key": "previews/livevil/Morphics_-_livevil_Final.mp3",
-        "filename": "Morphics - livevil Final.aif",
-        "size": 4163335,
-        "duration_seconds": 260
-      },
-      {
-        "track_number": 1,
-        "key": "previews/livevil/MorphicslivevilFinal.mp3",
-        "filename": "MorphicslivevilFinal.aif",
-        "size": 4163335,
-        "duration_seconds": 260
+        "key": "previews/lucent/Lucent.mp3",
+        "filename": "Lucent.wav",
+        "size": 2761082,
+        "duration_seconds": 173
       }
     ],
     "mellifluous": [
@@ -284,6 +241,54 @@
         "filename": "MorphicsSweetDeams.aif",
         "size": 4001167,
         "duration_seconds": 250
+      }
+    ],
+    "morpheus": [
+      {
+        "track_number": 1,
+        "key": "previews/morpheus/MORPHICS_-_MORPHEUS.mp3",
+        "filename": "MORPHICS - MORPHEUS.wav",
+        "size": 3456984,
+        "duration_seconds": 216
+      }
+    ],
+    "nexus": [
+      {
+        "track_number": 1,
+        "key": "previews/nexus/1_Telepathine.mp3",
+        "filename": "1 Telepathine.wav",
+        "size": 3566907,
+        "duration_seconds": 223
+      },
+      {
+        "track_number": 2,
+        "key": "previews/nexus/2_Phantom.mp3",
+        "filename": "2 Phantom.wav",
+        "size": 3169010,
+        "duration_seconds": 198
+      },
+      {
+        "track_number": 3,
+        "key": "previews/nexus/3_Lucent.mp3",
+        "filename": "3 Lucent.wav",
+        "size": 2761082,
+        "duration_seconds": 173
+      },
+      {
+        "track_number": 4,
+        "key": "previews/nexus/4_Numinous.mp3",
+        "filename": "4 Numinous.wav",
+        "size": 2881036,
+        "duration_seconds": 180
+      }
+    ],
+    "numinous": [
+      {
+        "track_number": 1,
+        "key": "previews/numinous/Numinous.mp3",
+        "filename": "Numinous.wav",
+        "size": 2881036,
+        "duration_seconds": 180
       }
     ],
     "perception": [
@@ -379,6 +384,15 @@
         "duration_seconds": 216
       }
     ],
+    "phantom": [
+      {
+        "track_number": 1,
+        "key": "previews/phantom/Phantom.mp3",
+        "filename": "Phantom.wav",
+        "size": 3169010,
+        "duration_seconds": 198
+      }
+    ],
     "phormless": [
       {
         "track_number": 1,
@@ -402,13 +416,6 @@
         "track_number": 1,
         "key": "previews/slang/01_Slang.mp3",
         "filename": "01 Slang.wav",
-        "size": 4641062,
-        "duration_seconds": 290
-      },
-      {
-        "track_number": 1,
-        "key": "previews/slang/SlangFinish.mp3",
-        "filename": "SlangFinish.wav",
         "size": 4641062,
         "duration_seconds": 290
       }
@@ -438,34 +445,22 @@
         "duration_seconds": 244
       }
     ],
-    "nexus": [
+    "druid": [
       {
         "track_number": 1,
-        "key": "previews/nexus/1_Telepathine.mp3",
-        "filename": "1 Telepathine.wav",
-        "size": 3566907,
-        "duration_seconds": 223
-      },
+        "key": "previews/druid/druid-final.mp3",
+        "filename": "druid-final.mp3",
+        "size": 4230000,
+        "duration_seconds": 176
+      }
+    ],
+    "mysterium": [
       {
-        "track_number": 2,
-        "key": "previews/nexus/2_Phantom.mp3",
-        "filename": "2 Phantom.wav",
-        "size": 3169010,
-        "duration_seconds": 198
-      },
-      {
-        "track_number": 3,
-        "key": "previews/nexus/3_Lucent.mp3",
-        "filename": "3 Lucent.wav",
-        "size": 2761082,
-        "duration_seconds": 173
-      },
-      {
-        "track_number": 4,
-        "key": "previews/nexus/4_Numinous.mp3",
-        "filename": "4 Numinous.wav",
-        "size": 2881036,
-        "duration_seconds": 180
+        "track_number": 1,
+        "key": "previews/mysterium/mysterium.mp3",
+        "filename": "mysterium.mp3",
+        "size": 4288305,
+        "duration_seconds": 178
       }
     ]
   }

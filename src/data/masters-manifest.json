@@ -1,13 +1,29 @@
 {
   "bucket": "morphicsbrain-media",
-  "generated_at": "2026-05-26T18:25:09.886Z",
+  "generated_at": "2026-05-27T01:03:34.566Z",
   "releases": {
+    "befuddled": [
+      {
+        "filename": "Morphics - Befuddled.wav",
+        "key": "masters/befuddled/Morphics_-_Befuddled.wav",
+        "size": 40366928,
+        "ext": "wav"
+      }
+    ],
     "cicada": [
       {
         "filename": "MorphicsCicadaFULLFINAL (1).aif",
         "key": "masters/cicada/MorphicsCicadaFULLFINAL_1_.aif",
         "size": 47694762,
         "ext": "aif"
+      }
+    ],
+    "crave": [
+      {
+        "filename": "Morphics - Crave.wav",
+        "key": "masters/crave/Morphics_-_Crave.wav",
+        "size": 28224044,
+        "ext": "wav"
       }
     ],
     "dark-side-of-the-mind": [
@@ -49,12 +65,6 @@
       }
     ],
     "distort": [
-      {
-        "filename": "Distort.mp3",
-        "key": "masters/distort/Distort.mp3",
-        "size": 7427136,
-        "ext": "mp3"
-      },
       {
         "filename": "Distort.wav",
         "key": "masters/distort/Distort.wav",
@@ -146,48 +156,6 @@
         "key": "masters/heart-of-the-sun/07_Fusion.aif",
         "size": 44717454,
         "ext": "aif"
-      },
-      {
-        "filename": "CompassionFin.aif",
-        "key": "masters/heart-of-the-sun/CompassionFin.aif",
-        "size": 48263094,
-        "ext": "aif"
-      },
-      {
-        "filename": "Dreamerfin).aif",
-        "key": "masters/heart-of-the-sun/Dreamerfin_.aif",
-        "size": 60328854,
-        "ext": "aif"
-      },
-      {
-        "filename": "FloatingFin.aif",
-        "key": "masters/heart-of-the-sun/FloatingFin.aif",
-        "size": 45864054,
-        "ext": "aif"
-      },
-      {
-        "filename": "FusionFin.aif",
-        "key": "masters/heart-of-the-sun/FusionFin.aif",
-        "size": 44717454,
-        "ext": "aif"
-      },
-      {
-        "filename": "MORPHICS - ORGANIC.aif",
-        "key": "masters/heart-of-the-sun/MORPHICS_-_ORGANIC.aif",
-        "size": 71500854,
-        "ext": "aif"
-      },
-      {
-        "filename": "SynthFin.aif",
-        "key": "masters/heart-of-the-sun/SynthFin.aif",
-        "size": 42336054,
-        "ext": "aif"
-      },
-      {
-        "filename": "heartofthesunfin.aif",
-        "key": "masters/heart-of-the-sun/heartofthesunfin.aif",
-        "size": 58542806,
-        "ext": "aif"
       }
     ],
     "livevil": [
@@ -196,18 +164,14 @@
         "key": "masters/livevil/LIVEVIL.wav",
         "size": 39852878,
         "ext": "wav"
-      },
+      }
+    ],
+    "lucent": [
       {
-        "filename": "Morphics - livevil Final.aif",
-        "key": "masters/livevil/Morphics_-_livevil_Final.aif",
-        "size": 45889254,
-        "ext": "aif"
-      },
-      {
-        "filename": "MorphicslivevilFinal.aif",
-        "key": "masters/livevil/MorphicslivevilFinal.aif",
-        "size": 45889254,
-        "ext": "aif"
+        "filename": "Lucent.wav",
+        "key": "masters/lucent/Lucent.wav",
+        "size": 30429044,
+        "ext": "wav"
       }
     ],
     "mellifluous": [
@@ -248,6 +212,14 @@
         "ext": "aif"
       }
     ],
+    "morpheus": [
+      {
+        "filename": "MORPHICS - MORPHEUS.wav",
+        "key": "masters/morpheus/MORPHICS_-_MORPHEUS.wav",
+        "size": 38102444,
+        "ext": "wav"
+      }
+    ],
     "nexus": [
       {
         "filename": "1 Telepathine.wav",
@@ -270,6 +242,14 @@
       {
         "filename": "4 Numinous.wav",
         "key": "masters/nexus/4_Numinous.wav",
+        "size": 47628044,
+        "ext": "wav"
+      }
+    ],
+    "numinous": [
+      {
+        "filename": "Numinous.wav",
+        "key": "masters/numinous/Numinous.wav",
         "size": 47628044,
         "ext": "wav"
       }
@@ -354,6 +334,14 @@
         "ext": "wav"
       }
     ],
+    "phantom": [
+      {
+        "filename": "Phantom.wav",
+        "key": "masters/phantom/Phantom.wav",
+        "size": 34927244,
+        "ext": "wav"
+      }
+    ],
     "phormless": [
       {
         "filename": "Formless.wav",
@@ -374,12 +362,6 @@
       {
         "filename": "01 Slang.wav",
         "key": "masters/slang/01_Slang.wav",
-        "size": 51156044,
-        "ext": "wav"
-      },
-      {
-        "filename": "SlangFinish.wav",
-        "key": "masters/slang/SlangFinish.wav",
         "size": 51156044,
         "ext": "wav"
       }
