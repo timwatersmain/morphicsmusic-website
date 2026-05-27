@@ -27,6 +27,13 @@
     </div>
     <span id="pb-dur" class="pb-time">0:00</span>
 
+    <div class="pb-volume">
+      <button id="pb-mute" class="pb-mute" type="button" aria-label="Mute / unmute">
+        <span class="material-symbols-outlined">volume_up</span>
+      </button>
+      <input id="pb-vol" class="pb-vol" type="range" min="0" max="1" step="0.01" value="1" aria-label="Volume" />
+    </div>
+
     <button id="pb-cart" class="pb-cart" type="button" aria-label="Add to cart" hidden>
       <span class="material-symbols-outlined">add_shopping_cart</span>
       <span id="pb-cart-label" class="pb-cart-label">Add</span>
@@ -159,6 +166,64 @@
   .pb-wave-wrap:focus-visible { outline: 1px solid rgba(125, 255, 179, 0.5); }
   .pb-wave { display: block; width: 100%; height: 100%; }
 
+  .pb-volume {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    flex-shrink: 0;
+  }
+  .pb-mute {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.55);
+    border: none;
+    cursor: pointer;
+    transition: color 160ms ease;
+  }
+  .pb-mute:hover { color: #7dffb3; }
+  .pb-mute .material-symbols-outlined { font-size: 20px; }
+  .pb-vol {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 72px;
+    height: 3px;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, 0.18);
+    accent-color: #7dffb3;
+    cursor: pointer;
+    outline: none;
+  }
+  .pb-vol::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #7dffb3;
+    border: none;
+    cursor: pointer;
+    transition: transform 120ms ease;
+  }
+  .pb-vol::-webkit-slider-thumb:hover { transform: scale(1.2); }
+  .pb-vol::-moz-range-thumb {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #7dffb3;
+    border: none;
+    cursor: pointer;
+  }
+  .pb-vol::-moz-range-track {
+    height: 3px;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, 0.18);
+  }
+  .pb-vol:focus-visible { outline: 1px solid rgba(125, 255, 179, 0.5); outline-offset: 4px; }
+
   .pb-cart {
     flex-shrink: 0;
     display: flex;
@@ -204,5 +269,6 @@
     .pb-inner { gap: 0.6rem; padding: 0.5rem 0.75rem; }
     .pb-cart { padding: 0 0.6rem; }
     .pb-cart-label { display: none; }
+    .pb-vol { display: none; }
   }
 </style>

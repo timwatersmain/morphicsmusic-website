@@ -25,12 +25,36 @@ const UNPLAYED = 'rgba(255, 255, 255, 0.16)';
 
 const $ = (id) => document.getElementById(id);
 
+/* ---------- volume (persisted, works before <audio> exists) ---------- */
+
+const VOL_KEY = 'mx-pb-volume';
+const MUTE_KEY = 'mx-pb-muted';
+let volLevel = (() => {
+  const v = parseFloat(localStorage.getItem(VOL_KEY));
+  return Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : 1;
+})();
+let volMuted = localStorage.getItem(MUTE_KEY) === '1';
+
+function applyVolume() {
+  if (audio) { audio.volume = volLevel; audio.muted = volMuted; }
+  const slider = $('pb-vol');
+  if (slider) slider.value = String(volMuted ? 0 : volLevel);
+  const icon = iconEl($('pb-mute'));
+  if (icon) {
+    icon.textContent = (volMuted || volLevel === 0)
+      ? 'volume_off'
+      : volLevel < 0.5 ? 'volume_down' : 'volume_up';
+  }
+}
+
 /* ---------- audio element ---------- */
 
 function ensureAudio() {
   if (audio) return audio;
   audio = new Audio();
   audio.preload = 'none';
+  audio.volume = volLevel;
+  audio.muted = volMuted;
   audio.addEventListener('ended', () => { bothIcons('play_arrow'); stopRaf(); drawWave(); });
   audio.addEventListener('pause', () => { if (audio.ended) return; bothIcons('play_arrow'); stopRaf(); drawWave(); });
   audio.addEventListener('play', () => { bothIcons('pause'); startRaf(); });
@@ -298,6 +322,32 @@ function wireBar() {
       hideBar();
     });
   }
+
+  const volSlider = $('pb-vol');
+  if (volSlider && !volSlider.__wired) {
+    volSlider.__wired = true;
+    volSlider.addEventListener('input', () => {
+      volLevel = Math.min(1, Math.max(0, parseFloat(volSlider.value) || 0));
+      volMuted = volLevel === 0;
+      localStorage.setItem(VOL_KEY, String(volLevel));
+      localStorage.setItem(MUTE_KEY, volMuted ? '1' : '0');
+      applyVolume();
+    });
+  }
+
+  const muteBtn = $('pb-mute');
+  if (muteBtn && !muteBtn.__wired) {
+    muteBtn.__wired = true;
+    muteBtn.addEventListener('click', () => {
+      // Unmuting at 0 restores a sensible level.
+      if (!volMuted && volLevel === 0) volLevel = 1;
+      volMuted = !volMuted;
+      localStorage.setItem(MUTE_KEY, volMuted ? '1' : '0');
+      localStorage.setItem(VOL_KEY, String(volLevel));
+      applyVolume();
+    });
+  }
+  applyVolume();
 
   const wrap = $('pb-wave-wrap');
   if (wrap && !wrap.__wired) {
