@@ -190,15 +190,6 @@
         "duration_seconds": 151
       }
     ],
-    "lucent": [
-      {
-        "track_number": 1,
-        "key": "previews/lucent/Lucent.mp3",
-        "filename": "Lucent.wav",
-        "size": 2761082,
-        "duration_seconds": 173
-      }
-    ],
     "mellifluous": [
       {
         "track_number": 1,
@@ -278,15 +269,6 @@
         "track_number": 4,
         "key": "previews/nexus/4_Numinous.mp3",
         "filename": "4 Numinous.wav",
-        "size": 2881036,
-        "duration_seconds": 180
-      }
-    ],
-    "numinous": [
-      {
-        "track_number": 1,
-        "key": "previews/numinous/Numinous.mp3",
-        "filename": "Numinous.wav",
         "size": 2881036,
         "duration_seconds": 180
       }
@@ -382,15 +364,6 @@
         "filename": "Rivka - Swim High (Morphics Reslime).wav",
         "size": 3456984,
         "duration_seconds": 216
-      }
-    ],
-    "phantom": [
-      {
-        "track_number": 1,
-        "key": "previews/phantom/Phantom.mp3",
-        "filename": "Phantom.wav",
-        "size": 3169010,
-        "duration_seconds": 198
       }
     ],
     "phormless": [

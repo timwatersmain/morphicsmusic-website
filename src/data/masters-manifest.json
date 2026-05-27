@@ -166,14 +166,6 @@
         "ext": "wav"
       }
     ],
-    "lucent": [
-      {
-        "filename": "Lucent.wav",
-        "key": "masters/lucent/Lucent.wav",
-        "size": 30429044,
-        "ext": "wav"
-      }
-    ],
     "mellifluous": [
       {
         "filename": "MorphicsDrifting.aif",
@@ -242,14 +234,6 @@
       {
         "filename": "4 Numinous.wav",
         "key": "masters/nexus/4_Numinous.wav",
-        "size": 47628044,
-        "ext": "wav"
-      }
-    ],
-    "numinous": [
-      {
-        "filename": "Numinous.wav",
-        "key": "masters/numinous/Numinous.wav",
         "size": 47628044,
         "ext": "wav"
       }
@@ -331,14 +315,6 @@
         "filename": "Rivka - Swim High (Morphics Reslime).wav",
         "key": "masters/perception/Rivka_-_Swim_High_Morphics_Reslime_.wav",
         "size": 38107970,
-        "ext": "wav"
-      }
-    ],
-    "phantom": [
-      {
-        "filename": "Phantom.wav",
-        "key": "masters/phantom/Phantom.wav",
-        "size": 34927244,
         "ext": "wav"
       }
     ],

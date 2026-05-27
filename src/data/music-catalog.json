@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-27T00:52:20.431Z",
+  "generated_at": "2026-05-27T17:05:31.571Z",
   "releases": [
     {
       "id": "edb40167312d42adbed12c13da2f65fa",
@@ -376,87 +376,6 @@
           "duration_seconds": null,
           "min_price_cents": 100,
           "master_filename": "4 Numinous.wav"
-        }
-      ]
-    },
-    {
-      "id": "phantom",
-      "slug": "phantom",
-      "title": "PHANTOM",
-      "type": "single",
-      "release_date": "2022-04-29",
-      "artwork": "/images/albums/phantom.jpg",
-      "genre": [
-        "electronic"
-      ],
-      "description": "",
-      "bandcamp_url": null,
-      "min_price_cents": 100,
-      "track_count": 1,
-      "has_masters": true,
-      "tracks": [
-        {
-          "id": "phantom-1",
-          "track_number": 1,
-          "title": "Phantom",
-          "isrc": "USLZJ2254210",
-          "duration_seconds": null,
-          "min_price_cents": 100,
-          "master_filename": "Phantom.wav"
-        }
-      ]
-    },
-    {
-      "id": "lucent",
-      "slug": "lucent",
-      "title": "LUCENT",
-      "type": "single",
-      "release_date": "2022-04-15",
-      "artwork": "/images/albums/lucent.jpg",
-      "genre": [
-        "electronic"
-      ],
-      "description": "",
-      "bandcamp_url": null,
-      "min_price_cents": 100,
-      "track_count": 1,
-      "has_masters": true,
-      "tracks": [
-        {
-          "id": "lucent-1",
-          "track_number": 1,
-          "title": "Lucent",
-          "isrc": "USLZJ2232816",
-          "duration_seconds": null,
-          "min_price_cents": 100,
-          "master_filename": "Lucent.wav"
-        }
-      ]
-    },
-    {
-      "id": "numinous",
-      "slug": "numinous",
-      "title": "NUMINOUS",
-      "type": "single",
-      "release_date": "2022-04-01",
-      "artwork": "/images/albums/numinous.jpg",
-      "genre": [
-        "electronic"
-      ],
-      "description": "",
-      "bandcamp_url": null,
-      "min_price_cents": 100,
-      "track_count": 1,
-      "has_masters": true,
-      "tracks": [
-        {
-          "id": "numinous-1",
-          "track_number": 1,
-          "title": "Numinous",
-          "isrc": "USLZJ2213689",
-          "duration_seconds": null,
-          "min_price_cents": 100,
-          "master_filename": "Numinous.wav"
         }
       ]
     },

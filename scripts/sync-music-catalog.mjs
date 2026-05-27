@@ -19,6 +19,12 @@ const BRAIN_DB = '/Users/morphics/Desktop/MorphicsBrain/data/morphicsbrain.db';
 const SITE_PATH = resolve(import.meta.dirname, '..');
 const MASTERS_DIR = join(os.homedir(), 'Desktop', 'Morphics Masters');
 
+// Releases that exist in the brain DB but should NOT appear as their own card
+// on the site. PHANTOM/LUCENT/NUMINOUS are only sold as part of the NEXUS EP —
+// their standalone singles are hidden here (the DB rows stay intact for
+// streaming/ISRC purposes). Keyed by release slug.
+const EXCLUDE_SLUGS = new Set(['phantom', 'lucent', 'numinous']);
+
 function query(sql) {
   try {
     const raw = execSync(`sqlite3 -json "${BRAIN_DB}" "${sql.replace(/"/g, '\\"')}"`, { encoding: 'utf-8' });
@@ -82,7 +88,9 @@ for (const t of tracks) {
 
 const catalog = {
   generated_at: new Date().toISOString(),
-  releases: releases.map(r => {
+  releases: releases
+    .filter(r => !EXCLUDE_SLUGS.has(releaseSlug(r.id, r.title)))
+    .map(r => {
     const slug = releaseSlug(r.id, r.title);
     const releaseTracks = tracksByRelease[r.id] || [];
     const masterFolder = findMasterFolder(r.title);
