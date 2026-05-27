@@ -31,6 +31,19 @@ const releases = catalog.releases.map(r => ({
 const latest = [...releases]
   .filter(r => r.date)
   .sort((a, b) => b.date.localeCompare(a.date))[0];
+
+// Discography type filter (Singles / EPs / Albums). Only show a tab when at
+// least one release of that type exists.
+const typeCounts = releases.reduce((m: Record<string, number>, r) => {
+  m[r.type] = (m[r.type] || 0) + 1;
+  return m;
+}, {});
+const discogFilters = [
+  { label: 'All', value: 'all', count: releases.length },
+  { label: 'Singles', value: 'single', count: typeCounts.single || 0 },
+  { label: 'EPs', value: 'ep', count: typeCounts.ep || 0 },
+  { label: 'Albums', value: 'album', count: typeCounts.album || 0 },
+].filter(f => f.value === 'all' || f.count > 0);
 ---
 
 <BaseLayout title="MUSIC" currentPage="/music">
@@ -127,14 +140,27 @@ const latest = [...releases]
     </div>
   )}
 
-  <div class="flex items-baseline gap-4 mb-8">
+  <div class="flex items-baseline gap-4 mb-6">
     <span class="font-mono text-xs text-secondary uppercase">Discography</span>
     <div class="h-[1px] flex-1 bg-outline-variant/30"></div>
   </div>
 
-  <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+  <div class="flex flex-wrap gap-2 mb-8" id="discog-filters" role="tablist" aria-label="Filter discography by type">
+    {discogFilters.map(f => (
+      <button
+        type="button"
+        class="discog-filter font-mono text-[10px] tracking-widest uppercase px-3 py-1.5 border transition-colors border-primary/20 text-primary hover:border-secondary hover:text-secondary"
+        data-filter={f.value}
+        aria-pressed={f.value === 'all' ? 'true' : 'false'}
+      >
+        {f.label} <span class="opacity-40 ml-0.5">{f.count}</span>
+      </button>
+    ))}
+  </div>
+
+  <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4" id="discog-grid">
     {releases.map(release => (
-      <div class="group relative bg-surface-container-low border border-white/5 transition-all duration-500 hover:border-secondary/30 terminal-glow">
+      <div class="discog-card group relative bg-surface-container-low border border-white/5 transition-all duration-500 hover:border-secondary/30 terminal-glow" data-type={release.type}>
         <div class="relative overflow-hidden aspect-square">
           <a href={`/store/music/${release.slug}`} class="block w-full h-full">
             {release.artwork ? (
@@ -217,6 +243,29 @@ const latest = [...releases]
     import '../scripts/release-countdown.js';
     import '../scripts/cart.js';
     import '../scripts/preview-player.js';
+
+    // Discography type filter (Singles / EPs / Albums).
+    const ACTIVE = ['border-primary', 'bg-primary', 'text-on-primary'];
+    const INACTIVE = ['border-primary/20', 'text-primary', 'hover:border-secondary', 'hover:text-secondary'];
+    const filterBtns = Array.from(document.querySelectorAll<HTMLButtonElement>('.discog-filter'));
+    const cards = Array.from(document.querySelectorAll<HTMLElement>('.discog-card'));
+
+    function applyFilter(value: string) {
+      cards.forEach(card => {
+        const show = value === 'all' || card.dataset.type === value;
+        card.style.display = show ? '' : 'none';
+      });
+      filterBtns.forEach(btn => {
+        const on = btn.dataset.filter === value;
+        btn.setAttribute('aria-pressed', String(on));
+        btn.classList.remove(...ACTIVE, ...INACTIVE);
+        btn.classList.add(...(on ? ACTIVE : INACTIVE));
+      });
+    }
+
+    filterBtns.forEach(btn => btn.addEventListener('click', () => applyFilter(btn.dataset.filter || 'all')));
+    applyFilter('all');
+
     document.querySelectorAll<HTMLButtonElement>('.release-add-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         if (btn.disabled) return;
