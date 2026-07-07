@@ -109,34 +109,39 @@ function syncStore(releases) {
   writeData('store.json', storeItems);
 }
 
-// ── Sync: Signal (from content_history in DB, deduplicated) ─────────
-function syncSignal() {
+// ── Sign build (from social_feed_posts, falling back to content_history) ──
+// Exported + query-injected so it can be unit tested without a real DB.
+export function buildSignal(query) {
   // Prefer YouTube > Instagram > Bluesky > others for the displayed platform
   const platformPriority = { youtube: 1, instagram: 2, bluesky: 3, tiktok: 4, facebook: 5, twitter: 6 };
 
-  const posts = query(`
-    SELECT id, platform, caption, media_url, platform_url, published_at, media_type,
-           youtube_title, instagram_post_type
-    FROM content_history
-    ORDER BY published_at DESC
-    LIMIT 50
+  // Prefer the new social_feed_posts table (real recent posts). Fall back to
+  // content_history (Brain-published posts) only if the new table is empty.
+  let rows = query(`
+    SELECT id, platform, platform_id, media_type, title, caption,
+           media_url, permalink AS platform_url, published_at,
+           NULL AS youtube_title, NULL AS instagram_post_type
+    FROM social_feed_posts ORDER BY published_at DESC LIMIT 50
   `);
-
-  if (posts.length === 0) {
-    console.log('  - No content_history posts found, keeping existing signal.json');
-    return;
+  if (!rows || rows.length === 0) {
+    rows = query(`
+      SELECT id, platform, caption, media_url, platform_url, published_at,
+             media_type, youtube_title, instagram_post_type
+      FROM content_history ORDER BY published_at DESC LIMIT 50
+    `);
   }
+  if (!rows || rows.length === 0) return null;
 
   // Group by caption to deduplicate cross-posts
   const groups = {};
-  for (const p of posts) {
-    const key = (p.caption || '').trim().toLowerCase();
+  for (const p of rows) {
+    const key = (p.caption || '').trim().toLowerCase() || (p.id || Math.random().toString());
     if (!groups[key]) groups[key] = [];
     groups[key].push(p);
   }
 
   // Pick the best platform per group, collect all platforms it was posted to
-  const signal = Object.values(groups).map(group => {
+  return Object.values(groups).map(group => {
     group.sort((a, b) =>
       (platformPriority[a.platform?.toLowerCase()] || 99) -
       (platformPriority[b.platform?.toLowerCase()] || 99)
@@ -156,7 +161,7 @@ function syncSignal() {
 
     return {
       id: best.id || '',
-      title: (best.youtube_title || best.caption || '').substring(0, 60).toUpperCase(),
+      title: (best.title || best.youtube_title || best.caption || '').substring(0, 60).toUpperCase(),
       type: best.media_type || 'visual',
       mediaUrl: proxiedUrl,
       thumbnail: '',
@@ -167,7 +172,14 @@ function syncSignal() {
       originalPlatforms: allPlatforms
     };
   });
+}
 
+function syncSignal() {
+  const signal = buildSignal(query);
+  if (signal === null) {
+    console.log('  - No posts found, keeping existing signal.json');
+    return;
+  }
   writeData('signal.json', signal);
 }
 
@@ -227,23 +239,33 @@ function syncTracks() {
 }
 
 // ── Main ────────────────────────────────────────────────────────────
-console.log('\n🔄 Syncing from MorphicsBrain...\n');
+// Guard so `import { buildSignal }` from tests doesn't trigger a real sync.
+if (import.meta.url === `file://${process.argv[1]}`) {
+  const onlySignal = process.argv.includes('--only=signal');
+  console.log('\n🔄 Syncing from MorphicsBrain...\n');
 
-console.log('Releases:');
-const releases = syncReleases();
+  if (onlySignal) {
+    console.log('Signal (only):');
+    syncSignal();
+    console.log('\n✅ Sync complete.\n');
+  } else {
+    console.log('Releases:');
+    const releases = syncReleases();
 
-// Store is manually maintained — skip auto-sync
-// To regenerate: uncomment and run `npm run sync`
-// console.log('\nStore:');
-// syncStore(releases);
+    // Store is manually maintained — skip auto-sync
+    // To regenerate: uncomment and run `npm run sync`
+    // console.log('\nStore:');
+    // syncStore(releases);
 
-console.log('\nTracks:');
-syncTracks();
+    console.log('\nTracks:');
+    syncTracks();
 
-console.log('\nBandcamp:');
-syncBandcamp();
+    console.log('\nBandcamp:');
+    syncBandcamp();
 
-console.log('\nSignal:');
-syncSignal();
+    console.log('\nSignal:');
+    syncSignal();
 
-console.log('\n✅ Sync complete.\n');
+    console.log('\n✅ Sync complete.\n');
+  }
+}
