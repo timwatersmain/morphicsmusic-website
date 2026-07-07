@@ -132,10 +132,13 @@ export function buildSignal(query) {
   }
   if (!rows || rows.length === 0) return null;
 
-  // Group by caption to deduplicate cross-posts
+  // Group by caption to deduplicate cross-posts. Collapse internal
+  // whitespace so IG/Bluesky copies of the same post (which often differ
+  // only by a stray double-space) merge into one card.
   const groups = {};
   for (const p of rows) {
-    const key = (p.caption || '').trim().toLowerCase() || (p.id || Math.random().toString());
+    const key = (p.caption || '').trim().toLowerCase().replace(/\s+/g, ' ')
+      || (p.id || Math.random().toString());
     if (!groups[key]) groups[key] = [];
     groups[key].push(p);
   }
@@ -154,7 +157,10 @@ export function buildSignal(query) {
     // public r2.dev domain (so paid masters under masters/ stay private);
     // social-media files are served via the proxy function with an
     // allow-list regex that rejects anything resembling a master path.
-    const rawUrl = best.media_url || '';
+    // Prefer the best platform's media, but fall back to any cross-post
+    // that actually has a file (e.g. Bluesky videos carry no playable
+    // file, so a merged Instagram copy supplies the real mp4).
+    const rawUrl = best.media_url || (group.find(p => p.media_url)?.media_url) || '';
     const proxiedUrl = rawUrl.startsWith('https://pub-')
       ? `/api/social-media/${rawUrl.split('/').pop()}`
       : rawUrl;

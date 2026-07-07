@@ -17,6 +17,26 @@ test('buildSignal reads social_feed_posts', () => {
   assert.equal(out[0].date, '2026-07-01');
 });
 
+test('buildSignal merges whitespace-differing cross-posts and takes the media-bearing copy', () => {
+  const rows = [
+    // Bluesky video copy: no playable file, note the stray double-space.
+    { id: 'bluesky_b', platform: 'bluesky', media_type: 'video',
+      title: 'SNIPPET', caption: '05/23  | Short snippet', media_url: '',
+      platform_url: 'https://bsky.app/x', published_at: '2026-05-21T00:00:00Z' },
+    // Instagram copy of the same post: real mp4, single space.
+    { id: 'instagram_i', platform: 'instagram', media_type: 'video',
+      title: 'SNIPPET', caption: '05/23 | Short snippet',
+      media_url: '/api/social-media/instagram_x.mp4',
+      platform_url: 'https://instagram.com/reel/1', published_at: '2026-05-21T00:00:00Z' },
+  ];
+  const query = (sql) => sql.includes('social_feed_posts') ? rows : [];
+  const out = buildSignal(query);
+  assert.equal(out.length, 1, 'the two cross-posts should merge into one card');
+  assert.equal(out[0].platform, 'instagram', 'instagram wins by priority');
+  assert.equal(out[0].mediaUrl, '/api/social-media/instagram_x.mp4');
+  assert.deepEqual(out[0].originalPlatforms.sort(), ['bluesky', 'instagram']);
+});
+
 test('buildSignal falls back to content_history when new table empty', () => {
   const legacy = [
     { id: 'c1', platform: 'bluesky', media_type: 'text', caption: 'legacy',
