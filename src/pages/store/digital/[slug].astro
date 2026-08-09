@@ -12,7 +12,10 @@ export function getStaticPaths() {
 }
 
 const { item } = Astro.props;
-const price = `$${(item.price_cents / 100).toFixed(0)}`;
+// Whole dollars stay clean; anything with cents shows them.
+const price = item.price_cents % 100 === 0
+  ? `$${item.price_cents / 100}`
+  : `$${(item.price_cents / 100).toFixed(2)}`;
 ---
 
 <BaseLayout title={item.name.toUpperCase()} currentPage="/store">

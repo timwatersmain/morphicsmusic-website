@@ -41,7 +41,7 @@ const formatPrice = (lo: number | null, hi: number | null) => {
                 TYPEFACE
               </div>
               <div class="flex items-center gap-2 bg-background/80 px-2 py-1 backdrop-blur-md text-primary">
-                ${(item.price_cents / 100).toFixed(0)}
+                ${item.price_cents % 100 === 0 ? item.price_cents / 100 : (item.price_cents / 100).toFixed(2)}
               </div>
             </div>
           </div>
