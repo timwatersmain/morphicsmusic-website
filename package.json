@@ -13,7 +13,8 @@
     "prebuild": "node scripts/sync-from-brain.mjs && node scripts/sync-music-catalog.mjs && node scripts/fetch-bandcamp.mjs",
     "build": "astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "upload:digital": "node scripts/upload-digital.mjs"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.2.2",
