@@ -2,7 +2,7 @@
   {
     "slug": "morphian",
     "name": "Morphian",
-    "tagline": "A constructed cipher alphabet",
+    "tagline": "A constructed cipher alphabet · 303 codepoints",
     "kind": "font",
     "price_cents": 1000,
     "available": true,
@@ -10,7 +10,7 @@
     "blurb": "One coded sign per letter, base-five numerals and 54 symbols. Proportional and monospaced cuts, for desktop and web.",
     "details": [
       "Morphian and Morphian Mono",
-      "OTF, TTF, WOFF2, WOFF \u2014 with a stylesheet",
+      "OTF, TTF, WOFF2, WOFF — with a stylesheet",
       "303 codepoints; unicase, accented Latin folds to the base sign",
       "Commercial licence, up to 5 users"
     ],
