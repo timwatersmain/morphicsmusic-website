@@ -86,7 +86,14 @@ export const onRequestPost: PagesFunction<Env> = corsHandler<Env>(async ({ reque
   // would otherwise let an attacker tell whether the limit had triggered.
   // 5s timeout so a slow Resend doesn't hang the worker indefinitely.
   if (env.RESEND_API_KEY) {
-    const from = env.ORDER_FROM_EMAIL || 'onboarding@resend.dev';
+    // onboarding@resend.dev is Resend's shared test sender: it only delivers to
+    // the account owner, so real buyers never receive anything. morphicsmusic.com
+    // is verified in Resend as of 2026-08-09, so ignore that value if it is still
+    // configured rather than depending on someone remembering to clear it.
+    const configured = env.ORDER_FROM_EMAIL;
+    const from = (!configured || configured.endsWith('@resend.dev'))
+      ? 'orders@morphicsmusic.com'
+      : configured;
     waitUntil((async () => {
       try {
         await fetch('https://api.resend.com/emails', {

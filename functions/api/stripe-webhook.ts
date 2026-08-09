@@ -228,7 +228,14 @@ async function sendDownloadEmail(env: Env, to: string, downloadUrl: string, rele
     console.warn('RESEND_API_KEY missing — skipping email');
     return;
   }
-  const from = env.ORDER_FROM_EMAIL || 'orders@morphicsmusic.com';
+  // onboarding@resend.dev is Resend's shared test sender: it only delivers to
+  // the account owner, so real buyers never receive anything. morphicsmusic.com
+  // is verified in Resend as of 2026-08-09, so ignore that value if it is still
+  // configured rather than depending on someone remembering to clear it.
+  const configured = env.ORDER_FROM_EMAIL;
+  const from = (!configured || configured.endsWith('@resend.dev'))
+    ? 'orders@morphicsmusic.com'
+    : configured;
   const titles = releaseTitles.join(', ');
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
