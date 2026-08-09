@@ -8,6 +8,7 @@
 // Email-link tokens stay 7-day / 5-use; logged-in customers download freely.
 
 import manifest from '../../src/data/masters-manifest.json';
+import digitalData from '../../src/data/digital.json';
 import catalog from '../../src/data/music-catalog.json';
 import { isReleased } from '../_lib/release-gate.mjs';
 import { readCookie, verifySession, SESSION_COOKIE, LEGACY_SESSION_COOKIE } from '../_lib/auth';
@@ -15,12 +16,13 @@ import { corsHandler, preflight } from '../_lib/cors';
 import { rateLimit, rateLimitedText, clientIp } from '../_lib/ratelimit';
 
 interface CustomerRecord {
-  purchases?: Array<{ music_release_slugs?: string[] }>;
+  purchases?: Array<{ music_release_slugs?: string[]; digital_slugs?: string[] }>;
 }
 
 interface DownloadGrant {
   email: string;
   release_slugs: string[];
+  digital_slugs?: string[];
   created_at: number;
   expires_at: number;
   uses: number;
@@ -56,6 +58,13 @@ async function loadGrant(env: Env, token: string): Promise<DownloadGrant | null>
 // requires the full key to match an exact manifest entry — that's the
 // authoritative allow-list. Returns the verified slug + display filename
 // (which may differ from the URL-safe segment) or null on any failure.
+function parseAndValidateDigitalKey(key: string): { slug: string; filename: string } | null {
+  if (!key || key.length > 256 || key.includes('\0') || key.includes('\\')) return null;
+  const product = (digitalData as any[]).find(p => p?.file?.r2_key === key);
+  if (!product) return null;
+  return { slug: product.slug, filename: product.file.filename || 'download' };
+}
+
 function parseAndValidateKey(key: string, manifestRef: any): { slug: string; filename: string } | null {
   if (!key || key.length > 256 || key.includes('\0') || key.includes('\\')) return null;
   const parts = key.split('/');
@@ -104,14 +113,21 @@ export const onRequestGet: PagesFunction<Env> = corsHandler<Env>(async ({ reques
     if (!raw) return new Response('no purchases', { status: 403 });
     let rec: CustomerRecord;
     try { rec = JSON.parse(raw); } catch { return new Response('corrupt record', { status: 500 }); }
-    const parsed = parseAndValidateKey(key, manifest);
+    // Digital products (fonts, packs) have their own allow-list and no
+    // release-date gate; music keeps its existing path untouched.
+    const digital = parseAndValidateDigitalKey(key);
+    const parsed = digital || parseAndValidateKey(key, manifest);
     if (!parsed) return new Response('invalid key', { status: 400 });
-    const rel = (catalog as any).releases.find((r: any) => r.slug === parsed.slug);
-    if (rel && !isReleased(rel.release_date)) {
-      return new Response('not yet released', { status: 403 });
-    }
     const owned = new Set<string>();
-    for (const p of (rec.purchases || [])) for (const s of (p.music_release_slugs || [])) owned.add(s);
+    if (digital) {
+      for (const p of (rec.purchases || [])) for (const d of (p.digital_slugs || [])) owned.add(d);
+    } else {
+      const rel = (catalog as any).releases.find((r: any) => r.slug === parsed.slug);
+      if (rel && !isReleased(rel.release_date)) {
+        return new Response('not yet released', { status: 403 });
+      }
+      for (const p of (rec.purchases || [])) for (const s of (p.music_release_slugs || [])) owned.add(s);
+    }
     if (!owned.has(parsed.slug)) return new Response('not in your library', { status: 403 });
     const obj = await env.MASTERS.get(key);
     if (!obj) return new Response('file not found', { status: 404 });
@@ -142,12 +158,21 @@ export const onRequestGet: PagesFunction<Env> = corsHandler<Env>(async ({ reques
         artwork: r.artwork,
         files: ((manifest as any).releases[r.slug] || []),
       }));
+    const digitals = (digitalData as any[])
+      .filter(d => (grant.digital_slugs || []).includes(d.slug))
+      .map(d => ({
+        slug: d.slug,
+        title: d.name,
+        artwork: d.thumbnail,
+        files: [{ key: d.file.r2_key, filename: d.file.filename }],
+      }));
     return new Response(JSON.stringify({
       email: grant.email,
       expires_at: grant.expires_at,
       uses: grant.uses,
       max_uses: MAX_USES,
       releases,
+      digitals,
     }), { headers: { 'Content-Type': 'application/json' } });
   }
 
@@ -155,14 +180,21 @@ export const onRequestGet: PagesFunction<Env> = corsHandler<Env>(async ({ reques
 
   // Validate key shape AND that the file is actually in the manifest.
   // Path-traversal segments are rejected before we ever touch R2.
-  const parsed = parseAndValidateKey(key, manifest);
+  const digital = parseAndValidateDigitalKey(key);
+  const parsed = digital || parseAndValidateKey(key, manifest);
   if (!parsed) return new Response('invalid key', { status: 400 });
-  const rel = (catalog as any).releases.find((r: any) => r.slug === parsed.slug);
-  if (rel && !isReleased(rel.release_date)) {
-    return new Response('not yet released', { status: 403 });
-  }
-  if (!grant.release_slugs.includes(parsed.slug)) {
-    return new Response('not in your grant', { status: 403 });
+  if (digital) {
+    if (!(grant.digital_slugs || []).includes(parsed.slug)) {
+      return new Response('not in your grant', { status: 403 });
+    }
+  } else {
+    const rel = (catalog as any).releases.find((r: any) => r.slug === parsed.slug);
+    if (rel && !isReleased(rel.release_date)) {
+      return new Response('not yet released', { status: 403 });
+    }
+    if (!grant.release_slugs.includes(parsed.slug)) {
+      return new Response('not in your grant', { status: 403 });
+    }
   }
 
   if (grant.uses >= MAX_USES) {

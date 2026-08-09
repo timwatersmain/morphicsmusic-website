@@ -1,0 +1,102 @@
+---
+// Product page for downloadable goods (typefaces, packs). Fixed price, no
+// variants, no release gate — the counterpart to store/merch/[slug].astro.
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import digitalItems from '../../../data/digital.json';
+
+export function getStaticPaths() {
+  return digitalItems.map(item => ({
+    params: { slug: item.slug },
+    props: { item },
+  }));
+}
+
+const { item } = Astro.props;
+const price = `$${(item.price_cents / 100).toFixed(0)}`;
+---
+
+<BaseLayout title={item.name.toUpperCase()} currentPage="/store">
+  <div class="max-w-[1400px] mx-auto">
+    <a
+      href="/store"
+      class="inline-flex items-center gap-2 font-mono text-[10px] tracking-[0.25em] uppercase text-white/40 hover:text-secondary transition-colors mb-10"
+    >
+      <span class="material-symbols-outlined text-sm">arrow_back</span>
+      Store
+    </a>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20">
+      <div class="bg-surface-container-low border border-white/5">
+        <img src={item.thumbnail} alt={item.name} class="w-full aspect-square object-cover" />
+      </div>
+
+      <div class="flex flex-col justify-center">
+        <div class="font-mono text-[10px] tracking-[0.25em] uppercase text-secondary mb-4">
+          Typeface · Instant download
+        </div>
+
+        <h1 class="text-5xl md:text-6xl font-headline font-bold text-primary tracking-tighter leading-none mb-3">
+          {item.name.toUpperCase()}
+        </h1>
+        <p class="font-mono text-xs text-white/50 uppercase tracking-widest mb-8">{item.tagline}</p>
+
+        <p class="text-white/70 leading-relaxed mb-8 max-w-[52ch]">{item.blurb}</p>
+
+        <ul class="space-y-2 mb-10">
+          {item.details.map(d => (
+            <li class="flex items-start gap-3 font-mono text-[11px] text-white/50 uppercase tracking-wider">
+              <span class="text-secondary mt-[2px]">·</span>{d}
+            </li>
+          ))}
+        </ul>
+
+        <div class="flex items-baseline gap-4 mb-6">
+          <div class="font-headline text-4xl text-primary">{price}</div>
+          <div class="font-mono text-[10px] tracking-widest uppercase text-white/40">
+            Commercial licence · up to 5 users
+          </div>
+        </div>
+
+        <button
+          id="add-btn"
+          class="w-full py-4 border border-secondary/40 bg-secondary/10 font-mono text-[11px] tracking-[0.2em] uppercase text-secondary hover:bg-secondary hover:text-on-secondary transition-colors"
+        >
+          Add to cart
+        </button>
+
+        <p class="font-mono text-[10px] text-white/30 uppercase tracking-widest mt-4">
+          Delivered by email · re-downloadable from your library
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <script type="application/json" id="item-data" set:html={JSON.stringify(item)} is:inline />
+
+  <script>
+    import '../../../scripts/cart.js';
+    const item = JSON.parse(document.getElementById('item-data')!.textContent || '{}');
+    const btn = document.getElementById('add-btn') as HTMLButtonElement;
+
+    btn.addEventListener('click', () => {
+      (window as any).morphicsCart.add({
+        type: 'digital',
+        sku: `digital:${item.slug}`,
+        title: item.name,
+        subtitle: item.tagline,
+        image: item.thumbnail,
+        unit_amount: item.price_cents,
+        qty: 1,
+        metadata: { digital_slug: item.slug },
+      });
+
+      const original = btn.textContent;
+      btn.textContent = '✓ Added — view cart';
+      btn.classList.add('bg-secondary', 'text-on-secondary');
+      setTimeout(() => {
+        btn.textContent = original;
+        btn.classList.remove('bg-secondary', 'text-on-secondary');
+      }, 2000);
+    });
+  </script>
+</BaseLayout>

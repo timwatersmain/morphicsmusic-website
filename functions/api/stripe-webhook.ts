@@ -10,17 +10,21 @@
 
 import Stripe from 'stripe';
 
+import digitalData from '../../src/data/digital.json';
+
 interface FulfillmentEntry {
   type: 'merch' | 'music';
   printful_variant_id?: number;
   quantity: number;
   retail_price?: number;
   release_slug?: string;
+  digital_slug?: string;
 }
 
 interface DownloadGrant {
   email: string;
   release_slugs: string[];
+  digital_slugs?: string[];
   created_at: number;
   expires_at: number;
   uses: number;
@@ -81,12 +85,24 @@ async function createPrintfulOrder(env: Env, session: Stripe.Checkout.Session, i
   return await res.json();
 }
 
-async function issueDownloadGrant(env: Env, email: string, releaseSlugs: string[], sessionId: string) {
+function digitalTitle(slug: string): string {
+  const p = (digitalData as any[]).find(d => d.slug === slug);
+  return p?.name || slug.toUpperCase().replace(/-/g, ' ');
+}
+
+async function issueDownloadGrant(
+  env: Env,
+  email: string,
+  releaseSlugs: string[],
+  sessionId: string,
+  digitalSlugs: string[] = [],
+) {
   const token = tokenHex();
   const now = Math.floor(Date.now() / 1000);
   const grant: DownloadGrant = {
     email,
     release_slugs: releaseSlugs,
+    digital_slugs: digitalSlugs,
     created_at: now,
     expires_at: now + SEVEN_DAYS_SEC,
     uses: 0,
@@ -106,6 +122,7 @@ interface CustomerPurchase {
   purchased_at: number;
   stripe_session_id: string;
   music_release_slugs: string[];
+  digital_slugs?: string[];
   merch_items: Array<{ printful_variant_id?: number; quantity: number }>;
   amount_total: number;
   currency: string;
@@ -153,6 +170,10 @@ async function recordCustomerPurchase(
     music_release_slugs: fulfillment
       .filter(f => f.type === 'music')
       .map(f => f.release_slug!)
+      .filter(Boolean),
+    digital_slugs: fulfillment
+      .filter(f => f.type === 'digital')
+      .map(f => f.digital_slug!)
       .filter(Boolean),
     merch_items: fulfillment
       .filter(f => f.type === 'merch')
@@ -350,11 +371,19 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, waitUnti
         // past order — separate from the 7-day download-grant tokens.
         await recordCustomerPurchase(env, email, name, full, fulfillment);
       }
-      if (musicItems.length > 0 && email) {
+      // One grant covers everything downloadable in the order, so a cart with
+      // a release and a font produces a single email rather than two.
+      const digitalItems = fulfillment.filter(f => f.type === 'digital');
+      if ((musicItems.length > 0 || digitalItems.length > 0) && email) {
         const slugs = musicItems.map(m => m.release_slug!).filter(Boolean);
-        const token = await issueDownloadGrant(env, email, slugs, full.id);
+        const dslugs = digitalItems.map(d => d.digital_slug!).filter(Boolean);
+        const token = await issueDownloadGrant(env, email, slugs, full.id, dslugs);
         const url = `${env.PUBLIC_SITE_URL || new URL(request.url).origin}/download?token=${token}`;
-        await sendDownloadEmail(env, email, url, slugs.map(s => s.toUpperCase().replace(/-/g, ' ')));
+        const titles = [
+          ...slugs.map(s => s.toUpperCase().replace(/-/g, ' ')),
+          ...dslugs.map(d => digitalTitle(d)),
+        ];
+        await sendDownloadEmail(env, email, url, titles);
       }
       await env.DOWNLOADS.put(completedKey, '1', { expirationTtl: 60 * 60 * 24 * 30 });
     } catch (e) {
