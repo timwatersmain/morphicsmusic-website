@@ -4,13 +4,13 @@
     "name": "Morphian",
     "tagline": "A constructed cipher alphabet",
     "kind": "font",
-    "price_cents": 1000,
+    "price_cents": 50,
     "available": true,
     "thumbnail": "/images/digital/morphian-card.png",
     "blurb": "One coded sign per letter, base-five numerals and 54 symbols. Proportional and monospaced cuts, for desktop and web.",
     "details": [
       "Morphian and Morphian Mono",
-      "OTF, TTF, WOFF2, WOFF — with a stylesheet",
+      "OTF, TTF, WOFF2, WOFF \u2014 with a stylesheet",
       "303 codepoints; unicase, accented Latin folds to the base sign",
       "Commercial licence, up to 5 users"
     ],
