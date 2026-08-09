@@ -18,6 +18,21 @@ const price = item.price_cents % 100 === 0
   : `$${(item.price_cents / 100).toFixed(2)}`;
 ---
 
+<style is:global>
+  /* The trial cut only — 26 letters, no numerals, symbols, kerning or mono.
+     The paid font is never served to a browser. */
+  @font-face {
+    font-family: 'Morphian Trial';
+    src: url('/fonts/MorphianTrial-Regular.woff2') format('woff2');
+    font-weight: 400;
+    font-display: swap;
+  }
+  .morphian-live {
+    font-family: 'Morphian Trial', sans-serif;
+    font-size: clamp(34px, 6vw, 74px);
+  }
+</style>
+
 <BaseLayout title={item.name.toUpperCase()} currentPage="/store">
   <div class="max-w-[1400px] mx-auto">
     <a
@@ -72,6 +87,29 @@ const price = item.price_cents % 100 === 0
         </p>
       </div>
     </div>
+
+    <section class="mt-20 border-t border-white/10 pt-12">
+      <div class="font-mono text-[10px] tracking-[0.25em] uppercase text-white/40 mb-6">
+        The alphabet
+      </div>
+      <div class="morphian-live text-primary leading-[1.15] break-words">
+        <div>ABCDEFGHIJKLM</div>
+        <div>NOPQRSTUVWXYZ</div>
+      </div>
+
+      <div class="font-mono text-[10px] tracking-[0.25em] uppercase text-white/40 mt-12 mb-6">
+        Numerals &amp; symbols
+      </div>
+      <img
+        src="/images/digital/morphian-glyphs.png"
+        alt="Morphian numerals and symbols"
+        class="w-full max-w-[900px] border border-white/5"
+        loading="lazy"
+      />
+      <p class="font-mono text-[10px] text-white/30 uppercase tracking-widest mt-4">
+        Letters shown in the free trial cut · full set included with purchase
+      </p>
+    </section>
   </div>
 
   <script type="application/json" id="item-data" set:html={JSON.stringify(item)} is:inline />
