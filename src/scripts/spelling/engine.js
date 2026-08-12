@@ -317,6 +317,19 @@ export class SpellingEngine {
     this.spriteD = pad * 2;
   }
 
+  // Resolve the goo filter's feGaussianBlur from the canvas's own document
+  // (not a bare global document.getElementById) and cache it — this only needs
+  // to run once per engine instance.
+  gooBlurEl() {
+    if (this._gooBlurEl) return this._gooBlurEl;
+    const doc = this.canvas && this.canvas.ownerDocument;
+    if (!doc) return null;
+    const filter = doc.getElementById('spelling-goo');
+    const blur = filter && filter.querySelector('feGaussianBlur');
+    if (blur) this._gooBlurEl = blur;
+    return blur || null;
+  }
+
   frame = (now) => {
     this.raf = requestAnimationFrame(this.frame);
     if (document.hidden) return;
@@ -354,8 +367,6 @@ export class SpellingEngine {
     const bobX = Math.cos(bt / 2600) * S * 0.008;
 
     ctx.clearRect(0, 0, W, H);
-    ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, W, H);
 
     // Interpolate the RENDERED radius, not its two factors — S already carries
     // vScale, so scaling by rScale on top double-counts and steps at re-target.
@@ -370,9 +381,16 @@ export class SpellingEngine {
     this.rScale = rf + (rt - rf) * eR;
 
     // The threshold must land at the same fraction of the stroke at every scale,
-    // so drive the blur from the rendered radius and hold contrast constant.
-    const flt = 'blur(' + (R * 0.71).toFixed(2) + 'px) contrast(26) brightness(1.03)';
-    if (this.fltNow !== flt) { c.style.filter = flt; this.fltNow = flt; }
+    // so drive the blur from the rendered radius and hold the alpha threshold
+    // (the SVG-filter analogue of contrast(26)) constant. The filter reference
+    // itself is set once; only the blur's stdDeviation attribute updates here.
+    if (!this.fltNow) { c.style.filter = 'url(#spelling-goo)'; this.fltNow = true; }
+    const stdDev = (R * 0.71).toFixed(2);
+    if (this.stdDevNow !== stdDev) {
+      const blurEl = this.gooBlurEl();
+      if (blurEl) blurEl.setAttribute('stdDeviation', stdDev);
+      this.stdDevNow = stdDev;
+    }
 
     const settle = this.running ? raw * raw : 0;
 

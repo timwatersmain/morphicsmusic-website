@@ -6,6 +6,18 @@
 ---
 
 <div class="spelling" aria-hidden="true">
+  <svg width="0" height="0" style="position: absolute; overflow: hidden;">
+    <defs>
+      <filter id="spelling-goo" x="-30%" y="-30%" width="160%" height="160%" color-interpolation-filters="sRGB">
+        <feGaussianBlur in="SourceGraphic" stdDeviation="8" result="blur" />
+        <feColorMatrix in="blur" type="matrix"
+          values="1 0 0 0 0
+                  0 1 0 0 0
+                  0 0 1 0 0
+                  0 0 0 26 -13" />
+      </filter>
+    </defs>
+  </svg>
   <canvas id="spelling"></canvas>
 </div>
 
@@ -22,14 +34,10 @@
     width: 300px;
     height: 300px;
     pointer-events: none;
-    background: #000;
-    /* The canvas itself stays opaque black — the blur(...)/contrast(26) pipeline
-       that gives the mass its hard edge depends on compositing against an opaque
-       backdrop (see engine.js). Screen-blending the whole element maps that
-       black stage to fully transparent against the page while leaving the white
-       mass at full strength, so the particle field behind it stays visible
-       without touching the calibrated render pipeline. */
-    mix-blend-mode: screen;
+    /* The canvas is transparent — the goo edge is produced by the SVG filter
+       #spelling-goo (thresholding alpha, not luminance/contrast) so it works
+       against a transparent backdrop and the particle field stays visible
+       behind the mass. See engine.js for the stdDeviation-driven blur. */
   }
 
   @media (min-width: 640px) {
