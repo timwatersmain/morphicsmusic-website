@@ -34,6 +34,10 @@ export class SpellingEngine {
     this.stopped = true;    // true when the loop must unwind
     this.raf = null;
     this.timer = null;
+    // Bumped on every start() so a loop resumed after a stop()/start() pair that
+    // straddled an in-flight await (e.g. a glyph fetch) can tell it's stale and
+    // bail instead of running concurrently with the new loop.
+    this.generation = 0;
   }
 
   // ---- lifecycle ---------------------------------------------------------
@@ -41,9 +45,16 @@ export class SpellingEngine {
   start() {
     if (!this.stopped) return;
     this.stopped = false;
+    this.generation++;
+    const myGeneration = this.generation;
     this.size();
     if (this.raf === null) this.raf = requestAnimationFrame(this.frame);
-    this.cycle();
+    // Not awaited: this kicks off the fire-and-forget sequencer loop. Catch so a
+    // transient failure inside it (e.g. a rejected fetch) can't surface as an
+    // unhandled promise rejection.
+    this.cycle(myGeneration).catch(e => {
+      console.error('SpellingEngine: cycle failed', e);
+    });
   }
 
   stop() {
@@ -177,43 +188,72 @@ export class SpellingEngine {
 
   // ---- the loop ----------------------------------------------------------
 
+  // True when a NEWER start() has run since `gen` was captured — a different
+  // loop now owns this.running/this.timer/this.mode, so a stale resumption must
+  // return without touching any of it. this.stopped alone (gen still current,
+  // no restart yet) is different: nothing else owns the state, so it's safe to
+  // clean up. Conflating the two was the bug — a stale loop resetting
+  // this.running to false out from under a newer, still-active loop.
+  stale(gen) {
+    return gen !== this.generation;
+  }
+
   // The reference's run() executes once. This repeats it forever.
-  async cycle() {
-    while (!this.stopped) {
-      await this.spellOnce();
+  async cycle(gen) {
+    while (!this.stopped && !this.stale(gen)) {
+      await this.spellOnce(gen);
+      if (this.stale(gen)) return;
       if (this.stopped) return;
       await this.wait(this.restMs);
+      if (this.stale(gen)) return;
     }
   }
 
-  async spellOnce() {
+  async spellOnce(gen) {
+    // Restores the source run()'s top-of-loop guard (line 428): never let a
+    // second sequencer run concurrently against the same particle state.
+    if (this.running) return;
     this.running = true;
     const chars = this.phrase.toUpperCase().split('');
     let last = null;
 
     for (const ch of chars) {
-      if (this.stopped) break;
+      if (this.stale(gen)) return;
+      if (this.stopped) { this.running = false; return; }
       if (ch === ' ') {
         this.resize(this.N_LETTER);
         this.morphTo(spherePoints(this.n), 'implode');
         await this.wait(this.morphMs + 120);
+        if (this.stale(gen)) return;
+        if (this.stopped) { this.running = false; return; }
         continue;
       }
+      // Required by the looping change (source's run() only ever spelled once,
+      // so it never needed to re-grow the field): idleTick/the dormant tail
+      // between cycles resizes down to N_IDLE, so without this every letter
+      // after the first cycle would sample at N_IDLE (420) points instead of
+      // N_LETTER (900). Do not remove as "redundant".
       this.resize(this.N_LETTER);
       const pts = await this.glyph(ch);
+      if (this.stale(gen)) return;
+      if (this.stopped) { this.running = false; return; }
       if (!pts) continue;
       last = pickMode(last);
       this.morphTo(pts, last);
       await this.wait(this.morphMs + this.holdMs);
+      if (this.stale(gen)) return;
+      if (this.stopped) { this.running = false; return; }
     }
 
     // The whole phrase resolves out of the last letter, seamlessly.
     let exiting = false;
     const mapped = chars.filter(c => CHARMAP[c]).length;
-    if (!this.stopped && mapped > 1) {
+    if (mapped > 1) {
       const budget = Math.min(this.N_MAX, Math.max(this.N_LETTER, 700 * mapped));
       const w = await this.phrasePoints(this.phrase, budget);
-      if (w && !this.stopped) {
+      if (this.stale(gen)) return;
+      if (this.stopped) { this.running = false; return; }
+      if (w) {
         this.resize(w.pts.length);
         const c = this.canvas;
         const CW = c ? c.width : 430, CH = c ? c.height : 430;
@@ -224,19 +264,27 @@ export class SpellingEngine {
         this.morphTo(w.pts, 'direct', inMs, w.scale, vs);
         this.calmIn = true;
         await this.wait(inMs);
+        if (this.stale(gen)) return;
+        if (this.stopped) { this.running = false; return; }
         this.calmIn = false;
         this.t0 = performance.now() - this.dur - 1;   // land the morph exactly
         this.frozen = true;
         await this.wait(this.holdMs * 4);
+        // Stale: a newer generation already owns (and has reset) this.frozen
+        // via its own morphTo() — touch nothing further.
+        if (this.stale(gen)) return;
+        if (this.stopped) { this.running = false; this.frozen = false; return; }
         this.frozen = false;
         exiting = true;
       }
     }
 
-    // Return to dormant. This return is itself a morph and must stay inside the
-    // framing lock; releasing it early doubles the ink and pins the mass to the
-    // canvas edges.
+    // Return to dormant. This return is itself a morph, but running is already
+    // false by the time it plays, so the framing lock (gated on this.running in
+    // frame()) is OFF for it — matching the source exactly. That's intentional:
+    // only the spelling morphs are framing-locked, not the dormant settle.
     this.running = false;
+    if (this.stale(gen)) return;
     if (this.stopped) return;
     const tail = Math.round(this.morphMs * (exiting ? 1.9 : 1.6));
     this.resize(this.N_IDLE);
@@ -244,6 +292,7 @@ export class SpellingEngine {
     this.calmOut = exiting;
     this.nextIdle = performance.now() + tail;
     await this.wait(tail);
+    if (this.stale(gen)) return;
   }
 
   // ---- render ------------------------------------------------------------
