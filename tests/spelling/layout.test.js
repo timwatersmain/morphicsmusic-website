@@ -34,9 +34,13 @@ describe('planPhrase', () => {
   });
 
   it('clamps the per-glyph point budget to 360..760', () => {
-    expect(planPhrase(PHRASE, 100).perGlyph).toBe(360);
-    expect(planPhrase(PHRASE, 1e6).perGlyph).toBe(760);
+    // Below the floor: production input (7200) for 23 glyphs clamps to 360.
+    // This is the real path, since the engine computes budget = min(7200, max(900, 700*glyphCount)).
+    expect(planPhrase(PHRASE, 7200).perGlyph).toBe(360);
+    // Mid-range unclamped: 12000 budget produces a value inside the 360..760 range.
     expect(planPhrase(PHRASE, 12000).perGlyph).toBe(Math.floor(12000 / 23));
+    // Above the ceiling: very high budget clamps to 760.
+    expect(planPhrase(PHRASE, 1e6).perGlyph).toBe(760);
   });
 
   it('uppercases input and drops unmapped characters', () => {
