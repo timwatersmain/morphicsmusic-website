@@ -30,8 +30,11 @@ describe('assign', () => {
   });
 
   it('pairs by radius within a sector, so an inner ring maps to an inner ring', () => {
-    const src = [...ring(24, 10), ...ring(24, 40)];
-    const dst = [...ring(24, 12), ...ring(24, 44)];
+    // Use phase offset 0.013 rad (~0.75°) to keep points off sector boundaries,
+    // which would otherwise cause floating-point sector misalignment at 24 sectors/24 points.
+    const phase = 0.013;
+    const src = [...ring(24, 10, phase), ...ring(24, 40, phase)];
+    const dst = [...ring(24, 12, phase), ...ring(24, 44, phase)];
     const out = assign(src, dst);
     for (let i = 0; i < 24; i++) {
       expect(Math.hypot(out[i].x - 60, out[i].y - 60)).toBeLessThan(20);

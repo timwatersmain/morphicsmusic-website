@@ -8,7 +8,7 @@ const SECTORS = 24;
 export function assign(src, dst) {
   const key = p => {
     const a = Math.atan2(p.y - CENTER, p.x - CENTER);
-    const s = Math.round((a + Math.PI) / (2 * Math.PI) * SECTORS) % SECTORS;
+    const s = Math.floor((a + Math.PI) / (2 * Math.PI) * SECTORS);
     return s * 1000 + Math.hypot(p.x - CENTER, p.y - CENTER);
   };
   const si = src.map((p, i) => [key(p), i]).sort((a, b) => a[0] - b[0]);
