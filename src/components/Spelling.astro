@@ -23,6 +23,13 @@
     height: 300px;
     pointer-events: none;
     background: #000;
+    /* The canvas itself stays opaque black — the blur(...)/contrast(26) pipeline
+       that gives the mass its hard edge depends on compositing against an opaque
+       backdrop (see engine.js). Screen-blending the whole element maps that
+       black stage to fully transparent against the page while leaving the white
+       mass at full strength, so the particle field behind it stays visible
+       without touching the calibrated render pipeline. */
+    mix-blend-mode: screen;
   }
 
   @media (min-width: 640px) {
@@ -49,8 +56,7 @@
     if (reduced.matches) {
       // Hold one settled frame: no rAF loop, no flow field, no droplet budding.
       engine.frozen = true;
-      engine.size();
-      engine.frame(performance.now());
+      engine.renderOnce();
     } else {
       // Only run while the canvas is actually on screen.
       const io = new IntersectionObserver((entries) => {

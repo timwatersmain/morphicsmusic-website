@@ -324,7 +324,13 @@ export class SpellingEngine {
     // the filter cost.
     if (this.lastF && now - this.lastF < 20) return;
     this.lastF = now;
+    this.renderFrame(now);
+  };
 
+  // Render exactly one frame — no rAF scheduling, no fps cap, no hidden-tab
+  // skip. Used by the rAF loop above (via frame()) and by renderOnce() below,
+  // which is the only entry point that must NOT arm a loop.
+  renderFrame(now) {
     const c = this.canvas;
     if (!c || !c.isConnected || !c.clientWidth) return;
     if (!c.width || c.width !== Math.floor(c.clientWidth * this.dpr)) this.size();
@@ -419,7 +425,7 @@ export class SpellingEngine {
             const out = bud * Math.pow(Math.min(1, rr / 34), 1.8) * 4 * inflight * this.rScale * calm;
             x += (dx0 / rr) * out; y += (dy0 / rr) * out;
           }
-        } else if (!this.running) {
+        } else if (!this.running && !this.frozen) {
           // Dormant: rectified, so droplets bud outward and are drawn back in.
           const bud = Math.sin(now / 1250 + sd * 6.283) * Math.sin(now / 2900 + sd * 12.57);
           const out = Math.max(0, bud) * Math.pow(Math.min(1, rr / 34), 2.2) * 15;
@@ -459,5 +465,13 @@ export class SpellingEngine {
       ctx.drawImage(sp, (px - SD / 2) | 0, (py - SD / 2) | 0);
     }
     ctx.globalCompositeOperation = 'source-over';
-  };
+  }
+
+  // Render one settled frame with no scheduling — for prefers-reduced-motion,
+  // where the caller sets `frozen = true` and wants a single static frame with
+  // no rAF loop, no flow field, and no droplet budding.
+  renderOnce() {
+    this.size();
+    this.renderFrame(performance.now());
+  }
 }
