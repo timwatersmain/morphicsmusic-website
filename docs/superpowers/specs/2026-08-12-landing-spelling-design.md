@@ -32,44 +32,48 @@ The prototype's UI chrome, all of which the README marks as optional scaffolding
 
 No status readout appears on the landing page. The existing Latin `<p>` tagline is the translation of the glyphs and stays exactly as it is today.
 
-## The one deliberate change: multi-line phrase reveal
+## Phrase layout: the code, not the README
 
-The reference lays the phrase reveal out on **one line** at 112 units per character. `THE ONLY CONSTANT IS CHANGE` is 23 glyphs; on a 390px-wide phone that is ~17px per glyph, below the size at which the blur-and-threshold pipeline holds a stroke.
+**The README is wrong about the reveal and the code is right.** The README states the phrase resolves on one line at 112 units per character. The shipped `phrasePoints` in `Spelling.dc.html` does something else, and it is what the reference actually looks like on screen:
 
-Phrase layout therefore becomes breakpoint-driven:
+- `const lines = words` — **one word per line**, always. A word never breaks.
+- Advance `ADV = 92`, line lead `LEAD = 100`.
+- Scale auto-fits the artboard: `s = min(0.72, 120 / (L * ADV), 110 / (rows * LEAD))` where `L` is the longest line length and `rows` the line count.
+- View scale is then derived from the **measured canvas**, not a constant:
+  `vs = clamp(0.6, 2.6, (min(CW, CH) / 2 - Rpx - 8) / half)` — which guarantees a phrase of any length fits the raster instead of being sliced by it.
 
-| viewport | canvas | reveal layout |
+So `THE ONLY CONSTANT IS CHANGE` already renders as five stacked lines that self-fit at any canvas size. **No breakpoint table, no break table, no layout changes are needed.** The port carries `phrasePoints` across unmodified.
+
+The mobile adaptation is therefore only sizing and budget:
+
+| viewport | canvas (CSS px) | phrase point cap |
 |---|---|---|
-| ≥ 1024px | 430 × 430 | 1 line — `THE ONLY CONSTANT IS CHANGE` |
-| 640–1023px | 380 × 380 | 2 lines — `THE ONLY CONSTANT` / `IS CHANGE` |
-| < 640px | 300 × 225 (4:3) | 3 lines — `THE ONLY` / `CONSTANT` / `IS CHANGE` |
+| ≥ 1024px | 430 × 430 | 7200 |
+| 640–1023px | 380 × 380 | 7200 |
+| < 640px | 300 × 300 | 3600 |
 
-Rules:
-
-- Breaks come from a **fixed break table** keyed by line count, not from measurement. Deterministic, never mid-word.
-- Horizontal advance stays **112 units** per character. Line advance is **132 units** (112 + stroke clearance).
-- Each line is centred horizontally about the block centre; the block is centred vertically about artboard centre `(60, 60)`.
-- The bounding box of the fully laid-out block drives `viewScale` exactly as the single-line reveal does. Multi-line is only a different set of target coordinates — the framing lock, pairing, and collapse-back are untouched.
-- Breakpoint is resolved once at mount and on resize; a resize mid-cycle re-lays out at the next reveal, it does not re-flow in flight.
+The canvas stays **square at every breakpoint** — `phrasePoints` fits to `min(CW, CH)`, so a non-square box buys nothing and costs filter area. Backing store is set with `dpr = 1` deliberately, as the reference does: the form is heavily blurred, so backing-store resolution is never visible, and CSS filters apply at display scale.
 
 ## Point budgets
 
 | | desktop | mobile (< 640px) |
 |---|---|---|
-| per spelled character | 900 | 600 |
-| per phrase character | ~700 | ~700 |
-| phrase cap | 7200 | 3600 |
-| dormant mass | 420 | 420 |
+| per spelled character (`N_LETTER`) | 900 | 600 |
+| per phrase character | `700 × charCount`, clamped 360–760 per glyph | same |
+| phrase cap (`N_MAX`) | 7200 | 3600 |
+| dormant mass (`N_IDLE`) | 420 | 420 |
 
 ## Sequence
 
-Runs forever, no user input:
+The reference's `run()` executes **once** and stops. Looping is the port's own addition. The cycle, forever, with no user input:
 
-1. **Dormant** — endless morphing between formless low-harmonic masses, re-targeting at 72% of each morph so it never arrives.
-2. **Spell** — for each character of `THE ONLY CONSTANT IS CHANGE`: morph to the glyph (620ms), hold (380ms). A space collapses to a sphere.
-3. **Reveal** — the laid-out phrase resolves out of the final glyph over 2.6× the morph duration, plain interpolation.
-4. **Collapse** — back to a dormant mass over 1.6× the morph, staying inside the framing lock.
-5. Hold dormant ~2s, then return to step 2.
+1. **Dormant** — endless morphing between formless low-harmonic masses, re-targeting at 72% of each morph so it never arrives. Driven by `idleTick`.
+2. **Spell** — for each character of `THE ONLY CONSTANT IS CHANGE`: morph to the glyph (`morphMs` 620ms), hold (`hold` 380ms), behaviour picked at random and never repeating back-to-back. A space morphs to a sphere with `implode` and waits `morphMs + 120`.
+3. **Reveal** — the laid-out phrase resolves out of the final glyph over `morphMs × 1.5` on `direct`, then `frozen = true` for `hold × 4`.
+4. **Collapse** — back to a dormant mass over `morphMs × 1.9` (the `exiting` path), staying inside the framing lock.
+5. Hold dormant **2000ms**, then return to step 2.
+
+The loop must be cancellable: a single `stopped` flag checked at every `await` boundary, so teardown, off-screen pause, and tab-hide can halt it without leaving an orphaned `setTimeout` or a half-finished cycle.
 
 ## Files
 
@@ -83,7 +87,9 @@ Runs forever, no user input:
 
 ## Glyph loading
 
-Only the unique glyphs in the tagline are fetched — `T H E O N L Y C S A I G` plus the space case, 13 files, a few KB. Fetched lazily on first need, parsed once, geometry cached per character. Wrapper transforms are flattened (composing translate, multiplying scale) and baked into coordinates per the README. Unmapped characters are skipped, not substituted.
+Only the unique glyphs in the tagline are fetched — `T H E O N L Y C S A I G`, 12 files, a few KB. Fetched lazily on first need from `/glyphs/svg/<id>.svg` (the reference uses a relative `glyphs/svg/` path; it becomes root-absolute here), parsed once with `flatten()`, geometry cached per `CHARMAP` id. Wrapper transforms are flattened (composing translate, multiplying scale) and baked into coordinates. Unmapped characters are skipped, not substituted.
+
+`CHARMAP` is ported whole even though the tagline needs 12 entries — it is a lookup table, it costs nothing, and it keeps the engine reusable for other phrases without a code change.
 
 ## Performance and guards
 
