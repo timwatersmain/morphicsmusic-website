@@ -22,8 +22,21 @@ const { title, currentPage = '', clean = false } = Astro.props;
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{title} // MORPHICS</title>
   <link rel="icon" type="image/png" href="/favicon.png" />
-  <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&family=Geist+Mono:wght@100..900&display=swap" rel="stylesheet" />
-  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+  <!-- Both text fonts are self-hosted (see global.css) and preloaded, so
+       everything that sets the page's text metrics is on our own origin and
+       arrives with the CSS instead of after a third-party handshake — that
+       round trip is what made the nav and headings reflow seconds after first
+       paint. Space Grotesk was being requested here and used by nothing.
+       Only the icon font still comes from Google, so warm that connection. -->
+  <link rel="preload" href="/fonts/Rubik-Variable.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="/fonts/GeistMono-Variable.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <!-- display=block, not swap: these are ligature icons, so with swap the raw
+       ligature text ("shopping_cart") lays out at word width first and then
+       collapses to a glyph, which is the nav twitching a second in. block
+       keeps them invisible until the font is there, so nothing reflows. -->
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=block" rel="stylesheet" />
   <style>
     .material-symbols-outlined {
       font-variation-settings: 'FILL' 0, 'wght' 200, 'GRAD' 0, 'opsz' 24;

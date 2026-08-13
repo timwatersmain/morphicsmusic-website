@@ -1,4 +1,5 @@
 ---
+import Artwork from '../../../components/Artwork.astro';
 import BaseLayout from '../../../layouts/BaseLayout.astro';
 import merch from '../../../data/merch.json';
 
@@ -22,7 +23,7 @@ const fmtPrice = (lo: number, hi: number) =>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
       <div class="relative bg-surface-container-low border border-white/5 overflow-hidden">
-        <img src={item.thumbnail} alt={item.name} class="w-full aspect-square object-cover" />
+        <Artwork src={item.thumbnail} alt={item.name} priority sizes="(max-width: 767px) 100vw, 460px" class="w-full aspect-square object-cover" />
       </div>
 
       <div>

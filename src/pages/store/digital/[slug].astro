@@ -1,4 +1,5 @@
 ---
+import Artwork from '../../../components/Artwork.astro';
 // Product page for downloadable goods (typefaces, packs). Fixed price, no
 // variants, no release gate — the counterpart to store/merch/[slug].astro.
 import BaseLayout from '../../../layouts/BaseLayout.astro';
@@ -45,7 +46,7 @@ const price = item.price_cents % 100 === 0
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20">
       <div class="bg-surface-container-low border border-white/5">
-        <img src={item.thumbnail} alt={item.name} class="w-full aspect-square object-cover" />
+        <Artwork src={item.thumbnail} alt={item.name} priority sizes="(max-width: 767px) 100vw, 460px" class="w-full aspect-square object-cover" />
       </div>
 
       <div class="flex flex-col justify-center">

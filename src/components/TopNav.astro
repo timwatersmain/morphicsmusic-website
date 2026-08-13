@@ -11,7 +11,26 @@ const navItems = [
 
 <header class="fixed top-0 w-full z-50 bg-[#0A0A0A]/85 backdrop-blur-2xl grid grid-cols-[auto_1fr_auto] items-center gap-3 px-4 md:px-8 py-3 md:py-6">
   <a href="/" class="flex-shrink-0 hover:scale-105 transition-all duration-[400ms]">
-    <img src="/images/logos/emblem-anim-30.webp" alt="Morphics" class="h-10 w-10 md:h-12 md:w-12 object-contain" />
+    <!-- The animated emblem is 956KB: 300 lossy frames at 30fps, and that size
+         is inherent to the animation — re-encoding it smaller, with lossy alpha
+         or with frame differencing, all came out no better than the original.
+         At 956KB it was ~70% of the landing page's bytes and, on a slow
+         connection, starved the wordmark: LCP 12s.
+         So the mark paints immediately from its own first frame (6.6KB) and the
+         animation is fetched only once the page has finished loading, then
+         swapped in. Nothing about the emblem's appearance changes; the motion
+         simply starts a beat later instead of the logo arriving late. Under
+         prefers-reduced-motion the still is the final state. -->
+    <img
+      id="nav-emblem"
+      src="/images/logos/emblem-still.webp"
+      data-anim="/images/logos/emblem-anim-30.webp"
+      alt="Morphics"
+      width="192"
+      height="192"
+      decoding="async"
+      class="h-10 w-10 md:h-12 md:w-12 object-contain"
+    />
   </a>
 
   <!-- Centered main nav. Mobile keeps cart inline at the right end of the
@@ -80,6 +99,22 @@ const navItems = [
 
   // If a session cookie is valid, the account link points to /library and
   // shows "Library" instead of "Sign in".
+  // Pull the animated emblem in only once everything else has landed, so its
+  // ~1MB never competes with content for bandwidth. Decoded off-document first
+  // so the swap cannot flash.
+  const emblem = document.getElementById('nav-emblem') as HTMLImageElement | null;
+  if (emblem && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    const start = () => {
+      const anim = emblem.dataset.anim;
+      if (!anim) return;
+      const pre = new Image();
+      pre.onload = () => { emblem.src = anim; };
+      pre.src = anim;
+    };
+    if (document.readyState === 'complete') start();
+    else window.addEventListener('load', start, { once: true });
+  }
+
   fetch('/api/auth/me', { credentials: 'include' })
     .then(r => r.json())
     .then((data: any) => {

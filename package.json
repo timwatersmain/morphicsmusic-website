@@ -16,7 +16,8 @@
     "astro": "astro",
     "upload:digital": "node scripts/upload-digital.mjs",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "images:optimize": "node scripts/generate-image-variants.mjs"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.2.2",

@@ -1,5 +1,30 @@
 @import "tailwindcss";
 
+/* Rubik carries every headline and every line of body copy, so it decides the
+   metrics of nearly all text on the page. It was being fetched from Google —
+   DNS, TLS and two round trips to a third party before any text could settle —
+   which is what made the nav links and headings visibly reflow a second or more
+   after first paint. The file was already sitting unused in public/fonts, so it
+   is served from our own origin now, alongside the HTML. */
+/* Geist Mono is every mono label in the nav and across the UI; same reasoning
+   as Rubik. Latin subset only — the site has no Cyrillic or Vietnamese copy,
+   and Google was serving all six subsets' worth of @font-face rules. */
+@font-face {
+  font-family: "Geist Mono";
+  src: url("/fonts/GeistMono-Variable.woff2") format("woff2-variations");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Rubik";
+  src: url("/fonts/Rubik-Variable.woff2") format("woff2-variations");
+  font-weight: 300 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 @theme {
   /* Colors — Synthetix 2035 design tokens */
   --color-on-primary: #00363a;
