@@ -122,20 +122,22 @@
       // and simply get taller, trading a little vertical spacing for ~15% fewer
       // cells to draw every frame.
       extraRows: -4,
-      // Total points, not cell count, drives frame cost — a measured cliff sits
-      // near 16000 in this Chrome build, so the budget is spread across however
-      // many cells the viewport fits.
+      // Total points, not cell count, drives frame cost, so the budget is
+      // spread across however many cells the viewport fits. The old "cliff near
+      // 16000" was an artefact of the per-particle drawImage this engine no
+      // longer uses (a 6px blit cost ~7us and degraded past ~8k calls); with the
+      // batched arc union the curve is flat and 24000 is affordable.
       pointBudget: small ? 10000 : 24000,
-      // Mobile renders at full resolution: its canvas is small, so the filter
-      // cost is trivial there, and at 0.6 each disc fell to ~1px — sub-pixel,
-      // where the stroke stops matching the font (measured: ink ratio swung to
-      // 0.76 at that size versus ~1.00 above it).
+      // Mobile renders at full resolution: at 0.6 each disc fell to ~1px —
+      // sub-pixel, where the stroke stops matching the font (measured: ink ratio
+      // swung to 0.76 at that size versus ~1.00 above it). renderScale is part
+      // of the stroke calibration, not a perf knob — see grid-engine.js.
       renderScale: small ? 1 : 0.6,
       minCellPoints: 56,
       cellPoints: small ? 140 : 240,
-      // Long, jittered holds: a cell in hold is one cached blit instead of ~55
-      // particle draws, so hold length directly sets the frame cost. Randomness
-      // is what keeps the field from pulsing in unison.
+      // Long, jittered holds: a cell in hold is one cached blit instead of a
+      // fresh arc union, so hold length still trims frame cost. Randomness is
+      // what keeps the field from pulsing in unison.
       // Short morph, long hold: cells read as settled letters ~90% of the time.
       // Everything is always moving: a brief pause on each letter, then straight
       // into the next morph. Most cells are mid-morph at any instant, so the

@@ -1,11 +1,12 @@
 // The v2 scramble grid: 27 independently morphing glyph cells sharing one
-// canvas, one sprite, and one filter pass. See
+// canvas, one particle radius, and one filter pass. See
 // docs/superpowers/specs/2026-08-12-landing-scramble-grid-design.md.
 //
 // Reuses, unmodified, the calibrated pieces from the v1 engine: CHARMAP/HALF/
 // CENTER, the SVG flattener + sampler, 24-sector pairing, the 25 behaviours,
-// and the render pipeline (sprite, additive compositing, alpha-threshold
-// filter, dpr=1, 48fps cap, hidden-tab skip) via render-shared.js. What's new
+// and the render pipeline (alpha-threshold filter, dpr=1, hidden-tab skip)
+// via render-shared.js — but NOT the per-particle sprite blit, which this
+// engine replaces with a batched arc union (see below). What's new
 // is the sequencer: N independent cell clocks instead of one travelling mass,
 // and per-cell containment instead of a single global framing lock.
 import { CHARMAP, CENTER, HALF, PHRASE } from './charmap.js';
@@ -14,7 +15,7 @@ import { samplePoints } from './sampling.js';
 import { ease } from './shapes.js';
 import { assign, box } from './pairing.js';
 import { displace, leadFor, pickMode } from './behaviours.js';
-import { makeSprite, makeFixedSprite, makeExactSprite, resolveGooBlur, createFrameLoop } from './render-shared.js';
+import { resolveGooBlur, createFrameLoop } from './render-shared.js';
 import { planGrid, planFreeGrid, staggerRanks, nextLetter } from './grid-layout.js';
 
 const clone = (p) => ({ x: p.x, y: p.y });
@@ -43,6 +44,37 @@ const STROKE_DILATION_PX = 0.76;
 
 // Floor: below this the stroke stops resolving at all and the glyph beads.
 const MIN_STROKE_PX = 0.38;
+
+const TAU = Math.PI * 2;
+
+// Particles are drawn as ONE path of arcs filled in a single call, not as one
+// drawImage per particle. Measured in this Chrome build against the real
+// canvas: a 6px sprite blit costs ~6.5-7.2us per call whatever the source type
+// (canvas, ImageBitmap, integer or subpixel coords, filtered or unfiltered
+// destination), while an arc in a batched fill costs ~0.57us — 12x cheaper, and
+// it collapses ~190 calls per cell into one. At 15k particles that is the
+// difference between 79ms and 8.5ms of raster per frame.
+//
+// The sprite was not a flat disc — it was a hard core out to 0.86 of its radius
+// and a gradient tail to the edge, and that tail is load-bearing. Where discs
+// crowd along a stroke the tails overlap and sum to opaque, so a flat union
+// reproduces the stroke; but an ISOLATED feature (this alphabet is full of
+// dots) has no neighbours to sum with, so the tail is all that carried it over
+// the goo filter's alpha threshold. Dropping it shrank every dot visibly while
+// leaving strokes correct — which is why no single radius fixed both: growing
+// the radius fattened the strokes long before it restored the dots.
+//
+// Rebuilding the tail as a second, larger fill at the gradient's mid alpha was
+// tried and is WORSE: it puts the union's boundary at exactly the alpha the goo
+// filter cuts at, so strokes sit on the threshold and break up (letter E lost
+// half its ink). The fix belongs upstream instead — the dots are circle parts,
+// so the sampler grows those and only those. See DOT_GROW.
+// Glyph units of extra fill radius for CIRCLE parts only (the alphabet's dots).
+// Bisected on screen against the sprite render at the shipped size: 2.0 brings
+// isolated dots back to 553/543/576 px^2 against the sprite's 574/552/530, and
+// takes whole-letter IoU from 0.87 to 0.95. Dilating the particle radius
+// instead cannot do this — it fattens the strokes long before the dots recover.
+const DOT_GROW = 2.0;
 
 // Blur relative to the sprite radius. The design reference used 0.71 for one
 // large mass, where heavy fusion is the point. At grid scale that much blur
@@ -91,10 +123,14 @@ export class ScrambleGridEngine {
 
     this.cache = {};       // char id -> flattened SVG parts
     this.dpr = 1;
-    // The SVG goo filter is the dominant per-frame cost and scales with backing
-    // -store AREA. A full-viewport canvas is ~20x the area of v1's 430px square,
-    // so the grid rasterises below layout size and lets CSS scale it up — the
-    // form is heavily blurred, so the lost resolution is not visible.
+    // Rasterise below layout size and let CSS scale it up; the form is heavily
+    // blurred, so the lost resolution is not visible. NOTE: this was introduced
+    // believing the SVG goo filter was the dominant per-frame cost. It is not —
+    // removing the filter entirely changes frame time by nothing measurable.
+    // The scale still matters, but as CALIBRATION, not performance:
+    // STROKE_DILATION_PX is a device-pixel constant, so changing renderScale
+    // changes stroke weight (measured: 0.8 -> +5% ink, 1.0 -> +11%). Treat it
+    // as a locked part of the letterform calibration, not a perf knob.
     this.renderScale = opts.renderScale ?? 0.55;
     // 0 = run at vsync. See createFrameLoop: a 20ms cap judders on a 60Hz display.
     this.loop = createFrameLoop((now) => this.renderFrame(now), 0);
@@ -152,25 +188,31 @@ export class ScrambleGridEngine {
   }
 
   // One bitmap per settled letter, shared by every cell holding that letter.
-  // Rendered from the same sprites at the same size, so a cached blit is
-  // pixel-identical to drawing the discs individually. Invalidated whenever
-  // the cell size or sprite changes (resize).
-  settledBitmap(cell, S, sp, SD) {
+  // Built by the same arc-union fill at the same size, so a cached blit is
+  // pixel-identical to drawing the cell live. Invalidated whenever the cell
+  // size or particle radius changes (resize).
+  settledBitmap(cell, S, R) {
     const key = cell.displayChar;
     if (!key || !cell.hasGlyph || !cell.to || !cell.to.length) return null;
-    if (this.bmpKey !== S + ':' + SD) { this.bmpCache = new Map(); this.bmpKey = S + ':' + SD; }
+    if (this.bmpKey !== S + ':' + R) { this.bmpCache = new Map(); this.bmpKey = S + ':' + R; }
     const hit = this.bmpCache.get(key);
     if (hit) return hit;
 
-    const size = Math.ceil(Math.max(this.cellW, this.cellH) + SD * 2);
+    const size = Math.ceil(Math.max(this.cellW, this.cellH) + R * 4);
     const off = document.createElement('canvas');
     off.width = off.height = size;
     const g = off.getContext('2d');
     const c0 = size / 2;
+    g.fillStyle = '#fff';
+    g.beginPath();
     for (let i = 0; i < cell.to.length; i++) {
       const b = cell.to[i];
-      g.drawImage(sp, c0 + (b.x - CENTER) / 120 * S - SD / 2, c0 + (b.y - CENTER) / 120 * S - SD / 2);
+      const px = c0 + (b.x - CENTER) / 120 * S;
+      const py = c0 + (b.y - CENTER) / 120 * S;
+      g.moveTo(px + R, py);
+      g.arc(px, py, R, 0, TAU);
     }
+    g.fill();
     this.bmpCache.set(key, off);
     return off;
   }
@@ -292,7 +334,7 @@ export class ScrambleGridEngine {
 
   async glyph(ch, n) {
     const p = await this.parts(ch);
-    return p ? samplePoints(p, n || this.n) : null;
+    return p ? samplePoints(p, n || this.n, DOT_GROW) : null;
   }
 
   // Fire-and-forget: cache every A-Z glyph up front so the first scramble
@@ -431,14 +473,10 @@ export class ScrambleGridEngine {
     const trueHalf = Math.min(this.cellW, this.cellH) * GLYPH_FILL * (HALF / 120);
     const S0 = Math.max(MIN_STROKE_PX, trueHalf - STROKE_DILATION_PX);
     this.Rpx = S0;
-    const D = S0 * 2.24;
-    // Fixed-resolution bitmap, drawn scaled to the true diameter D. Decoupling
-    // bitmap resolution from stroke size is what makes thickness scale with
-    // glyph size instead of pinning to makeSprite's 4px floor.
-    if (!this.sprite || Math.abs(this.spriteDrawn - D) > 0.25) {
-      const sp = makeExactSprite(D);
-      this.sprite = sp.sprite; this.spriteD = sp.spriteD; this.spriteDrawn = D;
-    }
+    // Particle radius: the same S0 * 2.24 diameter the sprite pipeline drew,
+    // corrected for the flat union (see UNION_R_MUL).
+    const R = S0 * 2.24 / 2;
+    this.discR = R;
 
     if (!this.fltNow) { c.style.filter = 'url(#spelling-grid-goo)'; this.fltNow = true; }
     const stdDev = (S0 * BLUR_RATIO).toFixed(2);
@@ -449,8 +487,9 @@ export class ScrambleGridEngine {
     }
 
     const S = Math.min(this.cellW, this.cellH) * GLYPH_FILL;
-    const sp = this.sprite, SD = this.spriteD;
     ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = '#fff';
+    if (hiCtx) hiCtx.fillStyle = '#fff';
 
     for (let ci = 0; ci < this.cells.length; ci++) {
       const cell = this.cells[ci];
@@ -472,7 +511,7 @@ export class ScrambleGridEngine {
         // its next morph. Blit one cached bitmap instead of re-drawing every
         // disc — the per-particle draw loop is the frame's dominant cost, and
         // most cells are holding at any instant.
-        const bmp = this.settledBitmap(cell, S, sp, SD);
+        const bmp = this.settledBitmap(cell, S, R);
         if (bmp) {
           if (cell.alphaDur > 1) {
             const at = Math.min(1, (now - cell.alphaT0) / cell.alphaDur);
@@ -546,6 +585,12 @@ export class ScrambleGridEngine {
 
       const gm = (hiCtx && cell.phraseChar && cell.appliedResolved) ? hiCtx : ctx;
       gm.globalAlpha = cell.alpha;
+      // One path per cell, filled once: every particle is an arc appended to it.
+      // All arcs wind the same way, so the nonzero fill is their flat union —
+      // which is what the goo filter's alpha threshold wants anyway.
+      // Subpixel throughout: at ~3px discs, snapping to whole pixels is a
+      // large relative error and reads as lumpy stroke edges.
+      gm.beginPath();
       for (let i = 0; i < n; i++) {
         const x = CENTER + (PX[i] - CENTER - ndx) * kx;
         const y = CENTER + (PY[i] - CENTER - ndy) * ky;
@@ -553,10 +598,11 @@ export class ScrambleGridEngine {
         cell.cur[i].y = CENTER + (BY[i] - CENTER - ndy) * ky;
         const px = cell.cx + (x - CENTER) / 120 * S;
         const py = cell.cy + (y - CENTER) / 120 * S;
-        // Subpixel position: at ~4px discs, snapping to whole pixels is a
-        // large relative error and reads as lumpy stroke edges.
-        gm.drawImage(sp, px - SD / 2, py - SD / 2);
+        gm.moveTo(px + R, py);
+        gm.arc(px, py, R, 0, TAU);
       }
+      gm.globalAlpha = cell.alpha;
+      gm.fill();
     }
     ctx.globalAlpha = 1;
     ctx.globalCompositeOperation = 'source-over';
