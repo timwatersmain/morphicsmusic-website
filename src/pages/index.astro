@@ -9,8 +9,12 @@ import ScrambleGrid from '../components/ScrambleGrid.astro';
        footer line, no decoration: the landing is the cleanest page. -->
   <section class="relative min-h-[calc(100dvh-12rem)] w-full flex flex-col items-center justify-center px-6 overflow-hidden">
     <ScrambleGrid />
-    <div class="relative z-10 text-center max-w-4xl px-4">
-      <h1 class="mb-12">
+    <!-- Centred on the BUTTON, not on the block: the wordmark is much shorter
+         on mobile than desktop, so centring the pair together put ENTER at a
+         different height on each. The wordmark hangs above it instead, which
+         keeps the button in the same place on every screen. -->
+    <div class="relative z-10 flex items-center justify-center text-center px-4">
+      <h1 class="absolute bottom-full left-1/2 -translate-x-1/2 mb-10 md:mb-12 w-max">
         <img
           src="/images/logos/morphics-text-white.png"
           alt="MORPHICS"

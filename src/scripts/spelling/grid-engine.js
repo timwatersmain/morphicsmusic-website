@@ -29,12 +29,20 @@ const clone = (p) => ({ x: p.x, y: p.y });
 // closing them into a blob.
 const GLYPH_FILL = 0.95;
 
-// Stroke weight relative to the glyph's own 13-unit house stroke. 0.90 is the
-// design reference's calibrated value and reproduces the alphabet's true
-// proportions; a lighter pen makes letters that no longer match the real
-// glyphs. If letters read as too heavy, the fix is more device pixels per
-// glyph (renderScale / cellTarget), not a thinner pen.
-const STROKE_WEIGHT = 0.90;
+// The blur-and-threshold pipeline dilates every stroke by a FIXED amount in
+// device pixels, independent of glyph size. Measured by bisecting the pen width
+// until rendered ink matched the source SVG's, across cell sizes 27.6 -> 72px:
+// the deficit came out 0.759, 0.781, 0.762, 0.777, 0.832 — flat at ~0.78px.
+//
+// A constant error cannot be corrected by a multiplier, which is why a single
+// STROKE_WEIGHT could never match the font at both breakpoints: 0.78px is a
+// sliver of a desktop half-stroke but over half of a mobile one. So the pen is
+// the glyph's TRUE half-stroke minus that constant, and the letterforms then
+// match the font at every size.
+const STROKE_DILATION_PX = 0.76;
+
+// Floor: below this the stroke stops resolving at all and the glyph beads.
+const MIN_STROKE_PX = 0.38;
 
 // Blur relative to the sprite radius. The design reference used 0.71 for one
 // large mass, where heavy fusion is the point. At grid scale that much blur
@@ -420,7 +428,8 @@ export class ScrambleGridEngine {
 
     // One radius for the whole canvas — cells share a uniform size, so one
     // sprite and one filter stdDeviation serve every cell (single filter pass).
-    const S0 = Math.min(this.cellW, this.cellH) * GLYPH_FILL * (HALF / 120) * STROKE_WEIGHT;
+    const trueHalf = Math.min(this.cellW, this.cellH) * GLYPH_FILL * (HALF / 120);
+    const S0 = Math.max(MIN_STROKE_PX, trueHalf - STROKE_DILATION_PX);
     this.Rpx = S0;
     const D = S0 * 2.24;
     // Fixed-resolution bitmap, drawn scaled to the true diameter D. Decoupling

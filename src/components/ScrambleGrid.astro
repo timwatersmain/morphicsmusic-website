@@ -85,7 +85,11 @@
       // near 16000 in this Chrome build, so the budget is spread across however
       // many cells the viewport fits.
       pointBudget: small ? 10000 : 24000,
-      renderScale: 0.6,
+      // Mobile renders at full resolution: its canvas is small, so the filter
+      // cost is trivial there, and at 0.6 each disc fell to ~1px — sub-pixel,
+      // where the stroke stops matching the font (measured: ink ratio swung to
+      // 0.76 at that size versus ~1.00 above it).
+      renderScale: small ? 1 : 0.6,
       minCellPoints: 56,
       cellPoints: small ? 140 : 240,
       // Long, jittered holds: a cell in hold is one cached blit instead of ~55
