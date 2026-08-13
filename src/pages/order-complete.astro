@@ -13,13 +13,28 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8 text-left">
         <div class="border border-white/10 p-6">
           <div class="font-mono text-[10px] text-secondary uppercase tracking-widest mb-2">Digital</div>
-          <p class="font-mono text-[11px] text-white/60 leading-relaxed">Download link sent to your email. If you don't see it, check spam.</p>
+          <p class="font-mono text-[11px] text-white/60 leading-relaxed">Your download is ready below. A copy of the link is emailed to you as well.</p>
         </div>
         <div class="border border-white/10 p-6">
           <div class="font-mono text-[10px] text-secondary uppercase tracking-widest mb-2">Merch</div>
           <p class="font-mono text-[11px] text-white/60 leading-relaxed">Made-to-order via Printful. Tracking will arrive in your email.</p>
         </div>
       </div>
+      <div id="dl-panel" class="hidden text-left border border-secondary/30 bg-secondary/5 p-6 mt-8">
+        <div class="font-mono text-[10px] text-secondary uppercase tracking-widest mb-4">
+          Your downloads
+        </div>
+        <div id="dl-list" class="space-y-2"></div>
+        <p class="font-mono text-[10px] text-white/40 mt-4 leading-relaxed">
+          This link stays valid for 7 days. Signed-in customers can re-download
+          any time from <a href="/library" class="text-secondary underline">your library</a>.
+        </p>
+      </div>
+
+      <div id="dl-pending" class="hidden font-mono text-[11px] text-white/40 mt-8">
+        Preparing your download…
+      </div>
+
       <div class="pt-8 flex justify-center gap-4">
         <a href="/store" class="px-6 py-3 border border-primary/20 hover:border-primary/60 hover:bg-primary/5 font-mono text-[10px] tracking-widest uppercase text-primary">
           Back to store
@@ -30,4 +45,40 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       </div>
     </div>
   </div>
+
+  <script>
+    // Hand the buyer their files straight away. The session id in the URL is
+    // unguessable and the server checks with Stripe that it was actually paid,
+    // so this cannot be used to fish for someone else's download.
+    const sid = new URLSearchParams(location.search).get('session_id');
+    const panel = document.getElementById('dl-panel')!;
+    const list = document.getElementById('dl-list')!;
+    const pending = document.getElementById('dl-pending')!;
+
+    if (sid) {
+      pending.classList.remove('hidden');
+      fetch(`/api/order?session_id=${encodeURIComponent(sid)}`)
+        .then(r => r.json())
+        .then(d => {
+          pending.classList.add('hidden');
+          if (!d?.paid || !d?.items?.length) return;
+          const rows: string[] = [];
+          for (const item of d.items) {
+            for (const f of (item.files || [])) {
+              const href = `/api/download?token=${encodeURIComponent(d.token)}&key=${encodeURIComponent(f.key)}`;
+              rows.push(
+                `<a href="${href}" class="flex items-center justify-between gap-4 border border-white/10 hover:border-secondary/50 px-4 py-3 group">
+                   <span class="font-mono text-[11px] text-white/80 truncate">${item.title} — ${f.filename}</span>
+                   <span class="font-mono text-[10px] tracking-widest uppercase text-secondary whitespace-nowrap">Download</span>
+                 </a>`,
+              );
+            }
+          }
+          if (!rows.length) return;
+          list.innerHTML = rows.join('');
+          panel.classList.remove('hidden');
+        })
+        .catch(() => pending.classList.add('hidden'));
+    }
+  </script>
 </BaseLayout>

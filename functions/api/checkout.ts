@@ -9,12 +9,13 @@
 import Stripe from 'stripe';
 import merchData from '../../src/data/merch.json';
 import musicData from '../../src/data/music-catalog.json';
+import digitalData from '../../src/data/digital.json';
 import { isReleased } from '../_lib/release-gate.mjs';
 import { corsHandler, preflight } from '../_lib/cors';
 import { rateLimit, rateLimitedJson, clientIp } from '../_lib/ratelimit';
 
 interface CartItem {
-  type: 'merch' | 'music';
+  type: 'merch' | 'music' | 'digital';
   sku: string;
   title: string;
   subtitle?: string;
@@ -25,6 +26,7 @@ interface CartItem {
     printful_variant_id?: number;
     sku?: string;
     release_slug?: string;
+    digital_slug?: string;
   };
 }
 
@@ -122,6 +124,29 @@ export const onRequestPost: PagesFunction<Env> = corsHandler<Env>(async ({ reque
         },
       });
       fulfillment.push({ type: 'music', release_slug: release.slug, quantity: item.qty });
+    } else if (item.type === 'digital') {
+      // Fixed-price downloads (fonts, packs). Unlike music these are not
+      // name-your-price and have no release-date gate — the price comes from
+      // the catalogue, never from the client.
+      const product = (digitalData as any[]).find(p => p.slug === item.metadata.digital_slug);
+      if (!product) return new Response(`Unknown digital ${item.sku}`, { status: 400 });
+      if (!product.available) return new Response(`Unavailable ${item.sku}`, { status: 400 });
+
+      hasDigital = true;
+      lineItems.push({
+        quantity: 1, // one licence per order; quantity is meaningless here
+        price_data: {
+          currency: 'usd',
+          unit_amount: product.price_cents,
+          product_data: {
+            name: product.name,
+            description: product.tagline,
+            images: product.thumbnail?.startsWith('http') ? [product.thumbnail] : undefined,
+            metadata: { digital_slug: product.slug, kind: 'digital' },
+          },
+        },
+      });
+      fulfillment.push({ type: 'digital', digital_slug: product.slug, quantity: 1 });
     } else {
       return new Response(`Unknown item type`, { status: 400 });
     }
@@ -133,7 +158,11 @@ export const onRequestPost: PagesFunction<Env> = corsHandler<Env>(async ({ reque
   // Webhook reads the full fulfillment from KV by session_id below; this is
   // just a human-readable hint for the Stripe dashboard.
   const summary = fulfillment
-    .map(f => f.type === 'music' ? `music:${f.release_slug}x${f.quantity}` : `merch:${f.printful_variant_id}x${f.quantity}`)
+    .map(f => {
+      if (f.type === 'music') return `music:${f.release_slug}x${f.quantity}`;
+      if (f.type === 'digital') return `digital:${f.digital_slug}`;
+      return `merch:${f.printful_variant_id}x${f.quantity}`;
+    })
     .join(',')
     .slice(0, 480);
 

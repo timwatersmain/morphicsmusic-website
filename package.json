@@ -14,6 +14,7 @@
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro",
+    "upload:digital": "node scripts/upload-digital.mjs",
     "test": "vitest run",
     "test:watch": "vitest"
   },
