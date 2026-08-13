@@ -64,13 +64,15 @@
       // Total points, not cell count, drives frame cost — a measured cliff sits
       // near 16000 in this Chrome build, so the budget is spread across however
       // many cells the viewport fits.
-      pointBudget: small ? 7000 : 16000,
-      renderScale: 0.42,
-      minCellPoints: 55,
+      pointBudget: small ? 14000 : 40000,
+      renderScale: 0.72,
+      minCellPoints: 130,
       cellPoints: small ? 140 : 240,
       // Long, jittered holds: a cell in hold is one cached blit instead of ~55
       // particle draws, so hold length directly sets the frame cost. Randomness
       // is what keeps the field from pulsing in unison.
+      // Short morph, long hold: cells read as settled letters ~90% of the time.
+      morphMs: 260,
       holdMs: 2600,
     });
 

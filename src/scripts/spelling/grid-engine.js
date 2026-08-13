@@ -40,7 +40,24 @@ const STROKE_WEIGHT = 0.90;
 // large mass, where heavy fusion is the point. At grid scale that much blur
 // rounds every corner and fills the counters, so the letterforms stop matching
 // the real alphabet. Lower = crisper, at the cost of needing denser points.
-const BLUR_RATIO = 0.22;
+const BLUR_RATIO = 0.34;
+
+// Behaviours that keep the mass coherent while it travels. The full 25 include
+// split / seam / boil / tendril / braid, which deliberately tear the form apart
+// mid-morph — striking on one large glyph, but across a field of small letters
+// they read as a swarm of loose particles rather than letters changing.
+// Every cell must read as a LETTER at essentially all times. The morph
+// inherently passes through a non-letter state, so two things keep it legible:
+// this set is restricted to behaviours that preserve the form as a whole
+// (uniform scale / squeeze) rather than staggering, rotating or tearing it —
+// a staggered behaviour leaves half the glyph behind and reads as debris —
+// and the morph itself is short, so the in-between is a brief snap.
+const GRID_MODES = ['direct', 'implode', 'quench', 'inhale', 'lathe'];
+const pickGridMode = (prev) => {
+  let m = GRID_MODES[(Math.random() * GRID_MODES.length) | 0];
+  while (m === prev && GRID_MODES.length > 1) m = GRID_MODES[(Math.random() * GRID_MODES.length) | 0];
+  return m;
+};
 
 const RESOLVE_DUR = 520;
 const RESOLVE_STAGGER_TOTAL = 180;
@@ -124,7 +141,7 @@ export class ScrambleGridEngine {
   // the cell size or sprite changes (resize).
   settledBitmap(cell, S, sp, SD) {
     const key = cell.displayChar;
-    if (!key || !cell.to || !cell.to.length) return null;
+    if (!key || !cell.hasGlyph || !cell.to || !cell.to.length) return null;
     if (this.bmpKey !== S + ':' + SD) { this.bmpCache = new Map(); this.bmpKey = S + ':' + SD; }
     const hit = this.bmpCache.get(key);
     if (hit) return hit;
@@ -151,6 +168,9 @@ export class ScrambleGridEngine {
       trueChar: slot.ch,
       isSpace,
       displayChar: startLetter,
+      // False until the first REAL glyph lands: a placeholder must never be
+      // cached under a letter key (that turned the whole field into dots).
+      hasGlyph: false,
       mode: 'direct',
       cur: pts.map(clone),
       from: pts.map(clone),
@@ -162,7 +182,7 @@ export class ScrambleGridEngine {
       // scramble cycle, so cells never tick in unison — even on frame 1.
       t0: now,
       dur: 1,
-      nextAt: now + Math.random() * (this.morphMs + this.holdMs),
+      nextAt: now + Math.random() * 700,
       appliedResolved: false,
       gen: 0, // bumped on every scheduled async morph target; guards against a
                // slower in-flight fetch stomping a newer target after a fast
@@ -227,7 +247,7 @@ export class ScrambleGridEngine {
     cell.to = assign(cell.from, pts);
     cell.bbFrom = cell.bbTo || box(cell.from);
     cell.bbTo = box(cell.to);
-    cell.mode = mode || pickMode(cell.mode);
+    cell.mode = mode || pickGridMode(cell.mode);
     cell.t0 = now;
     cell.dur = dur;
   }
@@ -252,7 +272,8 @@ export class ScrambleGridEngine {
     const pts = await this.glyph(letter);
     if (!pts || cell.gen !== myGen) return;
     cell.displayChar = letter;
-    this.cellMorphTo(cell, pts, pickMode(cell.mode), this.morphMs, performance.now());
+    cell.hasGlyph = true;
+    this.cellMorphTo(cell, pts, pickGridMode(cell.mode), this.morphMs, performance.now());
   }
 
   async scheduleResolveLetter(cell, now) {
@@ -260,7 +281,8 @@ export class ScrambleGridEngine {
     const pts = await this.glyph(cell.trueChar);
     if (!pts || cell.gen !== myGen) return;
     cell.displayChar = cell.trueChar;
-    this.cellMorphTo(cell, pts, pickMode(cell.mode), RESOLVE_DUR, performance.now());
+    cell.hasGlyph = true;
+    this.cellMorphTo(cell, pts, pickGridMode(cell.mode), RESOLVE_DUR, performance.now());
   }
 
   // ---- the per-frame tick ---------------------------------------------------
