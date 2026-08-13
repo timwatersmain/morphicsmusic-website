@@ -5,6 +5,7 @@ import { spherePoints, blobShape, ease } from './shapes.js';
 import { assign, box } from './pairing.js';
 import { planPhrase, viewScaleFor } from './layout.js';
 import { IDLE_MODE, displace, leadFor, pickMode } from './behaviours.js';
+import { makeSprite, resolveGooBlur, createFrameLoop } from './render-shared.js';
 
 const clone = p => ({ x: p.x, y: p.y });
 
@@ -32,7 +33,7 @@ export class SpellingEngine {
     this.dpr = 1;
     this.running = false;   // true while spelling; false while dormant
     this.stopped = true;    // true when the loop must unwind
-    this.raf = null;
+    this.loop = createFrameLoop((now) => this.renderFrame(now));
     this.timer = null;
     // Bumped on every start() so a loop resumed after a stop()/start() pair that
     // straddled an in-flight await (e.g. a glyph fetch) can tell it's stale and
@@ -48,7 +49,7 @@ export class SpellingEngine {
     this.generation++;
     const myGeneration = this.generation;
     this.size();
-    if (this.raf === null) this.raf = requestAnimationFrame(this.frame);
+    this.loop.start();
     // Not awaited: this kicks off the fire-and-forget sequencer loop. Catch so a
     // transient failure inside it (e.g. a rejected fetch) can't surface as an
     // unhandled promise rejection.
@@ -61,7 +62,7 @@ export class SpellingEngine {
     this.stopped = true;
     this.running = false;
     clearTimeout(this.timer);
-    if (this.raf !== null) { cancelAnimationFrame(this.raf); this.raf = null; }
+    this.loop.stop();
   }
 
   destroy() {
@@ -302,43 +303,19 @@ export class SpellingEngine {
   // tail sums to full white far past the core under additive blending, so the
   // threshold lands outside the intended edge and every stroke renders fat.
   makeSprite(D) {
-    const pad = Math.max(4, Math.round(D / 2));
-    const s = document.createElement('canvas');
-    s.width = s.height = pad * 2;
-    const g2 = s.getContext('2d');
-    const g = g2.createRadialGradient(pad, pad, 0, pad, pad, pad);
-    g.addColorStop(0, 'rgba(255,255,255,1)');
-    g.addColorStop(0.86, 'rgba(255,255,255,1)');
-    g.addColorStop(0.94, 'rgba(255,255,255,0.5)');
-    g.addColorStop(1, 'rgba(255,255,255,0)');
-    g2.fillStyle = g;
-    g2.fillRect(0, 0, pad * 2, pad * 2);
-    this.sprite = s;
-    this.spriteD = pad * 2;
+    const { sprite, spriteD } = makeSprite(D);
+    this.sprite = sprite;
+    this.spriteD = spriteD;
   }
 
   // Resolve the goo filter's feGaussianBlur from the canvas's own document
-  // (not a bare global document.getElementById) and cache it — this only needs
-  // to run once per engine instance.
+  // and cache it — this only needs to run once per engine instance.
   gooBlurEl() {
     if (this._gooBlurEl) return this._gooBlurEl;
-    const doc = this.canvas && this.canvas.ownerDocument;
-    if (!doc) return null;
-    const filter = doc.getElementById('spelling-goo');
-    const blur = filter && filter.querySelector('feGaussianBlur');
+    const blur = resolveGooBlur(this.canvas, 'spelling-goo');
     if (blur) this._gooBlurEl = blur;
-    return blur || null;
+    return blur;
   }
-
-  frame = (now) => {
-    this.raf = requestAnimationFrame(this.frame);
-    if (document.hidden) return;
-    // Cap the sim at ~48fps — the form is fluid, not twitchy, and this halves
-    // the filter cost.
-    if (this.lastF && now - this.lastF < 20) return;
-    this.lastF = now;
-    this.renderFrame(now);
-  };
 
   // Render exactly one frame — no rAF scheduling, no fps cap, no hidden-tab
   // skip. Used by the rAF loop above (via frame()) and by renderOnce() below,

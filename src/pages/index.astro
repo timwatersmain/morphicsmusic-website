@@ -1,6 +1,6 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-import Spelling from '../components/Spelling.astro';
+import ScrambleGrid from '../components/ScrambleGrid.astro';
 ---
 
 <BaseLayout title="MORPHICS" currentPage="/" clean>
@@ -8,19 +8,19 @@ import Spelling from '../components/Spelling.astro';
        centers the wordmark + tagline on every device. No accents, no
        footer line, no decoration: the landing is the cleanest page. -->
   <section class="relative min-h-[calc(100dvh-12rem)] w-full flex flex-col items-center justify-center px-6 overflow-hidden">
+    <ScrambleGrid />
     <div class="relative z-10 text-center max-w-4xl px-4">
-      <h1 class="mb-4">
+      <h1 class="mb-6">
         <img
           src="/images/logos/morphics-text-white.png"
           alt="MORPHICS"
           class="max-h-24 md:h-36 lg:h-44 w-auto mx-auto"
         />
       </h1>
-      <Spelling />
       <p class="font-body text-lg md:text-xl text-on-surface-variant font-light tracking-wide max-w-lg mx-auto mb-12">
         The only constant is change.
       </p>
-      <a href="/music" class="group relative inline-block px-12 py-4 overflow-hidden border border-primary/20 hover:border-primary/60 transition-all duration-500 hover:scale-105 active:scale-95">
+      <a href="/music" data-resolve-trigger class="group relative inline-block px-12 py-4 overflow-hidden border border-primary/20 hover:border-primary/60 transition-all duration-500 hover:scale-105 active:scale-95">
         <div class="absolute inset-0 bg-primary/5 group-hover:bg-primary/10 transition-colors"></div>
         <div class="absolute bottom-0 left-0 h-[2px] w-0 bg-primary group-hover:w-full transition-all duration-700"></div>
         <span class="relative z-10 font-headline font-bold text-primary tracking-[0.4em] text-sm uppercase">ENTER</span>

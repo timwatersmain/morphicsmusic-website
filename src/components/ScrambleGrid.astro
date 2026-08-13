@@ -1,0 +1,115 @@
+---
+// The Morphics scramble grid (v2): 27 independently morphing glyph cells,
+// the whole tagline present at all times in a constructed alphabet. Hovering
+// or focusing the ENTER button (data-resolve-trigger) resolves every cell
+// into its true letter; leaving returns them to scrambling. Purely
+// decorative — pointer-events are off and it carries no text, so the Latin
+// tagline below it remains the accessible content.
+//
+// See docs/superpowers/specs/2026-08-12-landing-scramble-grid-design.md.
+---
+
+<div class="scramble-grid" aria-hidden="true">
+  <svg width="0" height="0" style="position: absolute; overflow: hidden;">
+    <defs>
+      <filter id="spelling-grid-goo" x="-30%" y="-30%" width="160%" height="160%" color-interpolation-filters="sRGB">
+        <feGaussianBlur in="SourceGraphic" stdDeviation="8" result="blur" />
+        <feColorMatrix in="blur" type="matrix"
+          values="1 0 0 0 0
+                  0 1 0 0 0
+                  0 0 1 0 0
+                  0 0 0 26 -13" />
+      </filter>
+    </defs>
+  </svg>
+  <canvas id="scramble-grid"></canvas>
+</div>
+
+<style>
+  /* Full-bleed field: the grid fills the hero rather than sitting in it, so
+     the wordmark, tagline and ENTER read on top of a living lattice. */
+  .scramble-grid {
+    /* Fixed rather than absolute so the field covers the whole viewport — the
+       hero section stops short of the bottom edge, which left a bare band. */
+    position: fixed;
+    inset: 0;
+    display: block;
+    pointer-events: none;
+  }
+
+  #scramble-grid {
+    display: block;
+    width: 100%;
+    height: 100%;
+    opacity: 0.05;
+    pointer-events: none;
+    /* Transparent canvas — the goo edge comes from the SVG filter
+       #spelling-grid-goo (alpha threshold, not luminance), same pipeline as
+       v1. See grid-engine.js for the stdDeviation-driven blur. */
+  }
+
+
+</style>
+
+<script>
+  import { ScrambleGridEngine } from '../scripts/spelling/grid-engine.js';
+
+  const canvas = document.getElementById('scramble-grid');
+  if (canvas) {
+    const small = window.matchMedia('(max-width: 639px)').matches;
+    const engine = new ScrambleGridEngine(canvas, {
+      free: true,
+      cellTarget: small ? 46 : 72,
+      extraRows: 1,
+      // Total points, not cell count, drives frame cost — a measured cliff sits
+      // near 16000 in this Chrome build, so the budget is spread across however
+      // many cells the viewport fits.
+      pointBudget: small ? 7000 : 16000,
+      renderScale: 0.42,
+      minCellPoints: 55,
+      cellPoints: small ? 140 : 240,
+      // Long, jittered holds: a cell in hold is one cached blit instead of ~55
+      // particle draws, so hold length directly sets the frame cost. Randomness
+      // is what keeps the field from pulsing in unison.
+      holdMs: 2600,
+    });
+
+    const trigger = document.querySelector('[data-resolve-trigger]');
+    const enter = () => engine.enterResolve();
+    const leave = () => engine.leaveResolve();
+    if (trigger) {
+      trigger.addEventListener('mouseenter', enter);
+      trigger.addEventListener('mouseleave', leave);
+      trigger.addEventListener('focus', enter);
+      trigger.addEventListener('blur', leave);
+    }
+
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
+    if (reduced.matches) {
+      // One static, already-resolved frame: no rAF loop, no cell scheduling.
+      engine.renderResolvedOnce();
+    } else {
+      // Only run while the canvas is actually on screen.
+      const io = new IntersectionObserver((entries) => {
+        for (const e of entries) {
+          if (e.isIntersecting) engine.start();
+          else engine.stop();
+        }
+      }, { threshold: 0.01 });
+      io.observe(canvas);
+
+      window.addEventListener('pagehide', () => {
+        io.disconnect();
+        engine.destroy();
+        if (trigger) {
+          trigger.removeEventListener('mouseenter', enter);
+          trigger.removeEventListener('mouseleave', leave);
+          trigger.removeEventListener('focus', enter);
+          trigger.removeEventListener('blur', leave);
+        }
+      });
+    }
+
+    window.addEventListener('resize', () => engine.size());
+  }
+</script>
