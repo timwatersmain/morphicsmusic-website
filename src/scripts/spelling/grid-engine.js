@@ -68,6 +68,11 @@ export class ScrambleGridEngine {
     this.n = opts.cellPoints ?? 240;
     // Free (word-search) mode vs the fixed phrase grid.
     this.free = opts.free ?? false;
+    // A second canvas stacked over the field carrying ONLY the locked phrase.
+    // The goo filter thresholds on ALPHA, so a reduced per-cell globalAlpha
+    // does not dim a glyph — it drops below the cut and erases it. Brightening
+    // has to happen by compositing a separate layer at a higher CSS opacity.
+    this.hiCanvas = opts.highlightCanvas ?? null;
     this.cellTarget = opts.cellTarget ?? 120;
     this.extraRows = opts.extraRows ?? 0;
     this.pointBudget = opts.pointBudget ?? 9000;
@@ -389,6 +394,17 @@ export class ScrambleGridEngine {
     const W = c.width, H = c.height;
     ctx.clearRect(0, 0, W, H);
 
+    let hiCtx = null;
+    if (this.hiCanvas) {
+      if (this.hiCanvas.width !== W || this.hiCanvas.height !== H) {
+        this.hiCanvas.width = W;
+        this.hiCanvas.height = H;
+      }
+      hiCtx = this.hiCanvas.getContext('2d');
+      hiCtx.clearRect(0, 0, W, H);
+      hiCtx.globalCompositeOperation = 'source-over';
+    }
+
     // One radius for the whole canvas — cells share a uniform size, so one
     // sprite and one filter stdDeviation serve every cell (single filter pass).
     const S0 = Math.min(this.cellW, this.cellH) * GLYPH_FILL * (HALF / 120) * STROKE_WEIGHT;
@@ -443,8 +459,9 @@ export class ScrambleGridEngine {
             cell.alpha = cell.alphaTo;
           }
           if (cell.alpha <= 0.004) continue;
-          ctx.globalAlpha = cell.alpha;
-          ctx.drawImage(bmp, cell.cx - bmp.width / 2, cell.cy - bmp.height / 2);
+          const gs = (hiCtx && cell.phraseChar && cell.appliedResolved) ? hiCtx : ctx;
+          gs.globalAlpha = cell.alpha;
+          gs.drawImage(bmp, cell.cx - bmp.width / 2, cell.cy - bmp.height / 2);
           continue;
         }
         for (let i = 0; i < n; i++) {
@@ -490,7 +507,8 @@ export class ScrambleGridEngine {
       }
       if (cell.alpha <= 0.004) continue; // nothing to draw
 
-      ctx.globalAlpha = cell.alpha;
+      const gm = (hiCtx && cell.phraseChar && cell.appliedResolved) ? hiCtx : ctx;
+      gm.globalAlpha = cell.alpha;
       for (let i = 0; i < n; i++) {
         const x = CENTER + (PX[i] - CENTER - ndx) * kx;
         const y = CENTER + (PY[i] - CENTER - ndy) * ky;
@@ -500,7 +518,7 @@ export class ScrambleGridEngine {
         const py = cell.cy + (y - CENTER) / 120 * S;
         // Subpixel position: at ~4px discs, snapping to whole pixels is a
         // large relative error and reads as lumpy stroke edges.
-        ctx.drawImage(sp, px - SD / 2, py - SD / 2);
+        gm.drawImage(sp, px - SD / 2, py - SD / 2);
       }
     }
     ctx.globalAlpha = 1;

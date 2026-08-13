@@ -23,6 +23,7 @@
     </defs>
   </svg>
   <canvas id="scramble-grid"></canvas>
+  <canvas id="scramble-grid-hi"></canvas>
 </div>
 
 <style>
@@ -37,12 +38,26 @@
     pointer-events: none;
   }
 
-  #scramble-grid {
+  #scramble-grid,
+  #scramble-grid-hi {
     display: block;
     width: 100%;
     height: 100%;
-    opacity: 0.05;
     pointer-events: none;
+  }
+
+  #scramble-grid {
+    opacity: 0.05;
+  }
+
+  /* The locked phrase only. Composited over the field at a much higher opacity
+     so it reads clearly the moment it snaps in — same goo filter, so the
+     letterforms are identical and only the compositing differs. */
+  #scramble-grid-hi {
+    position: absolute;
+    inset: 0;
+    opacity: 0.30;
+    filter: url(#spelling-grid-goo);
     /* Transparent canvas — the goo edge comes from the SVG filter
        #spelling-grid-goo (alpha threshold, not luminance), same pipeline as
        v1. See grid-engine.js for the stdDeviation-driven blur. */
@@ -55,10 +70,12 @@
   import { ScrambleGridEngine } from '../scripts/spelling/grid-engine.js';
 
   const canvas = document.getElementById('scramble-grid');
+  const hiCanvas = document.getElementById('scramble-grid-hi');
   if (canvas) {
     const small = window.matchMedia('(max-width: 639px)').matches;
     const engine = new ScrambleGridEngine(canvas, {
       free: true,
+      highlightCanvas: hiCanvas,
       cellTarget: small ? 46 : 72,
       extraRows: 1,
       // Total points, not cell count, drives frame cost — a measured cliff sits
