@@ -76,7 +76,17 @@
       holdMs: 2600,
     });
 
+    // The phrase sits in the lattice rows under the ENTER button, so the engine
+    // needs the button's rect relative to the canvas — remeasured on resize.
     const trigger = document.querySelector('[data-resolve-trigger]');
+    const measure = () => {
+      if (!trigger) return;
+      const t = trigger.getBoundingClientRect();
+      const c = canvas.getBoundingClientRect();
+      engine.setPhraseAnchor({ cx: t.left + t.width / 2 - c.left, bottom: t.bottom - c.top });
+    };
+    measure();
+    window.addEventListener('resize', measure);
     const enter = () => engine.enterResolve();
     const leave = () => engine.leaveResolve();
     if (trigger) {

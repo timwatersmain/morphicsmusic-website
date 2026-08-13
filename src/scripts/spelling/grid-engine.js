@@ -8,7 +8,7 @@
 // filter, dpr=1, 48fps cap, hidden-tab skip) via render-shared.js. What's new
 // is the sequencer: N independent cell clocks instead of one travelling mass,
 // and per-cell containment instead of a single global framing lock.
-import { CHARMAP, CENTER, HALF } from './charmap.js';
+import { CHARMAP, CENTER, HALF, PHRASE } from './charmap.js';
 import { flatten } from './glyph-parse.js';
 import { samplePoints } from './sampling.js';
 import { ease } from './shapes.js';
@@ -112,6 +112,7 @@ export class ScrambleGridEngine {
     const c = this.canvas;
     const W = (c && c.width) || 900, H = (c && c.height) || 260;
     if (this.W === W && this.H === H && this.cells.length) return;
+    this.needsPhraseAssign = true;
     this.W = W; this.H = H;
 
     // Free mode fills the canvas with a lattice of independent random letters
@@ -123,6 +124,7 @@ export class ScrambleGridEngine {
       ? planFreeGrid(W, H, { target: this.cellTarget * this.renderScale, extraRows: this.extraRows })
       : planGrid(W, H);
     if (this.free) {
+      this.cols = plan.cols; this.rows = plan.rows;
       this.n = Math.max(this.minCellPoints, Math.min(this.n, Math.floor(this.pointBudget / plan.cells.length)));
     }
     this.cellW = plan.cellW;
@@ -133,6 +135,7 @@ export class ScrambleGridEngine {
 
     const now = performance.now();
     this.cells = plan.cells.map((slot, i) => this.makeCell(slot, i, now));
+    if (this.needsPhraseAssign) { this.assignPhrase(); this.needsPhraseAssign = false; }
   }
 
   // One bitmap per settled letter, shared by every cell holding that letter.
@@ -159,6 +162,51 @@ export class ScrambleGridEngine {
     return off;
   }
 
+  // The ENTER button's rect in CSS px relative to the canvas; the phrase is
+  // placed in the lattice rows directly beneath it.
+  setPhraseAnchor(rect) {
+    this.anchor = rect;
+    this.assignPhrase();
+  }
+
+  // Gap-free AND word-safe: words are packed greedily into rows, then joined
+  // with NO separator. A space would leave a hole in the lattice; splitting a
+  // word across rows makes it unreadable.
+  assignPhrase() {
+    for (const cell of this.cells) cell.phraseChar = null;
+    if (!this.anchor || !this.cols || !this.cellW) return;
+
+    const sc = this.renderScale;
+    const anchorCx = (this.anchor.cx || 0) * sc;
+    const anchorBottom = (this.anchor.bottom || 0) * sc;
+
+    const maxPerRow = Math.max(1, this.cols - 2);
+    const words = PHRASE.toUpperCase().split(/\s+/).filter(Boolean);
+    const packed = [];
+    let row = '';
+    for (const w of words) {
+      if (row && row.length + w.length > maxPerRow) { packed.push(row); row = w; }
+      else row += w;
+    }
+    if (row) packed.push(row);
+
+    let startRow = 0;
+    while (startRow < this.rows && (startRow + 0.5) * this.cellH < anchorBottom) startRow++;
+    startRow += 1;
+
+    packed.forEach((text, li) => {
+      const r = startRow + li;
+      if (r >= this.rows) return;
+      const startCol = Math.round(anchorCx / this.cellW - text.length / 2);
+      for (let k = 0; k < text.length; k++) {
+        const c = startCol + k;
+        if (c < 0 || c >= this.cols) continue;
+        const cell = this.cells[r * this.cols + c];
+        if (cell) cell.phraseChar = text[k];
+      }
+    });
+  }
+
   makeCell(slot, i, now) {
     const isSpace = slot.ch === ' ';
     const startLetter = nextLetter(null);
@@ -168,6 +216,7 @@ export class ScrambleGridEngine {
       trueChar: slot.ch,
       isSpace,
       displayChar: startLetter,
+      phraseChar: null,
       // False until the first REAL glyph lands: a placeholder must never be
       // cached under a letter key (that turned the whole field into dots).
       hasGlyph: false,
@@ -278,9 +327,10 @@ export class ScrambleGridEngine {
 
   async scheduleResolveLetter(cell, now) {
     const myGen = ++cell.gen;
-    const pts = await this.glyph(cell.trueChar);
+    const target = cell.phraseChar || cell.trueChar;
+    const pts = await this.glyph(target);
     if (!pts || cell.gen !== myGen) return;
-    cell.displayChar = cell.trueChar;
+    cell.displayChar = target;
     cell.hasGlyph = true;
     this.cellMorphTo(cell, pts, pickGridMode(cell.mode), RESOLVE_DUR, performance.now());
   }
@@ -288,11 +338,15 @@ export class ScrambleGridEngine {
   // ---- the per-frame tick ---------------------------------------------------
 
   tickCell(cell, i, now) {
+    // Only cells carrying a phrase character react to the hover; every other
+    // cell free-runs its own scramble the whole time. A resolved phrase cell
+    // then holds its letter for as long as the hover lasts.
+    const wantResolved = this.resolved && !!cell.phraseChar;
     const triggerAt = this.resolvedSince + (this.staggerMs[i] || 0);
-    if (now >= triggerAt && cell.appliedResolved !== this.resolved) {
-      cell.appliedResolved = this.resolved;
-      if (this.resolved) {
-        if (cell.isSpace) {
+    if (now >= triggerAt && cell.appliedResolved !== wantResolved) {
+      cell.appliedResolved = wantResolved;
+      if (wantResolved) {
+        if (false) {
           // Fade to nothing; leave point geometry where it is (no glyph to
           // morph to) so the fade reads as a dissolve, not a snap.
           this.cellAlphaTo(cell, 0, RESOLVE_DUR, now);
