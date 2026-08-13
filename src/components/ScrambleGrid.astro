@@ -66,6 +66,47 @@
 
 </style>
 
+<style is:global>
+  /* The tap-to-enter transition (touch devices only — see the click handler).
+     Transitions are declared on the base selectors so adding .is-entering
+     animates rather than snapping. The grid pulls further than the content so
+     the field rushes past the wordmark, which is what sells the depth. */
+  .scramble-grid,
+  .scramble-grid canvas {
+    transition: transform 820ms cubic-bezier(0.55, 0, 0.2, 1),
+                opacity 820ms cubic-bezier(0.4, 0, 0.6, 1);
+    transform-origin: 50% 45%;
+    will-change: transform, opacity;
+  }
+
+  html.is-entering .scramble-grid,
+  html.is-entering .scramble-grid canvas {
+    transform: scale(2.6);
+    opacity: 0;
+  }
+
+  html.is-entering main {
+    transition: transform 820ms cubic-bezier(0.55, 0, 0.2, 1),
+                opacity 620ms ease-in 120ms;
+    transform: scale(1.28);
+    opacity: 0;
+  }
+
+  /* Black ground behind the fade, so the last frame is the void rather than
+     a flash of the page background. */
+  html.is-entering body {
+    background: #000;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .scramble-grid,
+    .scramble-grid canvas,
+    html.is-entering main {
+      transition: none;
+    }
+  }
+</style>
+
 <script>
   import { ScrambleGridEngine } from '../scripts/spelling/grid-engine.js';
 
@@ -122,6 +163,42 @@
       trigger.addEventListener('mouseleave', leave);
       trigger.addEventListener('focus', enter);
       trigger.addEventListener('blur', leave);
+    }
+
+    // Touch devices have no hover, so the phrase would never be seen there.
+    // Tapping ENTER instead plays it as a deliberate exit: the phrase resolves
+    // and locks, holds long enough to read, then the whole page zooms through
+    // and fades out before navigating. Gated on the device genuinely lacking
+    // hover rather than on screen width, so a small window on a desktop keeps
+    // the instant click.
+    const coarse = window.matchMedia('(hover: none), (pointer: coarse)').matches;
+    if (trigger && coarse) {
+      const RESOLVE_MS = 620;   // phrase morphs in
+      const READ_MS = 560;      // held, legible
+      const ZOOM_MS = 820;      // zoom + fade through
+      let leaving = false;
+
+      trigger.addEventListener('click', (e) => {
+        const href = trigger.getAttribute('href');
+        if (!href || leaving) return;
+        // Let modified taps / new-tab gestures behave normally.
+        if (e.metaKey || e.ctrlKey || e.shiftKey || e.button > 0) return;
+        e.preventDefault();
+        leaving = true;
+
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+          window.location.href = href;
+          return;
+        }
+
+        engine.enterResolve();
+        setTimeout(() => {
+          document.documentElement.classList.add('is-entering');
+        }, RESOLVE_MS + READ_MS);
+        setTimeout(() => {
+          window.location.href = href;
+        }, RESOLVE_MS + READ_MS + ZOOM_MS);
+      });
     }
 
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
