@@ -174,9 +174,14 @@ export class ScrambleGridEngine {
     this.assignPhrase();
   }
 
-  // Gap-free AND word-safe: words are packed greedily into rows, then joined
-  // with NO separator. A space would leave a hole in the lattice; splitting a
-  // word across rows makes it unreadable.
+  // Which lattice cells CAN spell the phrase. They only lock and brighten
+  // while the ENTER button is hovered; the rest of the time they scramble with
+  // everything else and are indistinguishable from the field.
+  //
+  // Spaces are NOT holes and NOT phrase cells: the cell at a space position is
+  // simply left alone, so it keeps scrambling as part of the dark field. That
+  // separates the words while keeping the lattice unbroken, because the gap is
+  // made of moving dark letters rather than emptiness.
   assignPhrase() {
     for (const cell of this.cells) cell.phraseChar = null;
     if (!this.anchor || !this.cols || !this.cellW) return;
@@ -185,25 +190,33 @@ export class ScrambleGridEngine {
     const anchorCx = (this.anchor.cx || 0) * sc;
     const anchorBottom = (this.anchor.bottom || 0) * sc;
 
+    // Pack whole words per row (a split word is unreadable), keeping the space
+    // between them as a real lattice position.
     const maxPerRow = Math.max(1, this.cols - 2);
     const words = PHRASE.toUpperCase().split(/\s+/).filter(Boolean);
-    const packed = [];
+    const lines = [];
     let row = '';
     for (const w of words) {
-      if (row && row.length + w.length > maxPerRow) { packed.push(row); row = w; }
-      else row += w;
+      const next = row ? row + ' ' + w : w;
+      if (next.length > maxPerRow && row) { lines.push(row); row = w; }
+      else row = next;
     }
-    if (row) packed.push(row);
+    if (row) lines.push(row);
 
     let startRow = 0;
     while (startRow < this.rows && (startRow + 0.5) * this.cellH < anchorBottom) startRow++;
     startRow += 1;
+    // Adaptive: the whole phrase must be on screen. If there are not enough
+    // rows left below the button, slide the block up until it fits — being
+    // readable matters more than sitting directly under the button.
+    startRow = Math.max(0, Math.min(startRow, this.rows - lines.length));
 
-    packed.forEach((text, li) => {
+    lines.forEach((text, li) => {
       const r = startRow + li;
       if (r >= this.rows) return;
       const startCol = Math.round(anchorCx / this.cellW - text.length / 2);
       for (let k = 0; k < text.length; k++) {
+        if (text[k] === ' ') continue; // untouched: keeps scrambling, stays dark
         const c = startCol + k;
         if (c < 0 || c >= this.cols) continue;
         const cell = this.cells[r * this.cols + c];
@@ -370,7 +383,7 @@ export class ScrambleGridEngine {
     // reacted to a resolve request) does a cell free-run its own hold/morph
     // cycle — this is what keeps cells from ticking in unison.
     if (!cell.appliedResolved && now >= cell.nextAt) {
-      cell.nextAt = now + this.morphMs + this.holdMs * (0.45 + Math.random() * 1.35);
+      cell.nextAt = now + this.morphMs + this.holdMs * (0.4 + Math.random() * 1.6);
       this.scheduleScramble(cell, now);
     }
   }
@@ -470,15 +483,30 @@ export class ScrambleGridEngine {
           PX[i] = b.x; PY[i] = b.y;
         }
       } else {
+        // Fast path for GRID_MODES. Every one of them is the same shape:
+        // interpolate, then scale about the cell centre. None staggers, so
+        // leadFor is 0 and tt === raw. Computing the two scale factors ONCE
+        // per cell turns the inner loop into pure arithmetic — no function
+        // call and, critically, no {x,y} allocation per particle per frame.
+        // That allocation was the reason constant morphing was unaffordable.
+        const e = ease(raw);
+        const k = Math.sin(Math.PI * raw);
+        let sx = 1, sy = 1;
+        const M = cell.mode;
+        if (M === 'implode') { sx = sy = 1 - 0.62 * k; }
+        else if (M === 'quench') { sx = sy = 1 - 0.45 * k; }
+        else if (M === 'inhale') { sx = 1 - 0.30 * k; sy = 1 - 0.14 * k; }
+        else if (M === 'lathe') { sx = 1 - 0.70 * k; sy = 1 + 0.22 * k; }
         for (let i = 0; i < n; i++) {
-          const a = cell.from[i], b = cell.to[i], sd = cell.seed[i];
-          const lead = leadFor(cell.mode, b, i, n, sd);
-          const tt = Math.max(0, Math.min(1, (raw - lead) / (1 - lead || 1)));
-          const d = displace(cell.mode, a, b, tt, i, sd, now);
-          BX[i] = d.x; BY[i] = d.y;
-          PX[i] = d.x; PY[i] = d.y;
-          if (d.x < nx0) nx0 = d.x; if (d.x > nx1) nx1 = d.x;
-          if (d.y < ny0) ny0 = d.y; if (d.y > ny1) ny1 = d.y;
+          const a = cell.from[i], b = cell.to[i];
+          const mx = a.x + (b.x - a.x) * e;
+          const my = a.y + (b.y - a.y) * e;
+          const x = CENTER + (mx - CENTER) * sx;
+          const y = CENTER + (my - CENTER) * sy;
+          BX[i] = x; BY[i] = y;
+          PX[i] = x; PY[i] = y;
+          if (x < nx0) nx0 = x; if (x > nx1) nx1 = x;
+          if (y < ny0) ny0 = y; if (y > ny1) ny1 = y;
         }
       }
 
