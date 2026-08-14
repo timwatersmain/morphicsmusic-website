@@ -10,10 +10,7 @@
       "experimental"
     ],
     "links": {
-      "bandcamp": "https://morphics.bandcamp.com/track/golden-dawn",
-      "spotify": "https://open.spotify.com/artist/morphicsmusic",
-      "apple music": "https://music.apple.com/artist/morphicsmusic",
-      "soundcloud": "https://soundcloud.com/morphics-music"
+      "bandcamp": "https://morphics.bandcamp.com/track/golden-dawn"
     },
     "embed": "",
     "featured": true
@@ -29,10 +26,7 @@
       "experimental"
     ],
     "links": {
-      "bandcamp": "https://morphics.bandcamp.com/",
-      "spotify": "https://open.spotify.com/artist/morphicsmusic",
-      "apple music": "https://music.apple.com/artist/morphicsmusic",
-      "soundcloud": "https://soundcloud.com/morphics-music"
+      "bandcamp": "https://morphics.bandcamp.com/"
     },
     "embed": "",
     "featured": true
@@ -48,10 +42,7 @@
       "sound-design"
     ],
     "links": {
-      "bandcamp": "https://morphics.bandcamp.com/",
-      "spotify": "https://open.spotify.com/artist/morphicsmusic",
-      "apple music": "https://music.apple.com/artist/morphicsmusic",
-      "soundcloud": "https://soundcloud.com/morphics-music"
+      "bandcamp": "https://morphics.bandcamp.com/"
     },
     "embed": "",
     "featured": false
@@ -67,10 +58,7 @@
       "ambient"
     ],
     "links": {
-      "bandcamp": "https://morphics.bandcamp.com/track/morpheus",
-      "spotify": "https://open.spotify.com/artist/morphicsmusic",
-      "apple music": "https://music.apple.com/artist/morphicsmusic",
-      "soundcloud": "https://soundcloud.com/morphics-music"
+      "bandcamp": "https://morphics.bandcamp.com/track/morpheus"
     },
     "embed": "",
     "featured": false
@@ -86,10 +74,7 @@
       "bass"
     ],
     "links": {
-      "bandcamp": "https://morphics.bandcamp.com/album/nexus",
-      "spotify": "https://open.spotify.com/artist/morphicsmusic",
-      "apple music": "https://music.apple.com/artist/morphicsmusic",
-      "soundcloud": "https://soundcloud.com/morphics-music"
+      "bandcamp": "https://morphics.bandcamp.com/album/nexus"
     },
     "embed": "",
     "featured": false
@@ -105,10 +90,7 @@
       "ambient"
     ],
     "links": {
-      "bandcamp": "https://morphics.bandcamp.com/track/cicada",
-      "spotify": "https://open.spotify.com/artist/morphicsmusic",
-      "apple music": "https://music.apple.com/artist/morphicsmusic",
-      "soundcloud": "https://soundcloud.com/morphics-music"
+      "bandcamp": "https://morphics.bandcamp.com/track/cicada"
     },
     "embed": "",
     "featured": false
