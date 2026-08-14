@@ -16,7 +16,7 @@ import { ease } from './shapes.js';
 import { assign, box } from './pairing.js';
 import { displace, leadFor, pickMode } from './behaviours.js';
 import { resolveGooBlur, createFrameLoop } from './render-shared.js';
-import { planGrid, planFreeGrid, backingSize, needsResize, staggerRanks, nextLetter } from './grid-layout.js';
+import { planGrid, planFreeGrid, backingSize, needsResize, effectivePoints, staggerRanks, nextLetter } from './grid-layout.js';
 
 const clone = (p) => ({ x: p.x, y: p.y });
 
@@ -120,7 +120,14 @@ const RESOLVE_STAGGER_TOTAL = 180;
 export class ScrambleGridEngine {
   constructor(canvas, opts = {}) {
     this.canvas = canvas;
-    this.n = opts.cellPoints ?? 240;
+    // The REQUESTED points per cell, kept separate from the effective `this.n`
+    // that layout() derives from it. They used to be the same field, and
+    // layout() clamped it against its own previous value, so it could only ever
+    // ratchet DOWN: growing the viewport cut points per cell and shrinking it
+    // again never restored them. Density silently degraded for the rest of the
+    // session, and a profile switch could not raise it back either.
+    this.cellPointsBase = opts.cellPoints ?? 240;
+    this.n = this.cellPointsBase;
     // Free (word-search) mode vs the fixed phrase grid.
     this.free = opts.free ?? false;
     // A second canvas stacked over the field carrying ONLY the locked phrase.
@@ -160,6 +167,40 @@ export class ScrambleGridEngine {
 
   // ---- layout -------------------------------------------------------------
 
+  // Swap the viewport-dependent tuning (the phone/desktop profile) on a live
+  // engine. These four were previously read once in the constructor from a
+  // media query evaluated at load, so a phone rotated into landscape crossed
+  // the 639px breakpoint still carrying the portrait profile — full-resolution
+  // rasterising and phone-sized cells on a desktop-width viewport — and a
+  // desktop window dragged narrow kept the desktop profile. Only a reload
+  // fixed either.
+  //
+  // Returns true if anything actually changed, so callers can skip the
+  // relayout on the (common) no-op call.
+  setProfile(opts = {}) {
+    const next = {
+      cellTarget: opts.cellTarget ?? this.cellTarget,
+      pointBudget: opts.pointBudget ?? this.pointBudget,
+      renderScale: opts.renderScale ?? this.renderScale,
+      cellPointsBase: opts.cellPoints ?? this.cellPointsBase,
+    };
+    if (next.cellTarget === this.cellTarget && next.pointBudget === this.pointBudget
+      && next.renderScale === this.renderScale && next.cellPointsBase === this.cellPointsBase) return false;
+
+    Object.assign(this, next);
+    // layout() short-circuits when the backing size is unchanged, and a profile
+    // change can leave it unchanged (renderScale the same, only cellTarget
+    // moving). Clearing the cached dimensions forces the rebuild.
+    this.W = this.H = -1;
+    // Glyph bitmaps are keyed on cell size and particle radius, both of which
+    // this can move; the key check in settledBitmap handles it, but dropping
+    // the cache here keeps stale entries from lingering across the switch.
+    this.bmpCache = new Map();
+    this.bmpKey = null;
+    this.size();
+    return true;
+  }
+
   // Backing-store size (matches v1: dpr stays 1 so the CSS filter, which
   // applies at display scale, isn't scaled up with it) plus the pure grid
   // arithmetic from grid-layout.js.
@@ -188,7 +229,9 @@ export class ScrambleGridEngine {
       : planGrid(W, H);
     if (this.free) {
       this.cols = plan.cols; this.rows = plan.rows;
-      this.n = Math.max(this.minCellPoints, Math.min(this.n, Math.floor(this.pointBudget / plan.cells.length)));
+      // From the BASE each time, never from the last computed value, so this is
+      // a pure function of the current viewport and profile.
+      this.n = effectivePoints(this.cellPointsBase, this.minCellPoints, this.pointBudget, plan.cells.length);
     }
     this.cellW = plan.cellW;
     this.cellH = plan.cellH;

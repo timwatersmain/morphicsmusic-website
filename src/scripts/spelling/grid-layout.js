@@ -86,6 +86,19 @@ export function needsResize(canvas, dpr, renderScale) {
   return canvas.width !== w || canvas.height !== h;
 }
 
+// Points per cell for a given grid: the requested base, reduced so the whole
+// field fits the total point budget, but never below the floor where a glyph
+// stops resolving.
+//
+// It is a pure function of (base, budget, cellCount) ON PURPOSE. This used to
+// be computed in place against the engine's own previous value, so it could
+// only ratchet DOWN — growing the viewport cut points per cell and shrinking it
+// back never restored them, and swapping to a richer profile could not raise
+// them either. Density degraded for the rest of the session.
+export function effectivePoints(base, minPoints, budget, cellCount) {
+  return Math.max(minPoints, Math.min(base, Math.floor(budget / Math.max(1, cellCount))));
+}
+
 // Stagger order for the resolve sweep: left-to-right by centre x, both rows
 // interleaved so the sweep reads as one motion across the whole grid rather
 // than two independent per-row sweeps. Ties (same column in both rows) share

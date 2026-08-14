@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { gridRows, planGrid, planFreeGrid, backingSize, needsResize, staggerRanks, nextLetter, ROWS, LETTERS } from '../../src/scripts/spelling/grid-layout.js';
+import { gridRows, planGrid, planFreeGrid, backingSize, needsResize, effectivePoints, staggerRanks, nextLetter, ROWS, LETTERS } from '../../src/scripts/spelling/grid-layout.js';
 import { PHRASE } from '../../src/scripts/spelling/charmap.js';
 
 describe('gridRows', () => {
@@ -188,6 +188,45 @@ describe('needsResize', () => {
 
   it('treats an unsized canvas (width 0) as needing a resize', () => {
     expect(needsResize(canvas(390, 844, 0, 0), 1, 1)).toBe(true);
+  });
+});
+
+describe('effectivePoints', () => {
+  const BASE = 240, FLOOR = 56, BUDGET = 24000;
+
+  it('gives the full base when the budget comfortably covers the grid', () => {
+    expect(effectivePoints(BASE, FLOOR, BUDGET, 50)).toBe(BASE);   // 480 available
+  });
+
+  it('spreads the budget when there are more cells than it can fund', () => {
+    expect(effectivePoints(BASE, FLOOR, BUDGET, 260)).toBe(92);    // 24000/260
+  });
+
+  it('never drops below the floor where glyphs stop resolving', () => {
+    expect(effectivePoints(BASE, FLOOR, BUDGET, 10000)).toBe(FLOOR);
+  });
+
+  // The ratchet. Growing the viewport (more cells) used to permanently lower
+  // the engine's stored points-per-cell, because the new value was clamped
+  // against the previous one instead of against the base. Shrinking back, or
+  // switching to a richer profile, could then never restore density.
+  it('is a pure function of its inputs — density returns when cells do', () => {
+    const small = effectivePoints(BASE, FLOOR, BUDGET, 60);
+    const large = effectivePoints(BASE, FLOOR, BUDGET, 600);
+    const backAgain = effectivePoints(BASE, FLOOR, BUDGET, 60);
+    expect(large).toBeLessThan(small);
+    expect(backAgain).toBe(small);
+  });
+
+  it('raises points when a profile switch raises the base and budget', () => {
+    // Phone profile -> desktop profile at the same cell count.
+    const phone = effectivePoints(140, FLOOR, 10000, 144);
+    const desktop = effectivePoints(240, FLOOR, 24000, 144);
+    expect(desktop).toBeGreaterThan(phone);
+  });
+
+  it('never divides by zero on an empty grid', () => {
+    expect(effectivePoints(BASE, FLOOR, BUDGET, 0)).toBe(BASE);
   });
 });
 

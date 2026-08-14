@@ -127,10 +127,12 @@
   const canvas = document.getElementById('scramble-grid');
   const hiCanvas = document.getElementById('scramble-grid-hi');
   if (canvas) {
-    const small = window.matchMedia('(max-width: 639px)').matches;
-    const engine = new ScrambleGridEngine(canvas, {
-      free: true,
-      highlightCanvas: hiCanvas,
+    // Everything that depends on the viewport breakpoint lives here, as a
+    // function of `small`, so it can be re-applied when the breakpoint changes
+    // rather than being frozen at load. Rotating a phone into landscape crosses
+    // 639px, and before this the engine kept the portrait profile until reload.
+    const smallMQ = window.matchMedia('(max-width: 639px)');
+    const profileFor = (small) => ({
       // Cells are square, so this one number sets BOTH the letter size and the
       // spacing on both axes — there is no separate row knob (an earlier
       // extraRows: -4 bought fewer cells by stretching them vertically, which
@@ -145,11 +147,16 @@
       pointBudget: small ? 10000 : 24000,
       // Mobile renders at full resolution: at 0.6 each disc fell to ~1px —
       // sub-pixel, where the stroke stops matching the font (measured: ink ratio
-      // swung to 0.76 at that size versus ~1.00 above it). renderScale is part
-      // of the stroke calibration, not a perf knob — see grid-engine.js.
+      // swung to 0.76 at that size versus ~1.00 above it).
       renderScale: small ? 1 : 0.6,
-      minCellPoints: 56,
       cellPoints: small ? 140 : 240,
+    });
+
+    const engine = new ScrambleGridEngine(canvas, {
+      free: true,
+      highlightCanvas: hiCanvas,
+      ...profileFor(smallMQ.matches),
+      minCellPoints: 56,
       // Short morph, long jittered hold. The ratio between these two IS the
       // legibility of the field, because a cell mid-morph is not a letter: it
       // is a travelling union of discs, and the goo filter's alpha threshold
@@ -208,6 +215,22 @@
       });
       ro.observe(canvas);
     }
+
+    // Re-apply the profile whenever the breakpoint is crossed — a phone
+    // rotating, a desktop window dragged past 639px, a tablet folding. The
+    // engine ignores a no-op, and the repaint mirrors the ResizeObserver's for
+    // the same reason: setProfile re-sizes the canvas, which clears it.
+    const applyProfile = () => {
+      if (!engine.setProfile(profileFor(smallMQ.matches))) return;
+      measure();
+      if (reducedMQ.matches) engine.renderResolvedOnce();
+    };
+    // addEventListener on a MediaQueryList is the modern form; addListener is
+    // the fallback for older WebKit, which is exactly the engine this matters
+    // most on.
+    if (smallMQ.addEventListener) smallMQ.addEventListener('change', applyProfile);
+    else if (smallMQ.addListener) smallMQ.addListener(applyProfile);
+
     window.addEventListener('resize', measure);
     const enter = () => engine.enterResolve();
     const leave = () => engine.leaveResolve();
