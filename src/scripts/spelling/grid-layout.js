@@ -59,6 +59,33 @@ export function planGrid(canvasW, canvasH, opts = {}) {
   return { cells, cellW, cellH, rows, maxCols };
 }
 
+// The canvas backing-store size for a given CSS box. Rasterising below layout
+// size (renderScale) and letting CSS scale the result up is deliberate — see
+// grid-engine.js.
+export function backingSize(clientW, clientH, dpr, renderScale) {
+  return {
+    w: Math.floor(clientW * dpr * renderScale),
+    h: Math.floor(clientH * dpr * renderScale),
+  };
+}
+
+// Does the canvas need re-sizing to match its CSS box? Both axes, always.
+//
+// This exists as a shared function because the per-frame guard and size() used
+// to compute it separately, and the guard compared only width. That is the
+// mobile scroll glitch: iOS Safari collapses the URL bar on swipe-up, growing
+// this fixed, inset:0 canvas taller at the same width, and a width-only guard
+// sees nothing to do. CSS then stretches the old, shorter backing store over
+// the taller box and the lattice smears into stacked rows. Swiping back down
+// restored the original height, so the mismatch — and the glitch — vanished.
+//
+// Keeping ONE definition is the actual fix; the two callers can no longer
+// disagree about what "already the right size" means.
+export function needsResize(canvas, dpr, renderScale) {
+  const { w, h } = backingSize(canvas.clientWidth, canvas.clientHeight, dpr, renderScale);
+  return canvas.width !== w || canvas.height !== h;
+}
+
 // Stagger order for the resolve sweep: left-to-right by centre x, both rows
 // interleaved so the sweep reads as one motion across the whole grid rather
 // than two independent per-row sweeps. Ties (same column in both rows) share
@@ -84,18 +111,32 @@ export { LETTERS };
 // carries no phrase: every cell is an independent random letter, and the grid
 // is sized to the canvas rather than to a fixed row structure.
 //
-// Cells are square and butt directly against one another (the glyph's own
-// GLYPH_FILL inset supplies the visual gutter), so row spacing matches column
-// spacing and the field reads as an even lattice rather than as ruled lines.
+// Cells are TRULY square — cellW === cellH — and butt directly against one
+// another (the glyph's own GLYPH_FILL inset supplies the visual gutter), so the
+// gap between two side-by-side letters is exactly the gap between two stacked
+// ones and the field reads as an even lattice rather than as ruled lines.
+//
+// Squareness is a constraint, not an approximation, which is why only ONE of
+// the two axes can tile exactly. Width wins: the columns divide canvasW evenly
+// so no half-glyph is clipped at the left or right edge, where the eye reads a
+// hard vertical margin. The leftover on the height (always < one cell) is split
+// evenly top and bottom as a symmetric bleed — the field is full-bleed and
+// faint, so a glyph cropped by the viewport edge is invisible, whereas an
+// asymmetric letterbox is not.
+//
+// Deriving rows from the square size is also why there is no `extraRows` knob:
+// row count is a consequence of cell size, and adding rows independently is
+// exactly what made cells non-square before. Cell COUNT (the frame cost) is
+// tuned with `target` alone.
 export function planFreeGrid(canvasW, canvasH, opts = {}) {
   const target = opts.target ?? 120;
-  // extraRows pushes the lattice past the canvas's natural fit so the field
-  // reaches the bottom edge instead of stopping short of it.
-  const extraRows = opts.extraRows ?? 0;
   const cols = Math.max(1, Math.round(canvasW / target));
-  const rows = Math.max(1, Math.round(canvasH / target) + extraRows);
-  const cellW = canvasW / cols;
-  const cellH = canvasH / rows;
+  const cell = canvasW / cols;
+  // ceil, so the lattice always covers the full height rather than stopping
+  // short of the bottom edge.
+  const rows = Math.max(1, Math.ceil(canvasH / cell));
+  // <= 0: the overhang hangs off both edges equally.
+  const offsetY = (canvasH - rows * cell) / 2;
 
   const cells = [];
   for (let r = 0; r < rows; r++) {
@@ -104,12 +145,12 @@ export function planFreeGrid(canvasW, canvasH, opts = {}) {
         ch: nextLetter(null),
         row: r,
         col: c,
-        cx: c * cellW + cellW / 2,
-        cy: r * cellH + cellH / 2,
-        w: cellW,
-        h: cellH,
+        cx: c * cell + cell / 2,
+        cy: offsetY + r * cell + cell / 2,
+        w: cell,
+        h: cell,
       });
     }
   }
-  return { cells, cellW, cellH, cols, rows };
+  return { cells, cellW: cell, cellH: cell, cols, rows };
 }

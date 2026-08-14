@@ -27,21 +27,96 @@ const { title, currentPage = '', clean = false } = Astro.props;
        arrives with the CSS instead of after a third-party handshake — that
        round trip is what made the nav and headings reflow seconds after first
        paint. Space Grotesk was being requested here and used by nothing.
-       Only the icon font still comes from Google, so warm that connection. -->
+       The icon font is now self-hosted too — see the note on .icon below. -->
   <link rel="preload" href="/fonts/Rubik-Variable.woff2" as="font" type="font/woff2" crossorigin />
   <link rel="preload" href="/fonts/GeistMono-Variable.woff2" as="font" type="font/woff2" crossorigin />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <!-- display=block, not swap: these are ligature icons, so with swap the raw
-       ligature text ("shopping_cart") lays out at word width first and then
-       collapses to a glyph, which is the nav twitching a second in. block
-       keeps them invisible until the font is there, so nothing reflows. -->
-  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=block" rel="stylesheet" />
-  <style>
+  <link rel="preload" href="/fonts/MaterialSymbols-Subset.woff2" as="font" type="font/woff2" crossorigin />
+  <!-- is:global is REQUIRED, not stylistic. Astro scopes a plain <style> to the
+       component it appears in, and every .material-symbols-outlined lives in
+       TopNav / Cart / PlayerBar, never in this file — so a scoped rule matches
+       nothing and the icons silently fall back to literal ligature text. (The
+       old font-variation-settings block here was scoped too, and had therefore
+       never applied; the font-family it needed came from Google's own global
+       stylesheet.) -->
+  <style is:global>
+    /* Self-hosted and subset to the ~40 icons the site uses (1.1MB -> 10KB) by
+       scripts/subset-icon-font.mjs. Previously this came from Google, and that
+       round trip is what put "graphic_eqgrid_viewstorefrontsensors" across the
+       top of the page on mobile: Material Symbols are LIGATURE icons, so the
+       markup contains the literal words and any moment the font isn't ready is
+       a moment those words are real text laid out in the fallback face.
+       font-display: block only covers its own ~3s block period — on a slow
+       connection the font missed that window and the fallback painted anyway. */
+    @font-face {
+      font-family: 'Material Symbols Outlined';
+      font-style: normal;
+      font-weight: 100 700;
+      font-display: block;
+      src: url('/fonts/MaterialSymbols-Subset.woff2') format('woff2');
+    }
+
     .material-symbols-outlined {
+      font-family: 'Material Symbols Outlined';
+      font-weight: normal;
+      font-style: normal;
+      font-size: 24px;
+      line-height: 1;
+      letter-spacing: normal;
+      text-transform: none;
+      display: inline-block;
+      white-space: nowrap;
+      word-wrap: normal;
+      direction: ltr;
       font-variation-settings: 'FILL' 0, 'wght' 200, 'GRAD' 0, 'opsz' 24;
     }
+
+    /* Belt and braces: never let the ligature text paint, whatever the network
+       does. The glyph is transparent until the font is confirmed loaded (see
+       the inline script below), so a failure or a timeout degrades to a blank
+       square rather than to a run-on line of code. Space is still reserved, so
+       revealing the icons reflows nothing.
+       :not(.fonts-ready) rather than a .fonts-pending class, so the icons are
+       hidden from the very first paint without waiting for any script. */
+    html:not(.fonts-ready) .material-symbols-outlined { color: transparent; }
   </style>
+  <script is:inline>
+    // Runs before first paint. Icons are revealed ONLY once the face is
+    // confirmed usable — there is deliberately no timeout that reveals them
+    // anyway. If the font never arrives, the icons stay blank forever, because
+    // a blank slot next to a "MUSIC" label is a far better failure than the
+    // nav spelling out "graphic_eqgrid_viewstorefront". The only unconditional
+    // reveal is for a browser with no CSS Font Loading API, where we cannot
+    // tell the two states apart.
+    (function () {
+      var FONT = '24px "Material Symbols Outlined"';
+      var reveal = function () { document.documentElement.classList.add('fonts-ready'); };
+      if (!document.fonts || !document.fonts.check) { reveal(); return; }
+      // Poll rather than awaiting a single fonts.load(). This script runs before
+      // Astro's bundled stylesheet, so at this point the @font-face is not yet
+      // registered and a one-shot load() resolves with an empty list — it looks
+      // identical to a failure, and the icons would stay hidden forever on a
+      // perfectly good page. Polling check() waits for the face to appear AND
+      // finish loading. It gives up after ~10s without revealing, so a genuinely
+      // missing font still never paints ligature text.
+      // The test is the FACE's own status, not fonts.check(): check() reports
+      // whether text can be painted, and it answers true once a face has FAILED
+      // and the browser has settled on the fallback — precisely the case we must
+      // not reveal on.
+      var loaded = function () {
+        var ok = false;
+        document.fonts.forEach(function (f) {
+          if (f.family === 'Material Symbols Outlined' && f.status === 'loaded') ok = true;
+        });
+        return ok;
+      };
+      var t0 = Date.now();
+      (function poll() {
+        if (loaded()) { reveal(); return; }
+        document.fonts.load(FONT, 'close').catch(function () {});
+        if (Date.now() - t0 < 10000) setTimeout(poll, 100);
+      })();
+    })();
+  </script>
 </head>
 <body class="neural-bg min-h-screen font-body text-on-surface overflow-x-hidden">
   <ParticleBackground />

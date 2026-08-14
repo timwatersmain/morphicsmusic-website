@@ -16,7 +16,7 @@ import { ease } from './shapes.js';
 import { assign, box } from './pairing.js';
 import { displace, leadFor, pickMode } from './behaviours.js';
 import { resolveGooBlur, createFrameLoop } from './render-shared.js';
-import { planGrid, planFreeGrid, staggerRanks, nextLetter } from './grid-layout.js';
+import { planGrid, planFreeGrid, backingSize, needsResize, staggerRanks, nextLetter } from './grid-layout.js';
 
 const clone = (p) => ({ x: p.x, y: p.y });
 
@@ -82,6 +82,21 @@ const DOT_GROW = 2.0;
 // the real alphabet. Lower = crisper, at the cost of needing denser points.
 const BLUR_RATIO = 0.34;
 
+// BLUR_RATIO was calibrated at renderScale 0.6, and it has to be renormalised
+// for any other scale because the blur and the artwork live in DIFFERENT
+// coordinate spaces: stdDeviation is computed from backing pixels, but a CSS
+// filter applies at DISPLAY scale, after the browser has scaled the backing
+// store up by 1 / renderScale. So the blur the eye sees, measured against the
+// glyph, is proportional to renderScale itself.
+//
+// That is the mobile bug. At renderScale 1 the letters got 1/0.6 = 1.67x the
+// blur desktop gets, fed into a filter that HARD-THRESHOLDS alpha (feColorMatrix
+// 26 / -13): counters fill in, corners round off, neighbouring strokes fuse, and
+// a field of letters collapses into a field of blobs. Renormalising by
+// BLUR_REF / renderScale makes the rendered letterform independent of the scale
+// it was rasterised at — desktop is unchanged (0.6 / 0.6 = 1).
+const BLUR_REF = 0.6;
+
 // Behaviours that keep the mass coherent while it travels. The full 25 include
 // split / seam / boil / tendril / braid, which deliberately tear the form apart
 // mid-morph — striking on one large glyph, but across a field of small letters
@@ -114,7 +129,6 @@ export class ScrambleGridEngine {
     // has to happen by compositing a separate layer at a higher CSS opacity.
     this.hiCanvas = opts.highlightCanvas ?? null;
     this.cellTarget = opts.cellTarget ?? 120;
-    this.extraRows = opts.extraRows ?? 0;
     this.pointBudget = opts.pointBudget ?? 9000;
     this.minCellPoints = opts.minCellPoints ?? 45;
     this.morphMs = opts.morphMs ?? 620;
@@ -127,10 +141,11 @@ export class ScrambleGridEngine {
     // blurred, so the lost resolution is not visible. NOTE: this was introduced
     // believing the SVG goo filter was the dominant per-frame cost. It is not —
     // removing the filter entirely changes frame time by nothing measurable.
-    // The scale still matters, but as CALIBRATION, not performance:
-    // STROKE_DILATION_PX is a device-pixel constant, so changing renderScale
-    // changes stroke weight (measured: 0.8 -> +5% ink, 1.0 -> +11%). Treat it
-    // as a locked part of the letterform calibration, not a perf knob.
+    // Changing renderScale used to change apparent stroke weight (measured:
+    // 0.8 -> +5% ink, 1.0 -> +11%) because the goo blur was applied in display
+    // space while being computed in backing space. renderFrame now renormalises
+    // stdDeviation by BLUR_REF / renderScale, so the letterform is scale-
+    // independent and this IS a perf knob again.
     this.renderScale = opts.renderScale ?? 0.55;
     // 0 = run at vsync. See createFrameLoop: a 20ms cap judders on a 60Hz display.
     this.loop = createFrameLoop((now) => this.renderFrame(now), 0);
@@ -151,8 +166,7 @@ export class ScrambleGridEngine {
   size() {
     const c = this.canvas;
     if (!c || !c.clientWidth) return;
-    const w = Math.floor(c.clientWidth * this.dpr * this.renderScale);
-    const h = Math.floor(c.clientHeight * this.dpr * this.renderScale);
+    const { w, h } = backingSize(c.clientWidth, c.clientHeight, this.dpr, this.renderScale);
     if (c.width !== w || c.height !== h) { c.width = w; c.height = h; }
     this.layout();
   }
@@ -170,7 +184,7 @@ export class ScrambleGridEngine {
     // points, not cell count, is what drives frame cost, and a measured cliff
     // sits near 16000 points in this Chrome build.
     const plan = this.free
-      ? planFreeGrid(W, H, { target: this.cellTarget * this.renderScale, extraRows: this.extraRows })
+      ? planFreeGrid(W, H, { target: this.cellTarget * this.renderScale })
       : planGrid(W, H);
     if (this.free) {
       this.cols = plan.cols; this.rows = plan.rows;
@@ -450,7 +464,8 @@ export class ScrambleGridEngine {
   renderFrame(now) {
     const c = this.canvas;
     if (!c || !c.isConnected || !c.clientWidth) return;
-    if (!c.width || c.width !== Math.floor(c.clientWidth * this.dpr * this.renderScale)) this.size();
+    // Both axes — a height-only change is the iOS URL-bar case. See needsResize.
+    if (needsResize(c, this.dpr, this.renderScale)) this.size();
     if (!this.cells.length) return;
 
     const ctx = c.getContext('2d');
@@ -479,7 +494,7 @@ export class ScrambleGridEngine {
     this.discR = R;
 
     if (!this.fltNow) { c.style.filter = 'url(#spelling-grid-goo)'; this.fltNow = true; }
-    const stdDev = (S0 * BLUR_RATIO).toFixed(2);
+    const stdDev = (S0 * BLUR_RATIO * (BLUR_REF / this.renderScale)).toFixed(2);
     if (this.stdDevNow !== stdDev) {
       const blurEl = this.gooBlurEl();
       if (blurEl) blurEl.setAttribute('stdDeviation', stdDev);

@@ -33,7 +33,21 @@
     /* Fixed rather than absolute so the field covers the whole viewport — the
        hero section stops short of the bottom edge, which left a bare band. */
     position: fixed;
-    inset: 0;
+    top: 0;
+    left: 0;
+    width: 100%;
+    /* Height is pinned to the LARGE viewport (URL bar hidden) rather than to
+       inset: 0, so that it does not change while scrolling on mobile.
+       inset: 0 tracked the shrinking viewport, so every swipe that collapsed
+       or restored Safari's URL bar resized the canvas mid-scroll — which both
+       reshuffled the whole field and, before needsResize covered the height
+       axis, stretched a stale backing store over the taller box. Pinning to
+       100lvh means the URL bar moving is not a resize at all: the field is
+       always drawn at its tallest and the browser chrome simply slides over
+       it. 100vh first as the fallback for browsers without lvh; on iOS that
+       has always resolved to the large viewport too. */
+    height: 100vh;
+    height: 100lvh;
     display: block;
     pointer-events: none;
   }
@@ -117,11 +131,12 @@
     const engine = new ScrambleGridEngine(canvas, {
       free: true,
       highlightCanvas: hiCanvas,
-      cellTarget: small ? 46 : 72,
-      // Two fewer rows: cells stay the same WIDTH (so letter size is unchanged)
-      // and simply get taller, trading a little vertical spacing for ~15% fewer
-      // cells to draw every frame.
-      extraRows: -4,
+      // Cells are square, so this one number sets BOTH the letter size and the
+      // spacing on both axes — there is no separate row knob (an earlier
+      // extraRows: -4 bought fewer cells by stretching them vertically, which
+      // is what left the field with wide horizontal gutters and much wider
+      // vertical ones). Raise this to draw fewer cells per frame.
+      cellTarget: small ? 52 : 72,
       // Total points, not cell count, drives frame cost, so the budget is
       // spread across however many cells the viewport fits. The old "cliff near
       // 16000" was an artefact of the per-particle drawImage this engine no
@@ -135,16 +150,28 @@
       renderScale: small ? 1 : 0.6,
       minCellPoints: 56,
       cellPoints: small ? 140 : 240,
-      // Long, jittered holds: a cell in hold is one cached blit instead of a
-      // fresh arc union, so hold length still trims frame cost. Randomness is
-      // what keeps the field from pulsing in unison.
-      // Short morph, long hold: cells read as settled letters ~90% of the time.
-      // Everything is always moving: a brief pause on each letter, then straight
-      // into the next morph. Most cells are mid-morph at any instant, so the
-      // settled-glyph cache no longer carries the frame — the allocation-free
-      // inner loop in grid-engine does.
-      morphMs: 1100,
-      holdMs: 520,
+      // Short morph, long jittered hold. The ratio between these two IS the
+      // legibility of the field, because a cell mid-morph is not a letter: it
+      // is a travelling union of discs, and the goo filter's alpha threshold
+      // fills that union into a solid blob. The fraction of cells showing a
+      // real letter at any instant is hold / (morph + hold).
+      //
+      // These were previously 1100 / 520 — a LONG morph and a SHORT hold,
+      // exactly inverted from what the comment here claimed. Measured over 270
+      // frames that left only 34% of cells settled (min 12%), so two thirds of
+      // the field was blobs at any moment. On desktop, 20 columns of small
+      // glyphs, that passed as texture; on mobile, 8 big columns, it read as a
+      // grid of squares.
+      //
+      // At 380 / 2400 the mean cycle is 380 + 2400*1.2 = 3.26s, so ~88% of
+      // cells are settled letters and the morph is a brief snap between them.
+      // The field is still busy — 144 cells on a phone means roughly 44 cells
+      // begin a morph every second. Holds are also cheaper than morphs (a hold
+      // is one cached blit, a morph is a fresh arc union), so this cuts frame
+      // cost as well. Randomness in the hold is what keeps the field from
+      // pulsing in unison.
+      morphMs: 380,
+      holdMs: 2400,
     });
 
     // The phrase sits in the lattice rows under the ENTER button, so the engine
@@ -157,6 +184,30 @@
       engine.setPhraseAnchor({ cx: t.left + t.width / 2 - c.left, bottom: t.bottom - c.top });
     };
     measure();
+
+    // ResizeObserver rather than window 'resize': it fires for ANY change to
+    // the canvas's own box — orientation, chrome sliding, the on-screen
+    // keyboard, a zoom — including the mobile cases where window 'resize' is
+    // late or never arrives. The per-frame needsResize guard already corrects
+    // geometry within one frame while animating; this is what covers the paths
+    // where no frame is running (reduced-motion's single static render, or the
+    // IntersectionObserver having stopped the loop).
+    //
+    // Re-rendering afterwards is NOT optional: assigning canvas.width/height
+    // clears the bitmap, so any resize leaves the field blank until something
+    // paints again. Under prefers-reduced-motion there is no rAF loop to do
+    // that — renderResolvedOnce() drew the only frame there will ever be — so
+    // the resize must repaint explicitly or the grid simply disappears.
+    const reducedMQ = window.matchMedia('(prefers-reduced-motion: reduce)');
+    let ro = null;
+    if (window.ResizeObserver) {
+      ro = new ResizeObserver(() => {
+        engine.size();
+        measure();
+        if (reducedMQ.matches) engine.renderResolvedOnce();
+      });
+      ro.observe(canvas);
+    }
     window.addEventListener('resize', measure);
     const enter = () => engine.enterResolve();
     const leave = () => engine.leaveResolve();
@@ -203,8 +254,7 @@
       });
     }
 
-    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
-    if (reduced.matches) {
+    if (reducedMQ.matches) {
       // One static, already-resolved frame: no rAF loop, no cell scheduling.
       engine.renderResolvedOnce();
     } else {
@@ -219,6 +269,7 @@
 
       window.addEventListener('pagehide', () => {
         io.disconnect();
+        if (ro) ro.disconnect();
         engine.destroy();
         if (trigger) {
           trigger.removeEventListener('mouseenter', enter);
@@ -229,6 +280,8 @@
       });
     }
 
-    window.addEventListener('resize', () => engine.size());
+    // Kept for browsers without ResizeObserver; where it exists, the observer
+    // above has already handled the resize and engine.size() is a no-op.
+    if (!ro) window.addEventListener('resize', () => engine.size());
   }
 </script>

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { gridRows, planGrid, staggerRanks, nextLetter, ROWS, LETTERS } from '../../src/scripts/spelling/grid-layout.js';
+import { gridRows, planGrid, planFreeGrid, backingSize, needsResize, staggerRanks, nextLetter, ROWS, LETTERS } from '../../src/scripts/spelling/grid-layout.js';
 import { PHRASE } from '../../src/scripts/spelling/charmap.js';
 
 describe('gridRows', () => {
@@ -80,6 +80,114 @@ describe('planGrid', () => {
         expect(c.cy + c.h / 2).toBeLessThanOrEqual(h + 0.01);
       }
     }
+  });
+});
+
+describe('planFreeGrid', () => {
+  // Every viewport the field actually has to survive: phone portrait, phone
+  // landscape, tablet, laptop, ultrawide, and the awkward in-between widths.
+  const VIEWPORTS = [
+    [390, 844], [844, 390], [360, 640], [768, 1024],
+    [1024, 768], [1440, 900], [2560, 1080], [900, 260], [517, 731],
+  ];
+
+  it('makes cells exactly square at every viewport — this is the whole point', () => {
+    for (const [w, h] of VIEWPORTS) {
+      const { cellW, cellH, cells } = planFreeGrid(w, h, { target: 72 });
+      expect(cellW).toBeCloseTo(cellH, 9);
+      for (const c of cells) {
+        expect(c.w).toBeCloseTo(c.h, 9);
+      }
+    }
+  });
+
+  it('spaces neighbours identically across and down, so the lattice reads even', () => {
+    for (const [w, h] of VIEWPORTS) {
+      const { cells, cols, rows } = planFreeGrid(w, h, { target: 72 });
+      if (cols < 2 || rows < 2) continue;
+      const at = (r, c) => cells[r * cols + c];
+      const dx = at(0, 1).cx - at(0, 0).cx;
+      const dy = at(1, 0).cy - at(0, 0).cy;
+      expect(dx).toBeCloseTo(dy, 9);
+    }
+  });
+
+  it('tiles the width exactly, so no glyph is clipped at the left or right edge', () => {
+    for (const [w, h] of VIEWPORTS) {
+      const { cells, cols, cellW } = planFreeGrid(w, h, { target: 72 });
+      expect(cols * cellW).toBeCloseTo(w, 9);
+      expect(cells[0].cx - cellW / 2).toBeCloseTo(0, 9);
+      expect(cells[cols - 1].cx + cellW / 2).toBeCloseTo(w, 9);
+    }
+  });
+
+  it('covers the full height, bleeding equally off the top and bottom', () => {
+    for (const [w, h] of VIEWPORTS) {
+      const { cells, cols, rows, cellH } = planFreeGrid(w, h, { target: 72 });
+      const top = cells[0].cy - cellH / 2;
+      const bottom = cells[(rows - 1) * cols].cy + cellH / 2;
+      expect(top).toBeLessThanOrEqual(0.000001);          // reaches the top edge
+      expect(bottom).toBeGreaterThanOrEqual(h - 0.000001); // and the bottom
+      expect(top).toBeCloseTo(h - bottom, 9);              // symmetric overhang
+    }
+  });
+
+  it('scales cell count with the target, keeping cells square either way', () => {
+    const coarse = planFreeGrid(1440, 900, { target: 120 });
+    const fine = planFreeGrid(1440, 900, { target: 40 });
+    expect(fine.cells.length).toBeGreaterThan(coarse.cells.length);
+    expect(coarse.cellW).toBeCloseTo(coarse.cellH, 9);
+    expect(fine.cellW).toBeCloseTo(fine.cellH, 9);
+  });
+
+  it('never degenerates below a single cell on a tiny canvas', () => {
+    const { cells, cols, rows } = planFreeGrid(10, 10, { target: 400 });
+    expect(cols).toBe(1);
+    expect(rows).toBeGreaterThanOrEqual(1);
+    expect(cells.length).toBe(cols * rows);
+  });
+});
+
+describe('needsResize', () => {
+  // A canvas stand-in: the four numbers the check actually reads.
+  const canvas = (clientW, clientH, w, h) => ({ clientWidth: clientW, clientHeight: clientH, width: w, height: h });
+
+  it('is quiet when the backing store already matches the CSS box', () => {
+    expect(needsResize(canvas(390, 844, 390, 844), 1, 1)).toBe(false);
+    expect(needsResize(canvas(1440, 900, 864, 540), 1, 0.6)).toBe(false);
+  });
+
+  it('notices a WIDTH-only change', () => {
+    expect(needsResize(canvas(500, 844, 390, 844), 1, 1)).toBe(true);
+  });
+
+  // The mobile scroll glitch. iOS Safari collapses the URL bar on swipe-up,
+  // which makes the fixed, inset:0 grid taller while its width is untouched.
+  // The old per-frame guard compared width only, so the canvas kept its short
+  // backing store and CSS stretched that image over the taller box — the
+  // "stacked / glitching" field. Swiping down restored the original height and
+  // with it the match, which is why scrolling back appeared to fix it.
+  it('notices a HEIGHT-only change — the iOS URL-bar case', () => {
+    expect(needsResize(canvas(390, 934, 390, 844), 1, 1)).toBe(true);
+    expect(needsResize(canvas(390, 754, 390, 844), 1, 1)).toBe(true);
+  });
+
+  it('notices both changing at once, as on orientation change', () => {
+    expect(needsResize(canvas(844, 390, 390, 844), 1, 1)).toBe(true);
+  });
+
+  it('agrees with backingSize, so the check and the resize cannot drift apart', () => {
+    for (const [cw, ch, rs] of [[390, 844, 1], [1440, 900, 0.6], [844, 390, 1], [1024, 768, 0.55]]) {
+      const { w, h } = backingSize(cw, ch, 1, rs);
+      expect(needsResize(canvas(cw, ch, w, h), 1, rs)).toBe(false);
+      // One device pixel off in either axis must still be caught.
+      expect(needsResize(canvas(cw, ch, w, h - 1), 1, rs)).toBe(true);
+      expect(needsResize(canvas(cw, ch, w - 1, h), 1, rs)).toBe(true);
+    }
+  });
+
+  it('treats an unsized canvas (width 0) as needing a resize', () => {
+    expect(needsResize(canvas(390, 844, 0, 0), 1, 1)).toBe(true);
   });
 });
 
