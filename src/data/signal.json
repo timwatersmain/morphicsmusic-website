@@ -1,5 +1,19 @@
 [
   {
+    "id": "instagram_17873827890629598",
+    "title": "- SERAPHIC   THE SECOND TRACK OF MY UPCOMING EP SCRYING THE ",
+    "type": "video",
+    "mediaUrl": "/api/social-media/instagram_d0e837c1cce4a373.mp4",
+    "thumbnail": "",
+    "caption": "- Seraphic \n\nThe second track of my upcoming EP Scrying the Veil",
+    "date": "2026-08-13",
+    "platform": "instagram",
+    "url": "https://www.instagram.com/reel/Db_0kaDxJKf/",
+    "originalPlatforms": [
+      "instagram"
+    ]
+  },
+  {
     "id": "instagram_18130134985590342",
     "title": "05/23 | SHORT SNIPPET OF SYNAPTIC ACID, A SINGLE OFF MY UPCO",
     "type": "video",
@@ -133,7 +147,7 @@
     "id": "instagram_18083860484246255",
     "title": "🧿🧿🧿",
     "type": "video",
-    "mediaUrl": "",
+    "mediaUrl": "/api/social-media/instagram_f800f9ee0eb84155.mp4",
     "thumbnail": "",
     "caption": "🧿🧿🧿",
     "date": "2026-03-06",
