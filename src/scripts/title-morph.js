@@ -20,11 +20,16 @@ const TARGET_POINTS = 2600;
 const MORPH_MS = 620;   // snappier than the 900 it shipped at
 const HANDOFF_MS = 160;   // canvas fades out as the real <h1> fades in
 
-// Modes that pull the form apart on the way across rather than sliding it.
-// These are the ones the grid engine deliberately EXCLUDES, because there they
-// would read as debris across a field of small letters. On one large word they
-// are the whole point.
-export const FORMLESS = ['boil', 'tendril', 'split', 'seam', 'braid', 'cascade', 'unwind', 'vortex'];
+// The rotation, chosen by ear in /lab/title-morph rather than from the source.
+// Tim kept: direct, wave, ripple, magnet, snake, peel, knit, furl.
+// Explicitly rejected: vortex, unwind, split, braid, seam — the hardest-tearing
+// ones, which scatter so far that the word stops reading as a word. The
+// remaining behaviours (boil, tendril, cascade, swirl, implode, spin, orbit,
+// shear, fold, inhale, lathe, quench) are simply not endorsed; add them only
+// after auditioning them in the lab.
+export const TITLE_MODES = [
+  'direct', 'wave', 'ripple', 'magnet', 'snake', 'peel', 'knit', 'furl',
+];
 
 const titleEl = () => document.querySelector('main h1:not([data-no-vt])');
 const titleText = (el) => (el?.textContent || '').trim().replace(/\s+/g, ' ');
@@ -118,7 +123,7 @@ function equalise(a, b) {
 // duration — auditioning the 25 behaviours is otherwise guesswork.
 export function morphWord(h1, fromWord, toWord, opts = {}) {
   const ms = opts.ms ?? MORPH_MS;
-  const mode = opts.mode || FORMLESS[(Math.random() * FORMLESS.length) | 0];
+  const mode = opts.mode || TITLE_MODES[(Math.random() * TITLE_MODES.length) | 0];
   const onDone = opts.onDone;
   // Where the particle canvas is attached. Defaults to <body> in page
   // coordinates, which is right for a normal page title. A caller whose title

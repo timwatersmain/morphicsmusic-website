@@ -19,8 +19,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
     </h2>
     <p class="font-mono text-[11px] text-white/40 mb-10 max-w-xl leading-relaxed">
       Every behaviour in <code>behaviours.js</code>, played on a real page title.
-      Tap a mode to watch it. The eight marked <span class="text-secondary">SHIPPING</span>
-      are the ones currently in rotation on the site.
+      Tap a mode to watch it. The eight marked in green are the rotation currently shipping.
     </p>
 
     <!-- The stage. This h1 is the real thing: same classes as every section
@@ -59,7 +58,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 </BaseLayout>
 
 <script>
-  import { morphWord, FORMLESS } from '../../scripts/title-morph.js';
+  import { morphWord, TITLE_MODES } from '../../scripts/title-morph.js';
   import { MODES } from '../../scripts/spelling/behaviours.js';
 
   const h1 = document.getElementById('lab-title');
@@ -110,7 +109,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
   replay.addEventListener('click', () => last && play(last));
 
   for (const mode of MODES) {
-    const shipping = FORMLESS.includes(mode);
+    const shipping = TITLE_MODES.includes(mode);
     const b = document.createElement('button');
     b.dataset.mode = mode;
     b.className =
