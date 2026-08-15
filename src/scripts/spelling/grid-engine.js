@@ -135,6 +135,18 @@ export class ScrambleGridEngine {
     // does not dim a glyph — it drops below the cut and erases it. Brightening
     // has to happen by compositing a separate layer at a higher CSS opacity.
     this.hiCanvas = opts.highlightCanvas ?? null;
+    // The SVG goo filter blurs the disc union and HARD-THRESHOLDS its alpha
+    // (feColorMatrix 26 / -13) to fuse the discs into a smooth stroke. That
+    // threshold is a cliff: a small per-engine difference in how the blur is
+    // rasterised is the difference between a clean letter, a solid square, and
+    // nothing at all. Measured in WebKit, the same page renders letters at
+    // stdDeviation 0.36 and an almost entirely BLANK field at 8.
+    //
+    // iOS Safari lands on the wrong side of that cliff and fills every cell
+    // into an identical rounded square. With the filter off the letterforms
+    // survive on every engine, because the disc union already IS the stroke —
+    // the filter only ever smoothed its outline. Determinism beats the polish.
+    this.goo = opts.goo ?? true;
     this.cellTarget = opts.cellTarget ?? 120;
     this.pointBudget = opts.pointBudget ?? 9000;
     this.minCellPoints = opts.minCellPoints ?? 45;
@@ -183,9 +195,11 @@ export class ScrambleGridEngine {
       pointBudget: opts.pointBudget ?? this.pointBudget,
       renderScale: opts.renderScale ?? this.renderScale,
       cellPointsBase: opts.cellPoints ?? this.cellPointsBase,
+      goo: opts.goo ?? this.goo,
     };
     if (next.cellTarget === this.cellTarget && next.pointBudget === this.pointBudget
-      && next.renderScale === this.renderScale && next.cellPointsBase === this.cellPointsBase) return false;
+      && next.renderScale === this.renderScale && next.cellPointsBase === this.cellPointsBase
+      && next.goo === this.goo) return false;
 
     Object.assign(this, next);
     // layout() short-circuits when the backing size is unchanged, and a profile
@@ -197,6 +211,9 @@ export class ScrambleGridEngine {
     // the cache here keeps stale entries from lingering across the switch.
     this.bmpCache = new Map();
     this.bmpKey = null;
+    // Force the filter state to be re-applied; `goo` may have flipped.
+    this.fltNow = null;
+    this.stdDevNow = null;
     this.size();
     return true;
   }
@@ -529,19 +546,35 @@ export class ScrambleGridEngine {
     // One radius for the whole canvas — cells share a uniform size, so one
     // sprite and one filter stdDeviation serve every cell (single filter pass).
     const trueHalf = Math.min(this.cellW, this.cellH) * GLYPH_FILL * (HALF / 120);
-    const S0 = Math.max(MIN_STROKE_PX, trueHalf - STROKE_DILATION_PX);
+    // STROKE_DILATION_PX exists to cancel the fattening the blur-and-threshold
+    // adds. With the filter off there is no such fattening, so subtracting it
+    // would render the stroke thin and beaded — the pen is the true half-stroke.
+    const S0 = this.goo
+      ? Math.max(MIN_STROKE_PX, trueHalf - STROKE_DILATION_PX)
+      : Math.max(MIN_STROKE_PX, trueHalf);
     this.Rpx = S0;
     // Particle radius: the same S0 * 2.24 diameter the sprite pipeline drew,
     // corrected for the flat union (see UNION_R_MUL).
     const R = S0 * 2.24 / 2;
     this.discR = R;
 
-    if (!this.fltNow) { c.style.filter = 'url(#spelling-grid-goo)'; this.fltNow = true; }
-    const stdDev = (S0 * BLUR_RATIO * (BLUR_REF / this.renderScale)).toFixed(2);
-    if (this.stdDevNow !== stdDev) {
-      const blurEl = this.gooBlurEl();
-      if (blurEl) blurEl.setAttribute('stdDeviation', stdDev);
-      this.stdDevNow = stdDev;
+    if (this.goo) {
+      if (this.fltNow !== true) {
+        c.style.filter = 'url(#spelling-grid-goo)';
+        if (this.hiCanvas) this.hiCanvas.style.filter = 'url(#spelling-grid-goo)';
+        this.fltNow = true;
+      }
+      const stdDev = (S0 * BLUR_RATIO * (BLUR_REF / this.renderScale)).toFixed(2);
+      if (this.stdDevNow !== stdDev) {
+        const blurEl = this.gooBlurEl();
+        if (blurEl) blurEl.setAttribute('stdDeviation', stdDev);
+        this.stdDevNow = stdDev;
+      }
+    } else if (this.fltNow !== false) {
+      // Both canvases: the highlight layer carries the same filter from CSS.
+      c.style.filter = 'none';
+      if (this.hiCanvas) this.hiCanvas.style.filter = 'none';
+      this.fltNow = false;
     }
 
     const S = Math.min(this.cellW, this.cellH) * GLYPH_FILL;

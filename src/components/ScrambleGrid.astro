@@ -150,6 +150,14 @@
       // swung to 0.76 at that size versus ~1.00 above it).
       renderScale: small ? 1 : 0.6,
       cellPoints: small ? 140 : 240,
+      // Goo OFF on mobile. The filter's alpha threshold is a cliff, and iOS
+      // Safari lands on the wrong side of it: every cell fills into an
+      // identical rounded square, which is what shipped and what no amount of
+      // stdDeviation tuning fixed, because the failure is the threshold rather
+      // than the blur width. Unfiltered, the disc union already reads as the
+      // letter on every engine. Desktop keeps the filter — it has never been
+      // reported wrong there, and this is the narrower change.
+      goo: !small,
     });
 
     const engine = new ScrambleGridEngine(canvas, {
