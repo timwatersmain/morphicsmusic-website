@@ -97,15 +97,117 @@
   --radius-full: 9999px; /* pills: buttons, badges */
 }
 
+/* Cross-document view transitions.
+   Deliberately NOT Astro's <ClientRouter />: that swaps the site to
+   client-side routing, which would re-run (or fail to re-run) the cart,
+   player-bar and preview-player wiring on every navigation. This is the pure
+   CSS form — the browser animates between two real page loads, so the page
+   lifecycle is completely unchanged and a browser without support (Firefox
+   today) just navigates normally. */
+@view-transition {
+  navigation: auto;
+}
+
 @layer base {
   body {
     background-color: #0A0A0A;
     color: #E5E2E1;
   }
 
+  /* The page title is the shared element: every section's <h1> claims the same
+     transition name, so the browser treats MUSIC / STORE / SOCIAL / VISUALS as
+     one element that changed, and interpolates its box while crossfading the
+     glyphs. That reads as the title morphing rather than the page reloading.
+     Matching on `main h1` rather than a class means any new page joins in for
+     free; the landing opts out via data-no-vt because its h1 is the wordmark
+     image and it already plays the ENTER zoom. */
+  main h1:not([data-no-vt]) {
+    view-transition-name: page-title;
+  }
+
+  /* Chrome that is identical across pages gets its own names so it stays put
+     instead of being crossfaded along with the page body. */
+  #site-header {
+    view-transition-name: site-nav;
+  }
+
   ::selection {
     background-color: #00f0ff;
     color: #006970;
+  }
+
+  /* --- view transition choreography ------------------------------------- */
+
+  /* The page body: a quick crossfade, kept short so navigation still feels
+     instant. The title outlasts it, which is what makes the title read as the
+     thing being carried across rather than as part of the fade. */
+  ::view-transition-old(root) {
+    animation: vt-fade-out 180ms cubic-bezier(0.4, 0, 1, 1) both;
+  }
+  ::view-transition-new(root) {
+    animation: vt-fade-in 260ms cubic-bezier(0, 0, 0.2, 1) 60ms both;
+  }
+
+  /* The title morph. Both snapshots are stretched to the SAME interpolated box
+     by the browser, so the letterforms squash toward each other while they
+     crossfade — the old word appears to become the new one. A touch of blur at
+     the midpoint hides the fact that these are two different words rather than
+     a true glyph interpolation; without it the crossfade reads as a dissolve. */
+  ::view-transition-old(page-title) {
+    animation: vt-title-out 460ms cubic-bezier(0.6, 0, 0.4, 1) both;
+  }
+  ::view-transition-new(page-title) {
+    animation: vt-title-in 460ms cubic-bezier(0.6, 0, 0.4, 1) both;
+  }
+  /* Stretch rather than letterbox: the two words have different aspect ratios,
+     and the default `object-fit` keeps each snapshot's own proportions, which
+     makes them slide past one another instead of morphing. */
+  ::view-transition-group(page-title) {
+    animation-duration: 460ms;
+    animation-timing-function: cubic-bezier(0.6, 0, 0.4, 1);
+  }
+  ::view-transition-image-pair(page-title) {
+    isolation: auto;
+  }
+  ::view-transition-old(page-title),
+  ::view-transition-new(page-title) {
+    width: 100%;
+    height: 100%;
+    object-fit: fill;
+    mix-blend-mode: normal;
+  }
+
+  /* The nav never changes, so it should not animate at all. */
+  ::view-transition-old(site-nav),
+  ::view-transition-new(site-nav) {
+    animation: none;
+    mix-blend-mode: normal;
+  }
+
+  @keyframes vt-fade-out {
+    to { opacity: 0; }
+  }
+  @keyframes vt-fade-in {
+    from { opacity: 0; }
+  }
+  @keyframes vt-title-out {
+    0%   { opacity: 1; filter: blur(0); }
+    60%  { opacity: 0; filter: blur(6px); }
+    100% { opacity: 0; filter: blur(6px); }
+  }
+  @keyframes vt-title-in {
+    0%   { opacity: 0; filter: blur(6px); }
+    40%  { opacity: 0; filter: blur(6px); }
+    100% { opacity: 1; filter: blur(0); }
+  }
+
+  /* Motion is the whole point here, so honour the preference completely. */
+  @media (prefers-reduced-motion: reduce) {
+    ::view-transition-group(*),
+    ::view-transition-old(*),
+    ::view-transition-new(*) {
+      animation: none !important;
+    }
   }
 
   /* Rounding by ROLE rather than by hand-editing every class attribute. The
