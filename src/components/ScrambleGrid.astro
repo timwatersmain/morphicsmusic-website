@@ -240,8 +240,18 @@
     else if (smallMQ.addListener) smallMQ.addListener(applyProfile);
 
     window.addEventListener('resize', measure);
-    const enter = () => engine.enterResolve();
-    const leave = () => engine.leaveResolve();
+    // Set once the exit transition has begun. The pointer almost always slides
+    // off the button while the page is zooming away, and un-resolving the
+    // phrase mid-flight would scramble it just as it rushes past the camera.
+    let leaving = false;
+    // Sticky: has this visitor ever had the phrase resolved, by hover or focus?
+    // Deliberately not "is it resolved right now" — the pointer crossing the
+    // button's edge for a moment clears that, and someone who has already read
+    // the phrase should not be made to sit through the full first-sight hold
+    // just because their mouse wobbled on the way to clicking.
+    let seenPhrase = false;
+    const enter = () => { seenPhrase = true; engine.enterResolve(); };
+    const leave = () => { if (!leaving) engine.leaveResolve(); };
     if (trigger) {
       trigger.addEventListener('mouseenter', enter);
       trigger.addEventListener('mouseleave', leave);
@@ -249,23 +259,31 @@
       trigger.addEventListener('blur', leave);
     }
 
-    // Touch devices have no hover, so the phrase would never be seen there.
-    // Tapping ENTER instead plays it as a deliberate exit: the phrase resolves
-    // and locks, holds long enough to read, then the whole page zooms through
-    // and fades out before navigating. Gated on the device genuinely lacking
-    // hover rather than on screen width, so a small window on a desktop keeps
-    // the instant click.
-    const coarse = window.matchMedia('(hover: none), (pointer: coarse)').matches;
-    if (trigger && coarse) {
-      const RESOLVE_MS = 620;   // phrase morphs in
-      const READ_MS = 560;      // held, legible
-      const ZOOM_MS = 820;      // zoom + fade through
-      let leaving = false;
+    // Activating ENTER plays a deliberate exit on every device: the phrase
+    // resolves and locks, holds long enough to read, then the whole page zooms
+    // through and fades out before navigating.
+    //
+    // This used to be gated on (hover: none) so only touch got it, on the
+    // reasoning that touch has no hover and would otherwise never see the
+    // phrase. But the zoom is the payoff, not a consolation prize for touch —
+    // desktop just navigated instantly and never showed it.
+    //
+    // The two cases differ only in how long to hold before the zoom. A pointer
+    // user has been resolving the phrase on hover and has already read it, so
+    // they get a short beat; a tap is the first time the phrase appears, so it
+    // gets the full read. Either way the zoom never starts mid-morph: whatever
+    // is left of the resolve is waited out first, which also covers clicking
+    // the instant after hovering.
+    if (trigger) {
+      const RESOLVE_MS = 620;    // phrase morphs in
+      const READ_MS = 560;       // held, legible — first sight of it
+      const SEEN_READ_MS = 180;  // already been reading it on hover
+      const ZOOM_MS = 820;       // zoom + fade through
 
       trigger.addEventListener('click', (e) => {
         const href = trigger.getAttribute('href');
         if (!href || leaving) return;
-        // Let modified taps / new-tab gestures behave normally.
+        // Let modified clicks / new-tab gestures behave normally.
         if (e.metaKey || e.ctrlKey || e.shiftKey || e.button > 0) return;
         e.preventDefault();
         leaving = true;
@@ -275,13 +293,21 @@
           return;
         }
 
+        // Two independent questions. `seenPhrase` decides how long to HOLD once
+        // it is legible; `elapsed` decides how much of the resolve is still
+        // outstanding. Someone who hovered, drifted off, and clicked has seen it
+        // but needs it to morph back in, so they wait the resolve and get the
+        // short read.
+        const elapsed = engine.resolved ? performance.now() - engine.resolvedSince : 0;
         engine.enterResolve();
+        const hold = Math.max(0, RESOLVE_MS - elapsed) + (seenPhrase ? SEEN_READ_MS : READ_MS);
+
         setTimeout(() => {
           document.documentElement.classList.add('is-entering');
-        }, RESOLVE_MS + READ_MS);
+        }, hold);
         setTimeout(() => {
           window.location.href = href;
-        }, RESOLVE_MS + READ_MS + ZOOM_MS);
+        }, hold + ZOOM_MS);
       });
     }
 
