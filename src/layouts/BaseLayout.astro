@@ -78,6 +78,19 @@ const { title, currentPage = '' } = Astro.props;
     html:not(.fonts-ready) .material-symbols-outlined { color: transparent; }
   </style>
   <script is:inline>
+    // Before first paint: if the previous page left a title behind, this page's
+    // <h1> must start hidden so the word never flashes into place before the
+    // particles have assembled it. title-morph.js clears the class when the
+    // morph lands — or immediately, if it decides not to run.
+    (function () {
+      try {
+        if (!sessionStorage.getItem('morphics:title-from')) return;
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+        document.documentElement.classList.add('title-morphing');
+      } catch (e) { /* private mode: just show the title */ }
+    })();
+  </script>
+  <script is:inline>
     // Runs before first paint. Icons are revealed ONLY once the face is
     // confirmed usable — there is deliberately no timeout that reveals them
     // anyway. If the font never arrives, the icons stay blank forever, because
@@ -129,6 +142,8 @@ const { title, currentPage = '' } = Astro.props;
 
   <script>
     import '../scripts/preview-player.js';
+    import { initTitleMorph } from '../scripts/title-morph.js';
+    initTitleMorph();
   </script>
 </body>
 </html>
