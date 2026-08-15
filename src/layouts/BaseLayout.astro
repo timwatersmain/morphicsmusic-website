@@ -1,6 +1,5 @@
 ---
 import TopNav from '../components/TopNav.astro';
-import CornerAccents from '../components/CornerAccents.astro';
 import ParticleBackground from '../components/ParticleBackground.astro';
 import Cart from '../components/Cart.astro';
 import PlayerBar from '../components/PlayerBar.astro';
@@ -9,10 +8,9 @@ import '../styles/global.css';
 interface Props {
   title: string;
   currentPage?: string;
-  clean?: boolean;
 }
 
-const { title, currentPage = '', clean = false } = Astro.props;
+const { title, currentPage = '' } = Astro.props;
 ---
 
 <!DOCTYPE html>
@@ -121,7 +119,6 @@ const { title, currentPage = '', clean = false } = Astro.props;
 <body class="neural-bg min-h-screen font-body text-on-surface overflow-x-hidden">
   <ParticleBackground />
   <TopNav currentPage={currentPage} />
-  {!clean && <CornerAccents />}
 
   <main class="relative z-10 pt-24 pb-24 px-8">
     <slot />
