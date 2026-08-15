@@ -80,11 +80,21 @@
   --font-body: "Rubik", sans-serif;
   --font-mono: "Geist Mono", monospace;
 
-  /* Border radius — sharp edges by default */
-  --radius: 0px;
-  --radius-lg: 0px;
-  --radius-xl: 0px;
-  --radius-full: 9999px;
+  /* Border radius — soft, to match the wordmark.
+     The MORPHICS letterforms are geometric with fully rounded terminals and
+     generous corner radii, so the UI echoes that instead of the hard 0px
+     rectangles it used to be (every token here was literally 0px, which is why
+     the markup carries almost no rounded-* classes — they would have done
+     nothing). Small controls go fully round like the letter terminals; larger
+     surfaces take a proportionally smaller radius so they read as soft rather
+     than as lozenges. */
+  --radius-sm: 8px;    /* thumbnails, tags, tight chips */
+  --radius: 12px;      /* default: inputs, small controls */
+  --radius-md: 14px;
+  --radius-lg: 18px;   /* cards, tiles */
+  --radius-xl: 24px;   /* large panels, modals */
+  --radius-2xl: 32px;  /* drawers, hero surfaces */
+  --radius-full: 9999px; /* pills: buttons, badges */
 }
 
 @layer base {
@@ -96,6 +106,50 @@
   ::selection {
     background-color: #00f0ff;
     color: #006970;
+  }
+
+  /* Rounding by ROLE rather than by hand-editing every class attribute. The
+     markup grew up under a 0px scale, so the surfaces carry no rounded-*
+     utilities at all; adding them one by one across ~70 elements would drift
+     out of sync the moment anything new is added. These defaults round the
+     things that are always meant to be soft, and any element can still opt out
+     with an explicit rounded-* utility, which wins on specificity. */
+
+  /* Controls go fully round, echoing the wordmark's terminals. Icon-only
+     buttons are square, so a pill radius renders them as circles — which is
+     the intent. */
+  button,
+  [type="button"],
+  [type="submit"],
+  [type="reset"] {
+    border-radius: var(--radius-full);
+  }
+
+  /* Text fields stay a soft rectangle: a pill fights a long text baseline. */
+  input:not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    border-radius: var(--radius);
+  }
+
+  /* Media is the other big source of hard corners — artwork tiles, video
+     thumbnails, avatars in the feed. */
+  img:not([alt=""]),
+  video,
+  canvas.rounded-media {
+    border-radius: var(--radius-lg);
+  }
+
+  /* ...but never the wordmark, the nav emblem, or the decorative brand art:
+     those are transparent PNGs whose own silhouette is the shape. Clipping
+     them to a rounded box would slice the letterforms. */
+  h1 img,
+  nav img,
+  .brand-divider img,
+  .brand-accent img,
+  [data-no-round],
+  [data-no-round] img {
+    border-radius: 0;
   }
 }
 

@@ -63,7 +63,7 @@ const typeIcons: Record<string, string> = {
           href={platform.url}
           class="group relative flex flex-col items-center gap-3 transition-all duration-[400ms] hover:scale-110"
         >
-          <div class="w-16 h-16 border border-outline-variant/30 flex items-center justify-center bg-surface-container-low hover:border-primary/60 hover:bg-primary/5 transition-all duration-[400ms] shadow-[0_0_40px_rgba(0,219,233,0.06)]">
+          <div class="w-16 h-16 border border-outline-variant/30 flex items-center justify-center bg-surface-container-low rounded-lg hover:border-primary/60 hover:bg-primary/5 transition-all duration-[400ms] shadow-[0_0_40px_rgba(0,219,233,0.06)]">
             <span class="material-symbols-outlined text-2xl text-primary/60 group-hover:text-primary transition-colors">{platform.icon}</span>
           </div>
           <span class="font-mono text-[9px] tracking-widest text-white/30 group-hover:text-primary transition-colors">{platform.name}</span>
@@ -117,7 +117,7 @@ const typeIcons: Record<string, string> = {
             )}
             <div class="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent pointer-events-none"></div>
             <div class="absolute top-3 right-3">
-              <div class="bg-background/80 px-2 py-1 backdrop-blur-md flex items-center gap-1.5">
+              <div class="bg-background/80 px-2 py-1 backdrop-blur-md flex items-center gap-1.5 rounded-full">
                 <span class="material-symbols-outlined text-sm text-primary">{platformIcons[post.platform]}</span>
                 <span class="font-mono text-[8px] text-primary uppercase">{post.platform}</span>
               </div>
@@ -160,7 +160,7 @@ const typeIcons: Record<string, string> = {
             />
             <div class="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent"></div>
             <div class="absolute top-3 right-3">
-              <div class="bg-background/80 px-2 py-1 backdrop-blur-md flex items-center gap-1.5">
+              <div class="bg-background/80 px-2 py-1 backdrop-blur-md flex items-center gap-1.5 rounded-full">
                 <span class="material-symbols-outlined text-sm text-primary">{platformIcons[post.platform]}</span>
                 <span class="font-mono text-[8px] text-primary uppercase">{post.platform}</span>
               </div>

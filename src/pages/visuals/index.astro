@@ -112,7 +112,7 @@ const featuredVisuals = visualsData.filter(v => v.featured);
       </div>
       <a
         href="/visuals/gallery"
-        class="self-start md:self-end flex items-center gap-3 px-5 py-3 border border-outline-variant text-on-surface font-mono text-xs uppercase tracking-widest hover:bg-primary/10 hover:border-primary transition-all duration-300 group no-underline"
+        class="self-start md:self-end flex items-center gap-3 px-5 py-3 border border-outline-variant text-on-surface font-mono text-xs uppercase tracking-widest hover:bg-primary/10 hover:border-primary transition-all duration-300 group no-underline rounded-full"
       >
         <span class="material-symbols-outlined text-primary text-base transition-transform group-hover:scale-110">gallery_thumbnail</span>
         VIEW FULL GALLERY
@@ -123,7 +123,7 @@ const featuredVisuals = visualsData.filter(v => v.featured);
       {featuredVisuals.map((v, i) => (
         <div
           class:list={[
-            "visual-card group relative border border-outline-variant bg-surface-container-low transition-all duration-500 hover:scale-[1.02] hover:z-10 card-glow violet-pulse cursor-pointer",
+            "visual-card group relative border border-outline-variant bg-surface-container-low rounded-lg overflow-hidden transition-all duration-500 hover:scale-[1.02] hover:z-10 card-glow violet-pulse cursor-pointer",
             v.size === 'tall' && 'masonry-item-tall',
             v.size === 'wide' && 'masonry-item-wide',
             v.size === 'square' && 'masonry-item-square',

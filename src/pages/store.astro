@@ -25,7 +25,7 @@ const formatPrice = (lo: number | null, hi: number | null) => {
       {digitalItems.filter(item => item.available).map(item => (
         <a
           href={`/store/digital/${item.slug}`}
-          class="group relative bg-surface-container-low border border-white/5 transition-all duration-500 hover:border-secondary/30 terminal-glow block"
+          class="group relative bg-surface-container-low border border-white/5 rounded-lg overflow-hidden transition-all duration-500 hover:border-secondary/30 terminal-glow block"
         >
           <div class="relative overflow-hidden">
             <img
@@ -36,11 +36,11 @@ const formatPrice = (lo: number | null, hi: number | null) => {
             />
             <div class="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent opacity-70"></div>
             <div class="absolute bottom-4 left-4 font-mono text-[10px] space-y-1">
-              <div class="flex items-center gap-2 bg-background/80 px-2 py-1 backdrop-blur-md text-secondary">
+              <div class="flex items-center gap-2 bg-background/80 px-2 py-1 backdrop-blur-md text-secondary rounded-full">
                 <span class="material-symbols-outlined text-sm">text_fields</span>
                 TYPEFACE
               </div>
-              <div class="flex items-center gap-2 bg-background/80 px-2 py-1 backdrop-blur-md text-primary">
+              <div class="flex items-center gap-2 bg-background/80 px-2 py-1 backdrop-blur-md text-primary rounded-full">
                 ${item.price_cents % 100 === 0 ? item.price_cents / 100 : (item.price_cents / 100).toFixed(2)}
               </div>
             </div>
@@ -56,7 +56,7 @@ const formatPrice = (lo: number | null, hi: number | null) => {
       ))}
 
       {pluginItems.map(item => (
-        <div class="group relative bg-surface-container-low border border-white/5 transition-all duration-500 hover:border-secondary/30 terminal-glow block cursor-default">
+        <div class="group relative bg-surface-container-low border border-white/5 rounded-lg overflow-hidden transition-all duration-500 hover:border-secondary/30 terminal-glow block cursor-default">
           <div class="relative overflow-hidden">
             <img
               src={item.thumbnail}
@@ -66,15 +66,15 @@ const formatPrice = (lo: number | null, hi: number | null) => {
             />
             <div class="absolute inset-0 bg-gradient-to-t from-background via-background/30 to-transparent opacity-90"></div>
             <div class="absolute bottom-4 left-4 font-mono text-[10px] space-y-1">
-              <div class="flex items-center gap-2 bg-background/80 px-2 py-1 backdrop-blur-md text-secondary">
+              <div class="flex items-center gap-2 bg-background/80 px-2 py-1 backdrop-blur-md text-secondary rounded-full">
                 <span class="material-symbols-outlined text-sm">memory</span>
                 PLUGIN
               </div>
-              <div class="flex items-center gap-2 bg-background/80 px-2 py-1 backdrop-blur-md text-primary">
+              <div class="flex items-center gap-2 bg-background/80 px-2 py-1 backdrop-blur-md text-primary rounded-full">
                 {item.price_display}
               </div>
             </div>
-            <div class="absolute top-4 right-4 font-mono text-[9px] tracking-[0.25em] uppercase px-2 py-1 bg-secondary/15 text-secondary border border-secondary/30 backdrop-blur-md">
+            <div class="absolute top-4 right-4 font-mono text-[9px] tracking-[0.25em] uppercase px-2 py-1 bg-secondary/15 text-secondary border border-secondary/30 backdrop-blur-md rounded-full">
               Coming Soon
             </div>
           </div>
@@ -106,16 +106,16 @@ const formatPrice = (lo: number | null, hi: number | null) => {
               />
               <div class="absolute inset-0 bg-gradient-to-t from-background to-transparent opacity-60"></div>
               <div class="absolute bottom-4 left-4 font-mono text-[10px] space-y-1">
-                <div class="flex items-center gap-2 bg-background/80 px-2 py-1 backdrop-blur-md text-secondary">
+                <div class="flex items-center gap-2 bg-background/80 px-2 py-1 backdrop-blur-md text-secondary rounded-full">
                   <span class="material-symbols-outlined text-sm">checkroom</span>
                   MERCH
                 </div>
-                <div class="flex items-center gap-2 bg-background/80 px-2 py-1 backdrop-blur-md text-primary">
+                <div class="flex items-center gap-2 bg-background/80 px-2 py-1 backdrop-blur-md text-primary rounded-full">
                   {formatPrice(item.price_low, item.price_high)}
                 </div>
               </div>
               {!available && (
-                <div class="absolute top-4 right-4 font-mono text-[9px] tracking-[0.25em] uppercase px-2 py-1 bg-secondary/15 text-secondary border border-secondary/30 backdrop-blur-md">
+                <div class="absolute top-4 right-4 font-mono text-[9px] tracking-[0.25em] uppercase px-2 py-1 bg-secondary/15 text-secondary border border-secondary/30 backdrop-blur-md rounded-full">
                   Restocking
                 </div>
               )}
@@ -124,10 +124,10 @@ const formatPrice = (lo: number | null, hi: number | null) => {
               <h3 class:list={["font-headline text-xl uppercase tracking-tight mb-2 transition-colors", available ? "text-primary group-hover:text-secondary" : "text-primary"]}>{item.name}</h3>
               <div class="flex flex-wrap gap-2 mb-4">
                 {item.sizes.slice(0, 6).map(s => (
-                  <span class="px-2 py-1 bg-white/5 text-[9px] font-mono text-primary border border-primary/10">{s}</span>
+                  <span class="px-2 py-1 bg-white/5 text-[9px] font-mono text-primary border border-primary/10 rounded-full">{s}</span>
                 ))}
                 {item.colors.slice(0, 4).map(c => (
-                  <span class="px-2 py-1 bg-white/5 text-[9px] font-mono text-secondary border border-secondary/10">{c}</span>
+                  <span class="px-2 py-1 bg-white/5 text-[9px] font-mono text-secondary border border-secondary/10 rounded-full">{c}</span>
                 ))}
               </div>
               {available ? (
@@ -143,9 +143,9 @@ const formatPrice = (lo: number | null, hi: number | null) => {
           </div>
         );
         return available ? (
-          <a href={`/store/merch/${item.slug}`} class="group relative bg-surface-container-low border border-white/5 transition-all duration-500 hover:border-secondary/30 terminal-glow block">{inner}</a>
+          <a href={`/store/merch/${item.slug}`} class="group relative bg-surface-container-low border border-white/5 rounded-lg overflow-hidden transition-all duration-500 hover:border-secondary/30 terminal-glow block">{inner}</a>
         ) : (
-          <div class="group relative bg-surface-container-low border border-white/5 block cursor-default">{inner}</div>
+          <div class="group relative bg-surface-container-low border border-white/5 rounded-lg overflow-hidden block cursor-default">{inner}</div>
         );
       })}
     </div>

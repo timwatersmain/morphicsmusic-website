@@ -61,7 +61,7 @@ const discogFilters = [
         <span class="font-mono text-xs text-secondary uppercase">Latest Release</span>
         <div class="h-[1px] flex-1 bg-outline-variant/30"></div>
       </div>
-      <div class="bg-surface-container-low border border-white/5 p-6 md:flex md:gap-6 md:items-center">
+      <div class="bg-surface-container-low border border-white/5 rounded-lg overflow-hidden p-6 md:flex md:gap-6 md:items-center">
         <div class="relative group shrink-0 w-full md:w-48 mb-4 md:mb-0">
           <a href={`/store/music/${latest.slug}`} class="block aspect-square overflow-hidden">
             {latest.artwork ? (
@@ -107,7 +107,7 @@ const discogFilters = [
           <div class="font-mono text-[10px] text-white/30 mb-3">{latest.date}</div>
           <div class="flex flex-wrap gap-1 mb-5">
             {latest.genre.map(g => (
-              <span class="px-1.5 py-0.5 bg-white/5 text-[8px] font-mono text-primary border border-primary/10">#{g.toUpperCase()}</span>
+              <span class="px-1.5 py-0.5 bg-white/5 rounded-full text-[8px] font-mono text-primary border border-primary/10">#{g.toUpperCase()}</span>
             ))}
           </div>
           <div class="flex items-center gap-3">
@@ -163,7 +163,7 @@ const discogFilters = [
 
   <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4" id="discog-grid">
     {releases.map(release => (
-      <div class="discog-card group relative bg-surface-container-low border border-white/5 transition-all duration-500 hover:border-secondary/30 terminal-glow" data-type={release.type}>
+      <div class="discog-card group relative bg-surface-container-low border border-white/5 rounded-lg overflow-hidden transition-all duration-500 hover:border-secondary/30 terminal-glow" data-type={release.type}>
         <div class="relative overflow-hidden aspect-square">
           <a href={`/store/music/${release.slug}`} class="block w-full h-full">
             {release.artwork ? (
@@ -209,7 +209,7 @@ const discogFilters = [
           <div class="font-mono text-[9px] text-white/30 mb-3">{release.date}</div>
           <div class="flex flex-wrap gap-1 mb-4">
             {release.genre.map(g => (
-              <span class="px-1.5 py-0.5 bg-white/5 text-[8px] font-mono text-primary border border-primary/10">#{g.toUpperCase()}</span>
+              <span class="px-1.5 py-0.5 bg-white/5 rounded-full text-[8px] font-mono text-primary border border-primary/10">#{g.toUpperCase()}</span>
             ))}
           </div>
           <button

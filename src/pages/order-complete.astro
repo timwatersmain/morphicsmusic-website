@@ -36,10 +36,10 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       </div>
 
       <div class="pt-8 flex justify-center gap-4">
-        <a href="/store" class="px-6 py-3 border border-primary/20 hover:border-primary/60 hover:bg-primary/5 font-mono text-[10px] tracking-widest uppercase text-primary">
+        <a href="/store" class="px-6 py-3 border border-primary/20 hover:border-primary/60 hover:bg-primary/5 font-mono text-[10px] tracking-widest uppercase text-primary rounded-full">
           Back to store
         </a>
-        <a href="/" class="px-6 py-3 border border-white/10 hover:border-white/30 font-mono text-[10px] tracking-widest uppercase text-white/60">
+        <a href="/" class="px-6 py-3 border border-white/10 hover:border-white/30 font-mono text-[10px] tracking-widest uppercase text-white/60 rounded-full">
           Home
         </a>
       </div>
@@ -67,7 +67,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
             for (const f of (item.files || [])) {
               const href = `/api/download?token=${encodeURIComponent(d.token)}&key=${encodeURIComponent(f.key)}`;
               rows.push(
-                `<a href="${href}" class="flex items-center justify-between gap-4 border border-white/10 hover:border-secondary/50 px-4 py-3 group">
+                `<a href="${href}" class="flex items-center justify-between gap-4 border border-white/10 hover:border-secondary/50 px-4 py-3 group rounded-full">
                    <span class="font-mono text-[11px] text-white/80 truncate">${item.title} — ${f.filename}</span>
                    <span class="font-mono text-[10px] tracking-widest uppercase text-secondary whitespace-nowrap">Download</span>
                  </a>`,

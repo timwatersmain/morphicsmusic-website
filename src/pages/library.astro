@@ -10,7 +10,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         <h1 class="font-headline font-bold text-5xl md:text-7xl text-primary uppercase tracking-tighter leading-none mt-2">LIBRARY</h1>
         <p id="lib-email" class="font-mono text-[11px] text-white/50 mt-4"></p>
       </div>
-      <button id="logout-btn" class="font-mono text-[10px] text-white/40 hover:text-secondary uppercase tracking-widest border border-white/10 hover:border-secondary/30 px-4 py-2">
+      <button id="logout-btn" class="font-mono text-[10px] text-white/40 hover:text-secondary uppercase tracking-widest border border-white/10 hover:border-secondary/30 px-4 py-2 rounded-full">
         Sign out
       </button>
     </header>
@@ -86,7 +86,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
                         <span class="flex-1 font-mono text-[11px] text-white/80 truncate">${esc(f.filename)}</span>
                         <span class="font-mono text-[10px] text-white/40">${esc(fmtSize(f.size))}</span>
                         <a href="/api/download?key=${encodeURIComponent(f.key)}"
-                           class="px-3 py-2 border border-primary/20 hover:border-primary/60 hover:bg-primary/5 font-mono text-[10px] tracking-widest uppercase text-primary">
+                           class="px-3 py-2 border border-primary/20 hover:border-primary/60 hover:bg-primary/5 font-mono text-[10px] tracking-widest uppercase text-primary rounded-full">
                           Download
                         </a>
                       </li>

@@ -22,7 +22,7 @@ const fmtPrice = (lo: number, hi: number) =>
     </a>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
-      <div class="relative bg-surface-container-low border border-white/5 overflow-hidden">
+      <div class="relative bg-surface-container-low border border-white/5 rounded-lg overflow-hidden overflow-hidden">
         <Artwork src={item.thumbnail} alt={item.name} priority sizes="(max-width: 767px) 100vw, 460px" class="w-full aspect-square object-cover" />
       </div>
 
@@ -41,7 +41,7 @@ const fmtPrice = (lo: number, hi: number) =>
                 {sizes.map((s, i) => (
                   <label class="cursor-pointer">
                     <input type="radio" name="size" value={s} class="sr-only peer" checked={i === 0} />
-                    <span class="block px-4 py-2 border border-white/10 peer-checked:border-secondary peer-checked:text-secondary font-mono text-xs hover:border-white/30 transition-colors">{s}</span>
+                    <span class="block px-4 py-2 border border-white/10 peer-checked:border-secondary peer-checked:text-secondary font-mono text-xs hover:border-white/30 transition-colors rounded-full">{s}</span>
                   </label>
                 ))}
               </div>
@@ -55,7 +55,7 @@ const fmtPrice = (lo: number, hi: number) =>
                 {colors.map((c, i) => (
                   <label class="cursor-pointer">
                     <input type="radio" name="color" value={c} class="sr-only peer" checked={i === 0} />
-                    <span class="block px-4 py-2 border border-white/10 peer-checked:border-secondary peer-checked:text-secondary font-mono text-xs hover:border-white/30 transition-colors">{c}</span>
+                    <span class="block px-4 py-2 border border-white/10 peer-checked:border-secondary peer-checked:text-secondary font-mono text-xs hover:border-white/30 transition-colors rounded-full">{c}</span>
                   </label>
                 ))}
               </div>

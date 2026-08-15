@@ -40,7 +40,7 @@ function fmtDuration(seconds: number | null) {
     </a>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
-      <div class="relative bg-surface-container-low border border-white/5 overflow-hidden group">
+      <div class="relative bg-surface-container-low border border-white/5 rounded-lg overflow-hidden overflow-hidden group">
         <Artwork src={release.artwork} alt={release.title} priority sizes="(max-width: 767px) 100vw, 460px" class="w-full aspect-square object-cover" />
         {firstPreviewKey && (
           <button
@@ -74,7 +74,7 @@ function fmtDuration(seconds: number | null) {
         )}
         <div class="flex flex-wrap gap-2 mb-8">
           {release.genre.map(g => (
-            <span class="px-2 py-1 bg-white/5 text-[9px] font-mono text-primary border border-primary/10 uppercase">#{g}</span>
+            <span class="px-2 py-1 bg-white/5 text-[9px] font-mono text-primary border border-primary/10 uppercase rounded-full">#{g}</span>
           ))}
         </div>
 
