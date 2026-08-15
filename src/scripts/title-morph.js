@@ -20,7 +20,9 @@ const TARGET_POINTS = 2600;
 const MORPH_MS = 620;   // snappier than the 900 it shipped at
 const HANDOFF_MS = 160;   // canvas fades out as the real <h1> fades in
 
-// The rotation, chosen by ear in /lab/title-morph rather than from the source.
+// The rotation, chosen by ear rather than from reading the source, using a
+// preview page that has since been removed (src/pages/lab/title-morph.astro —
+// recoverable from git if these need re-auditioning).
 // Tim kept: direct, wave, ripple, magnet, snake, peel, knit, furl, tendril.
 // Explicitly rejected: vortex, unwind, split, braid, seam — the hardest-tearing
 // ones, which scatter so far that the word stops reading as a word. The
@@ -119,9 +121,9 @@ function equalise(a, b) {
 
 // --- the morph -------------------------------------------------------------
 
-// Morph one word into another over the given element's box. Exported so the
-// preview page at /lab/title-morph can drive it with an explicit mode and
-// duration — auditioning the 25 behaviours is otherwise guesswork.
+// Morph one word into another over the given element's box. Takes an explicit
+// mode and duration so it can be driven deliberately rather than only by the
+// page bootstrap; that is how the rotation below was auditioned.
 export function morphWord(h1, fromWord, toWord, opts = {}) {
   const ms = opts.ms ?? MORPH_MS;
   const mode = opts.mode || TITLE_MODES[(Math.random() * TITLE_MODES.length) | 0];
