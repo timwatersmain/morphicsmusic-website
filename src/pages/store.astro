@@ -48,7 +48,7 @@ const formatPrice = (lo: number | null, hi: number | null) => {
           <div class="p-6">
             <h3 class="font-headline text-xl text-primary uppercase tracking-tight mb-1">{item.name}</h3>
             <p class="font-mono text-[11px] text-white/50 uppercase tracking-widest mb-4">{item.tagline}</p>
-            <div class="w-full py-3 border border-secondary/30 font-mono text-[10px] tracking-widest uppercase text-center text-secondary group-hover:bg-secondary/10 transition-colors">
+            <div class="w-full py-3 border border-secondary/30 font-mono text-[10px] tracking-widest uppercase text-center text-secondary group-hover:bg-secondary/10 transition-colors rounded-full">
               Instant Download
             </div>
           </div>
@@ -81,7 +81,7 @@ const formatPrice = (lo: number | null, hi: number | null) => {
           <div class="p-6">
             <h3 class="font-headline text-xl text-primary uppercase tracking-tight mb-1">{item.name}</h3>
             <p class="font-mono text-[11px] text-white/50 uppercase tracking-widest mb-4">{item.tagline}</p>
-            <div class="w-full py-3 border border-white/10 font-mono text-[10px] tracking-widest uppercase text-center text-white/40">
+            <div class="w-full py-3 border border-white/10 font-mono text-[10px] tracking-widest uppercase text-center text-white/40 rounded-full">
               In Development
             </div>
           </div>
@@ -131,11 +131,11 @@ const formatPrice = (lo: number | null, hi: number | null) => {
                 ))}
               </div>
               {available ? (
-                <div class="w-full py-3 border border-primary/20 group-hover:border-primary/60 group-hover:bg-primary/5 font-mono text-[10px] tracking-widest transition-all uppercase text-center text-primary">
+                <div class="w-full py-3 border border-primary/20 group-hover:border-primary/60 group-hover:bg-primary/5 font-mono text-[10px] tracking-widest transition-all uppercase text-center text-primary rounded-full">
                   View · Pick size
                 </div>
               ) : (
-                <div class="w-full py-3 border border-white/10 font-mono text-[10px] tracking-widest uppercase text-center text-white/40">
+                <div class="w-full py-3 border border-white/10 font-mono text-[10px] tracking-widest uppercase text-center text-white/40 rounded-full">
                   Restocking soon
                 </div>
               )}
