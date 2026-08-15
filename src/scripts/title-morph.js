@@ -21,14 +21,15 @@ const MORPH_MS = 620;   // snappier than the 900 it shipped at
 const HANDOFF_MS = 160;   // canvas fades out as the real <h1> fades in
 
 // The rotation, chosen by ear in /lab/title-morph rather than from the source.
-// Tim kept: direct, wave, ripple, magnet, snake, peel, knit, furl.
+// Tim kept: direct, wave, ripple, magnet, snake, peel, knit, furl, tendril.
 // Explicitly rejected: vortex, unwind, split, braid, seam — the hardest-tearing
 // ones, which scatter so far that the word stops reading as a word. The
-// remaining behaviours (boil, tendril, cascade, swirl, implode, spin, orbit,
-// shear, fold, inhale, lathe, quench) are simply not endorsed; add them only
-// after auditioning them in the lab.
+// remaining behaviours (boil, cascade, swirl, implode, spin, orbit, shear,
+// fold, inhale, lathe, quench) are simply not endorsed; add them only after
+// auditioning them in the lab.
 export const TITLE_MODES = [
   'direct', 'wave', 'ripple', 'magnet', 'snake', 'peel', 'knit', 'furl',
+  'tendril',
 ];
 
 const titleEl = () => document.querySelector('main h1:not([data-no-vt])');
