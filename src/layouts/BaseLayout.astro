@@ -144,6 +144,12 @@ const { title, currentPage = '' } = Astro.props;
 
   <script>
     import '../scripts/preview-player.js';
+  </script>
+  <!-- Its own module, deliberately. Sharing one with preview-player meant an
+       import-time failure there would stop initTitleMorph() from ever running —
+       and since the <h1> starts hidden when a morph is pending, that leaves the
+       page title invisible. Separate modules fail independently. -->
+  <script>
     import { initTitleMorph } from '../scripts/title-morph.js';
     initTitleMorph();
   </script>

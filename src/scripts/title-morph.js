@@ -206,6 +206,7 @@ export function morphWord(h1, fromWord, toWord, opts = {}) {
 
   const t0 = performance.now();
   let raf = 0;
+  finished = false;
 
   const frameFn = (now) => {
     const raw = Math.min(1, (now - t0) / ms);
@@ -237,6 +238,13 @@ export function morphWord(h1, fromWord, toWord, opts = {}) {
   };
   raf = requestAnimationFrame(frameFn);
 
+  // A deadline, because requestAnimationFrame is not guaranteed to keep
+  // ticking: iOS Safari pauses it while the user scrolls, which stalls the
+  // morph and — since the real <h1> is hidden until the morph lands — left the
+  // title invisible until scrolling stopped. Timers keep running, so this
+  // guarantees the handoff regardless of what the render loop is doing.
+  setTimeout(() => { cancelAnimationFrame(raf); finish(h1, canvas); }, ms + 500);
+
   // Never leave the title invisible if anything goes wrong mid-flight.
   window.addEventListener('pagehide', () => {
     cancelAnimationFrame(raf);
@@ -248,7 +256,7 @@ export function morphWord(h1, fromWord, toWord, opts = {}) {
 export function runTitleMorph(fromWord) {
   const h1 = titleEl();
   if (!h1) return finish(null, null);
-  return morphWord(h1, fromWord, titleText(h1));
+  return safely(() => morphWord(h1, fromWord, titleText(h1)), h1);
 }
 
 // Approximate sampling stride in CSS px, used to size the particles.
@@ -257,7 +265,10 @@ function stridePixel(src, dst) {
   return n > 1800 ? 2 : n > 900 ? 3 : 4;
 }
 
+let finished = false;
 function finish(h1, canvas) {
+  if (finished) return;
+  finished = true;
   document.documentElement.classList.remove('title-morphing');
   if (h1) {
     h1.style.transition = `opacity ${HANDOFF_MS}ms linear`;
@@ -271,6 +282,12 @@ function finish(h1, canvas) {
 }
 
 // --- wiring ----------------------------------------------------------------
+
+// Every entry point is wrapped: an exception anywhere in here must still end
+// with a visible title, because the <h1> is hidden until the morph hands back.
+function safely(fn, h1) {
+  try { return fn(); } catch (e) { finish(h1 || titleEl(), null); }
+}
 
 export function initTitleMorph() {
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -293,7 +310,20 @@ export function initTitleMorph() {
 
   // Fonts must be settled first: rasterising against a fallback face would
   // sample the wrong letterforms and the morph would land off the real title.
-  const start = () => runTitleMorph(from);
-  if (document.fonts && document.fonts.ready) document.fonts.ready.then(start).catch(start);
-  else start();
+  //
+  // But that wait is BOUNDED, because the <h1> is hidden until the morph runs
+  // and document.fonts.ready can take well over a second — measured at ~1.5s in
+  // WebKit — which is a second of blank page title. If the fonts are not ready
+  // in time we skip the morph and just show the title: a missing flourish is a
+  // fine trade for never showing an empty heading.
+  let started = false;
+  const go = (morph) => {
+    if (started) return;
+    started = true;
+    if (morph) safely(() => runTitleMorph(from));
+    else finish(titleEl(), null);
+  };
+  const ready = document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve();
+  ready.then(() => go(true), () => go(true));
+  setTimeout(() => go(false), 450);
 }

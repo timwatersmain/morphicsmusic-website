@@ -126,6 +126,23 @@
      by the morph when it finishes or bails. */
   html.title-morphing main h1:not([data-no-vt]) {
     opacity: 0;
+    /* FAILSAFE. The title is hidden so the particles can assemble it, which
+       means its visibility must never depend on JavaScript finishing — or even
+       running. A module that fails to execute, an exception mid-morph, or a
+       stalled render loop would otherwise leave the page title permanently
+       invisible, which is exactly what happened: iOS Safari pauses
+       requestAnimationFrame while the user scrolls, so scrolling during the
+       morph left VISUALS blank until scrolling stopped.
+
+       A CSS animation is the right tool because it is driven by the compositor
+       and keeps its schedule even when the main thread is blocked. It simply
+       reveals the title after 1.1s no matter what. The morph normally finishes
+       in ~620ms and removes this class long before it fires. */
+    animation: title-failsafe 1ms linear 1100ms forwards;
+  }
+
+  @keyframes title-failsafe {
+    to { opacity: 1; }
   }
 
   /* Chrome that is identical across pages gets its own names so it stays put
