@@ -1,0 +1,121 @@
+---
+// Preview lab for the page-title morph. Unlinked and noindex — it exists so the
+// 25 behaviours in behaviours.js can be auditioned against the real font, at
+// the real size, on a real device, instead of being picked blind.
+//
+// Delete this file to remove it; nothing else references it.
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="Title Morph Lab" currentPage="">
+  <Fragment slot="head">
+    <meta name="robots" content="noindex, nofollow" />
+  </Fragment>
+
+  <section class="max-w-[1400px] mx-auto">
+    <p class="font-mono text-[10px] tracking-[0.25em] uppercase text-secondary mb-2">Lab · not linked</p>
+    <h2 class="font-headline font-bold text-3xl md:text-4xl text-primary uppercase tracking-tighter leading-none mb-2">
+      Title morph
+    </h2>
+    <p class="font-mono text-[11px] text-white/40 mb-10 max-w-xl leading-relaxed">
+      Every behaviour in <code>behaviours.js</code>, played on a real page title.
+      Tap a mode to watch it. The eight marked <span class="text-secondary">SHIPPING</span>
+      are the ones currently in rotation on the site.
+    </p>
+
+    <!-- The stage. This h1 is the real thing: same classes as every section
+         title, so the morph samples the exact letterforms visitors see. -->
+    <div class="border border-white/5 rounded-lg bg-surface-container-low px-6 py-14 mb-10 overflow-hidden">
+      <h1
+        id="lab-title"
+        data-no-vt
+        class="text-6xl md:text-8xl font-headline font-bold text-primary tracking-tighter leading-none"
+      >SOCIAL</h1>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-6 mb-8 font-mono text-[10px] tracking-widest uppercase">
+      <label class="flex items-center gap-3">
+        <span class="text-white/40">Speed</span>
+        <input id="lab-ms" type="range" min="200" max="2000" step="20" value="620" class="w-48 accent-secondary" />
+        <span id="lab-ms-val" class="text-primary tabular-nums w-14">620ms</span>
+      </label>
+      <label class="flex items-center gap-3">
+        <span class="text-white/40">Words</span>
+        <input id="lab-words" value="SOCIAL,STORE,MUSIC,VISUALS" class="bg-surface-container-low border border-white/10 px-3 py-2 font-mono text-[10px] text-primary w-72" />
+      </label>
+      <button id="lab-replay" class="px-5 py-2 border border-primary/20 hover:border-primary/60 hover:bg-primary/5 text-primary rounded-full">
+        Replay last
+      </button>
+    </div>
+
+    <div id="lab-modes" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2"></div>
+  </section>
+</BaseLayout>
+
+<script>
+  import { morphWord, FORMLESS } from '../../scripts/title-morph.js';
+  import { MODES } from '../../scripts/spelling/behaviours.js';
+
+  const h1 = document.getElementById('lab-title');
+  const grid = document.getElementById('lab-modes');
+  const msIn = document.getElementById('lab-ms');
+  const msVal = document.getElementById('lab-ms-val');
+  const wordsIn = document.getElementById('lab-words');
+  const replay = document.getElementById('lab-replay');
+
+  let wordIdx = 0;
+  let last = null;
+  let busy = false;
+
+  const words = () =>
+    wordsIn.value.split(',').map((w) => w.trim().toUpperCase()).filter(Boolean);
+
+  function play(mode) {
+    if (busy) return;
+    const list = words();
+    if (list.length < 2) return;
+    const from = h1.textContent.trim();
+    wordIdx = (wordIdx + 1) % list.length;
+    let to = list[wordIdx];
+    if (to === from) { wordIdx = (wordIdx + 1) % list.length; to = list[wordIdx]; }
+
+    busy = true;
+    last = mode;
+    for (const b of grid.children) b.dataset.active = String(b.dataset.mode === mode);
+
+    // The element must already read as the destination: the morph hides it,
+    // paints the particles, then hands back to the real glyphs on landing.
+    h1.textContent = to;
+    h1.style.opacity = '0';
+    morphWord(h1, from, to, {
+      mode,
+      ms: Number(msIn.value),
+      onDone: () => { busy = false; },
+    });
+  }
+
+  msIn.addEventListener('input', () => { msVal.textContent = `${msIn.value}ms`; });
+  replay.addEventListener('click', () => last && play(last));
+
+  for (const mode of MODES) {
+    const shipping = FORMLESS.includes(mode);
+    const b = document.createElement('button');
+    b.dataset.mode = mode;
+    b.className =
+      'lab-mode px-3 py-3 border font-mono text-[10px] tracking-widest uppercase rounded-full transition-colors ' +
+      (shipping
+        ? 'border-secondary/40 text-secondary hover:bg-secondary/10'
+        : 'border-white/10 text-white/50 hover:border-white/40 hover:text-white');
+    b.textContent = shipping ? `${mode} ·` : mode;
+    b.title = shipping ? 'currently shipping' : 'not in rotation';
+    b.addEventListener('click', () => play(mode));
+    grid.appendChild(b);
+  }
+</script>
+
+<style>
+  .lab-mode[data-active='true'] {
+    outline: 1px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+</style>

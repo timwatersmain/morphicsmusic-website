@@ -17,14 +17,14 @@ import { displace, leadFor } from './spelling/behaviours.js';
 const KEY = 'morphics:title-from';
 const ART = 120;          // behaviours.js coordinate space
 const TARGET_POINTS = 2600;
-const MORPH_MS = 900;
+const MORPH_MS = 620;   // snappier than the 900 it shipped at
 const HANDOFF_MS = 160;   // canvas fades out as the real <h1> fades in
 
 // Modes that pull the form apart on the way across rather than sliding it.
 // These are the ones the grid engine deliberately EXCLUDES, because there they
 // would read as debris across a field of small letters. On one large word they
 // are the whole point.
-const FORMLESS = ['boil', 'tendril', 'split', 'seam', 'braid', 'cascade', 'unwind', 'vortex'];
+export const FORMLESS = ['boil', 'tendril', 'split', 'seam', 'braid', 'cascade', 'unwind', 'vortex'];
 
 const titleEl = () => document.querySelector('main h1:not([data-no-vt])');
 const titleText = (el) => (el?.textContent || '').trim().replace(/\s+/g, ' ');
@@ -113,11 +113,16 @@ function equalise(a, b) {
 
 // --- the morph -------------------------------------------------------------
 
-export function runTitleMorph(fromWord) {
-  const h1 = titleEl();
-  if (!h1) return finish(null, null);
+// Morph one word into another over the given element's box. Exported so the
+// preview page at /lab/title-morph can drive it with an explicit mode and
+// duration — auditioning the 25 behaviours is otherwise guesswork.
+export function morphWord(h1, fromWord, toWord, opts = {}) {
+  const ms = opts.ms ?? MORPH_MS;
+  const mode = opts.mode || FORMLESS[(Math.random() * FORMLESS.length) | 0];
+  const onDone = opts.onDone;
 
-  const to = titleText(h1);
+  if (!h1) return finish(null, null);
+  const to = toWord;
   if (!to || !fromWord || fromWord === to) return finish(h1, null);
 
   const rect = h1.getBoundingClientRect();
@@ -172,7 +177,6 @@ export function runTitleMorph(fromWord) {
   // solid rather than dotted.
   const R = Math.max(1.2, stridePixel(src, dst) * dpr * 0.85);
 
-  const mode = FORMLESS[(Math.random() * FORMLESS.length) | 0];
   const seeds = new Float32Array(a0.length);
   for (let i = 0; i < seeds.length; i++) seeds[i] = Math.random();
 
@@ -180,7 +184,7 @@ export function runTitleMorph(fromWord) {
   let raf = 0;
 
   const frameFn = (now) => {
-    const raw = Math.min(1, (now - t0) / MORPH_MS);
+    const raw = Math.min(1, (now - t0) / ms);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = colour;
     ctx.globalAlpha = raw < 0.9 ? 1 : 1 - (raw - 0.9) / 0.1;
@@ -204,6 +208,7 @@ export function runTitleMorph(fromWord) {
       raf = requestAnimationFrame(frameFn);
     } else {
       finish(h1, canvas);
+      if (onDone) onDone();
     }
   };
   raf = requestAnimationFrame(frameFn);
@@ -213,6 +218,13 @@ export function runTitleMorph(fromWord) {
     cancelAnimationFrame(raf);
     finish(h1, canvas);
   }, { once: true });
+}
+
+// The page bootstrap: morph the title this page inherited into the one it has.
+export function runTitleMorph(fromWord) {
+  const h1 = titleEl();
+  if (!h1) return finish(null, null);
+  return morphWord(h1, fromWord, titleText(h1));
 }
 
 // Approximate sampling stride in CSS px, used to size the particles.
