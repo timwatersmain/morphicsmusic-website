@@ -120,6 +120,13 @@ export function morphWord(h1, fromWord, toWord, opts = {}) {
   const ms = opts.ms ?? MORPH_MS;
   const mode = opts.mode || FORMLESS[(Math.random() * FORMLESS.length) | 0];
   const onDone = opts.onDone;
+  // Where the particle canvas is attached. Defaults to <body> in page
+  // coordinates, which is right for a normal page title. A caller whose title
+  // lives in a sticky or scrolling container must pass that container instead,
+  // or the canvas is positioned in the wrong space and drifts away from the
+  // word as the page scrolls — and <body> carries overflow-x: hidden, which
+  // computes overflow-y to auto and can clip an absolutely positioned child.
+  const mount = opts.mount || document.body;
 
   if (!h1) return finish(null, null);
   const to = toWord;
@@ -154,14 +161,23 @@ export function morphWord(h1, fromWord, toWord, opts = {}) {
   const cw = frame.w + padX * 2;
   const ch = frame.h + padY * 2;
 
+  // Origin of the coordinate space the canvas is positioned in.
+  let originX = rect.left + window.scrollX;
+  let originY = rect.top + window.scrollY;
+  if (mount !== document.body) {
+    const base = mount.getBoundingClientRect();
+    originX = rect.left - base.left;
+    originY = rect.top - base.top;
+  }
+
   const canvas = document.createElement('canvas');
   canvas.setAttribute('aria-hidden', 'true');
   Object.assign(canvas.style, {
     position: 'absolute',
     // rect is the <h1> box; the rasterisation used the same origin, so the
     // frame offset carries straight over.
-    left: `${rect.left + window.scrollX + frame.x - padX}px`,
-    top: `${rect.top + window.scrollY + frame.y - padY}px`,
+    left: `${originX + frame.x - padX}px`,
+    top: `${originY + frame.y - padY}px`,
     width: `${cw}px`,
     height: `${ch}px`,
     pointerEvents: 'none',
@@ -169,7 +185,7 @@ export function morphWord(h1, fromWord, toWord, opts = {}) {
   });
   canvas.width = Math.ceil(cw * dpr);
   canvas.height = Math.ceil(ch * dpr);
-  document.body.appendChild(canvas);
+  mount.appendChild(canvas);
 
   const ctx = canvas.getContext('2d');
   const colour = style.color;

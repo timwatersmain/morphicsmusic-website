@@ -25,7 +25,13 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 
     <!-- The stage. This h1 is the real thing: same classes as every section
          title, so the morph samples the exact letterforms visitors see. -->
-    <div class="border border-white/5 rounded-lg bg-surface-container-low px-6 py-14 mb-10 overflow-hidden">
+    <!-- Sticky, and NOT overflow-hidden. The mode buttons sit well below the
+         stage — especially on a phone, where 25 of them fill the screen — so a
+         static stage means you tap a mode and the morph plays somewhere off
+         screen. Pinning it keeps the preview in view no matter how far down the
+         list you are. relative, because the particle canvas mounts into it. -->
+    <div id="lab-stage" class="relative sticky top-20 z-20 border border-white/5 rounded-lg bg-surface-container-low px-6 py-14 mb-10 backdrop-blur-xl">
+      <p id="lab-status" class="absolute top-3 left-6 font-mono text-[10px] tracking-widest uppercase text-secondary/70">tap a mode</p>
       <h1
         id="lab-title"
         data-no-vt
@@ -62,6 +68,8 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
   const msVal = document.getElementById('lab-ms-val');
   const wordsIn = document.getElementById('lab-words');
   const replay = document.getElementById('lab-replay');
+  const stage = document.getElementById('lab-stage');
+  const status = document.getElementById('lab-status');
 
   let wordIdx = 0;
   let last = null;
@@ -81,6 +89,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 
     busy = true;
     last = mode;
+    status.textContent = `${mode} · ${msIn.value}ms · ${from} → ${to}`;
     for (const b of grid.children) b.dataset.active = String(b.dataset.mode === mode);
 
     // The element must already read as the destination: the morph hides it,
@@ -90,6 +99,9 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
     morphWord(h1, from, to, {
       mode,
       ms: Number(msIn.value),
+      // Into the stage, not <body>: the stage is sticky, so a canvas positioned
+      // in page coordinates would be left behind the moment the page scrolls.
+      mount: stage,
       onDone: () => { busy = false; },
     });
   }
