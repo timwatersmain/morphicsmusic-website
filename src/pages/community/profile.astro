@@ -45,6 +45,8 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
   </div>
 
   <script>
+    import { avatarHtml, glyphLetterFor } from '../../scripts/avatar.js';
+
     const loading = document.getElementById('prof-loading')!;
     const signin = document.getElementById('prof-signin')!;
     const signinLink = document.getElementById('prof-signin-link') as HTMLAnchorElement;
@@ -59,32 +61,9 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
     const shelfEmpty = document.getElementById('prof-shelf-empty')!;
 
     const esc = (s: any) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
-    const safeImg = (s: any) => {
-      const v = String(s ?? '');
-      return /^(https?:|\/)/.test(v) ? v : '';
-    };
 
     function fmtDate(unix: number) {
       return new Date(unix * 1000).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
-    }
-
-    // Mirrors AvatarMedallion.astro — rebuilt here by hand because this
-    // markup is assembled from a client-side fetch, not server-rendered.
-    function medallionHtml(art: string | null | undefined, name: string, opts: { rarity?: number; size?: 'sm' | 'md' | 'lg' } = {}) {
-      const { rarity, size = 'md' } = opts;
-      const dim = { sm: 'w-10 h-10', md: 'w-16 h-16', lg: 'w-28 h-28' }[size];
-      const img = safeImg(art);
-      const inner = img
-        ? `<img src="${esc(img)}" alt="${esc(name)}" width="112" height="112" loading="lazy" decoding="async" class="w-full h-full object-cover" />`
-        : `<div class="w-full h-full bg-surface-container-high"></div>`;
-      const rarityBadge = (typeof rarity === 'number' && rarity > 0 && rarity <= 0.1)
-        ? `<span class="absolute -bottom-1 left-1/2 -translate-x-1/2 font-mono text-[8px] uppercase tracking-widest bg-secondary text-on-secondary px-1">${esc(Math.max(1, Math.round(rarity * 100)))}%</span>`
-        : '';
-      return `
-        <div class="relative inline-block">
-          <div class="${dim} rounded-full overflow-hidden border-2 border-primary/60 transition-colors">${inner}</div>
-          ${rarityBadge}
-        </div>`;
     }
 
     function showError(message: string) {
@@ -117,17 +96,22 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
           content.classList.remove('hidden');
 
           const { profile, shelf } = data;
+          // /api/community/profile sends only the public toPublicProfile()
+          // shape (handle, display_name, ... — see repo.ts), which is the
+          // only string this page has to derive this fan's glyph letter
+          // from; it never carries their private `username`.
+          const glyphLetter = glyphLetterFor(profile.handle || '');
           nameEl.textContent = profile.display_name || profile.handle;
           sinceEl.textContent = 'Fan since ' + fmtDate(profile.fan_since);
           countEl.textContent = `${profile.collection_count} collected`;
-          avatarEl.innerHTML = medallionHtml(profile.avatar && profile.avatar.art_path, profile.display_name || profile.handle, { size: 'lg' });
+          avatarEl.innerHTML = avatarHtml(profile.avatar, glyphLetter, 112);
 
           if (!shelf.length) {
             shelfEmpty.classList.remove('hidden');
           } else {
             shelfEl.innerHTML = shelf.map((a: any) => `
               <li class="text-center">
-                ${medallionHtml(a.art_path, a.name, { rarity: a.rarity })}
+                ${avatarHtml(a, glyphLetter, 84, { rarity: a.rarity })}
                 <p class="font-mono text-[9px] text-white/40 uppercase tracking-widest mt-2 leading-tight">${esc(a.name)}</p>
               </li>
             `).join('');

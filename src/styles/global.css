@@ -25,6 +25,21 @@
   font-display: swap;
 }
 
+/* The four-tier avatar glyph (tiers 1, 2 and 4 — see src/scripts/avatar.js).
+   font-display: block, not swap: this face paints a single letter that IS
+   the avatar, not body text with a readable fallback — a moment in a
+   fallback serif/sans face would flash a wrong letterform (no fallback font
+   has "Morphian" glyphs) rather than reflow acceptable text, so it is worth
+   a short block period to avoid ever painting the wrong thing. Tiny (6.8KB,
+   26 letters, no digits/punctuation), so the block window is brief. */
+@font-face {
+  font-family: "Morphian";
+  src: url("/fonts/MorphianTrial-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: block;
+}
+
 @theme {
   /* Colors — Synthetix 2035 design tokens */
   --color-on-primary: #00363a;

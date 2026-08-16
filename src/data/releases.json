@@ -10,7 +10,10 @@
       "experimental"
     ],
     "links": {
-      "bandcamp": "https://morphics.bandcamp.com/track/golden-dawn"
+      "bandcamp": "https://morphics.bandcamp.com/track/golden-dawn",
+      "spotify": "https://open.spotify.com/artist/morphicsmusic",
+      "apple music": "https://music.apple.com/artist/morphicsmusic",
+      "soundcloud": "https://soundcloud.com/morphics-music"
     },
     "embed": "",
     "featured": true
@@ -26,7 +29,10 @@
       "experimental"
     ],
     "links": {
-      "bandcamp": "https://morphics.bandcamp.com/"
+      "bandcamp": "https://morphics.bandcamp.com/",
+      "spotify": "https://open.spotify.com/artist/morphicsmusic",
+      "apple music": "https://music.apple.com/artist/morphicsmusic",
+      "soundcloud": "https://soundcloud.com/morphics-music"
     },
     "embed": "",
     "featured": true
@@ -42,7 +48,10 @@
       "sound-design"
     ],
     "links": {
-      "bandcamp": "https://morphics.bandcamp.com/"
+      "bandcamp": "https://morphics.bandcamp.com/",
+      "spotify": "https://open.spotify.com/artist/morphicsmusic",
+      "apple music": "https://music.apple.com/artist/morphicsmusic",
+      "soundcloud": "https://soundcloud.com/morphics-music"
     },
     "embed": "",
     "featured": false
@@ -58,7 +67,10 @@
       "ambient"
     ],
     "links": {
-      "bandcamp": "https://morphics.bandcamp.com/track/morpheus"
+      "bandcamp": "https://morphics.bandcamp.com/track/morpheus",
+      "spotify": "https://open.spotify.com/artist/morphicsmusic",
+      "apple music": "https://music.apple.com/artist/morphicsmusic",
+      "soundcloud": "https://soundcloud.com/morphics-music"
     },
     "embed": "",
     "featured": false
@@ -74,7 +86,10 @@
       "bass"
     ],
     "links": {
-      "bandcamp": "https://morphics.bandcamp.com/album/nexus"
+      "bandcamp": "https://morphics.bandcamp.com/album/nexus",
+      "spotify": "https://open.spotify.com/artist/morphicsmusic",
+      "apple music": "https://music.apple.com/artist/morphicsmusic",
+      "soundcloud": "https://soundcloud.com/morphics-music"
     },
     "embed": "",
     "featured": false
@@ -90,7 +105,10 @@
       "ambient"
     ],
     "links": {
-      "bandcamp": "https://morphics.bandcamp.com/track/cicada"
+      "bandcamp": "https://morphics.bandcamp.com/track/cicada",
+      "spotify": "https://open.spotify.com/artist/morphicsmusic",
+      "apple music": "https://music.apple.com/artist/morphicsmusic",
+      "soundcloud": "https://soundcloud.com/morphics-music"
     },
     "embed": "",
     "featured": false

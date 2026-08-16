@@ -78,17 +78,13 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
         </p>
       </section>
 
-      <div>
-        <div class="flex items-baseline gap-3 mb-4">
-          <span class="font-mono text-xs text-secondary uppercase">Your catalogue</span>
-          <div class="h-[1px] flex-1 bg-outline-variant/30"></div>
-        </div>
-        <ul id="me-catalogue" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-6"></ul>
-      </div>
+      <div id="me-catalogue" class="space-y-10"></div>
     </div>
   </div>
 
   <script>
+    import { avatarHtml, glyphLetterFor } from '../../scripts/avatar.js';
+
     const loading = document.getElementById('me-loading')!;
     const signin = document.getElementById('me-signin')!;
     const errorBox = document.getElementById('me-error')!;
@@ -109,37 +105,22 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
     const catalogueEl = document.getElementById('me-catalogue')!;
 
     const esc = (s: any) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
-    const safeImg = (s: any) => {
-      const v = String(s ?? '');
-      return /^(https?:|\/)/.test(v) ? v : '';
-    };
 
     function fmtDate(unix: number) {
       return new Date(unix * 1000).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
     }
 
-    // Mirrors AvatarMedallion.astro — rebuilt here by hand because this
-    // markup is assembled from a client-side fetch, not server-rendered.
-    function medallionHtml(art: string | null | undefined, name: string, opts: { locked?: boolean; rarity?: number; size?: 'sm' | 'md' | 'lg' } = {}) {
-      const { locked = false, rarity, size = 'md' } = opts;
-      const dim = { sm: 'w-10 h-10', md: 'w-16 h-16', lg: 'w-28 h-28' }[size];
-      const img = safeImg(art);
-      const border = locked ? 'border-white/10' : 'border-primary/60';
-      const inner = img
-        ? `<img src="${esc(img)}" alt="${esc(locked ? name + ' — locked' : name)}" width="112" height="112" loading="lazy" decoding="async" class="w-full h-full object-cover${locked ? ' grayscale opacity-25' : ''}" />`
-        : `<div class="w-full h-full bg-surface-container-high"></div>`;
-      const lockBadge = locked
-        ? `<span class="material-symbols-outlined absolute inset-0 grid place-items-center text-white/50 text-[18px]">lock</span>`
-        : '';
-      const rarityBadge = (!locked && typeof rarity === 'number' && rarity > 0 && rarity <= 0.1)
-        ? `<span class="absolute -bottom-1 left-1/2 -translate-x-1/2 font-mono text-[8px] uppercase tracking-widest bg-secondary text-on-secondary px-1">${esc(Math.max(1, Math.round(rarity * 100)))}%</span>`
-        : '';
-      return `
-        <div class="relative inline-block">
-          <div class="${dim} rounded-full overflow-hidden border-2 ${border} transition-colors">${inner}</div>
-          ${lockBadge}${rarityBadge}
-        </div>`;
-    }
+    // The fan's own glyph letter, derived from their handle (see
+    // functions/_lib/community/glyph.ts) — every glyph-styled avatar
+    // rendered on this page (equipped, catalogue, "just unlocked") is this
+    // one fan's letter, computed once per load().
+    let myGlyphLetter = 'm';
+
+    // 84px — the picker's showcase size, big enough to tell a colourway and
+    // a stroked tier-4 glyph apart in a 6-wide grid. 112px for the single
+    // large equipped avatar up top.
+    const TILE_SIZE = 84;
+    const EQUIPPED_SIZE = 112;
 
     // This is the reward moment the whole feature exists for: `newly_unlocked`
     // is a list of avatar ids granted THIS load (computed server-side in
@@ -157,7 +138,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
       unlockedBanner.classList.remove('hidden');
       unlockedList.innerHTML = won.map(a => `
         <li class="text-center">
-          ${medallionHtml(a.art_path, a.name, { size: 'md' })}
+          ${avatarHtml(a, myGlyphLetter, TILE_SIZE)}
           <p class="font-mono text-[10px] text-primary uppercase tracking-widest mt-2">${esc(a.name)}</p>
         </li>
       `).join('');
@@ -166,11 +147,28 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
     let currentEquippedId: string | null = null;
 
     function renderEquipped(avatar: any) {
-      equippedEl.innerHTML = medallionHtml(avatar && avatar.art_path, avatar ? avatar.name : 'No avatar equipped', { size: 'lg' });
+      equippedEl.innerHTML = avatarHtml(avatar, myGlyphLetter, EQUIPPED_SIZE);
     }
 
-    function renderCatalogue(avatars: any[]) {
-      catalogueEl.innerHTML = avatars.map(a => `
+    // Tier 1 is always available (the "six options" every fan gets on day
+    // one); tier 2 unlocks by finishing account setup; tiers 3-4 are granted
+    // by hand, never earned by a task, which is why their catalogue hint
+    // copy (set server-side, tools/d1/seed-avatar-tiers.sql) reads as an
+    // award ("A gift, for the loyal") rather than an instruction — nothing
+    // is more deflating than a goal with no path, and there IS no path here.
+    const TIER_GROUPS: Array<{ tier: number | null; heading: string }> = [
+      { tier: 1, heading: 'Tier 1' },
+      { tier: 2, heading: 'Tier 2' },
+      { tier: 3, heading: 'Tier 3' },
+      { tier: 4, heading: 'Tier 4' },
+      // Pre-existing release/special avatars (earned by owning a record)
+      // sit on their own axis — see migrations/0005_avatar_tiers.sql — and
+      // keep their own group at the end so they don't vanish from the picker.
+      { tier: null, heading: 'Releases' },
+    ];
+
+    function avatarTile(a: any) {
+      return `
         <li class="text-center">
           <button
             type="button"
@@ -178,13 +176,37 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
             data-unlocked="${a.unlocked ? '1' : '0'}"
             class="avatar-pick inline-block ${a.unlocked ? 'cursor-pointer' : 'cursor-default'} ${a.id === currentEquippedId ? 'drop-shadow-[0_0_8px_#00F0FF]' : ''}"
           >
-            ${medallionHtml(a.art_path, a.name, { locked: !a.unlocked, rarity: a.rarity })}
+            ${avatarHtml(a, myGlyphLetter, TILE_SIZE, { locked: !a.unlocked, rarity: a.rarity })}
           </button>
           <p class="font-mono text-[9px] text-white/40 uppercase tracking-widest mt-2 leading-tight">
             ${a.unlocked ? esc(a.name) : esc(a.hint || 'Locked')}
           </p>
         </li>
-      `).join('');
+      `;
+    }
+
+    function renderCatalogue(avatars: any[]) {
+      const byTier = new Map<number | null, any[]>();
+      for (const a of avatars) {
+        const key = typeof a.tier === 'number' ? a.tier : null;
+        if (!byTier.has(key)) byTier.set(key, []);
+        byTier.get(key)!.push(a);
+      }
+
+      catalogueEl.innerHTML = TIER_GROUPS
+        .map(({ tier, heading }) => ({ tier, heading, items: byTier.get(tier) || [] }))
+        .filter(g => g.items.length)
+        .map(({ heading, items }) => `
+          <div>
+            <div class="flex items-baseline gap-3 mb-4">
+              <span class="font-mono text-xs text-secondary uppercase">${esc(heading)}</span>
+              <div class="h-[1px] flex-1 bg-outline-variant/30"></div>
+            </div>
+            <ul class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-6">
+              ${items.map(avatarTile).join('')}
+            </ul>
+          </div>
+        `).join('');
 
       catalogueEl.querySelectorAll<HTMLButtonElement>('.avatar-pick').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -222,6 +244,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
           content.classList.remove('hidden');
 
           const { profile, avatars, newly_unlocked } = data;
+          myGlyphLetter = glyphLetterFor(profile.handle || '');
           currentEquippedId = profile.avatar ? profile.avatar.id : null;
           handleEl.textContent = profile.handle ? '@' + profile.handle : '';
           nameInput.value = profile.display_name || '';
@@ -237,7 +260,16 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
           }
           fanSinceEl.textContent = 'Fan since ' + fmtDate(profile.fan_since);
           countEl.textContent = String(profile.collection_count);
-          renderEquipped(profile.avatar);
+          // profile.avatar comes from the public toPublicProfile() shape,
+          // which only carries {id, name, art_path} — it never leaks the
+          // tier recipe. `avatars` (this fan's own full catalogue, one call
+          // above) has the same id WITH style/colourway/tier, so look the
+          // equipped one up there to render it correctly at the top of the
+          // page instead of falling back to the legacy art_path path.
+          const equippedFull = profile.avatar
+            ? avatars.find((a: any) => a.id === profile.avatar.id) || profile.avatar
+            : null;
+          renderEquipped(equippedFull);
           renderCatalogue(avatars);
           renderNewlyUnlocked(newly_unlocked, avatars);
         })

@@ -50,6 +50,8 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
   </div>
 
   <script>
+    import { avatarHtml, glyphLetterFor } from '../../scripts/avatar.js';
+
     const loading = document.getElementById('dir-loading')!;
     const signin = document.getElementById('dir-signin')!;
     const empty = document.getElementById('dir-empty')!;
@@ -60,38 +62,24 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
     const moreBtn = document.getElementById('dir-more') as HTMLButtonElement;
 
     const esc = (s: any) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
-    const safeImg = (s: any) => {
-      const v = String(s ?? '');
-      return /^(https?:|\/)/.test(v) ? v : '';
-    };
 
     function fmtDate(unix: number) {
       return new Date(unix * 1000).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
     }
 
-    // Mirrors AvatarMedallion.astro — that component renders server-side only,
-    // so this client script rebuilds the same markup by hand for fans fetched
-    // over the wire.
-    function medallionHtml(art: string | null | undefined, name: string) {
-      const img = safeImg(art);
-      return `
-        <div class="relative inline-block">
-          <div class="w-16 h-16 rounded-full overflow-hidden border-2 border-primary/60">
-            ${img
-              ? `<img src="${esc(img)}" alt="${esc(name)}" width="112" height="112" loading="lazy" decoding="async" class="w-full h-full object-cover" />`
-              : `<div class="w-full h-full bg-surface-container-high"></div>`}
-          </div>
-        </div>`;
-    }
-
     let offset = 0;
     const limit = 48;
+
+    // 40px — the compact, many-rows size for the fan wall list; see
+    // avatar.js's tier 4 outline note for why 40px is the size that has to
+    // hold up under scrutiny.
+    const WALL_SIZE = 40;
 
     function renderFans(fans: any[], append: boolean) {
       const html = fans.map(f => `
         <li class="flex items-center gap-4 py-4">
           <span class="font-mono text-[10px] text-white/30 w-8 text-right">${esc(f.position)}</span>
-          ${medallionHtml(f.avatar && f.avatar.art_path, f.display_name || f.handle)}
+          ${avatarHtml(f.avatar, glyphLetterFor(f.handle || ''), WALL_SIZE)}
           <div class="flex-1 min-w-0">
             <a href="/community/u/${encodeURIComponent(f.handle)}" class="font-headline text-lg text-primary uppercase tracking-tight hover:text-secondary transition-colors truncate block">
               ${esc(f.display_name || f.handle)}
