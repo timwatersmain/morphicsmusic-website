@@ -53,6 +53,72 @@ describe('ensureProfile', () => {
   });
 });
 
+describe('ensureProfile race recovery', () => {
+  it('returns the existing row when a concurrent insert wins the unique-email race', async () => {
+    const email = 'race@b.com';
+    // Simulate a concurrent request that already created the profile between
+    // our pre-check and our insert.
+    raw.exec(`INSERT INTO fan_profiles (email, handle, display_name, fan_since, created_at, updated_at, last_seen_at)
+      VALUES ('${email}', 'race', 'Race', 0, 0, 0, 0)`);
+
+    // Wrap the shim so the FIRST getProfileByEmail-shaped read misses the row
+    // that genuinely exists — reproducing the race window — while every
+    // later read (including the catch-block re-read) sees real data.
+    let emailReadCount = 0;
+    const raceDb = {
+      prepare: sql => {
+        const stmt = db.prepare(sql);
+        if (!sql.includes('FROM fan_profiles WHERE email = ?')) return stmt;
+        return {
+          ...stmt,
+          bind: (...a) => {
+            const bound = stmt.bind(...a);
+            return {
+              ...bound,
+              first: async () => {
+                emailReadCount += 1;
+                if (emailReadCount === 1) return null;
+                return bound.first();
+              },
+            };
+          },
+        };
+      },
+      batch: db.batch,
+    };
+
+    const p = await ensureProfile(raceDb, { email, fanSince: 0, displayName: 'Race' });
+    // The winner's row stands — ensureProfile must not throw or create a duplicate.
+    expect(p.handle).toBe('race');
+    expect(p.display_name).toBe('Race');
+    expect(raw.prepare('SELECT COUNT(*) c FROM fan_profiles').get().c).toBe(1);
+  });
+
+  it('rethrows a non-unique-violation error rather than swallowing it', async () => {
+    const boomDb = {
+      prepare: sql => {
+        const stmt = db.prepare(sql);
+        if (!sql.trim().startsWith('INSERT INTO fan_profiles')) return stmt;
+        return {
+          ...stmt,
+          bind: (...a) => ({
+            ...stmt.bind(...a),
+            run: async () => { throw new Error('disk I/O error'); },
+          }),
+        };
+      },
+      batch: db.batch,
+    };
+
+    await expect(
+      ensureProfile(boomDb, { email: 'boom@b.com', fanSince: 0, displayName: 'Boom' }),
+    ).rejects.toThrow('disk I/O error');
+    // The catch block's re-read found nothing real, so it must not fabricate
+    // or leave behind a row.
+    expect(raw.prepare('SELECT COUNT(*) c FROM fan_profiles').get().c).toBe(0);
+  });
+});
+
 describe('grantUnlocks', () => {
   let fanId;
   beforeEach(async () => {
