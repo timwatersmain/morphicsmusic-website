@@ -26,3 +26,10 @@ pnpm-debug.log*
 
 # local D1 state from the gate migration tooling
 tools/d1/.wrangler/
+
+# temp SQL emitted by scripts/rebuild-fan-projection.mjs and
+# scripts/sync-avatar-catalogue.mjs — the former embeds every customer
+# email. Both scripts now write to the OS temp dir, not here; this is the
+# second line of defense in case a repo-root copy ever shows up.
+.rebuild-fan-projection.sql
+.avatar-sync.sql

@@ -38,6 +38,7 @@
 import { execFileSync } from 'child_process';
 import { writeFileSync, unlinkSync } from 'fs';
 import { join } from 'path';
+import { tmpdir } from 'os';
 
 // Reuses the real unlock engine rather than re-deriving its rules here —
 // duplicating `qualifies()` in this script would drift from
@@ -45,10 +46,32 @@ import { join } from 'path';
 //
 // Importing a .ts file directly from a plain .mjs script relies on Node's
 // native TypeScript type-stripping, which is unflagged only from Node 22.18
-// / 23.6 onward. That is why package.json's `engines.node` floor is
-// >=22.18.0 rather than the site's previous >=22.12.0 — this import is what
-// sets it, so raise both together if either changes.
-import { evaluateUnlocks } from '../functions/_lib/community/unlocks.ts';
+// / 23.6 onward. THIS SCRIPT THEREFORE REQUIRES NODE >= 22.18 — but that
+// requirement must live here, not in package.json's `engines.node`: Cloudflare
+// Pages reads `engines.node` to choose its BUILD IMAGE, and this is a local
+// dev tool Pages never runs, so bumping the site-wide floor for it would risk
+// breaking production deploys for a script that only ever runs on a laptop.
+// assertNodeVersionForTsImport() below checks this explicitly and fails with
+// a clear message instead of a cryptic parse error from the .ts import.
+function assertNodeVersionForTsImport() {
+  const [major, minor] = process.versions.node.split('.').map(Number);
+  if (major > 22 || (major === 22 && minor >= 18)) return;
+  console.error(
+    `rebuild-fan-projection: requires Node >= 22.18 for .ts imports ` +
+    `(found ${process.versions.node}). This script imports evaluateUnlocks ` +
+    `directly from functions/_lib/community/unlocks.ts, which relies on ` +
+    `Node's native TypeScript type-stripping — unflagged only from 22.18 ` +
+    `(or 23.6) onward. Upgrade Node and try again.`,
+  );
+  process.exit(1);
+}
+assertNodeVersionForTsImport();
+
+// Dynamic (not static) import: a static import of a .ts file is parsed
+// before assertNodeVersionForTsImport() above ever runs, so on an old Node
+// it would throw a raw syntax error instead of our clear message. Top-level
+// await keeps the rest of this module from running until it resolves.
+const { evaluateUnlocks } = await import('../functions/_lib/community/unlocks.ts');
 
 const KV_CONFIG = 'tools/kv/wrangler.toml';
 const D1_CONFIG = 'tools/d1/wrangler.toml';
@@ -244,7 +267,11 @@ if (process.argv[1] && process.argv[1].endsWith('rebuild-fan-projection.mjs')) {
     process.exit(0);
   }
 
-  const tmp = join(process.cwd(), '.rebuild-fan-projection.sql');
+  // Written to the OS temp dir, not the repo root: this SQL embeds every
+  // customer email in the batch, and a killed process would otherwise leave
+  // that sitting in the working tree (the .gitignore entry below is a
+  // second line of defense, not the first).
+  const tmp = join(tmpdir(), `.rebuild-fan-projection-${process.pid}.sql`);
   writeFileSync(tmp, sql);
   try {
     execFileSync('npx', ['--yes', 'wrangler', 'd1', 'execute', 'GATES', '--config', D1_CONFIG, target, `--file=${tmp}`], { stdio: 'inherit' });

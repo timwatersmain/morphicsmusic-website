@@ -16,6 +16,7 @@
 import { execSync } from 'child_process';
 import { readFileSync, writeFileSync, unlinkSync } from 'fs';
 import { join } from 'path';
+import { tmpdir } from 'os';
 
 const args = Object.fromEntries(
   process.argv.slice(2).filter(a => a.startsWith('--')).map(a => {
@@ -82,7 +83,10 @@ if (process.argv[1] && process.argv[1].endsWith('sync-avatar-catalogue.mjs')) {
   }
 
   const target = args.remote ? '--remote' : '--local';
-  const tmp = join(process.cwd(), '.avatar-sync.sql');
+  // OS temp dir rather than the repo root, matching rebuild-fan-projection.mjs
+  // — a killed process should never leave a generated SQL file sitting in the
+  // working tree where it could get added by accident.
+  const tmp = join(tmpdir(), `.avatar-sync-${process.pid}.sql`);
   writeFileSync(tmp, toUpsertSql(rows));
   try {
     execSync(
