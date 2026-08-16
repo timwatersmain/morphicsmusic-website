@@ -1,2 +1,10 @@
 /signal /social 301
 /sonics /music 301
+
+# Astro here is static output with no adapter, so a dynamic [handle].astro
+# route can't prerender unknown fan handles. Instead every /community/u/*
+# path is rewritten (200, not a redirect) to the same static shell, which
+# reads the handle from location.pathname and fetches it client-side.
+# Placed after the two 301s above and scoped to /community/u/* specifically
+# so it cannot shadow /community itself or those existing redirects.
+/community/u/* /community/profile 200
