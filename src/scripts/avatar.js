@@ -11,12 +11,13 @@
 // every fan wearing "tier 1 / cyan" sees their own letter.
 //
 // The three community pages (index/me/profile) used to each hand-roll an
-// equivalent medallionHtml(); AvatarMedallion.astro documented that copy as
+// equivalent medallionHtml(); a component once documented that copy as
 // "reviewed and accepted" debt because the old avatars were plain images.
 // Now that rendering has real per-tier logic, that duplication is a real
-// liability, so this module is the ONE place it lives — every page (the
-// three client scripts, and AvatarMedallion.astro at build time) imports
-// avatarHtml() from here instead of keeping its own copy.
+// liability, so this module is the ONE place it lives — every page's
+// client script imports avatarHtml() from here instead of keeping its own
+// copy. (The old AvatarMedallion.astro component that predated this module
+// has been deleted — nothing imported it once this shared renderer landed.)
 //
 // `art_path` is a documented NOT-NULL sentinel ('(procedural)') for tiers
 // 1-2, since that column can't be dropped. We therefore always branch on

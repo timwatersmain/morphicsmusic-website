@@ -1,8 +1,7 @@
 // avatar.js is the one place the four-tier avatar disc is rendered — the
-// three community pages and AvatarMedallion.astro all call avatarHtml()
-// instead of keeping their own copy. These tests exercise the pure string
-// output directly, without a browser, since the function has no DOM/network
-// dependency of its own.
+// three community pages all call avatarHtml() instead of keeping their own
+// copy. These tests exercise the pure string output directly, without a
+// browser, since the function has no DOM/network dependency of its own.
 
 import { describe, it, expect } from 'vitest';
 import { avatarHtml, glyphLetterFor } from '../../src/scripts/avatar.js';
