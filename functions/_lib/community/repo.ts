@@ -135,43 +135,78 @@ export async function getDirectory(
   return results || [];
 }
 
-export async function updateProfile(
-  db: D1Database,
-  fanId: number,
-  fields: { displayName?: string; equippedAvatarId?: string | null; handle?: string },
-): Promise<void> {
+function buildProfileSets(
+  fields: { displayName?: string; equippedAvatarId?: string | null; handleLocked?: boolean },
+  handle: string | undefined,
+): { sets: string[]; args: unknown[] } {
   const sets: string[] = [];
   const args: unknown[] = [];
   if (fields.displayName !== undefined) { sets.push('display_name = ?'); args.push(fields.displayName); }
   if (fields.equippedAvatarId !== undefined) { sets.push('equipped_avatar_id = ?'); args.push(fields.equippedAvatarId); }
-  if (fields.handle !== undefined) { sets.push('handle = ?'); args.push(fields.handle); }
-  if (!sets.length) return;
-  sets.push('updated_at = ?'); args.push(now());
-  args.push(fanId);
-  await db.prepare(`UPDATE fan_profiles SET ${sets.join(', ')} WHERE id = ?`).bind(...args).run();
+  if (handle !== undefined) { sets.push('handle = ?'); args.push(handle); }
+  if (fields.handleLocked) { sets.push('handle_locked = ?'); args.push(1); }
+  return { sets, args };
+}
+
+async function runProfileUpdate(
+  db: D1Database, fanId: number, built: { sets: string[]; args: unknown[] },
+): Promise<void> {
+  if (!built.sets.length) return;
+  const args = [...built.args, now(), fanId];
+  await db.prepare(`UPDATE fan_profiles SET ${built.sets.join(', ')}, updated_at = ? WHERE id = ?`)
+    .bind(...args).run();
+}
+
+export async function updateProfile(
+  db: D1Database,
+  fanId: number,
+  fields: { displayName?: string; equippedAvatarId?: string | null; handle?: string; handleLocked?: boolean },
+): Promise<void> {
+  if (fields.handle === undefined) {
+    await runProfileUpdate(db, fanId, buildProfileSets(fields, undefined));
+    return;
+  }
+
+  try {
+    await runProfileUpdate(db, fanId, buildProfileSets(fields, fields.handle));
+    return;
+  } catch (err) {
+    // A concurrent regeneration landed on the same candidate handle first —
+    // idx_fan_profiles_handle throws rather than failing silently, same
+    // shape as ensureProfile's insert race. Re-derive a fresh candidate off
+    // the same base name and retry exactly once.
+    const retryBase = fields.displayName ?? fields.handle;
+    const retryHandle = await nextAvailableHandle(
+      retryBase, async h => !!(await getProfileByHandle(db, h)),
+    );
+    try {
+      await runProfileUpdate(db, fanId, buildProfileSets(fields, retryHandle));
+      return;
+    } catch {
+      // Still colliding. A fan renaming themselves must never get a 500 over
+      // a handle collision — keep the existing handle and persist everything
+      // else instead.
+      await runProfileUpdate(db, fanId, buildProfileSets(fields, undefined));
+    }
+  }
 }
 
 /**
- * The default display_name given to every profile created without a chosen
- * name (see `ensureProfile`'s `name` fallback above). Exported so update.ts
- * can detect "this is the fan's first chosen name" without duplicating the
- * literal.
- */
-export const UNTOUCHED_DEFAULT_NAME = 'Fan';
-
-/**
- * Regenerate `handle` from `newName`, but ONLY the first time a fan picks a
- * display name — i.e. only while their stored name is still the untouched
- * default. Once a fan has a chosen name, the handle is a permanent permalink
- * and must never move again (see the comment in update.ts).
+ * Regenerate `handle` from `newName`, but ONLY while the handle is still
+ * unlocked. Locking (not the display name) is the permanent record of
+ * whether this has already happened — a fan renaming themselves back to the
+ * literal string "Fan" must not re-arm regeneration, so the display name
+ * itself can never be part of this gate. Once locked, the handle is a
+ * permanent permalink and must never move again (see the comment in
+ * update.ts).
  *
- * Returns the new handle if one was generated, or null if the current name
- * is not the untouched default (caller should leave the handle alone).
+ * Returns the new handle if one was generated, or null if the handle is
+ * already locked (caller should leave the handle alone).
  */
 export async function regenerateHandleOnFirstName(
-  db: D1Database, currentDisplayName: string, newName: string,
+  db: D1Database, handleLocked: number, newName: string,
 ): Promise<string | null> {
-  if (currentDisplayName !== UNTOUCHED_DEFAULT_NAME) return null;
+  if (handleLocked) return null;
   return nextAvailableHandle(newName, async h => !!(await getProfileByHandle(db, h)));
 }
 

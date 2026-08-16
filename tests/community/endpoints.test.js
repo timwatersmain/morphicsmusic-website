@@ -27,6 +27,7 @@ import { onRequestGet as directoryGet } from '../../functions/api/community/dire
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const MIGRATION = readFileSync(join(root, 'migrations/0002_fan_profiles.sql'), 'utf8');
+const MIGRATION3 = readFileSync(join(root, 'migrations/0003_handle_locked.sql'), 'utf8');
 
 const AUTH_SECRET = 'test-only-secret-not-real';
 const FAN_EMAIL = 'endpoint-fan@example.com';
@@ -61,6 +62,7 @@ beforeEach(() => {
   raw = new DatabaseSync(':memory:');
   raw.exec('PRAGMA foreign_keys = ON');
   raw.exec(MIGRATION);
+  raw.exec(MIGRATION3);
   seedCatalogue(raw);
   db = makeD1Shim(raw);
   kv = makeKvStub();
@@ -336,5 +338,68 @@ describe('POST /api/community/update — handle regenerates once, on the first c
     // Handle is now a permalink — the second rename must not move it, even
     // though it no longer matches the display name.
     expect(afterSecond.handle).toBe('ana-vex');
+  });
+
+  it('locks the handle on the first rename', async () => {
+    const profile = await ensureProfile(db, {
+      email: FAN_EMAIL, fanSince: Math.floor(Date.now() / 1000), displayName: null,
+    });
+    const cookie = await cookieFor(FAN_EMAIL);
+
+    await updatePost({
+      request: req('https://morphicsmusic.com/api/community/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Cookie: cookie },
+        body: JSON.stringify({ display_name: 'Ana Vex' }),
+      }),
+      env,
+    });
+    const row = raw.prepare('SELECT handle_locked FROM fan_profiles WHERE id = ?').get(profile.id);
+    expect(row.handle_locked).toBe(1);
+  });
+
+  // The bug this branch fixes: 'Fan' is a legal display name, and the old
+  // gate compared the CURRENT display_name against the literal 'Fan' to
+  // decide whether to regenerate. That means a fan could rename to a real
+  // name (regenerating once, as intended), then rename BACK to 'Fan' — which
+  // re-armed the gate — then rename again to move the handle. Repeat
+  // indefinitely. The fix (gating on handle_locked, not on the display name)
+  // must survive exactly this sequence.
+  it('renaming to the literal "Fan" does not re-arm regeneration — the handle never moves again', async () => {
+    const profile = await ensureProfile(db, {
+      email: FAN_EMAIL, fanSince: Math.floor(Date.now() / 1000), displayName: null,
+    });
+    const cookie = await cookieFor(FAN_EMAIL);
+    const rename = async (name) => updatePost({
+      request: req('https://morphicsmusic.com/api/community/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Cookie: cookie },
+        body: JSON.stringify({ display_name: name }),
+      }),
+      env,
+    });
+
+    // First real name: this is the one legitimate regeneration.
+    await rename('First Real Name');
+    const firstHandle = raw.prepare('SELECT handle FROM fan_profiles WHERE id = ?').get(profile.id).handle;
+    expect(firstHandle).toBe('first-real-name');
+
+    // Rename back to the untouched-default literal — under the old
+    // currentDisplayName !== 'Fan' gate this would re-arm regeneration.
+    await rename('Fan');
+    expect(raw.prepare('SELECT handle FROM fan_profiles WHERE id = ?').get(profile.id).handle)
+      .toBe(firstHandle);
+
+    // Rename again — if the gate were re-armed, this would move the handle.
+    await rename('Totally New Identity');
+    expect(raw.prepare('SELECT handle FROM fan_profiles WHERE id = ?').get(profile.id).handle)
+      .toBe(firstHandle);
+
+    // And once more, for good measure — the lock must hold no matter how
+    // many times this loop runs.
+    await rename('Fan');
+    await rename('Yet Another Name');
+    expect(raw.prepare('SELECT handle FROM fan_profiles WHERE id = ?').get(profile.id).handle)
+      .toBe(firstHandle);
   });
 });

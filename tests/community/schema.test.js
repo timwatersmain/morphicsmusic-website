@@ -7,6 +7,8 @@ import { dirname, join } from 'node:path';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const UP = readFileSync(join(root, 'migrations/0002_fan_profiles.sql'), 'utf8');
 const DOWN = readFileSync(join(root, 'migrations/down/0002_fan_profiles.down.sql'), 'utf8');
+const UP3 = readFileSync(join(root, 'migrations/0003_handle_locked.sql'), 'utf8');
+const DOWN3 = readFileSync(join(root, 'migrations/down/0003_handle_locked.down.sql'), 'utf8');
 const TABLES = ['fan_profiles', 'avatar_catalogue', 'fan_avatar_unlocks'];
 
 const STUB = `CREATE TABLE IF NOT EXISTS d1_migrations (
@@ -52,6 +54,45 @@ describe('migration 0002', () => {
     db.exec(DOWN);
     expect(db.prepare('SELECT name FROM d1_migrations').all()).toHaveLength(0);
     expect(() => db.exec(UP)).not.toThrow();
+  });
+});
+
+const STUB3 = `INSERT INTO d1_migrations (name, applied_at) VALUES ('0003_handle_locked.sql','now');`;
+
+function makeDb3() {
+  const db = makeDb();
+  db.exec(STUB3);
+  db.exec(UP3);
+  return db;
+}
+
+describe('migration 0003', () => {
+  it('adds handle_locked, defaulting to 0', () => {
+    const db = makeDb3();
+    addFan(db, 'a@b.com', 'ana');
+    const row = db.prepare('SELECT handle_locked FROM fan_profiles').get();
+    expect(row.handle_locked).toBe(0);
+  });
+
+  it('enforces the 0/1 check constraint', () => {
+    const db = makeDb3();
+    addFan(db, 'a@b.com', 'ana');
+    expect(() => db.prepare('UPDATE fan_profiles SET handle_locked = 2 WHERE handle = ?').run('ana'))
+      .toThrow(/CHECK constraint/i);
+  });
+
+  it('is reversible', () => {
+    const db = makeDb3();
+    db.exec(DOWN3);
+    const cols = db.prepare("PRAGMA table_info(fan_profiles)").all().map(c => c.name);
+    expect(cols).not.toContain('handle_locked');
+  });
+
+  it('down clears bookkeeping so up can re-run', () => {
+    const db = makeDb3();
+    db.exec(DOWN3);
+    expect(db.prepare("SELECT name FROM d1_migrations WHERE name = '0003_handle_locked.sql'").all()).toHaveLength(0);
+    expect(() => { db.exec(STUB3); db.exec(UP3); }).not.toThrow();
   });
 });
 

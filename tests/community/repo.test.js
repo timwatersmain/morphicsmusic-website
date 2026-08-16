@@ -5,11 +5,12 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import {
   ensureProfile, grantUnlocks, getProfileByHandle, getUnlockedAvatarIds,
-  getRarity, getDirectory, toPublicProfile,
+  getRarity, getDirectory, toPublicProfile, updateProfile,
 } from '../../functions/_lib/community/repo';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const UP = readFileSync(join(root, 'migrations/0002_fan_profiles.sql'), 'utf8');
+const UP3 = readFileSync(join(root, 'migrations/0003_handle_locked.sql'), 'utf8');
 
 import { makeD1Shim } from './helpers/d1-shim.js';
 
@@ -18,6 +19,7 @@ beforeEach(() => {
   raw = new DatabaseSync(':memory:');
   raw.exec('PRAGMA foreign_keys = ON');
   raw.exec(UP);
+  raw.exec(UP3);
   raw.exec(`INSERT INTO avatar_catalogue (id,kind,release_slug,name,art_path,unlock_rule,hint,sort_order)
     VALUES ('release:perception','release','perception','PERCEPTION','/a.webp',
             '{"type":"own_release","slug":"perception"}','Own PERCEPTION',0)`);
@@ -207,10 +209,56 @@ describe('toPublicProfile', () => {
       id: 1, email: 'secret@b.com', handle: 'ana', display_name: 'Ana',
       equipped_avatar_id: null, fan_since: 1, rank_points: 0,
       collection_count: 2, created_at: 0, updated_at: 0, last_seen_at: null,
+      handle_locked: 1,
     };
     const pub = toPublicProfile(row, null);
     expect(JSON.stringify(pub)).not.toContain('secret@b.com');
     expect('email' in pub).toBe(false);
     expect(pub.handle).toBe('ana');
+  });
+
+  it('never includes handle_locked — it is internal state, not fan-facing', () => {
+    const row = {
+      id: 1, email: 'secret@b.com', handle: 'ana', display_name: 'Ana',
+      equipped_avatar_id: null, fan_since: 1, rank_points: 0,
+      collection_count: 2, created_at: 0, updated_at: 0, last_seen_at: null,
+      handle_locked: 1,
+    };
+    const pub = toPublicProfile(row, null);
+    expect('handle_locked' in pub).toBe(false);
+    expect(JSON.stringify(pub)).not.toContain('handle_locked');
+  });
+});
+
+describe('updateProfile handle race recovery', () => {
+  it('recovers from a handle collision during regeneration instead of throwing', async () => {
+    // Fan A already owns the handle "ana" — the exact candidate Fan B's
+    // regeneration would otherwise land on.
+    await ensureProfile(db, { email: 'a@b.com', fanSince: 0, displayName: 'Ana' });
+    const fanB = await ensureProfile(db, { email: 'b@b.com', fanSince: 0, displayName: null });
+    expect(fanB.display_name).toBe('Fan');
+
+    // Force the "candidate" the caller picked to collide: bypass
+    // nextAvailableHandle's own collision-avoidance by handing updateProfile
+    // the already-taken handle directly, exactly as update.ts would if two
+    // concurrent regenerations raced to the same free slug and both read it
+    // as available before either wrote.
+    await expect(
+      updateProfile(db, fanB.id, { displayName: 'Ana', handle: 'ana', handleLocked: true }),
+    ).resolves.toBeUndefined();
+
+    const row = raw.prepare('SELECT display_name, handle, handle_locked FROM fan_profiles WHERE id = ?')
+      .get(fanB.id);
+    // No exception escaped, the display name was still persisted, and the
+    // fan ended up on a real handle that is NOT "ana" (either a suffixed
+    // retry candidate or, if even the retry collided, their prior handle).
+    expect(row.display_name).toBe('Ana');
+    expect(row.handle).not.toBe('ana');
+    expect(row.handle).toBeTruthy();
+
+    // "ana" itself must still belong exclusively to fan A — the collision
+    // must never have been resolved by silently overwriting the other row.
+    const fanA = raw.prepare('SELECT handle FROM fan_profiles WHERE email = ?').get('a@b.com');
+    expect(fanA.handle).toBe('ana');
   });
 });

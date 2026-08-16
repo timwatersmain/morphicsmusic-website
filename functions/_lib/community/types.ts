@@ -11,6 +11,12 @@ export interface FanProfileRow {
   created_at: number;
   updated_at: number;
   last_seen_at: number | null;
+  /**
+   * Set to 1 the first time the handle is regenerated off a chosen display
+   * name, and never cleared. Internal state only — see toPublicProfile,
+   * which is a strict allow-list and must never grow this field.
+   */
+  handle_locked: number;
 }
 
 export interface AvatarCatalogueRow {

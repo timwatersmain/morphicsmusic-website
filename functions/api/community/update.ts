@@ -25,7 +25,9 @@ export const onRequestPost: PagesFunction<CommunityEnv> = corsHandler<CommunityE
     const profile = await getProfileByEmail(env.GATES, email);
     if (!profile) return json({ error: 'no profile' }, 404);
 
-    const fields: { displayName?: string; equippedAvatarId?: string | null; handle?: string } = {};
+    const fields: {
+      displayName?: string; equippedAvatarId?: string | null; handle?: string; handleLocked?: boolean;
+    } = {};
 
     if (body.display_name !== undefined) {
       const name = String(body.display_name).trim();
@@ -35,13 +37,19 @@ export const onRequestPost: PagesFunction<CommunityEnv> = corsHandler<CommunityE
       // The handle is derived once, at the moment the fan first chooses a
       // name: profiles are created with the untouched default ('Fan') and no
       // Stripe-derived name, so their handle is still a placeholder like
-      // "fan-7". Regenerating it here — only while the stored name is still
-      // that default — is the fan's one chance to land on a handle that
-      // matches the name they actually picked. Every rename after that
-      // leaves the handle alone: it is a stable permalink by then, and
-      // changing it would break every link to this profile.
-      const regenerated = await regenerateHandleOnFirstName(env.GATES, profile.display_name, name);
-      if (regenerated) fields.handle = regenerated;
+      // "fan-7". Regenerating it here — gated on handle_locked, NOT on the
+      // display name (a fan could otherwise rename themselves back to the
+      // literal 'Fan' to re-arm this and move their handle indefinitely) —
+      // is the fan's one chance to land on a handle that matches the name
+      // they actually picked. Locking happens in the same write below, so
+      // every rename after that leaves the handle alone: it is a stable
+      // permalink by then, and changing it would break every link to this
+      // profile.
+      const regenerated = await regenerateHandleOnFirstName(env.GATES, profile.handle_locked, name);
+      if (regenerated) {
+        fields.handle = regenerated;
+        fields.handleLocked = true;
+      }
     }
 
     if (body.equipped_avatar_id !== undefined) {

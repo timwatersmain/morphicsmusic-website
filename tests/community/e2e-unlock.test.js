@@ -15,6 +15,7 @@ import { makeD1Shim } from './helpers/d1-shim.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const UP = readFileSync(join(root, 'migrations/0002_fan_profiles.sql'), 'utf8');
+const UP3 = readFileSync(join(root, 'migrations/0003_handle_locked.sql'), 'utf8');
 
 const CATALOG = {
   releases: [
@@ -28,6 +29,7 @@ beforeEach(() => {
   raw = new DatabaseSync(':memory:');
   raw.exec('PRAGMA foreign_keys = ON');
   raw.exec(UP);
+  raw.exec(UP3);
   for (const a of buildReleaseAvatars(CATALOG)) {
     raw.prepare(`INSERT INTO avatar_catalogue
       (id,kind,release_slug,name,art_path,unlock_rule,hint,sort_order)
