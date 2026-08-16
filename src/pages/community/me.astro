@@ -31,6 +31,11 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
     </div>
 
     <div id="me-content" class="hidden space-y-12">
+      <div id="me-unlocked-banner" class="hidden p-6 border border-secondary/40 bg-secondary/5">
+        <p class="font-mono text-[10px] text-secondary uppercase tracking-widest mb-3">Just unlocked</p>
+        <ul id="me-unlocked-list" class="flex flex-wrap gap-6"></ul>
+      </div>
+
       <section class="border border-white/5 p-6">
         <div class="flex items-center gap-6 mb-6">
           <div id="me-equipped"></div>
@@ -40,7 +45,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
               <input
                 id="me-name-input"
                 type="text"
-                maxlength="32"
+                maxlength="40"
                 class="flex-1 px-4 py-3 bg-surface-container-low border border-white/10 focus:border-secondary outline-none font-mono text-sm text-primary"
               >
               <button id="me-name-save" class="px-4 py-3 border border-primary/20 hover:border-primary/60 hover:bg-primary/5 font-mono text-[10px] tracking-widest uppercase text-primary rounded-full">
@@ -72,6 +77,8 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
     const errorMsg = document.getElementById('me-error-msg')!;
     const content = document.getElementById('me-content')!;
     const handleEl = document.getElementById('me-handle')!;
+    const unlockedBanner = document.getElementById('me-unlocked-banner')!;
+    const unlockedList = document.getElementById('me-unlocked-list')!;
     const equippedEl = document.getElementById('me-equipped')!;
     const nameInput = document.getElementById('me-name-input') as HTMLInputElement;
     const nameSave = document.getElementById('me-name-save') as HTMLButtonElement;
@@ -111,6 +118,28 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
           <div class="${dim} rounded-full overflow-hidden border-2 ${border} transition-colors">${inner}</div>
           ${lockBadge}${rarityBadge}
         </div>`;
+    }
+
+    // This is the reward moment the whole feature exists for: `newly_unlocked`
+    // is a list of avatar ids granted THIS load (computed server-side in
+    // /api/community/me against the shelf as it stood before granting), so it
+    // is only ever non-empty for the one visit where the unlock happened.
+    function renderNewlyUnlocked(ids: string[] | undefined, avatars: any[]) {
+      const won = (ids || [])
+        .map(id => avatars.find(a => a.id === id))
+        .filter(Boolean);
+      if (!won.length) {
+        unlockedBanner.classList.add('hidden');
+        unlockedList.innerHTML = '';
+        return;
+      }
+      unlockedBanner.classList.remove('hidden');
+      unlockedList.innerHTML = won.map(a => `
+        <li class="text-center">
+          ${medallionHtml(a.art_path, a.name, { size: 'md' })}
+          <p class="font-mono text-[10px] text-primary uppercase tracking-widest mt-2">${esc(a.name)}</p>
+        </li>
+      `).join('');
     }
 
     let currentEquippedId: string | null = null;
@@ -171,7 +200,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
           loading.classList.add('hidden');
           content.classList.remove('hidden');
 
-          const { profile, avatars } = data;
+          const { profile, avatars, newly_unlocked } = data;
           currentEquippedId = profile.avatar ? profile.avatar.id : null;
           handleEl.textContent = profile.handle ? '@' + profile.handle : '';
           nameInput.value = profile.display_name || '';
@@ -179,6 +208,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
           countEl.textContent = String(profile.collection_count);
           renderEquipped(profile.avatar);
           renderCatalogue(avatars);
+          renderNewlyUnlocked(newly_unlocked, avatars);
         })
         .catch(e => {
           loading.classList.add('hidden');
