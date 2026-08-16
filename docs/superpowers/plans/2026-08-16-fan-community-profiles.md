@@ -1470,6 +1470,10 @@ export const onRequestGet: PagesFunction<CommunityEnv> = corsHandler<CommunityEn
     });
 
     const catalogue = await getCatalogue(env.GATES);
+    // Read the shelf BEFORE granting. Reading it afterwards would already
+    // include the new grants, so "what did you just earn" would always be
+    // empty — and that moment is the whole point of the reward loop.
+    const heldBefore = new Set(await getUnlockedAvatarIds(env.GATES, profile.id));
     const grants = evaluateUnlocks(
       {
         ownedSlugs: [...owned],
@@ -1507,7 +1511,7 @@ export const onRequestGet: PagesFunction<CommunityEnv> = corsHandler<CommunityEn
     return new Response(JSON.stringify({
       profile: { ...toPublicProfile({ ...profile, collection_count: owned.size }, equipped), is_self: true },
       avatars,
-      newly_unlocked: grants.filter(g => !unlockedIds.has(g.avatarId)).map(g => g.avatarId),
+      newly_unlocked: grants.filter(g => !heldBefore.has(g.avatarId)).map(g => g.avatarId),
     }), { headers: { 'Content-Type': 'application/json' } });
   },
 );
