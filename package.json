@@ -17,7 +17,12 @@
     "upload:digital": "node scripts/upload-digital.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
-    "images:optimize": "node scripts/generate-image-variants.mjs"
+    "images:optimize": "node scripts/generate-image-variants.mjs",
+    "d1:migrate:local": "npx --yes wrangler d1 migrations apply GATES --config tools/d1/wrangler.toml --local",
+    "d1:migrate": "npx --yes wrangler d1 migrations apply GATES --config tools/d1/wrangler.toml --remote",
+    "d1:rollback:local": "npx --yes wrangler d1 execute GATES --config tools/d1/wrangler.toml --local --file=migrations/down/0001_download_gates.down.sql",
+    "d1:rollback": "npx --yes wrangler d1 execute GATES --config tools/d1/wrangler.toml --remote --file=migrations/down/0001_download_gates.down.sql",
+    "d1:seed:local": "npx --yes wrangler d1 execute GATES --config tools/d1/wrangler.toml --local --file=tools/d1/seed-example-gate.sql"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.2.2",
