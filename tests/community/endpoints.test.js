@@ -244,3 +244,97 @@ describe('POST /api/community/update — blocked display names', () => {
     expect(body).toEqual({ error: 'blocked_name' });
   });
 });
+
+// Whole-branch review Fix 1: record.name in the KV customer blob is the
+// Stripe cardholder's LEGAL NAME (customer_details.name). It must never
+// reach display_name or, through the handle derivation, a public URL — and
+// once a fan does pick their own name, the handle should regenerate exactly
+// once so they are not stuck on a placeholder like "fan-7" forever.
+describe('GET /api/community/me — Stripe name never becomes a public identifier', () => {
+  it('does not use the KV record name for display_name or handle', async () => {
+    await kv.put(`customer:${FAN_EMAIL}`, JSON.stringify({
+      name: 'Jane Smith',
+      first_seen_at: Math.floor(Date.now() / 1000) - 86400,
+      purchases: [],
+    }));
+    const cookie = await cookieFor(FAN_EMAIL);
+
+    const res = await meGet({
+      request: req('https://morphicsmusic.com/api/community/me', { headers: { Cookie: cookie } }),
+      env,
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+
+    expect(body.profile.display_name).not.toBe('Jane Smith');
+    expect(body.profile.display_name).toBe('Fan');
+    expect(body.profile.handle).not.toContain('jane');
+    expect(body.profile.handle).not.toContain('smith');
+
+    const stored = raw.prepare('SELECT display_name, handle FROM fan_profiles WHERE email = ?').get(FAN_EMAIL);
+    expect(stored.display_name).toBe('Fan');
+    expect(stored.handle).not.toContain('jane');
+    expect(stored.handle).not.toContain('smith');
+  });
+});
+
+describe('POST /api/community/update — handle regenerates once, on the first chosen name', () => {
+  it('regenerates the handle the first time a fan sets a display name', async () => {
+    // Mirrors how /api/community/me creates a profile post-Fix-1: no name
+    // supplied, so it lands on the untouched default 'Fan' and a
+    // placeholder handle.
+    const profile = await ensureProfile(db, {
+      email: FAN_EMAIL, fanSince: Math.floor(Date.now() / 1000), displayName: null,
+    });
+    expect(profile.display_name).toBe('Fan');
+    const cookie = await cookieFor(FAN_EMAIL);
+
+    const res = await updatePost({
+      request: req('https://morphicsmusic.com/api/community/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Cookie: cookie },
+        body: JSON.stringify({ display_name: 'Ana Vex' }),
+      }),
+      env,
+    });
+    expect(res.status).toBe(200);
+
+    const stored = raw.prepare('SELECT display_name, handle FROM fan_profiles WHERE id = ?').get(profile.id);
+    expect(stored.display_name).toBe('Ana Vex');
+    expect(stored.handle).toBe('ana-vex');
+  });
+
+  it('does NOT regenerate the handle on a second rename', async () => {
+    const profile = await ensureProfile(db, {
+      email: FAN_EMAIL, fanSince: Math.floor(Date.now() / 1000), displayName: null,
+    });
+    const cookie = await cookieFor(FAN_EMAIL);
+
+    await updatePost({
+      request: req('https://morphicsmusic.com/api/community/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Cookie: cookie },
+        body: JSON.stringify({ display_name: 'Ana Vex' }),
+      }),
+      env,
+    });
+    const afterFirst = raw.prepare('SELECT handle FROM fan_profiles WHERE id = ?').get(profile.id);
+    expect(afterFirst.handle).toBe('ana-vex');
+
+    const res2 = await updatePost({
+      request: req('https://morphicsmusic.com/api/community/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Cookie: cookie },
+        body: JSON.stringify({ display_name: 'A Totally Different Name' }),
+      }),
+      env,
+    });
+    expect(res2.status).toBe(200);
+
+    const afterSecond = raw.prepare('SELECT display_name, handle FROM fan_profiles WHERE id = ?').get(profile.id);
+    expect(afterSecond.display_name).toBe('A Totally Different Name');
+    // Handle is now a permalink — the second rename must not move it, even
+    // though it no longer matches the display name.
+    expect(afterSecond.handle).toBe('ana-vex');
+  });
+});

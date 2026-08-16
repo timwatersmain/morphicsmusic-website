@@ -4,7 +4,9 @@
 import { corsHandler, preflight } from '../../_lib/cors';
 import { rateLimit, rateLimitedJson, clientIp } from '../../_lib/ratelimit';
 import { requireFan, unauthorized, type CommunityEnv } from '../../_lib/community/session';
-import { getProfileByEmail, getUnlockedAvatarIds, updateProfile } from '../../_lib/community/repo';
+import {
+  getProfileByEmail, getUnlockedAvatarIds, updateProfile, regenerateHandleOnFirstName,
+} from '../../_lib/community/repo';
 import { isValidDisplayName, isBlockedName } from '../../_lib/community/handle';
 
 export const onRequestOptions: PagesFunction<CommunityEnv> = async ({ request }) => preflight(request);
@@ -23,15 +25,23 @@ export const onRequestPost: PagesFunction<CommunityEnv> = corsHandler<CommunityE
     const profile = await getProfileByEmail(env.GATES, email);
     if (!profile) return json({ error: 'no profile' }, 404);
 
-    const fields: { displayName?: string; equippedAvatarId?: string | null } = {};
+    const fields: { displayName?: string; equippedAvatarId?: string | null; handle?: string } = {};
 
     if (body.display_name !== undefined) {
       const name = String(body.display_name).trim();
       if (!isValidDisplayName(name)) return json({ error: 'invalid_name' }, 400);
       if (isBlockedName(name)) return json({ error: 'blocked_name' }, 400);
       fields.displayName = name;
-      // The handle is deliberately NOT regenerated on rename: it is a stable
-      // permalink, and changing it would break every link to this profile.
+      // The handle is derived once, at the moment the fan first chooses a
+      // name: profiles are created with the untouched default ('Fan') and no
+      // Stripe-derived name, so their handle is still a placeholder like
+      // "fan-7". Regenerating it here — only while the stored name is still
+      // that default — is the fan's one chance to land on a handle that
+      // matches the name they actually picked. Every rename after that
+      // leaves the handle alone: it is a stable permalink by then, and
+      // changing it would break every link to this profile.
+      const regenerated = await regenerateHandleOnFirstName(env.GATES, profile.display_name, name);
+      if (regenerated) fields.handle = regenerated;
     }
 
     if (body.equipped_avatar_id !== undefined) {

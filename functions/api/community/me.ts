@@ -12,7 +12,9 @@ import {
 import { evaluateUnlocks } from '../../_lib/community/unlocks';
 
 interface CustomerRecord {
-  name?: string | null;
+  // Deliberately no `name` field: the KV record's `name` is the Stripe
+  // cardholder's legal name and must never be read into a fan-facing field.
+  // See the comment on `displayName: null` below.
   first_seen_at?: number;
   purchases?: Array<{ music_release_slugs?: string[]; digital_slugs?: string[] }>;
 }
@@ -44,7 +46,11 @@ export const onRequestGet: PagesFunction<CommunityEnv> = corsHandler<CommunityEn
       // A fan with no purchases (e.g. arrived via a download gate) still gets
       // a profile; their tenure starts now.
       fanSince: record.first_seen_at || nowSec,
-      displayName: record.name || null,
+      // `record.name` is the Stripe cardholder's LEGAL NAME
+      // (customer_details.name) — never persist it as a display name or let
+      // it seed a handle. The fan picks their own name later, at which
+      // point update.ts regenerates the handle exactly once.
+      displayName: null,
     });
 
     const catalogue = await getCatalogue(env.GATES);

@@ -168,6 +168,39 @@ describe('reads', () => {
   });
 });
 
+describe('getDirectory ordering', () => {
+  beforeEach(async () => {
+    raw.exec(`INSERT INTO avatar_catalogue (id,kind,release_slug,name,art_path,unlock_rule,hint,sort_order)
+      VALUES ('release:second','release','second','SECOND','/b.webp',
+              '{"type":"own_release","slug":"second"}','Own SECOND',1)`);
+  });
+
+  it('ranks a fan with more unlocks above an older fan with fewer, even though they joined later', async () => {
+    // Older fan, zero unlocks.
+    const veteran = await ensureProfile(db, { email: 'veteran@b.com', fanSince: 5, displayName: 'Veteran' });
+    // Much younger fan, but holds two avatars — under the old
+    // rank_points/tenure ordering this fan would rank LAST, not first.
+    const collector = await ensureProfile(db, { email: 'collector@b.com', fanSince: 5000, displayName: 'Collector' });
+    await grantUnlocks(db, collector.id, [
+      { avatarId: 'release:perception', source: 'own_release', sourceRef: 'perception' },
+      { avatarId: 'release:second', source: 'own_release', sourceRef: 'second' },
+    ]);
+
+    const rows = await getDirectory(db, { limit: 10, offset: 0 });
+    const handles = rows.map(r => r.handle);
+    expect(handles.indexOf('collector')).toBeLessThan(handles.indexOf('veteran'));
+  });
+
+  it('falls back to tenure (ascending) when unlock counts tie', async () => {
+    const older = await ensureProfile(db, { email: 'older@b.com', fanSince: 10, displayName: 'Older' });
+    const younger = await ensureProfile(db, { email: 'younger@b.com', fanSince: 999, displayName: 'Younger' });
+
+    const rows = await getDirectory(db, { limit: 10, offset: 0 });
+    const handles = rows.map(r => r.handle);
+    expect(handles.indexOf(older.handle)).toBeLessThan(handles.indexOf(younger.handle));
+  });
+});
+
 describe('toPublicProfile', () => {
   it('never includes the email', () => {
     const row = {

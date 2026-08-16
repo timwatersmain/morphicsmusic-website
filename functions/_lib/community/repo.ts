@@ -1,7 +1,7 @@
 // All D1 access for the community feature. Every function takes the database
 // as its first argument so tests can inject a node:sqlite shim.
 
-import { nextAvailableHandle, isValidDisplayName } from './handle';
+import { nextAvailableHandle, isValidDisplayName, isBlockedName } from './handle';
 import type { AvatarCatalogueRow, FanProfileRow, PublicProfile, UnlockGrant } from './types';
 
 const now = () => Math.floor(Date.now() / 1000);
@@ -35,7 +35,11 @@ export async function ensureProfile(
   const existing = await getProfileByEmail(db, email);
   if (existing) return existing;
 
-  const name = isValidDisplayName(opts.displayName || '') ? opts.displayName!.trim() : 'Fan';
+  // Defence in depth: update.ts is the normal path that enforces
+  // isBlockedName, but a seeded/imported displayName should never be able to
+  // slip a reserved word (e.g. "admin") straight into a handle either.
+  const rawName = opts.displayName || '';
+  const name = (isValidDisplayName(rawName) && !isBlockedName(rawName)) ? rawName.trim() : 'Fan';
   const handle = await nextAvailableHandle(name, async h => !!(await getProfileByHandle(db, h)));
   const t = now();
 
@@ -109,9 +113,11 @@ export async function getRarity(db: D1Database): Promise<Record<string, number>>
 }
 
 /**
- * Directory page. Ordered by rank_points then tenure — rank_points is a
- * placeholder (always 0) until the loyalty sub-project lands, so in practice
- * this currently orders by who has been a fan longest.
+ * Directory page. Matches the copy on /community — "ranked by rarity and
+ * tenure" — by ordering on the number of avatars each fan has actually
+ * unlocked (descending), then tenure (ascending) as the tiebreaker.
+ * `rank_points` is a placeholder column (always 0) until the loyalty
+ * sub-project lands, so it cannot be the sort key yet.
  */
 export async function getDirectory(
   db: D1Database, opts: { limit: number; offset: number },
@@ -119,7 +125,12 @@ export async function getDirectory(
   const limit = Math.min(Math.max(opts.limit | 0, 1), 100);
   const offset = Math.max(opts.offset | 0, 0);
   const { results } = await db.prepare(
-    `SELECT * FROM fan_profiles ORDER BY rank_points DESC, fan_since ASC LIMIT ? OFFSET ?`,
+    `SELECT fp.*, COUNT(u.avatar_id) AS unlock_count
+       FROM fan_profiles fp
+       LEFT JOIN fan_avatar_unlocks u ON u.fan_id = fp.id
+       GROUP BY fp.id
+       ORDER BY unlock_count DESC, fp.fan_since ASC
+       LIMIT ? OFFSET ?`,
   ).bind(limit, offset).all<FanProfileRow>();
   return results || [];
 }
@@ -127,16 +138,41 @@ export async function getDirectory(
 export async function updateProfile(
   db: D1Database,
   fanId: number,
-  fields: { displayName?: string; equippedAvatarId?: string | null },
+  fields: { displayName?: string; equippedAvatarId?: string | null; handle?: string },
 ): Promise<void> {
   const sets: string[] = [];
   const args: unknown[] = [];
   if (fields.displayName !== undefined) { sets.push('display_name = ?'); args.push(fields.displayName); }
   if (fields.equippedAvatarId !== undefined) { sets.push('equipped_avatar_id = ?'); args.push(fields.equippedAvatarId); }
+  if (fields.handle !== undefined) { sets.push('handle = ?'); args.push(fields.handle); }
   if (!sets.length) return;
   sets.push('updated_at = ?'); args.push(now());
   args.push(fanId);
   await db.prepare(`UPDATE fan_profiles SET ${sets.join(', ')} WHERE id = ?`).bind(...args).run();
+}
+
+/**
+ * The default display_name given to every profile created without a chosen
+ * name (see `ensureProfile`'s `name` fallback above). Exported so update.ts
+ * can detect "this is the fan's first chosen name" without duplicating the
+ * literal.
+ */
+export const UNTOUCHED_DEFAULT_NAME = 'Fan';
+
+/**
+ * Regenerate `handle` from `newName`, but ONLY the first time a fan picks a
+ * display name — i.e. only while their stored name is still the untouched
+ * default. Once a fan has a chosen name, the handle is a permanent permalink
+ * and must never move again (see the comment in update.ts).
+ *
+ * Returns the new handle if one was generated, or null if the current name
+ * is not the untouched default (caller should leave the handle alone).
+ */
+export async function regenerateHandleOnFirstName(
+  db: D1Database, currentDisplayName: string, newName: string,
+): Promise<string | null> {
+  if (currentDisplayName !== UNTOUCHED_DEFAULT_NAME) return null;
+  return nextAvailableHandle(newName, async h => !!(await getProfileByHandle(db, h)));
 }
 
 export async function setCollectionCount(db: D1Database, fanId: number, count: number): Promise<void> {
