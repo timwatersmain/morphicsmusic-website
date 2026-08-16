@@ -19,7 +19,10 @@ interface Env extends AdminEnv {
   GATES: D1Database;
 }
 
-export const onRequestOptions: PagesFunction<Env> = async ({ request }) => preflight(request);
+// Advertise DELETE alongside POST — this endpoint accepts both (grant/
+// revoke), and a cross-origin DELETE preflight would otherwise fail against
+// the shared default of "GET, POST, OPTIONS".
+export const onRequestOptions: PagesFunction<Env> = async ({ request }) => preflight(request, 'POST, DELETE, OPTIONS');
 
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });

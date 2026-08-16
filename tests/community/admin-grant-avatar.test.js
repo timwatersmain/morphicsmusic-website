@@ -13,7 +13,9 @@ import { dirname, join } from 'node:path';
 import { makeD1Shim } from './helpers/d1-shim.js';
 import { signSession, SESSION_COOKIE } from '../../functions/_lib/auth';
 import { ensureProfile, getUnlockedAvatarIds } from '../../functions/_lib/community/repo';
-import { onRequestPost as grantPost, onRequestDelete as grantDelete } from '../../functions/api/admin/grant-avatar';
+import {
+  onRequestPost as grantPost, onRequestDelete as grantDelete, onRequestOptions as grantOptions,
+} from '../../functions/api/admin/grant-avatar';
 import { onRequestPost as updatePost } from '../../functions/api/community/update';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -142,6 +144,36 @@ describe('POST /api/admin/grant-avatar', () => {
     });
     expect(res.status).toBe(200);
     expect(await getUnlockedAvatarIds(db, profile.id)).not.toContain(TIER3_ID);
+  });
+});
+
+// Pre-deploy review Fix 2: this endpoint accepts DELETE (revoke) as well as
+// POST (grant), so a cross-origin DELETE preflight must not be rejected by
+// the shared default Allow-Methods list.
+describe('OPTIONS /api/admin/grant-avatar', () => {
+  it('advertises DELETE alongside POST for an allowed origin', async () => {
+    const res = await grantOptions({
+      request: req('https://morphicsmusic.com/api/admin/grant-avatar', {
+        method: 'OPTIONS',
+        headers: { Origin: 'https://morphicsmusic.com' },
+      }),
+      env,
+    });
+    expect(res.status).toBe(204);
+    const allowed = res.headers.get('Access-Control-Allow-Methods');
+    expect(allowed).toContain('DELETE');
+    expect(allowed).toContain('POST');
+  });
+
+  it('still 403s a disallowed origin — the fix must not weaken the allow-list', async () => {
+    const res = await grantOptions({
+      request: req('https://morphicsmusic.com/api/admin/grant-avatar', {
+        method: 'OPTIONS',
+        headers: { Origin: 'https://evil.example.com' },
+      }),
+      env,
+    });
+    expect(res.status).toBe(403);
   });
 });
 

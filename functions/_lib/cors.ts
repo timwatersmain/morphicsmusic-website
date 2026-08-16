@@ -40,7 +40,11 @@ export function corsHandler<E = unknown>(fn: PagesFunction<E>): PagesFunction<E>
 
 // Preflight handler — call from onRequestOptions for any /api/* function
 // that needs to be reachable from a browser fetch with credentials.
-export function preflight(request: Request): Response {
+// `methods` defaults to the common GET/POST shape; pass the endpoint's
+// actual verb set (e.g. grant-avatar.ts's 'POST, DELETE, OPTIONS') so the
+// advertised Allow-Methods matches what the route really accepts, without
+// touching the origin allow-list this same helper enforces.
+export function preflight(request: Request, methods = 'GET, POST, OPTIONS'): Response {
   const allowed = pickAllowedOrigin(request);
   if (!allowed) return new Response(null, { status: 403 });
   return new Response(null, {
@@ -48,7 +52,7 @@ export function preflight(request: Request): Response {
     headers: {
       'Access-Control-Allow-Origin': allowed,
       'Access-Control-Allow-Credentials': 'true',
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Methods': methods,
       'Access-Control-Allow-Headers': 'Content-Type',
       'Access-Control-Max-Age': '600',
       'Vary': 'Origin',
