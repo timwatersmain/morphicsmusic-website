@@ -24,7 +24,10 @@
     "d1:rollback": "npx --yes wrangler d1 execute GATES --config tools/d1/wrangler.toml --remote --file=migrations/down/0001_download_gates.down.sql",
     "d1:rollback:community:local": "npx --yes wrangler d1 execute GATES --config tools/d1/wrangler.toml --local --file=migrations/down/0002_fan_profiles.down.sql",
     "d1:rollback:community": "npx --yes wrangler d1 execute GATES --config tools/d1/wrangler.toml --remote --file=migrations/down/0002_fan_profiles.down.sql",
-    "d1:seed:local": "npx --yes wrangler d1 execute GATES --config tools/d1/wrangler.toml --local --file=tools/d1/seed-example-gate.sql"
+    "d1:seed:local": "npx --yes wrangler d1 execute GATES --config tools/d1/wrangler.toml --local --file=tools/d1/seed-example-gate.sql",
+    "sync:avatars": "node scripts/sync-avatar-catalogue.mjs --local",
+    "sync:avatars:remote": "node scripts/sync-avatar-catalogue.mjs --remote",
+    "d1:seed:avatars:local": "npx --yes wrangler d1 execute GATES --config tools/d1/wrangler.toml --local --file=tools/d1/seed-special-avatars.sql"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.2.2",
