@@ -27,7 +27,8 @@
     "d1:seed:local": "npx --yes wrangler d1 execute GATES --config tools/d1/wrangler.toml --local --file=tools/d1/seed-example-gate.sql",
     "sync:avatars": "node scripts/sync-avatar-catalogue.mjs --local",
     "sync:avatars:remote": "node scripts/sync-avatar-catalogue.mjs --remote",
-    "d1:seed:avatars:local": "npx --yes wrangler d1 execute GATES --config tools/d1/wrangler.toml --local --file=tools/d1/seed-special-avatars.sql"
+    "d1:seed:avatars:local": "npx --yes wrangler d1 execute GATES --config tools/d1/wrangler.toml --local --file=tools/d1/seed-special-avatars.sql",
+    "rebuild:fans": "node scripts/rebuild-fan-projection.mjs"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.2.2",
