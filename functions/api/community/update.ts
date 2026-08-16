@@ -13,7 +13,7 @@ import { corsHandler, preflight } from '../../_lib/cors';
 import { rateLimit, rateLimitedJson, clientIp } from '../../_lib/ratelimit';
 import { requireFan, unauthorized, type CommunityEnv } from '../../_lib/community/session';
 import {
-  getProfileByEmail, getProfileByHandle, getUnlockedAvatarIds, updateProfile,
+  getProfileByEmail, getProfileByHandle, getUnlockedAvatarIds, getAvatarById, updateProfile,
   canChangeHandle, nextHandleChangeAt,
 } from '../../_lib/community/repo';
 import { isValidDisplayName, isBlockedName, slugifyHandle } from '../../_lib/community/handle';
@@ -77,8 +77,17 @@ export const onRequestPost: PagesFunction<CommunityEnv> = corsHandler<CommunityE
       if (wanted === null || wanted === '') {
         fields.equippedAvatarId = null;
       } else {
-        const unlocked = await getUnlockedAvatarIds(env.GATES, profile.id);
-        if (!unlocked.includes(wanted)) return json({ error: 'not_unlocked' }, 403);
+        const avatar = await getAvatarById(env.GATES, wanted);
+        // Tier 1 (glyph_solid) is available to every fan from signup by
+        // rule, not by ledger row — see the 'tier1_default' UnlockRule.
+        // Requiring a fan_avatar_unlocks row for it would mean writing six
+        // redundant grants (one per colourway) to every fan's ledger for
+        // something everyone already has.
+        const tierOneFree = avatar?.tier === 1;
+        if (!tierOneFree) {
+          const unlocked = await getUnlockedAvatarIds(env.GATES, profile.id);
+          if (!unlocked.includes(wanted)) return json({ error: 'not_unlocked' }, 403);
+        }
         fields.equippedAvatarId = wanted;
       }
     }

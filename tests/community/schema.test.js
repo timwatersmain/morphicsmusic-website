@@ -11,6 +11,8 @@ const UP3 = readFileSync(join(root, 'migrations/0003_handle_locked.sql'), 'utf8'
 const DOWN3 = readFileSync(join(root, 'migrations/down/0003_handle_locked.down.sql'), 'utf8');
 const UP4 = readFileSync(join(root, 'migrations/0004_handle_cooldown.sql'), 'utf8');
 const DOWN4 = readFileSync(join(root, 'migrations/down/0004_handle_cooldown.down.sql'), 'utf8');
+const UP5 = readFileSync(join(root, 'migrations/0005_avatar_tiers.sql'), 'utf8');
+const DOWN5 = readFileSync(join(root, 'migrations/down/0005_avatar_tiers.down.sql'), 'utf8');
 const TABLES = ['fan_profiles', 'avatar_catalogue', 'fan_avatar_unlocks'];
 
 const STUB = `CREATE TABLE IF NOT EXISTS d1_migrations (
@@ -131,6 +133,95 @@ describe('migration 0004', () => {
     db.exec(DOWN4);
     expect(db.prepare("SELECT name FROM d1_migrations WHERE name = '0004_handle_cooldown.sql'").all()).toHaveLength(0);
     expect(() => { db.exec(STUB4); db.exec(UP4); }).not.toThrow();
+  });
+});
+
+const STUB5 = `INSERT INTO d1_migrations (name, applied_at) VALUES ('0005_avatar_tiers.sql','now');`;
+
+function makeDb5() {
+  const db = makeDb4();
+  db.exec(STUB5);
+  db.exec(UP5);
+  return db;
+}
+
+const PLACEHOLDER_IDS = [
+  'special:tenure-90', 'special:tenure-365', 'special:tenure-730',
+  'special:streak-4', 'special:streak-12',
+];
+
+function placeholderCount(db) {
+  return db.prepare(
+    `SELECT COUNT(*) c FROM avatar_catalogue WHERE id IN (${PLACEHOLDER_IDS.map(() => '?').join(',')})`,
+  ).get(...PLACEHOLDER_IDS).c;
+}
+
+describe('migration 0005', () => {
+  it('adds style, colourway, artwork_key, tier — all nullable', () => {
+    const db = makeDb5();
+    addAvatar(db, 'release:perception');
+    const cols = db.prepare('PRAGMA table_info(avatar_catalogue)').all().map(c => c.name);
+    for (const c of ['style', 'colourway', 'artwork_key', 'tier']) expect(cols).toContain(c);
+    const row = db.prepare("SELECT style, colourway, artwork_key, tier FROM avatar_catalogue WHERE id = 'release:perception'").get();
+    expect(row.style).toBeNull();
+    expect(row.colourway).toBeNull();
+    expect(row.artwork_key).toBeNull();
+    expect(row.tier).toBeNull();
+  });
+
+  it('leaves art_path untouched — release avatars still work exactly as before', () => {
+    const db = makeDb5();
+    addAvatar(db, 'release:perception');
+    const row = db.prepare("SELECT art_path FROM avatar_catalogue WHERE id = 'release:perception'").get();
+    expect(row.art_path).toBe('/a.webp');
+  });
+
+  it('deletes the five special:* placeholder rows', () => {
+    const db = makeDb4();
+    // Seed the five placeholders exactly as tools/d1/seed-special-avatars.sql does.
+    for (const id of PLACEHOLDER_IDS) {
+      db.prepare(`INSERT INTO avatar_catalogue (id, kind, release_slug, name, art_path, unlock_rule, hint, sort_order)
+        VALUES (?, 'special', NULL, 'N', '/a.webp', '{"type":"tenure_days","days":1}', 'hint', 0)`).run(id);
+    }
+    expect(placeholderCount(db)).toBe(5);
+    db.exec(STUB5);
+    db.exec(UP5);
+    expect(placeholderCount(db)).toBe(0);
+  });
+
+  it('enforces the style CHECK constraint', () => {
+    const db = makeDb5();
+    expect(() => db.prepare(`INSERT INTO avatar_catalogue (id, kind, release_slug, name, art_path, unlock_rule, hint, sort_order, style)
+      VALUES ('x', 'special', NULL, 'N', '/a.webp', '{"type":"manual"}', 'hint', 0, 'nonsense')`).run())
+      .toThrow(/CHECK constraint/i);
+  });
+
+  it('enforces the tier CHECK constraint (1-4 or NULL)', () => {
+    const db = makeDb5();
+    expect(() => db.prepare(`INSERT INTO avatar_catalogue (id, kind, release_slug, name, art_path, unlock_rule, hint, sort_order, tier)
+      VALUES ('x', 'special', NULL, 'N', '/a.webp', '{"type":"manual"}', 'hint', 0, 5)`).run())
+      .toThrow(/CHECK constraint/i);
+  });
+
+  it('is reversible — drops the four columns', () => {
+    const db = makeDb5();
+    db.exec(DOWN5);
+    const cols = db.prepare('PRAGMA table_info(avatar_catalogue)').all().map(c => c.name);
+    for (const c of ['style', 'colourway', 'artwork_key', 'tier']) expect(cols).not.toContain(c);
+  });
+
+  it('down restores the five placeholder rows', () => {
+    const db = makeDb5();
+    expect(placeholderCount(db)).toBe(0);
+    db.exec(DOWN5);
+    expect(placeholderCount(db)).toBe(5);
+  });
+
+  it('down clears bookkeeping so up can re-run', () => {
+    const db = makeDb5();
+    db.exec(DOWN5);
+    expect(db.prepare("SELECT name FROM d1_migrations WHERE name = '0005_avatar_tiers.sql'").all()).toHaveLength(0);
+    expect(() => { db.exec(STUB5); db.exec(UP5); }).not.toThrow();
   });
 });
 

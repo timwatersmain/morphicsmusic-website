@@ -21,6 +21,9 @@ interface CustomerRecord {
   // signup.ts). Unlike `name`, this IS fan-chosen and safe to seed the
   // profile with — see the `username` comment below.
   username?: string;
+  // Presence (not value) drives tier 2's has_password unlock rule — see
+  // functions/_lib/customer.ts's CustomerRecord.password.
+  password?: string;
 }
 
 export const onRequestOptions: PagesFunction<CommunityEnv> = async ({ request }) => preflight(request);
@@ -78,6 +81,9 @@ export const onRequestGet: PagesFunction<CommunityEnv> = corsHandler<CommunityEn
         streakWeeks: 0,
         showsAttended: [],
         gatesCompleted: [],
+        // Tier 2's has_password rule. Presence, not value — the hash itself
+        // never leaves this scope.
+        hasPassword: !!record.password,
       },
       catalogue,
     );
@@ -98,7 +104,17 @@ export const onRequestGet: PagesFunction<CommunityEnv> = corsHandler<CommunityEn
       hint: a.hint,
       kind: a.kind,
       release_slug: a.release_slug,
-      unlocked: unlockedIds.has(a.id),
+      // Tier ladder recipe fields (null for release/special rows). The
+      // glyph itself is never sent — it is derived client-side (or by the
+      // future render endpoint) from the fan's own username.
+      style: a.style,
+      colourway: a.colourway,
+      artwork_key: a.artwork_key,
+      tier: a.tier,
+      // Tier 1 is available to everyone by rule — see update.ts's equip
+      // check — so it renders as unlocked even though it never gets a
+      // fan_avatar_unlocks row.
+      unlocked: a.tier === 1 || unlockedIds.has(a.id),
       rarity: rarity[a.id] ?? 0,
     }));
 

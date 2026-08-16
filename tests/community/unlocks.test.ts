@@ -10,14 +10,15 @@ function avatar(id: string, rule: object, over: Partial<AvatarCatalogueRow> = {}
     id, kind: id.startsWith('release:') ? 'release' : 'special',
     release_slug: null, name: id, art_path: '/a.webp',
     unlock_rule: JSON.stringify(rule), hint: 'hint',
-    available_from: null, available_until: null, sort_order: 0, ...over,
+    available_from: null, available_until: null, sort_order: 0,
+    style: null, colourway: null, artwork_key: null, tier: null, ...over,
   };
 }
 
 function ctx(over: Partial<UnlockContext> = {}): UnlockContext {
   return {
     ownedSlugs: [], fanSince: NOW, now: NOW,
-    streakWeeks: 0, showsAttended: [], gatesCompleted: [], ...over,
+    streakWeeks: 0, showsAttended: [], gatesCompleted: [], hasPassword: false, ...over,
   };
 }
 
@@ -83,6 +84,40 @@ describe('availability windows', () => {
   it('grants inside the window', () => {
     const cat = [avatar('special:live', rule, { available_from: NOW - DAY, available_until: NOW + DAY })];
     expect(evaluateUnlocks(ctx(), cat)).toHaveLength(1);
+  });
+});
+
+describe('tier 2 — has_password', () => {
+  const cat = [avatar('tier2:glyph_inverted:cyan', { type: 'has_password' }, { tier: 2, style: 'glyph_inverted', colourway: 'cyan' })];
+
+  it('grants when the fan has a password set', () => {
+    expect(evaluateUnlocks(ctx({ hasPassword: true }), cat)).toHaveLength(1);
+  });
+  it('does not grant when there is no password', () => {
+    expect(evaluateUnlocks(ctx({ hasPassword: false }), cat)).toHaveLength(0);
+  });
+});
+
+describe('tiers 3 and 4 — manual grants only', () => {
+  it('a manual rule never auto-grants, no matter the context', () => {
+    const cat = [
+      avatar('tier3:duotone:cyan:dscf3589', { type: 'manual' }, { tier: 3, style: 'duotone', colourway: 'cyan', artwork_key: 'dscf3589' }),
+      avatar('tier4:glyph_overlay:cyan:dscf3589', { type: 'manual' }, { tier: 4, style: 'glyph_overlay', colourway: 'cyan', artwork_key: 'dscf3589' }),
+    ];
+    // A context that would satisfy every other rule type still must not
+    // grant these — only POST /api/admin/grant-avatar ever writes them.
+    const generousCtx = ctx({
+      ownedSlugs: ['everything'], fanSince: 0, now: NOW,
+      streakWeeks: 999, showsAttended: ['any'], gatesCompleted: ['any'], hasPassword: true,
+    });
+    expect(evaluateUnlocks(generousCtx, cat)).toEqual([]);
+  });
+});
+
+describe('tier 1 — never granted through the ledger', () => {
+  it('a tier1_default rule never grants — availability comes from the tier column, not the ledger', () => {
+    const cat = [avatar('tier1:glyph_solid:cyan', { type: 'tier1_default' }, { tier: 1, style: 'glyph_solid', colourway: 'cyan' })];
+    expect(evaluateUnlocks(ctx({ hasPassword: true }), cat)).toEqual([]);
   });
 });
 

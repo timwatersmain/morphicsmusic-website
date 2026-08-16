@@ -130,6 +130,28 @@ export async function getCatalogue(db: D1Database): Promise<AvatarCatalogueRow[]
   return results || [];
 }
 
+export async function getAvatarById(db: D1Database, id: string): Promise<AvatarCatalogueRow | null> {
+  return db.prepare('SELECT * FROM avatar_catalogue WHERE id = ?').bind(id).first<AvatarCatalogueRow>();
+}
+
+/**
+ * Revoke a single grant (admin-only tiers 3-4). No-op if the fan never held
+ * it. Does not touch `equipped_avatar_id` — a fan wearing a revoked avatar
+ * falls back to the default render on next profile read, same as any other
+ * avatar deleted out from under them (see the ON DELETE SET NULL fk).
+ */
+export async function revokeUnlock(db: D1Database, fanId: number, avatarId: string): Promise<void> {
+  await db.prepare('DELETE FROM fan_avatar_unlocks WHERE fan_id = ? AND avatar_id = ?')
+    .bind(fanId, avatarId).run();
+  // A fan wearing the avatar being revoked must not keep displaying
+  // something they no longer hold — the fk's ON DELETE SET NULL only fires
+  // when the catalogue row itself is deleted, not when just the ledger
+  // entry is, so that has to be handled explicitly here.
+  await db.prepare(
+    'UPDATE fan_profiles SET equipped_avatar_id = NULL WHERE id = ? AND equipped_avatar_id = ?',
+  ).bind(fanId, avatarId).run();
+}
+
 /** avatarId -> fraction of all fans holding it (0..1). Empty when no fans. */
 export async function getRarity(db: D1Database): Promise<Record<string, number>> {
   const total = await db.prepare('SELECT COUNT(*) AS c FROM fan_profiles')

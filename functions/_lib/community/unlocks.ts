@@ -37,6 +37,18 @@ function qualifies(rule: UnlockRule, ctx: UnlockContext): string | null | false 
       return ctx.showsAttended.includes(rule.showId) ? rule.showId : false;
     case 'gate_completed':
       return ctx.gatesCompleted.includes(rule.gateSlug) ? rule.gateSlug : false;
+    case 'has_password':
+      return ctx.hasPassword ? null : false;
+    case 'manual':
+      // Tiers 3-4 are granted only via the admin endpoint, which writes
+      // directly to fan_avatar_unlocks and never goes through this
+      // evaluation path — so this must always refuse.
+      return false;
+    case 'tier1_default':
+      // Tier 1 availability comes from the `tier` column at equip time, not
+      // from a ledger row — this must always refuse so grantUnlocks never
+      // writes one.
+      return false;
     default:
       // Unknown rule type — forward-compatible with catalogue rows written by
       // a newer deploy. Never throws, never grants.
