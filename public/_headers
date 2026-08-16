@@ -47,3 +47,13 @@
 /community/*
   Cache-Control: no-store
   X-Robots-Tag: noindex, nofollow
+
+# scripts/subset-icon-font.mjs content-hashes this file's name, so a changed
+# font is a new URL — the only way to get new bytes is a new filename, which
+# is what makes a long-lived immutable cache safe here. (Before the hash, a
+# stale unhashed URL is exactly how the "diversity_3" nav icon bug shipped:
+# returning visitors kept the old font, which had no glyph for the icon, long
+# after the deploy that added it.) Matches the immutable Cache-Control already
+# used for /api/preview and /api/social-media/[key].
+/fonts/*
+  Cache-Control: public, max-age=31536000, immutable
