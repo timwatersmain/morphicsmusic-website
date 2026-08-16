@@ -56,8 +56,11 @@ export async function nextAvailableHandle(
   }
   // Pathological contention. A random suffix ends the loop rather than
   // spinning; collision odds at this point are negligible.
+  // padStart(2) matters: base36 of a byte under 36 is a SINGLE char, so an
+  // unpadded join can be shorter than 6 and the slice below would silently
+  // return a short suffix (~1% of calls). Pad first, then slice.
   const rand = Array.from(crypto.getRandomValues(new Uint8Array(4)))
-    .map(b => b.toString(36))
+    .map(b => b.toString(36).padStart(2, '0'))
     .join('')
     .slice(0, 6);
   return `${root}-${rand}`;
