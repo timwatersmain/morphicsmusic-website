@@ -33,7 +33,7 @@ const OUT = join(ROOT, 'public/fonts/MaterialSymbols-Subset.woff2');
 // fixing. Instead: take every identifier-shaped token in src/ and keep the ones
 // that are real glyph names in the upstream font. A false positive costs a few
 // hundred bytes; a false negative puts words on the page.
-function collectIcons(fontGlyphNames) {
+export function collectIcons(fontGlyphNames) {
   const words = new Set();
   const walk = (dir) => {
     for (const e of readdirSync(dir, { withFileTypes: true })) {
@@ -51,56 +51,109 @@ function collectIcons(fontGlyphNames) {
   return [...words].filter((w) => fontGlyphNames.has(w)).sort();
 }
 
+// The over-collecting scan above trades false positives for false negatives —
+// by design, per the comment on collectIcons. But an icon that is EXPLICITLY
+// named as an icon (an `icon: 'x'` property, not just some identifier that
+// happens to appear in source) is a much stronger signal than an incidental
+// token match, and a false negative here is exactly the "diversity_3" bug:
+// the name silently fails collectIcons's glyph-name filter (typo, or the icon
+// was renamed/retired upstream) and ships as literal text with nobody the
+// wiser. Explicit `icon:` declarations are collected separately and checked
+// against the upstream glyph set directly, so a miss throws at build time
+// instead of shipping a word.
+export function collectExplicitIconDeclarations() {
+  const found = [];
+  const walk = (dir) => {
+    for (const e of readdirSync(dir, { withFileTypes: true })) {
+      const full = join(dir, e.name);
+      if (e.isDirectory()) { walk(full); continue; }
+      if (!/\.(astro|js|ts|jsx|tsx)$/.test(e.name)) continue;
+      const src = readFileSync(full, 'utf8');
+      for (const m of src.matchAll(/\bicon:\s*['"]([a-z][a-z0-9_]*)['"]/g)) {
+        found.push({ icon: m[1], file: full });
+      }
+    }
+  };
+  walk(join(ROOT, 'src'));
+  return found;
+}
+
+// Pure so it's cheap to pin in a test: given the declarations and the
+// upstream glyph set, throw on the first one that won't survive the subset.
+// A missing glyph here is not a smaller font — it is a word on the page.
+export function assertExplicitIconsSurvive(declarations, fontGlyphNames) {
+  for (const { icon, file } of declarations) {
+    if (!fontGlyphNames.has(icon)) {
+      throw new Error(
+        `icon '${icon}' (declared in ${file}) is not a glyph name in the ` +
+        `upstream Material Symbols Outlined font, so it will render as ` +
+        `literal text instead of an icon. It may not exist in that icon set ` +
+        `— check https://fonts.google.com/icons for the current name — or it ` +
+        `may have been renamed/retired upstream.`
+      );
+    }
+  }
+}
+
 const CSS_URL = 'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=block';
 // Google serves a different CSS (and font format) per User-Agent; this one gets
 // the variable woff2 rather than a legacy static fallback.
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 
-if (process.argv.includes('--check')) {
-  if (!existsSync(OUT)) {
-    console.error(`missing ${OUT} — run: node scripts/subset-icon-font.mjs`);
-    process.exit(1);
+// Only run the (network-dependent) build when invoked directly — importing
+// this module for its pure functions (collectIcons, collectExplicitIconDeclarations,
+// assertExplicitIconsSurvive) in a test must not shell out to curl/python3.
+if (import.meta.url === `file://${process.argv[1]}`) {
+  if (process.argv.includes('--check')) {
+    if (!existsSync(OUT)) {
+      console.error(`missing ${OUT} — run: node scripts/subset-icon-font.mjs`);
+      process.exit(1);
+    }
+    console.log(`${OUT} present, ${(statSync(OUT).size / 1024).toFixed(1)} KB`);
+    process.exit(0);
   }
-  console.log(`${OUT} present, ${(statSync(OUT).size / 1024).toFixed(1)} KB`);
-  process.exit(0);
+
+  const tmp = mkdtempSync(join(tmpdir(), 'ms-subset-'));
+  const css = execFileSync('curl', ['-sS', '-A', UA, CSS_URL], { encoding: 'utf8' });
+  const url = css.match(/https:\/\/fonts\.gstatic\.com[^)]+\.woff2/)?.[0];
+  if (!url) throw new Error('could not find a woff2 URL in the Google CSS response');
+
+  const src = join(tmp, 'full.woff2');
+  execFileSync('curl', ['-sS', url, '-o', src]);
+
+  // Glyph names come from the font itself, so the source scan is matched against
+  // what this exact version actually ships — a renamed or retired icon shows up
+  // as "not found" here rather than as words on the page.
+  const names = execFileSync('python3', ['-c',
+    'import sys;from fontTools.ttLib import TTFont;print("\\n".join(TTFont(sys.argv[1]).getGlyphOrder()))',
+    src], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+  const fontGlyphNames = new Set(names.split('\n'));
+  const ICONS = collectIcons(fontGlyphNames);
+  if (!ICONS.length) throw new Error('scanned src/ and matched no icon glyph names — refusing to ship an empty font');
+
+  // Fail loudly on any explicit icon that won't survive into the subset.
+  assertExplicitIconsSurvive(collectExplicitIconDeclarations(), fontGlyphNames);
+
+  // Ligature substitution needs two things: the component CHARACTERS of every
+  // name (so "graphic_eq" can be typed at all), and the icon GLYPHS themselves.
+  //
+  // --glyphs is what makes this small. Selecting by --text alone keeps 1.1MB,
+  // because our names between them use most of the alphabet, so layout closure
+  // decides every ligature in the font is reachable and retains all ~3500 icons.
+  // Naming the glyphs explicitly and disabling closure drops it to ~10KB.
+  const text = [...new Set(ICONS.join('').split(''))].sort().join('');
+  writeFileSync(join(tmp, 'text.txt'), text);
+
+  execFileSync('python3', [
+    '-m', 'fontTools.subset', src,
+    `--text-file=${join(tmp, 'text.txt')}`,
+    `--glyphs=${ICONS.join(',')}`,
+    '--layout-features=rlig,rclt,liga,calt',
+    '--no-layout-closure',
+    '--flavor=woff2',
+    '--with-zopfli',
+    `--output-file=${OUT}`,
+  ], { stdio: 'inherit' });
+
+  console.log(`wrote ${OUT} — ${(statSync(OUT).size / 1024).toFixed(1)} KB for ${ICONS.length} icons`);
 }
-
-const tmp = mkdtempSync(join(tmpdir(), 'ms-subset-'));
-const css = execFileSync('curl', ['-sS', '-A', UA, CSS_URL], { encoding: 'utf8' });
-const url = css.match(/https:\/\/fonts\.gstatic\.com[^)]+\.woff2/)?.[0];
-if (!url) throw new Error('could not find a woff2 URL in the Google CSS response');
-
-const src = join(tmp, 'full.woff2');
-execFileSync('curl', ['-sS', url, '-o', src]);
-
-// Glyph names come from the font itself, so the source scan is matched against
-// what this exact version actually ships — a renamed or retired icon shows up
-// as "not found" here rather than as words on the page.
-const names = execFileSync('python3', ['-c',
-  'import sys;from fontTools.ttLib import TTFont;print("\\n".join(TTFont(sys.argv[1]).getGlyphOrder()))',
-  src], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
-const ICONS = collectIcons(new Set(names.split('\n')));
-if (!ICONS.length) throw new Error('scanned src/ and matched no icon glyph names — refusing to ship an empty font');
-
-// Ligature substitution needs two things: the component CHARACTERS of every
-// name (so "graphic_eq" can be typed at all), and the icon GLYPHS themselves.
-//
-// --glyphs is what makes this small. Selecting by --text alone keeps 1.1MB,
-// because our names between them use most of the alphabet, so layout closure
-// decides every ligature in the font is reachable and retains all ~3500 icons.
-// Naming the glyphs explicitly and disabling closure drops it to ~10KB.
-const text = [...new Set(ICONS.join('').split(''))].sort().join('');
-writeFileSync(join(tmp, 'text.txt'), text);
-
-execFileSync('python3', [
-  '-m', 'fontTools.subset', src,
-  `--text-file=${join(tmp, 'text.txt')}`,
-  `--glyphs=${ICONS.join(',')}`,
-  '--layout-features=rlig,rclt,liga,calt',
-  '--no-layout-closure',
-  '--flavor=woff2',
-  '--with-zopfli',
-  `--output-file=${OUT}`,
-], { stdio: 'inherit' });
-
-console.log(`wrote ${OUT} — ${(statSync(OUT).size / 1024).toFixed(1)} KB for ${ICONS.length} icons`);
