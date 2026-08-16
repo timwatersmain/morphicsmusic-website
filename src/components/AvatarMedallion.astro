@@ -1,0 +1,51 @@
+---
+// Circular framed avatar. Release art is square cover art; the crop and ring
+// are what make a leaderboard read as people rather than as a discography.
+//
+// This component is the canonical visual spec, not a component that runs in
+// the browser: Astro components cannot execute inside a client-side
+// <script>, so the three pages below hand-roll an equivalent `medallionHtml()`
+// in plain JS instead of importing this file. When the medallion's markup or
+// styling changes, change it here first and then mirror the change into all
+// three copies:
+//   - src/pages/community/index.astro  (medallionHtml, fan wall rows)
+//   - src/pages/community/me.astro     (medallionHtml, equipped + catalogue)
+//   - src/pages/community/profile.astro
+// This duplication was reviewed and accepted; a single written spec here is
+// what keeps the three copies from drifting apart.
+interface Props {
+  art?: string | null;
+  name: string;
+  size?: 'sm' | 'md' | 'lg';
+  locked?: boolean;
+  rarity?: number;
+}
+const { art, name, size = 'md', locked = false, rarity } = Astro.props;
+const dim = { sm: 'w-10 h-10', md: 'w-16 h-16', lg: 'w-28 h-28' }[size];
+---
+<div class="relative inline-block">
+  <div class:list={[
+    dim,
+    'rounded-full overflow-hidden border-2 transition-colors',
+    locked ? 'border-white/10' : 'border-primary/60',
+  ]}>
+    {art ? (
+      <img
+        src={art}
+        alt={locked ? `${name} — locked` : name}
+        width="112" height="112" loading="lazy" decoding="async"
+        class:list={['w-full h-full object-cover', locked && 'grayscale opacity-25']}
+      />
+    ) : (
+      <div class="w-full h-full bg-surface-container-high"></div>
+    )}
+  </div>
+  {locked && (
+    <span class="material-symbols-outlined absolute inset-0 grid place-items-center text-white/50 text-[18px]">lock</span>
+  )}
+  {!locked && typeof rarity === 'number' && rarity > 0 && rarity <= 0.1 && (
+    <span class="absolute -bottom-1 left-1/2 -translate-x-1/2 font-mono text-[8px] uppercase tracking-widest bg-secondary text-on-secondary px-1">
+      {Math.max(1, Math.round(rarity * 100))}%
+    </span>
+  )}
+</div>

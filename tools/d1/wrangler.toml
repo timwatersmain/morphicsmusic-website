@@ -1,0 +1,25 @@
+# D1 tooling config — NOT a Pages config, and deliberately not at the repo root.
+#
+# The live site configures its bindings (DOWNLOADS/KV, MASTERS/R2) in the
+# Cloudflare Pages dashboard. A wrangler config at the repo root that carries
+# `pages_build_output_dir` becomes the source of truth for the whole Pages
+# project, which would make those dashboard bindings uneditable and — if this
+# file didn't redeclare them — take the store down. So this file lives here,
+# declares no Pages fields, and is only ever used via `--config`:
+#
+#   npx wrangler d1 migrations apply GATES --config tools/d1/wrangler.toml --local
+#
+# The D1 binding for the deployed site is added in the Pages dashboard
+# (Settings → Functions → Bindings → D1), exactly like DOWNLOADS and MASTERS.
+# Nothing here affects a deploy.
+
+name = "morphics-gates-tooling"
+
+[[d1_databases]]
+binding = "GATES"
+database_name = "morphics-gates"
+# Filled in after `wrangler d1 create morphics-gates`. Only the --remote
+# commands read it; --local ignores it entirely.
+database_id = "PLACEHOLDER_RUN_WRANGLER_D1_CREATE"
+# Relative to THIS file, so the migrations themselves stay at the repo root.
+migrations_dir = "../../migrations"

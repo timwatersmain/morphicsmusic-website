@@ -1,0 +1,143 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="COMMUNITY" currentPage="/community">
+  <!-- pb-24 (96px) clears the fixed player bar (72px tall + 1px border), which
+       otherwise overlaps the bottom of this page's content once a preview is
+       playing. See src/components/PlayerBar.astro .pb-inner height. -->
+  <div class="max-w-4xl mx-auto pb-24">
+    <header class="mb-12 flex flex-wrap items-end justify-between gap-4">
+      <div>
+        <span class="font-mono text-xs text-secondary uppercase tracking-widest">Fan wall</span>
+        <h1 class="font-headline font-bold text-5xl md:text-7xl text-primary uppercase tracking-tighter leading-none mt-2">COMMUNITY</h1>
+        <p class="font-mono text-[11px] text-white/50 mt-4 leading-relaxed max-w-lg">
+          Every fan who's collected an avatar, ranked by rarity and tenure.
+        </p>
+      </div>
+      <a href="/community/me" class="font-mono text-[10px] text-white/40 hover:text-secondary uppercase tracking-widest border border-white/10 hover:border-secondary/30 px-4 py-2 rounded-full">
+        Your profile
+      </a>
+    </header>
+
+    <div id="dir-loading" class="font-mono text-[11px] text-white/40">Loading the fan wall…</div>
+
+    <div id="dir-signin" class="hidden p-8 border border-white/10 text-center">
+      <p class="font-mono text-[11px] text-white/40 leading-relaxed mb-4">
+        Sign in to see who else collects Morphics avatars.
+      </p>
+      <a href={`/login?redirect=${encodeURIComponent('/community')}`} class="inline-block px-6 py-3 bg-primary text-on-primary font-mono text-[11px] tracking-widest uppercase hover:bg-secondary hover:text-on-secondary transition-colors">
+        Sign in
+      </a>
+    </div>
+
+    <div id="dir-empty" class="hidden p-8 border border-white/10 text-center">
+      <p class="font-mono text-[11px] text-white/40 leading-relaxed">No fans on the wall yet — be the first.</p>
+    </div>
+
+    <div id="dir-error" class="hidden p-8 border border-white/10 text-center">
+      <p id="dir-error-msg" class="font-mono text-[11px] text-white/40 leading-relaxed"></p>
+    </div>
+
+    <div id="dir-content" class="hidden">
+      <ul id="dir-list" class="divide-y divide-white/5 border-y border-white/5"></ul>
+      <div class="mt-8 text-center">
+        <button id="dir-more" class="hidden font-mono text-[10px] text-white/40 hover:text-secondary uppercase tracking-widest border border-white/10 hover:border-secondary/30 px-6 py-3 rounded-full">
+          Load more
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const loading = document.getElementById('dir-loading')!;
+    const signin = document.getElementById('dir-signin')!;
+    const empty = document.getElementById('dir-empty')!;
+    const errorBox = document.getElementById('dir-error')!;
+    const errorMsg = document.getElementById('dir-error-msg')!;
+    const content = document.getElementById('dir-content')!;
+    const list = document.getElementById('dir-list')!;
+    const moreBtn = document.getElementById('dir-more') as HTMLButtonElement;
+
+    const esc = (s: any) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
+    const safeImg = (s: any) => {
+      const v = String(s ?? '');
+      return /^(https?:|\/)/.test(v) ? v : '';
+    };
+
+    function fmtDate(unix: number) {
+      return new Date(unix * 1000).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+    }
+
+    // Mirrors AvatarMedallion.astro — that component renders server-side only,
+    // so this client script rebuilds the same markup by hand for fans fetched
+    // over the wire.
+    function medallionHtml(art: string | null | undefined, name: string) {
+      const img = safeImg(art);
+      return `
+        <div class="relative inline-block">
+          <div class="w-16 h-16 rounded-full overflow-hidden border-2 border-primary/60">
+            ${img
+              ? `<img src="${esc(img)}" alt="${esc(name)}" width="112" height="112" loading="lazy" decoding="async" class="w-full h-full object-cover" />`
+              : `<div class="w-full h-full bg-surface-container-high"></div>`}
+          </div>
+        </div>`;
+    }
+
+    let offset = 0;
+    const limit = 48;
+
+    function renderFans(fans: any[], append: boolean) {
+      const html = fans.map(f => `
+        <li class="flex items-center gap-4 py-4">
+          <span class="font-mono text-[10px] text-white/30 w-8 text-right">${esc(f.position)}</span>
+          ${medallionHtml(f.avatar && f.avatar.art_path, f.display_name || f.handle)}
+          <div class="flex-1 min-w-0">
+            <a href="/community/u/${encodeURIComponent(f.handle)}" class="font-headline text-lg text-primary uppercase tracking-tight hover:text-secondary transition-colors truncate block">
+              ${esc(f.display_name || f.handle)}
+            </a>
+            <span class="font-mono text-[10px] text-white/40 uppercase tracking-widest">Fan since ${esc(fmtDate(f.fan_since))}</span>
+          </div>
+          <span class="font-mono text-[11px] text-secondary tabular-nums">${esc(f.collection_count)} collected</span>
+        </li>
+      `).join('');
+      if (append) list.innerHTML += html;
+      else list.innerHTML = html;
+    }
+
+    function load(append = false) {
+      fetch(`/api/community/directory?limit=${limit}&offset=${offset}`, { credentials: 'include' })
+        .then(async r => {
+          if (r.status === 401) {
+            loading.classList.add('hidden');
+            signin.classList.remove('hidden');
+            return null;
+          }
+          if (!r.ok) throw new Error(await r.text());
+          return r.json();
+        })
+        .then((data: any) => {
+          if (!data) return;
+          loading.classList.add('hidden');
+
+          if (!append && (!data.fans || !data.fans.length)) {
+            empty.classList.remove('hidden');
+            return;
+          }
+
+          content.classList.remove('hidden');
+          renderFans(data.fans, append);
+          offset = data.offset + data.fans.length;
+          moreBtn.classList.toggle('hidden', !data.has_more);
+        })
+        .catch(e => {
+          loading.classList.add('hidden');
+          errorBox.classList.remove('hidden');
+          errorMsg.textContent = 'Could not load the fan wall: ' + e.message;
+        });
+    }
+
+    moreBtn.addEventListener('click', () => load(true));
+    load(false);
+  </script>
+</BaseLayout>

@@ -1,0 +1,5 @@
+name = "morphics-kv-tooling"
+
+[[kv_namespaces]]
+binding = "DOWNLOADS"
+id = "PLACEHOLDER_LOCAL_ONLY"

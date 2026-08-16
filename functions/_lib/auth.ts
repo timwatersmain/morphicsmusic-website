@@ -6,12 +6,15 @@
 // their TTL.
 
 const SESSION_TTL_DAYS = 30;
+const REMEMBER_TTL_DAYS = 365;
 const LOGIN_TTL_MINUTES = 15;
 const COOKIE_NAME = '__Host-morphics_auth';
 const LEGACY_COOKIE_NAME = 'morphics_auth';
 
 export const SESSION_COOKIE = COOKIE_NAME;
 export const LEGACY_SESSION_COOKIE = LEGACY_COOKIE_NAME;
+export const SESSION_TTL_SECONDS = SESSION_TTL_DAYS * 86400;
+export const REMEMBER_TTL_SECONDS = REMEMBER_TTL_DAYS * 86400;
 
 function b64url(bytes: Uint8Array): string {
   let bin = '';
@@ -47,8 +50,10 @@ function constantTimeEqual(a: Uint8Array, b: Uint8Array): boolean {
 // Payload is `email|exp|ver`. ver is an integer that must match the latest
 // session_ver:<email> stored in KV; bumping it invalidates every cookie
 // issued before the bump.
-export async function signSession(secret: string, email: string, ver: number): Promise<string> {
-  const exp = Math.floor(Date.now() / 1000) + SESSION_TTL_DAYS * 86400;
+// ttlDays defaults to the existing 30 so every current caller is unaffected.
+// "Remember me" logins pass REMEMBER_TTL_DAYS (365) explicitly.
+export async function signSession(secret: string, email: string, ver: number, ttlDays: number = SESSION_TTL_DAYS): Promise<string> {
+  const exp = Math.floor(Date.now() / 1000) + ttlDays * 86400;
   const payload = `${email}|${exp}|${ver}`;
   const sig = await hmac(secret, payload);
   return `${b64url(new TextEncoder().encode(payload))}.${b64url(sig)}`;

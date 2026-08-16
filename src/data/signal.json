@@ -1,51 +1,35 @@
 [
   {
-    "id": "sc_track_2326233710",
-    "title": "MORPHICS — CROAKY ACID",
-    "type": "audio",
-    "mediaUrl": "https://i1.sndcdn.com/artworks-sYdsoh3YyzJrORGU-xPZNvg-t500x500.png",
-    "thumbnail": "",
-    "caption": "Morphics — Croaky Acid",
-    "date": "2026-05-23",
-    "platform": "soundcloud",
-    "url": "https://soundcloud.com/morphics-music/croaky-acid-2",
-    "originalPlatforms": [
-      "soundcloud"
-    ]
-  },
-  {
-    "id": "sc_track_2326233707",
-    "title": "MORPHICS — SYNAPTIC ACID",
-    "type": "audio",
-    "mediaUrl": "https://i1.sndcdn.com/artworks-sYdsoh3YyzJrORGU-xPZNvg-t500x500.png",
-    "thumbnail": "",
-    "caption": "Morphics — Synaptic Acid",
-    "date": "2026-05-23",
-    "platform": "soundcloud",
-    "url": "https://soundcloud.com/morphics-music/synaptic-acid-1",
-    "originalPlatforms": [
-      "soundcloud"
-    ]
-  },
-  {
-    "id": "cc880136-447c-46cc-b6ce-1980793cbf08",
-    "title": "05/23  | SHORT SNIPPET OF SYNAPTIC ACID, A SINGLE OFF MY UPC",
+    "id": "instagram_17873827890629598",
+    "title": "- SERAPHIC   THE SECOND TRACK OF MY UPCOMING EP SCRYING THE ",
     "type": "video",
-    "mediaUrl": "https://010e5d3391b0eb5f353aebf51ef5c4ec.r2.cloudflarestorage.com/morphicsbrain-media/8f2f9e0a414e44fb9b33a6495c5b814d.mp4?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=fbcb1dac86852d2dce54641d4a1dbdb7%2F20260521%2Fauto%2Fs3%2Faws4_request&X-Amz-Date=20260521T224750Z&X-Amz-Expires=86400&X-Amz-SignedHeaders=host&X-Amz-Signature=a4c08cc0507cb1a69c680ae5aa4d113c8d97df8ef3ef322937e045549b534b29",
+    "mediaUrl": "/api/social-media/instagram_d0e837c1cce4a373.mp4",
     "thumbnail": "",
-    "caption": "05/23  | Short snippet of Synaptic Acid, A single off my upcoming EP Swamp Logic dropping this weekend. ",
-    "date": "2026-05-21",
-    "platform": "youtube",
-    "url": "https://www.youtube.com/watch?v=6Vespt8SUUc",
+    "caption": "- Seraphic \n\nThe second track of my upcoming EP Scrying the Veil",
+    "date": "2026-08-13",
+    "platform": "instagram",
+    "url": "https://www.instagram.com/reel/Db_0kaDxJKf/",
     "originalPlatforms": [
-      "youtube",
-      "instagram",
-      "bluesky",
-      "facebook"
+      "instagram"
     ]
   },
   {
-    "id": "14d68549-d7a1-4064-8a80-28b7bde9b8c6",
+    "id": "",
+    "title": "05/23 | SHORT SNIPPET OF SYNAPTIC ACID, A SINGLE OFF MY UPCO",
+    "type": "video",
+    "mediaUrl": "/api/social-media/instagram_66483c3caa03f449.mp4",
+    "thumbnail": "",
+    "caption": "05/23 | Short snippet of Synaptic Acid, A single off my upcoming EP Swamp Logic dropping this weekend.",
+    "date": "2026-05-21",
+    "platform": "instagram",
+    "url": "https://www.instagram.com/reel/DYnjvCFj5XA/",
+    "originalPlatforms": [
+      "instagram",
+      "bluesky"
+    ]
+  },
+  {
+    "id": "",
     "title": "BEEN WORKING ON A MULTI-FX VST THE PAST FEW MONTHS. WILL HOP",
     "type": "text",
     "mediaUrl": "",
@@ -55,58 +39,26 @@
     "platform": "bluesky",
     "url": "https://bsky.app/profile/morphics.bsky.social/post/3mkndexqzue2q",
     "originalPlatforms": [
-      "bluesky",
-      "facebook",
-      "twitter"
+      "bluesky"
     ]
   },
   {
-    "id": "sc_repost_2311139210",
-    "title": "REPOSTED: MORPHIA — DUBTECHRE",
-    "type": "audio",
-    "mediaUrl": "https://i1.sndcdn.com/artworks-VxC7O1ncZ2wLBacc-LTMmcQ-t500x500.jpg",
-    "thumbnail": "",
-    "caption": "Reposted: Morphia — Dubtechre",
-    "date": "2026-04-29",
-    "platform": "soundcloud",
-    "url": "https://soundcloud.com/morphiasound/dubtechre",
-    "originalPlatforms": [
-      "soundcloud"
-    ]
-  },
-  {
-    "id": "manual_tiktok_20260429203601",
-    "title": "YEAHHH #DJ #LIVEMUSIC #MIXING #EDM #EDMTIKTOK",
-    "type": "video",
-    "mediaUrl": "",
-    "thumbnail": "",
-    "caption": "Yeahhh #dj #livemusic #mixing #edm #edmtiktok",
-    "date": "2026-04-28",
-    "platform": "tiktok",
-    "url": "https://www.tiktok.com/@skratchwax/video/7633877727577148703",
-    "originalPlatforms": [
-      "tiktok"
-    ]
-  },
-  {
-    "id": "3aec7769-b963-4e5a-85f8-ad1efb6158ab",
+    "id": "",
     "title": "SOMEONE MAKE ME PUT MUSIC OUT",
     "type": "video",
-    "mediaUrl": "/api/social-media/0c4d830afa2748f39e35c2a4a42615d3.mp4",
+    "mediaUrl": "/api/social-media/instagram_6dd5bb7f924cec2c.mp4",
     "thumbnail": "",
     "caption": "Someone make me put music out",
     "date": "2026-04-28",
-    "platform": "youtube",
-    "url": "https://www.youtube.com/watch?v=839nA0ECY-Y",
+    "platform": "instagram",
+    "url": "https://www.instagram.com/reel/DXqGcMeFdKI/",
     "originalPlatforms": [
-      "youtube",
       "instagram",
-      "bluesky",
-      "facebook"
+      "bluesky"
     ]
   },
   {
-    "id": "1eb5f457-7935-47a0-888c-412cd78caa3a",
+    "id": "",
     "title": "DISCOGRAPHY IS ALMOST FULLY ORGANIZED! SHOULD I START RELEAS",
     "type": "text",
     "mediaUrl": "",
@@ -116,411 +68,29 @@
     "platform": "bluesky",
     "url": "https://bsky.app/profile/morphics.bsky.social/post/3mjs2uz3zlr2j",
     "originalPlatforms": [
-      "bluesky",
-      "facebook",
-      "twitter"
+      "bluesky"
     ]
   },
   {
-    "id": "05453aa9-112a-44be-88c9-9e339f2d3758",
-    "title": "BACK AT IT",
-    "type": "video",
-    "mediaUrl": "/api/social-media/f2ee158ba3d4412b8b6ce7a505aa7723_original.mp4",
-    "thumbnail": "",
-    "caption": "back at it",
-    "date": "2026-04-13",
-    "platform": "tiktok",
-    "url": "https://www.tiktok.com/@skratchwax/video/7628254789331193118",
-    "originalPlatforms": [
-      "tiktok"
-    ]
-  },
-  {
-    "id": "c1a0a347-71e4-43d3-a92a-a8091a715d66",
+    "id": "",
     "title": "GETTING BACK INTO IT",
     "type": "video",
-    "mediaUrl": "/api/social-media/4b97db871cdf413298191a85da12c10b.mp4",
+    "mediaUrl": "/api/social-media/instagram_c1bf6ba726640270.mp4",
     "thumbnail": "",
     "caption": "Getting back into it",
     "date": "2026-04-12",
     "platform": "instagram",
-    "url": "https://www.instagram.com/p/18575708551012293/",
+    "url": "https://www.instagram.com/reel/DXCkWCODR8p/",
     "originalPlatforms": [
       "instagram",
-      "bluesky",
-      "facebook",
-      "discord"
+      "bluesky"
     ]
   },
   {
-    "id": "98379edb-147d-4ddf-aaa3-949da3bd6496",
-    "title": "",
-    "type": "video",
-    "mediaUrl": "",
-    "thumbnail": "",
-    "caption": "",
-    "date": "2026-04-11",
-    "platform": "tiktok",
-    "url": "https://www.tiktok.com/@skratchwax/video/7182918793969143086",
-    "originalPlatforms": [
-      "tiktok"
-    ]
-  },
-  {
-    "id": "18771c52-b8bd-48ea-9455-15c5efcbeaf9",
-    "title": "",
-    "type": "video",
-    "mediaUrl": "",
-    "thumbnail": "",
-    "caption": "",
-    "date": "2026-04-11",
-    "platform": "tiktok",
-    "url": "https://www.tiktok.com/@skratchwax/video/7191610522775588142",
-    "originalPlatforms": [
-      "tiktok"
-    ]
-  },
-  {
-    "id": "3b388c83-446e-4771-833d-e26b006aebde",
-    "title": "",
-    "type": "video",
-    "mediaUrl": "",
-    "thumbnail": "",
-    "caption": "",
-    "date": "2026-04-11",
-    "platform": "tiktok",
-    "url": "https://www.tiktok.com/@skratchwax/video/7190043782619073838",
-    "originalPlatforms": [
-      "tiktok"
-    ]
-  },
-  {
-    "id": "1d71cb29-e372-4607-9522-dc8bf6235786",
-    "title": "",
-    "type": "video",
-    "mediaUrl": "",
-    "thumbnail": "",
-    "caption": "",
-    "date": "2026-04-11",
-    "platform": "tiktok",
-    "url": "https://www.tiktok.com/@skratchwax/video/7187544315931954474",
-    "originalPlatforms": [
-      "tiktok"
-    ]
-  },
-  {
-    "id": "e4fab68a-104d-425a-a94c-7ac1ba102426",
-    "title": "",
-    "type": "video",
-    "mediaUrl": "",
-    "thumbnail": "",
-    "caption": "",
-    "date": "2026-04-11",
-    "platform": "tiktok",
-    "url": "https://www.tiktok.com/@skratchwax/video/7183366747251035435",
-    "originalPlatforms": [
-      "tiktok"
-    ]
-  },
-  {
-    "id": "8fdd8cae-9c2c-497c-bdd5-601ef36f9fd8",
-    "title": "",
-    "type": "video",
-    "mediaUrl": "",
-    "thumbnail": "",
-    "caption": "",
-    "date": "2026-04-11",
-    "platform": "tiktok",
-    "url": "https://www.tiktok.com/@skratchwax/video/7182378241905151274",
-    "originalPlatforms": [
-      "tiktok"
-    ]
-  },
-  {
-    "id": "2f0a3ac6-8a7c-4bc7-b9fe-8ef1a61afebe",
-    "title": "",
-    "type": "video",
-    "mediaUrl": "",
-    "thumbnail": "",
-    "caption": "",
-    "date": "2026-04-11",
-    "platform": "tiktok",
-    "url": "https://www.tiktok.com/@skratchwax/video/7161955743237819690",
-    "originalPlatforms": [
-      "tiktok"
-    ]
-  },
-  {
-    "id": "d4437fdf-a4fa-4b3e-9e29-ccee869256e0",
-    "title": "",
-    "type": "video",
-    "mediaUrl": "",
-    "thumbnail": "",
-    "caption": "",
-    "date": "2026-04-11",
-    "platform": "tiktok",
-    "url": "https://www.tiktok.com/@skratchwax/video/7149264064156372266",
-    "originalPlatforms": [
-      "tiktok"
-    ]
-  },
-  {
-    "id": "9d146a52-d481-475c-a9b3-d54d0e0b61ce",
-    "title": "",
-    "type": "video",
-    "mediaUrl": "",
-    "thumbnail": "",
-    "caption": "",
-    "date": "2026-04-11",
-    "platform": "tiktok",
-    "url": "https://www.tiktok.com/@skratchwax/video/7143995953689742635",
-    "originalPlatforms": [
-      "tiktok"
-    ]
-  },
-  {
-    "id": "88498e5b-6de6-4b6b-9ff4-87020ab731b8",
-    "title": "",
-    "type": "video",
-    "mediaUrl": "",
-    "thumbnail": "",
-    "caption": "",
-    "date": "2026-04-11",
-    "platform": "tiktok",
-    "url": "https://www.tiktok.com/@skratchwax/video/7143605234219142443",
-    "originalPlatforms": [
-      "tiktok"
-    ]
-  },
-  {
-    "id": "21fa72d2-9701-45db-87c7-65cbee4637b1",
-    "title": "",
-    "type": "video",
-    "mediaUrl": "",
-    "thumbnail": "",
-    "caption": "",
-    "date": "2026-04-11",
-    "platform": "tiktok",
-    "url": "https://www.tiktok.com/@skratchwax/video/7139151442937466154",
-    "originalPlatforms": [
-      "tiktok"
-    ]
-  },
-  {
-    "id": "341fe28b-970d-46de-b4ce-fced01e2049f",
-    "title": "",
-    "type": "video",
-    "mediaUrl": "",
-    "thumbnail": "",
-    "caption": "",
-    "date": "2026-04-11",
-    "platform": "tiktok",
-    "url": "https://www.tiktok.com/@skratchwax/video/7128528101281107246",
-    "originalPlatforms": [
-      "tiktok"
-    ]
-  },
-  {
-    "id": "d1a4ec70-1891-4995-84a0-e5ac5ef180e8",
-    "title": "",
-    "type": "video",
-    "mediaUrl": "",
-    "thumbnail": "",
-    "caption": "",
-    "date": "2026-04-11",
-    "platform": "tiktok",
-    "url": "https://www.tiktok.com/@skratchwax/video/7127739828577340718",
-    "originalPlatforms": [
-      "tiktok"
-    ]
-  },
-  {
-    "id": "408fd8cc-117c-403e-ace4-4828dad1e985",
-    "title": "",
-    "type": "video",
-    "mediaUrl": "",
-    "thumbnail": "",
-    "caption": "",
-    "date": "2026-04-11",
-    "platform": "tiktok",
-    "url": "https://www.tiktok.com/@skratchwax/video/7126965125193518379",
-    "originalPlatforms": [
-      "tiktok"
-    ]
-  },
-  {
-    "id": "d1c4692a-d9b1-4f7f-bd5f-6242b3cfa00b",
-    "title": "",
-    "type": "video",
-    "mediaUrl": "",
-    "thumbnail": "",
-    "caption": "",
-    "date": "2026-04-11",
-    "platform": "tiktok",
-    "url": "https://www.tiktok.com/@skratchwax/video/7125089979264486699",
-    "originalPlatforms": [
-      "tiktok"
-    ]
-  },
-  {
-    "id": "e8a19458-ac88-4d73-84cb-4e0530bbbfad",
-    "title": "",
-    "type": "video",
-    "mediaUrl": "",
-    "thumbnail": "",
-    "caption": "",
-    "date": "2026-04-11",
-    "platform": "tiktok",
-    "url": "https://www.tiktok.com/@skratchwax/video/7121051298639760686",
-    "originalPlatforms": [
-      "tiktok"
-    ]
-  },
-  {
-    "id": "16236240-1b08-47bc-bfd7-42b466bed104",
-    "title": "",
-    "type": "video",
-    "mediaUrl": "",
-    "thumbnail": "",
-    "caption": "",
-    "date": "2026-04-11",
-    "platform": "tiktok",
-    "url": "https://www.tiktok.com/@skratchwax/video/7120313608801684782",
-    "originalPlatforms": [
-      "tiktok"
-    ]
-  },
-  {
-    "id": "0e500096-5c39-42a6-91dd-3688266d52b7",
-    "title": "",
-    "type": "video",
-    "mediaUrl": "",
-    "thumbnail": "",
-    "caption": "",
-    "date": "2026-04-11",
-    "platform": "tiktok",
-    "url": "https://www.tiktok.com/@skratchwax/video/7114001428724813102",
-    "originalPlatforms": [
-      "tiktok"
-    ]
-  },
-  {
-    "id": "3ce3fe86-14ad-4b9d-a8c4-d082fd9d482d",
-    "title": "",
-    "type": "video",
-    "mediaUrl": "",
-    "thumbnail": "",
-    "caption": "",
-    "date": "2026-04-11",
-    "platform": "tiktok",
-    "url": "https://www.tiktok.com/@skratchwax/video/7113262915578285354",
-    "originalPlatforms": [
-      "tiktok"
-    ]
-  },
-  {
-    "id": "a30b27b9-003f-4eab-a343-40cef95ad551",
-    "title": "",
-    "type": "video",
-    "mediaUrl": "",
-    "thumbnail": "",
-    "caption": "",
-    "date": "2026-04-11",
-    "platform": "tiktok",
-    "url": "https://www.tiktok.com/@skratchwax/video/7111989213914107182",
-    "originalPlatforms": [
-      "tiktok"
-    ]
-  },
-  {
-    "id": "f9dc23a7-5965-468b-8520-e3b239ca4b77",
-    "title": "",
-    "type": "video",
-    "mediaUrl": "",
-    "thumbnail": "",
-    "caption": "",
-    "date": "2026-04-11",
-    "platform": "tiktok",
-    "url": "https://www.tiktok.com/@skratchwax/video/7110981847353478446",
-    "originalPlatforms": [
-      "tiktok"
-    ]
-  },
-  {
-    "id": "5fd0cb25-b558-4973-8066-5891f455fdbf",
-    "title": "",
-    "type": "video",
-    "mediaUrl": "",
-    "thumbnail": "",
-    "caption": "",
-    "date": "2026-04-11",
-    "platform": "tiktok",
-    "url": "https://www.tiktok.com/@skratchwax/video/7110292762536185131",
-    "originalPlatforms": [
-      "tiktok"
-    ]
-  },
-  {
-    "id": "383263c7-671a-4c3a-a7c8-ada1f9876726",
-    "title": "",
-    "type": "video",
-    "mediaUrl": "",
-    "thumbnail": "",
-    "caption": "",
-    "date": "2026-04-11",
-    "platform": "tiktok",
-    "url": "https://www.tiktok.com/@skratchwax/video/7108914189921471790",
-    "originalPlatforms": [
-      "tiktok"
-    ]
-  },
-  {
-    "id": "3346ccce-9074-45dc-a867-defb80d3baae",
-    "title": "",
-    "type": "video",
-    "mediaUrl": "",
-    "thumbnail": "",
-    "caption": "",
-    "date": "2026-04-11",
-    "platform": "tiktok",
-    "url": "https://www.tiktok.com/@skratchwax/video/7108227681812073770",
-    "originalPlatforms": [
-      "tiktok"
-    ]
-  },
-  {
-    "id": "d8e2686a-f9ff-4daf-8795-7222ef26c368",
-    "title": "",
-    "type": "video",
-    "mediaUrl": "",
-    "thumbnail": "",
-    "caption": "",
-    "date": "2026-04-11",
-    "platform": "tiktok",
-    "url": "https://www.tiktok.com/@skratchwax/video/7107744443176062254",
-    "originalPlatforms": [
-      "tiktok"
-    ]
-  },
-  {
-    "id": "906a439d-c491-4f86-8f9d-2a3d0f53a5a2",
-    "title": "",
-    "type": "video",
-    "mediaUrl": "",
-    "thumbnail": "",
-    "caption": "",
-    "date": "2026-04-11",
-    "platform": "tiktok",
-    "url": "https://www.tiktok.com/@skratchwax/video/7627098580381142303",
-    "originalPlatforms": [
-      "tiktok"
-    ]
-  },
-  {
-    "id": "8e4f6b83-f87e-4b55-9139-1e08e58b5bb8",
+    "id": "",
     "title": "NO AI BRAINROT HERE. JUST HANDCRAFTED AUDIO VISUAL ART. 🫠",
     "type": "video",
-    "mediaUrl": "/api/social-media/a6faaf94b2524612871ea910beec610e.mp4",
+    "mediaUrl": "",
     "thumbnail": "",
     "caption": "No AI brainrot here. Just handcrafted audio visual art. 🫠",
     "date": "2026-04-10",
@@ -528,6 +98,203 @@
     "url": "https://bsky.app/profile/morphics.bsky.social/post/3mj57q2r7ey2n",
     "originalPlatforms": [
       "bluesky"
+    ]
+  },
+  {
+    "id": "",
+    "title": "NEVER BEEN MORE LOCKED IN",
+    "type": "text",
+    "mediaUrl": "",
+    "thumbnail": "",
+    "caption": "Never been more locked in",
+    "date": "2026-04-03",
+    "platform": "bluesky",
+    "url": "https://bsky.app/profile/morphics.bsky.social/post/3mimhanzfjc2z",
+    "originalPlatforms": [
+      "bluesky"
+    ]
+  },
+  {
+    "id": "",
+    "title": "THREE EYES. ALL OF THEM OPEN.",
+    "type": "video",
+    "mediaUrl": "",
+    "thumbnail": "",
+    "caption": "three eyes. all of them open.\n",
+    "date": "2026-04-02",
+    "platform": "bluesky",
+    "url": "https://bsky.app/profile/morphics.bsky.social/post/3miketrj4qc2n",
+    "originalPlatforms": [
+      "bluesky"
+    ]
+  },
+  {
+    "id": "",
+    "title": "WATCHING STRUCTURES DISSOLVE AND REBUILD.",
+    "type": "video",
+    "mediaUrl": "/api/social-media/instagram_9a1ed7edcdc5b37d.mp4",
+    "thumbnail": "",
+    "caption": "watching structures dissolve and rebuild.",
+    "date": "2026-03-28",
+    "platform": "instagram",
+    "url": "https://www.instagram.com/reel/DWbjKuzlI2l/",
+    "originalPlatforms": [
+      "instagram",
+      "bluesky"
+    ]
+  },
+  {
+    "id": "",
+    "title": "🧿🧿🧿",
+    "type": "video",
+    "mediaUrl": "/api/social-media/instagram_f800f9ee0eb84155.mp4",
+    "thumbnail": "",
+    "caption": "🧿🧿🧿",
+    "date": "2026-03-06",
+    "platform": "instagram",
+    "url": "https://www.instagram.com/reel/DVhks9QEYEw/",
+    "originalPlatforms": [
+      "instagram"
+    ]
+  },
+  {
+    "id": "",
+    "title": "⚫️",
+    "type": "video",
+    "mediaUrl": "/api/social-media/instagram_ed2b30525d1d945f.mp4",
+    "thumbnail": "",
+    "caption": "⚫️",
+    "date": "2026-02-23",
+    "platform": "instagram",
+    "url": "https://www.instagram.com/reel/DVGxWVCkZwQ/",
+    "originalPlatforms": [
+      "instagram"
+    ]
+  },
+  {
+    "id": "",
+    "title": "⚙️",
+    "type": "video",
+    "mediaUrl": "/api/social-media/instagram_0caaf23e2b37c068.mp4",
+    "thumbnail": "",
+    "caption": "⚙️",
+    "date": "2025-02-07",
+    "platform": "instagram",
+    "url": "https://www.instagram.com/reel/DFyChy9R9Pz/",
+    "originalPlatforms": [
+      "instagram"
+    ]
+  },
+  {
+    "id": "",
+    "title": "AFFINITY  A TRACK OFF MY UPCOMING EP   #SPREADLOVE",
+    "type": "video",
+    "mediaUrl": "/api/social-media/instagram_23c1069143b4ccee.mp4",
+    "thumbnail": "",
+    "caption": "Affinity\n\nA track off my upcoming EP \n\n#spreadlove",
+    "date": "2025-02-03",
+    "platform": "instagram",
+    "url": "https://www.instagram.com/reel/DFoJdxsRJAP/",
+    "originalPlatforms": [
+      "instagram"
+    ]
+  },
+  {
+    "id": "",
+    "title": "HAVE A WIDE VARIETY OF EXCITING PROJECTS TO SHARE THIS YEAR.",
+    "type": "video",
+    "mediaUrl": "/api/social-media/instagram_626f64cc8859318c.mp4",
+    "thumbnail": "",
+    "caption": "Have a wide variety of exciting projects to share this year. \n\nExpect a few EPs, some singles, and an audio visual project that I truly cannot wait to wrap up and share with you all. \n\nApologies for being so reclusive and inactive over the past few years. I’ve been working tirelessly on myself and my art searching for balance and happiness.",
+    "date": "2025-02-01",
+    "platform": "instagram",
+    "url": "https://www.instagram.com/reel/DFixLUQx_fl/",
+    "originalPlatforms": [
+      "instagram"
+    ]
+  },
+  {
+    "id": "",
+    "title": "SHORT SNIPPET FROM AN AMBIENT AV PROJECT I’VE BEEN WORKING O",
+    "type": "video",
+    "mediaUrl": "/api/social-media/instagram_000da45199904ff4.mp4",
+    "thumbnail": "",
+    "caption": "Short snippet from an ambient AV project I’ve been working on. Really enjoy working on these macro videography clips and cant wait to share the full version.",
+    "date": "2025-01-12",
+    "platform": "instagram",
+    "url": "https://www.instagram.com/reel/DEve0HVRisM/",
+    "originalPlatforms": [
+      "instagram"
+    ]
+  },
+  {
+    "id": "",
+    "title": "NEW VISUAL STYLE THAT I THINK COMPLEMENTS THE SOUND AND VISI",
+    "type": "video",
+    "mediaUrl": "/api/social-media/instagram_0973574f2e41e1a3.mp4",
+    "thumbnail": "",
+    "caption": "New visual style that I think complements the sound and vision for this project perfectly. \n\nExtremely excited to debut these live at the Jade Cicada show on 12-28. \n\nTrack is called Seraphic and will be released on my next EP titled Scrying the Veil.",
+    "date": "2024-12-09",
+    "platform": "instagram",
+    "url": "https://www.instagram.com/reel/DDXWL0rpbru/",
+    "originalPlatforms": [
+      "instagram"
+    ]
+  },
+  {
+    "id": "",
+    "title": "PRESALES FOR 12/28 ARE NOW AVAILABLE  USE THE LINK IN MY BIO",
+    "type": "photo",
+    "mediaUrl": "/api/social-media/instagram_b5b59057dc6d0047.jpg",
+    "thumbnail": "",
+    "caption": "PRESALES FOR 12/28 ARE NOW AVAILABLE \nUse the link in my bio to sign up.\nPassword: UNFOLDING \n\nLimited quantity go get them while you can ✅",
+    "date": "2024-10-10",
+    "platform": "instagram",
+    "url": "https://www.instagram.com/p/DA8u841vjDp/",
+    "originalPlatforms": [
+      "instagram"
+    ]
+  },
+  {
+    "id": "",
+    "title": "DECEMBER 28TH BALTIMORE MD   AT THE ASSEMBLY ROOM WITH  @JAD",
+    "type": "video",
+    "mediaUrl": "/api/social-media/instagram_2488666e8d3df786.mp4",
+    "thumbnail": "",
+    "caption": "DECEMBER 28th\nBALTIMORE MD \n\nAt The Assembly Room with \n@jadecicada.mp3 @resonantlanguage @crawdadsniper @optiksound & @tenorless_ \n\nSign up for pre-sales here (https://laylo.com/jadecicada/BOXyU)\n\nA huge thanks to Jade Cicada and his team for including me on this bill it’s one you won’t want to miss.",
+    "date": "2024-10-09",
+    "platform": "instagram",
+    "url": "https://www.instagram.com/reel/DA6UNajP_C9/",
+    "originalPlatforms": [
+      "instagram"
+    ]
+  },
+  {
+    "id": "",
+    "title": "SOUND EXPERIMENTS VOLUME 2 IS OUT NOW ON MY SOUNDCLOUD. IT’S",
+    "type": "photo",
+    "mediaUrl": "/api/social-media/instagram_c7513936d5898be8.jpg",
+    "thumbnail": "",
+    "caption": "Sound Experiments Volume 2 is out now on my SoundCloud. It’s full of far out experimental tracks I’ve been working on and hope to have finalized soon. It’s likely that I will only release the best few tracks so leave a comment under your favorite if you’d like to see it released in the future. \n\nHappy to finally get this out there, \nmore to come soon!",
+    "date": "2024-08-15",
+    "platform": "instagram",
+    "url": "https://www.instagram.com/p/C-sxxMUv42L/",
+    "originalPlatforms": [
+      "instagram"
+    ]
+  },
+  {
+    "id": "",
+    "title": "",
+    "type": "video",
+    "mediaUrl": "/api/social-media/instagram_b8b2073545702862.mp4",
+    "thumbnail": "",
+    "caption": "",
+    "date": "2022-08-04",
+    "platform": "instagram",
+    "url": "https://www.instagram.com/reel/Cg2MIZ2pZbL/",
+    "originalPlatforms": [
+      "instagram"
     ]
   }
 ]

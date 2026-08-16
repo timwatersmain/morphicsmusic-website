@@ -1,0 +1,306 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="MY COMMUNITY" currentPage="/community">
+  <!-- pb-24 (96px) clears the fixed player bar (72px tall + 1px border), which
+       otherwise overlaps the last row of the avatar catalogue grid once a
+       preview is playing. See src/components/PlayerBar.astro .pb-inner height. -->
+  <div class="max-w-4xl mx-auto pb-24">
+    <header class="mb-12 flex flex-wrap items-end justify-between gap-4">
+      <div>
+        <span class="font-mono text-xs text-secondary uppercase tracking-widest">Your profile</span>
+        <h1 class="font-headline font-bold text-5xl md:text-7xl text-primary uppercase tracking-tighter leading-none mt-2">COMMUNITY</h1>
+        <p id="me-handle" class="font-mono text-[11px] text-white/50 mt-4"></p>
+      </div>
+      <a href="/community" class="font-mono text-[10px] text-white/40 hover:text-secondary uppercase tracking-widest border border-white/10 hover:border-secondary/30 px-4 py-2 rounded-full">
+        View fan wall
+      </a>
+    </header>
+
+    <div id="me-loading" class="font-mono text-[11px] text-white/40">Loading your profile…</div>
+
+    <div id="me-signin" class="hidden p-8 border border-white/10 text-center">
+      <p class="font-mono text-[11px] text-white/40 leading-relaxed mb-4">
+        Sign in to see your collection and pick your avatar.
+      </p>
+      <a href={`/login?redirect=${encodeURIComponent('/community/me')}`} class="inline-block px-6 py-3 bg-primary text-on-primary font-mono text-[11px] tracking-widest uppercase hover:bg-secondary hover:text-on-secondary transition-colors">
+        Sign in
+      </a>
+    </div>
+
+    <div id="me-error" class="hidden p-8 border border-white/10 text-center">
+      <p id="me-error-msg" class="font-mono text-[11px] text-white/40 leading-relaxed"></p>
+    </div>
+
+    <div id="me-content" class="hidden space-y-12">
+      <div id="me-unlocked-banner" class="hidden p-6 border border-secondary/40 bg-secondary/5">
+        <p class="font-mono text-[10px] text-secondary uppercase tracking-widest mb-3">Just unlocked</p>
+        <ul id="me-unlocked-list" class="flex flex-wrap gap-6"></ul>
+      </div>
+
+      <section class="border border-white/5 p-6">
+        <div class="flex items-center gap-6 mb-6">
+          <div id="me-equipped"></div>
+          <div class="flex-1">
+            <label class="block font-mono text-[10px] text-white/40 uppercase tracking-widest mb-2">Display name</label>
+            <div class="flex gap-2">
+              <input
+                id="me-name-input"
+                type="text"
+                maxlength="40"
+                class="flex-1 px-4 py-3 bg-surface-container-low border border-white/10 focus:border-secondary outline-none font-mono text-sm text-primary"
+              >
+              <button id="me-name-save" class="px-4 py-3 border border-primary/20 hover:border-primary/60 hover:bg-primary/5 font-mono text-[10px] tracking-widest uppercase text-primary rounded-full">
+                Save
+              </button>
+            </div>
+            <p id="me-name-status" class="font-mono text-[10px] text-white/30 mt-2 h-4"></p>
+
+            <label class="block font-mono text-[10px] text-white/40 uppercase tracking-widest mt-6 mb-2">Handle</label>
+            <div class="flex gap-2">
+              <span class="flex items-center px-3 font-mono text-sm text-white/30 select-none">@</span>
+              <input
+                id="me-handle-input"
+                type="text"
+                maxlength="32"
+                class="flex-1 px-4 py-3 bg-surface-container-low border border-white/10 focus:border-secondary outline-none font-mono text-sm text-primary"
+              >
+              <button id="me-handle-save" class="px-4 py-3 border border-primary/20 hover:border-primary/60 hover:bg-primary/5 font-mono text-[10px] tracking-widest uppercase text-primary rounded-full">
+                Save
+              </button>
+            </div>
+            <p id="me-handle-status" class="font-mono text-[10px] text-white/30 mt-2 h-4"></p>
+          </div>
+        </div>
+        <p class="font-mono text-[11px] text-white/40">
+          <span id="me-fan-since"></span> · <span id="me-count"></span> collected
+        </p>
+      </section>
+
+      <div>
+        <div class="flex items-baseline gap-3 mb-4">
+          <span class="font-mono text-xs text-secondary uppercase">Your catalogue</span>
+          <div class="h-[1px] flex-1 bg-outline-variant/30"></div>
+        </div>
+        <ul id="me-catalogue" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-6"></ul>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const loading = document.getElementById('me-loading')!;
+    const signin = document.getElementById('me-signin')!;
+    const errorBox = document.getElementById('me-error')!;
+    const errorMsg = document.getElementById('me-error-msg')!;
+    const content = document.getElementById('me-content')!;
+    const handleEl = document.getElementById('me-handle')!;
+    const unlockedBanner = document.getElementById('me-unlocked-banner')!;
+    const unlockedList = document.getElementById('me-unlocked-list')!;
+    const equippedEl = document.getElementById('me-equipped')!;
+    const nameInput = document.getElementById('me-name-input') as HTMLInputElement;
+    const nameSave = document.getElementById('me-name-save') as HTMLButtonElement;
+    const nameStatus = document.getElementById('me-name-status')!;
+    const handleInput = document.getElementById('me-handle-input') as HTMLInputElement;
+    const handleSave = document.getElementById('me-handle-save') as HTMLButtonElement;
+    const handleStatus = document.getElementById('me-handle-status')!;
+    const fanSinceEl = document.getElementById('me-fan-since')!;
+    const countEl = document.getElementById('me-count')!;
+    const catalogueEl = document.getElementById('me-catalogue')!;
+
+    const esc = (s: any) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
+    const safeImg = (s: any) => {
+      const v = String(s ?? '');
+      return /^(https?:|\/)/.test(v) ? v : '';
+    };
+
+    function fmtDate(unix: number) {
+      return new Date(unix * 1000).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+    }
+
+    // Mirrors AvatarMedallion.astro — rebuilt here by hand because this
+    // markup is assembled from a client-side fetch, not server-rendered.
+    function medallionHtml(art: string | null | undefined, name: string, opts: { locked?: boolean; rarity?: number; size?: 'sm' | 'md' | 'lg' } = {}) {
+      const { locked = false, rarity, size = 'md' } = opts;
+      const dim = { sm: 'w-10 h-10', md: 'w-16 h-16', lg: 'w-28 h-28' }[size];
+      const img = safeImg(art);
+      const border = locked ? 'border-white/10' : 'border-primary/60';
+      const inner = img
+        ? `<img src="${esc(img)}" alt="${esc(locked ? name + ' — locked' : name)}" width="112" height="112" loading="lazy" decoding="async" class="w-full h-full object-cover${locked ? ' grayscale opacity-25' : ''}" />`
+        : `<div class="w-full h-full bg-surface-container-high"></div>`;
+      const lockBadge = locked
+        ? `<span class="material-symbols-outlined absolute inset-0 grid place-items-center text-white/50 text-[18px]">lock</span>`
+        : '';
+      const rarityBadge = (!locked && typeof rarity === 'number' && rarity > 0 && rarity <= 0.1)
+        ? `<span class="absolute -bottom-1 left-1/2 -translate-x-1/2 font-mono text-[8px] uppercase tracking-widest bg-secondary text-on-secondary px-1">${esc(Math.max(1, Math.round(rarity * 100)))}%</span>`
+        : '';
+      return `
+        <div class="relative inline-block">
+          <div class="${dim} rounded-full overflow-hidden border-2 ${border} transition-colors">${inner}</div>
+          ${lockBadge}${rarityBadge}
+        </div>`;
+    }
+
+    // This is the reward moment the whole feature exists for: `newly_unlocked`
+    // is a list of avatar ids granted THIS load (computed server-side in
+    // /api/community/me against the shelf as it stood before granting), so it
+    // is only ever non-empty for the one visit where the unlock happened.
+    function renderNewlyUnlocked(ids: string[] | undefined, avatars: any[]) {
+      const won = (ids || [])
+        .map(id => avatars.find(a => a.id === id))
+        .filter(Boolean);
+      if (!won.length) {
+        unlockedBanner.classList.add('hidden');
+        unlockedList.innerHTML = '';
+        return;
+      }
+      unlockedBanner.classList.remove('hidden');
+      unlockedList.innerHTML = won.map(a => `
+        <li class="text-center">
+          ${medallionHtml(a.art_path, a.name, { size: 'md' })}
+          <p class="font-mono text-[10px] text-primary uppercase tracking-widest mt-2">${esc(a.name)}</p>
+        </li>
+      `).join('');
+    }
+
+    let currentEquippedId: string | null = null;
+
+    function renderEquipped(avatar: any) {
+      equippedEl.innerHTML = medallionHtml(avatar && avatar.art_path, avatar ? avatar.name : 'No avatar equipped', { size: 'lg' });
+    }
+
+    function renderCatalogue(avatars: any[]) {
+      catalogueEl.innerHTML = avatars.map(a => `
+        <li class="text-center">
+          <button
+            type="button"
+            data-avatar-id="${esc(a.id)}"
+            data-unlocked="${a.unlocked ? '1' : '0'}"
+            class="avatar-pick inline-block ${a.unlocked ? 'cursor-pointer' : 'cursor-default'} ${a.id === currentEquippedId ? 'drop-shadow-[0_0_8px_#00F0FF]' : ''}"
+          >
+            ${medallionHtml(a.art_path, a.name, { locked: !a.unlocked, rarity: a.rarity })}
+          </button>
+          <p class="font-mono text-[9px] text-white/40 uppercase tracking-widest mt-2 leading-tight">
+            ${a.unlocked ? esc(a.name) : esc(a.hint || 'Locked')}
+          </p>
+        </li>
+      `).join('');
+
+      catalogueEl.querySelectorAll<HTMLButtonElement>('.avatar-pick').forEach(btn => {
+        btn.addEventListener('click', () => {
+          if (btn.dataset.unlocked !== '1') return;
+          equip(btn.dataset.avatarId!);
+        });
+      });
+    }
+
+    function equip(avatarId: string) {
+      fetch('/api/community/update', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ equipped_avatar_id: avatarId }),
+      })
+        .then(r => { if (!r.ok) throw new Error('save failed'); return load(); })
+        .catch(() => { nameStatus.textContent = 'Could not equip that avatar.'; });
+    }
+
+    function load() {
+      return fetch('/api/community/me', { credentials: 'include' })
+        .then(async r => {
+          if (r.status === 401) {
+            loading.classList.add('hidden');
+            signin.classList.remove('hidden');
+            return null;
+          }
+          if (!r.ok) throw new Error(await r.text());
+          return r.json();
+        })
+        .then((data: any) => {
+          if (!data) return;
+          loading.classList.add('hidden');
+          content.classList.remove('hidden');
+
+          const { profile, avatars, newly_unlocked } = data;
+          currentEquippedId = profile.avatar ? profile.avatar.id : null;
+          handleEl.textContent = profile.handle ? '@' + profile.handle : '';
+          nameInput.value = profile.display_name || '';
+          handleInput.value = profile.handle || '';
+          if (profile.can_change_handle) {
+            handleSave.disabled = false;
+            handleStatus.textContent = '';
+          } else {
+            handleSave.disabled = true;
+            handleStatus.textContent = profile.handle_change_available_at
+              ? 'You can change your handle again on ' + fmtDate(profile.handle_change_available_at) + '.'
+              : '';
+          }
+          fanSinceEl.textContent = 'Fan since ' + fmtDate(profile.fan_since);
+          countEl.textContent = String(profile.collection_count);
+          renderEquipped(profile.avatar);
+          renderCatalogue(avatars);
+          renderNewlyUnlocked(newly_unlocked, avatars);
+        })
+        .catch(e => {
+          loading.classList.add('hidden');
+          errorBox.classList.remove('hidden');
+          errorMsg.textContent = 'Could not load your profile: ' + e.message;
+        });
+    }
+
+    nameSave.addEventListener('click', () => {
+      const name = nameInput.value.trim();
+      if (!name) { nameStatus.textContent = 'Name cannot be empty.'; return; }
+      nameSave.disabled = true;
+      nameStatus.textContent = 'Saving…';
+      fetch('/api/community/update', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ display_name: name }),
+      })
+        .then(async r => {
+          if (!r.ok) {
+            const body = await r.json().catch(() => ({}));
+            throw new Error(body.error || 'save failed');
+          }
+          nameStatus.textContent = 'Saved.';
+        })
+        .catch(e => { nameStatus.textContent = 'Could not save: ' + e.message; })
+        .finally(() => { nameSave.disabled = false; });
+    });
+
+    const HANDLE_ERROR_MESSAGES: Record<string, string> = {
+      handle_taken: 'That handle is already taken.',
+      blocked_handle: 'That handle is not available.',
+    };
+
+    handleSave.addEventListener('click', () => {
+      const handle = handleInput.value.trim();
+      if (!handle) { handleStatus.textContent = 'Handle cannot be empty.'; return; }
+      handleSave.disabled = true;
+      handleStatus.textContent = 'Saving…';
+      fetch('/api/community/update', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ handle }),
+      })
+        .then(async r => {
+          if (!r.ok) {
+            const body = await r.json().catch(() => ({}));
+            if (body.error === 'handle_cooldown' && body.next_change_at) {
+              throw new Error('you can change it again on ' + fmtDate(body.next_change_at));
+            }
+            throw new Error(HANDLE_ERROR_MESSAGES[body.error] || body.error || 'save failed');
+          }
+          handleStatus.textContent = 'Saved.';
+          return load();
+        })
+        .catch(e => { handleStatus.textContent = 'Could not save: ' + e.message; })
+        .finally(() => { handleSave.disabled = false; });
+    });
+
+    load();
+  </script>
+</BaseLayout>
