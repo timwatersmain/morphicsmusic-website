@@ -7,4 +7,29 @@
 # reads the handle from location.pathname and fetches it client-side.
 # Placed after the two 301s above and scoped to /community/u/* specifically
 # so it cannot shadow /community itself or those existing redirects.
-/community/u/* /community/profile 200
+#
+# Target must be the CANONICAL directory URL, with the trailing slash
+# ("/community/profile/"), not the bare directory ("/community/profile")
+# and not the literal asset file ("/community/profile/index.html").
+#
+# - Bare directory: Astro's static output emits this route as
+#   dist/community/profile/index.html, so Cloudflare's asset server 308s a
+#   bare-directory hit to add the trailing slash -- replacing the URL the
+#   browser is showing and discarding the /community/u/<handle> path the
+#   client script needs to read from location.pathname. This was the
+#   original bug.
+# - Literal index.html: looks like the obvious fix, but Cloudflare's own
+#   redirect validator (and wrangler's local emulation of it) treats ANY
+#   200-rewrite target ending in "index.html" as a potential infinite loop
+#   and silently drops the entire rule at deploy time -- confirmed by
+#   testing against `wrangler pages dev` here, and matches a known
+#   upstream false-positive (cloudflare/workers-sdk#11824). A dropped rule
+#   is worse than the original bug: every /community/u/* request falls
+#   through with no rewrite at all.
+# Requesting the already-canonical trailing-slash form avoids both: it
+# doesn't end in "index.html" (so the loop heuristic doesn't fire) and it's
+# already the form the asset server would redirect a bare directory TO, so
+# there's nothing left to canonicalize and no 308 happens. Verified against
+# `wrangler pages dev`: GET /community/profile/ -> 200, correct page, no
+# redirect.
+/community/u/* /community/profile/ 200
