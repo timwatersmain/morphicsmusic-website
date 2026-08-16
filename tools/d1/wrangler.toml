@@ -20,6 +20,6 @@ binding = "GATES"
 database_name = "morphics-gates"
 # Filled in after `wrangler d1 create morphics-gates`. Only the --remote
 # commands read it; --local ignores it entirely.
-database_id = "PLACEHOLDER_RUN_WRANGLER_D1_CREATE"
+database_id = "c30c0500-a46a-454c-bd1c-faa2ba8a86e9"
 # Relative to THIS file, so the migrations themselves stay at the repo root.
 migrations_dir = "../../migrations"
