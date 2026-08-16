@@ -42,6 +42,12 @@ import { join } from 'path';
 // Reuses the real unlock engine rather than re-deriving its rules here —
 // duplicating `qualifies()` in this script would drift from
 // functions/_lib/community/unlocks.ts the first time a rule type changes.
+//
+// Importing a .ts file directly from a plain .mjs script relies on Node's
+// native TypeScript type-stripping, which is unflagged only from Node 22.18
+// / 23.6 onward. That is why package.json's `engines.node` floor is
+// >=22.18.0 rather than the site's previous >=22.12.0 — this import is what
+// sets it, so raise both together if either changes.
 import { evaluateUnlocks } from '../functions/_lib/community/unlocks.ts';
 
 const KV_CONFIG = 'tools/kv/wrangler.toml';
@@ -98,9 +104,22 @@ const FORBIDDEN_COLUMNS = ['handle', 'display_name', 'equipped_avatar_id'];
  * "the code cannot do X" — a future edit to buildRebuildSql() that adds a
  * column trips this immediately, in CI, instead of silently shipping.
  */
+// Quote characters SQL engines accept around an identifier: double quotes,
+// single quotes (SQLite permits these for identifiers too), backticks, and
+// square brackets. Built by concatenation rather than one escaped regex
+// literal so the quoting of the quote characters themselves stays readable.
+const QUOTE_CHARS = '"' + "'" + '`';
+const OPEN_QUOTE = '[' + QUOTE_CHARS + '\\[]?'; // ["'`\[]?  — optional opening quote/bracket
+const CLOSE_QUOTE = '[' + QUOTE_CHARS + '\\]]?'; // ["'`\]]? — optional closing quote/bracket
+
 export function assertNoFanOwnedWrites(sql) {
   for (const col of FORBIDDEN_COLUMNS) {
-    const assignment = new RegExp(`\\b${col}\\s*=`, 'i');
+    // `\b` stays anchored directly to the bare column name — not outside the
+    // optional quote — so `"handle" =` matches but `equipped_avatar_id`
+    // still can never be confused with the legitimately-written `avatar_id`
+    // (that distinction depends on \b sitting at the real word boundary,
+    // which quoting doesn't move).
+    const assignment = new RegExp(`${OPEN_QUOTE}\\b${col}\\b${CLOSE_QUOTE}\\s*=`, 'i');
     const insertColumnList = new RegExp(`\\([^)]*\\b${col}\\b[^)]*\\)\\s*\\n?\\s*(SELECT|VALUES)`, 'i');
     if (assignment.test(sql) || insertColumnList.test(sql)) {
       throw new Error(
