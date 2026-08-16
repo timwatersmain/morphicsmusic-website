@@ -773,7 +773,7 @@ export function evaluateUnlocks(
 - [ ] **Step 5: Run test to verify it passes**
 
 Run: `npx vitest run tests/community/unlocks.test.ts`
-Expected: PASS (16 tests)
+Expected: PASS (14 tests)
 
 - [ ] **Step 6: Commit**
 
@@ -1278,13 +1278,22 @@ export async function ensureProfile(
   const handle = await nextAvailableHandle(name, async h => !!(await getProfileByHandle(db, h)));
   const t = now();
 
-  await db.prepare(
-    `INSERT INTO fan_profiles (email, handle, display_name, fan_since, created_at, updated_at, last_seen_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
-  ).bind(email, handle, name, opts.fanSince, t, t, t).run();
+  try {
+    await db.prepare(
+      `INSERT INTO fan_profiles (email, handle, display_name, fan_since, created_at, updated_at, last_seen_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    ).bind(email, handle, name, opts.fanSince, t, t, t).run();
+  } catch (err) {
+    // A concurrent request created this profile between our read above and
+    // this insert. The unique index on email makes that insert THROW — it
+    // does not fail silently — so the recovery has to live in a catch. Their
+    // row stands; return it. If no row is there, the error was something
+    // else entirely and must not be swallowed.
+    const raced = await getProfileByEmail(db, email);
+    if (raced) return raced;
+    throw err;
+  }
 
-  // Re-read rather than construct: a concurrent request may have won the race,
-  // in which case the unique index means our insert failed and theirs stands.
   const created = await getProfileByEmail(db, email);
   if (!created) throw new Error('profile creation failed');
   return created;
@@ -1397,7 +1406,7 @@ export function toPublicProfile(
 - [ ] **Step 6: Run test to verify it passes**
 
 Run: `npx vitest run tests/community/repo.test.js`
-Expected: PASS (13 tests)
+Expected: PASS (12 tests)
 
 - [ ] **Step 7: Commit**
 
