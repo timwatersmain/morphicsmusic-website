@@ -217,7 +217,8 @@
   }
 
   /* Media is the other big source of hard corners — artwork tiles, video
-     thumbnails, avatars in the feed. */
+     thumbnails, avatars in the feed.
+
      The :where() keeps this rule at zero specificity so the opt-outs below —
      which are plain descendant selectors — actually win. Without it, the
      `[alt]` check outweighed `h1 img` and the wordmark got its corners
