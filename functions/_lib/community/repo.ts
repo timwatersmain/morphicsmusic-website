@@ -6,6 +6,29 @@ import type { AvatarCatalogueRow, FanProfileRow, PublicProfile, UnlockGrant } fr
 
 const now = () => Math.floor(Date.now() / 1000);
 
+// A fan may change their handle, but not more than once every 30 days —
+// keeps profile links reasonably stable and makes name-squatting expensive,
+// without freezing anyone out of their own name forever (the old
+// handle_locked model this replaces).
+export const HANDLE_CHANGE_COOLDOWN_DAYS = 30;
+const HANDLE_CHANGE_COOLDOWN_SECONDS = HANDLE_CHANGE_COOLDOWN_DAYS * 24 * 60 * 60;
+
+/**
+ * Whether the fan may change their handle right now. `handleChangedAt` null
+ * means "never changed" — always permitted. `now` is injected (unix
+ * seconds) so this stays a pure function callers can test without faking
+ * the system clock.
+ */
+export function canChangeHandle(handleChangedAt: number | null, now: number): boolean {
+  if (handleChangedAt === null) return true;
+  return now - handleChangedAt >= HANDLE_CHANGE_COOLDOWN_SECONDS;
+}
+
+/** Unix seconds at which the cooldown lifts. Only meaningful when canChangeHandle is false. */
+export function nextHandleChangeAt(handleChangedAt: number): number {
+  return handleChangedAt + HANDLE_CHANGE_COOLDOWN_SECONDS;
+}
+
 export async function getProfileByHandle(
   db: D1Database, handle: string,
 ): Promise<FanProfileRow | null> {
@@ -23,23 +46,32 @@ export async function getProfileByEmail(
 /**
  * Fetch the fan's profile, creating it if this is their first visit.
  *
- * `displayName` is only used at creation — it never overwrites a name the fan
- * has since chosen. The handle is derived from the display name and is never
+ * `displayName`/`username` are only used at creation — they never overwrite
+ * a name or handle the fan has since chosen. Username and handle are
+ * separate concepts, but the handle defaults to the username when one
+ * exists (accounts created after username/password auth shipped); customers
+ * who signed up before that existed (purchase-only, no username) fall back
+ * to the display-name-derived behaviour this always had. Neither is ever
  * derived from the email, which must not leak into a fan-facing identifier.
  */
 export async function ensureProfile(
   db: D1Database,
-  opts: { email: string; fanSince: number; displayName?: string | null },
+  opts: { email: string; fanSince: number; displayName?: string | null; username?: string | null },
 ): Promise<FanProfileRow> {
   const email = opts.email.toLowerCase().trim();
   const existing = await getProfileByEmail(db, email);
   if (existing) return existing;
 
   // Defence in depth: update.ts is the normal path that enforces
-  // isBlockedName, but a seeded/imported displayName should never be able to
-  // slip a reserved word (e.g. "admin") straight into a handle either.
-  const rawName = opts.displayName || '';
+  // isBlockedName, but a seeded/imported displayName/username should never
+  // be able to slip a reserved word (e.g. "admin") straight into a handle
+  // either.
+  const rawName = opts.username || opts.displayName || '';
   const name = (isValidDisplayName(rawName) && !isBlockedName(rawName)) ? rawName.trim() : 'Fan';
+  // Route the username case through nextAvailableHandle too: slugifyHandle
+  // collapses underscores to hyphens, so two DISTINCT usernames like
+  // "foo_bar" and "foo-bar" slugify to the same root "foo-bar" — the second
+  // account to arrive must get a suffixed handle instead of colliding.
   const handle = await nextAvailableHandle(name, async h => !!(await getProfileByHandle(db, h)));
   const t = now();
 
@@ -136,23 +168,31 @@ export async function getDirectory(
 }
 
 function buildProfileSets(
-  fields: { displayName?: string; equippedAvatarId?: string | null; handleLocked?: boolean },
+  fields: { displayName?: string; equippedAvatarId?: string | null },
   handle: string | undefined,
+  t: number,
 ): { sets: string[]; args: unknown[] } {
   const sets: string[] = [];
   const args: unknown[] = [];
   if (fields.displayName !== undefined) { sets.push('display_name = ?'); args.push(fields.displayName); }
   if (fields.equippedAvatarId !== undefined) { sets.push('equipped_avatar_id = ?'); args.push(fields.equippedAvatarId); }
-  if (handle !== undefined) { sets.push('handle = ?'); args.push(handle); }
-  if (fields.handleLocked) { sets.push('handle_locked = ?'); args.push(1); }
+  if (handle !== undefined) {
+    sets.push('handle = ?'); args.push(handle);
+    // Every write of the handle column — deliberate or the collision-retry
+    // below — stamps the cooldown clock. update.ts is the one place that
+    // decides WHETHER a handle write is allowed to happen at all (via
+    // canChangeHandle); once it decides to call this, the write always
+    // counts.
+    sets.push('handle_changed_at = ?'); args.push(t);
+  }
   return { sets, args };
 }
 
 async function runProfileUpdate(
-  db: D1Database, fanId: number, built: { sets: string[]; args: unknown[] },
+  db: D1Database, fanId: number, built: { sets: string[]; args: unknown[] }, t: number,
 ): Promise<void> {
   if (!built.sets.length) return;
-  const args = [...built.args, now(), fanId];
+  const args = [...built.args, t, fanId];
   await db.prepare(`UPDATE fan_profiles SET ${built.sets.join(', ')}, updated_at = ? WHERE id = ?`)
     .bind(...args).run();
 }
@@ -160,18 +200,19 @@ async function runProfileUpdate(
 export async function updateProfile(
   db: D1Database,
   fanId: number,
-  fields: { displayName?: string; equippedAvatarId?: string | null; handle?: string; handleLocked?: boolean },
+  fields: { displayName?: string; equippedAvatarId?: string | null; handle?: string },
 ): Promise<void> {
+  const t = now();
   if (fields.handle === undefined) {
-    await runProfileUpdate(db, fanId, buildProfileSets(fields, undefined));
+    await runProfileUpdate(db, fanId, buildProfileSets(fields, undefined, t), t);
     return;
   }
 
   try {
-    await runProfileUpdate(db, fanId, buildProfileSets(fields, fields.handle));
+    await runProfileUpdate(db, fanId, buildProfileSets(fields, fields.handle, t), t);
     return;
   } catch (err) {
-    // A concurrent regeneration landed on the same candidate handle first —
+    // A concurrent change landed on the same candidate handle first —
     // idx_fan_profiles_handle throws rather than failing silently, same
     // shape as ensureProfile's insert race. Re-derive a fresh candidate off
     // the same base name and retry exactly once.
@@ -180,34 +221,15 @@ export async function updateProfile(
       retryBase, async h => !!(await getProfileByHandle(db, h)),
     );
     try {
-      await runProfileUpdate(db, fanId, buildProfileSets(fields, retryHandle));
+      await runProfileUpdate(db, fanId, buildProfileSets(fields, retryHandle, t), t);
       return;
     } catch {
       // Still colliding. A fan renaming themselves must never get a 500 over
       // a handle collision — keep the existing handle and persist everything
       // else instead.
-      await runProfileUpdate(db, fanId, buildProfileSets(fields, undefined));
+      await runProfileUpdate(db, fanId, buildProfileSets(fields, undefined, t), t);
     }
   }
-}
-
-/**
- * Regenerate `handle` from `newName`, but ONLY while the handle is still
- * unlocked. Locking (not the display name) is the permanent record of
- * whether this has already happened — a fan renaming themselves back to the
- * literal string "Fan" must not re-arm regeneration, so the display name
- * itself can never be part of this gate. Once locked, the handle is a
- * permanent permalink and must never move again (see the comment in
- * update.ts).
- *
- * Returns the new handle if one was generated, or null if the handle is
- * already locked (caller should leave the handle alone).
- */
-export async function regenerateHandleOnFirstName(
-  db: D1Database, handleLocked: number, newName: string,
-): Promise<string | null> {
-  if (handleLocked) return null;
-  return nextAvailableHandle(newName, async h => !!(await getProfileByHandle(db, h)));
 }
 
 export async function setCollectionCount(db: D1Database, fanId: number, count: number): Promise<void> {

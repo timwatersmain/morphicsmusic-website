@@ -7,7 +7,7 @@ import { rateLimit, rateLimitedJson, clientIp } from '../../_lib/ratelimit';
 import { requireFan, unauthorized, type CommunityEnv } from '../../_lib/community/session';
 import {
   ensureProfile, getCatalogue, getUnlockedAvatarIds, grantUnlocks,
-  getRarity, setCollectionCount, toPublicProfile,
+  getRarity, setCollectionCount, toPublicProfile, canChangeHandle, nextHandleChangeAt,
 } from '../../_lib/community/repo';
 import { evaluateUnlocks } from '../../_lib/community/unlocks';
 
@@ -17,6 +17,10 @@ interface CustomerRecord {
   // See the comment on `displayName: null` below.
   first_seen_at?: number;
   purchases?: Array<{ music_release_slugs?: string[]; digital_slugs?: string[] }>;
+  // The login username, if this customer has an account (functions/api/auth/
+  // signup.ts). Unlike `name`, this IS fan-chosen and safe to seed the
+  // profile with — see the `username` comment below.
+  username?: string;
 }
 
 export const onRequestOptions: PagesFunction<CommunityEnv> = async ({ request }) => preflight(request);
@@ -48,9 +52,15 @@ export const onRequestGet: PagesFunction<CommunityEnv> = corsHandler<CommunityEn
       fanSince: record.first_seen_at || nowSec,
       // `record.name` is the Stripe cardholder's LEGAL NAME
       // (customer_details.name) — never persist it as a display name or let
-      // it seed a handle. The fan picks their own name later, at which
-      // point update.ts regenerates the handle exactly once.
+      // it seed a handle.
       displayName: null,
+      // Username and handle are separate things, but the handle defaults to
+      // the username: a fan with a login already has a name they chose
+      // themselves, so there is no reason to hand them a placeholder handle
+      // like "fan-7" first. Purchase-only customers with no username fall
+      // back to ensureProfile's 'Fan' default and can set a real handle
+      // later via /api/community/update.
+      username: record.username || null,
     });
 
     const catalogue = await getCatalogue(env.GATES);
@@ -93,7 +103,18 @@ export const onRequestGet: PagesFunction<CommunityEnv> = corsHandler<CommunityEn
     }));
 
     return new Response(JSON.stringify({
-      profile: { ...toPublicProfile({ ...profile, collection_count: owned.size }, equipped), is_self: true },
+      profile: {
+        ...toPublicProfile({ ...profile, collection_count: owned.size }, equipped),
+        is_self: true,
+        // Self-view only augmentation (not part of toPublicProfile's public
+        // allow-list) so the settings UI can tell the fan when they'll next
+        // be able to change their handle, without exposing the raw
+        // handle_changed_at timestamp itself.
+        can_change_handle: canChangeHandle(profile.handle_changed_at, nowSec),
+        handle_change_available_at: profile.handle_changed_at === null
+          ? null
+          : nextHandleChangeAt(profile.handle_changed_at),
+      },
       avatars,
       newly_unlocked: grants.filter(g => !heldBefore.has(g.avatarId)).map(g => g.avatarId),
     }), { headers: { 'Content-Type': 'application/json' } });

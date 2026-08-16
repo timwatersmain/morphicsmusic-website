@@ -56,6 +56,21 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
               </button>
             </div>
             <p id="me-name-status" class="font-mono text-[10px] text-white/30 mt-2 h-4"></p>
+
+            <label class="block font-mono text-[10px] text-white/40 uppercase tracking-widest mt-6 mb-2">Handle</label>
+            <div class="flex gap-2">
+              <span class="flex items-center px-3 font-mono text-sm text-white/30 select-none">@</span>
+              <input
+                id="me-handle-input"
+                type="text"
+                maxlength="32"
+                class="flex-1 px-4 py-3 bg-surface-container-low border border-white/10 focus:border-secondary outline-none font-mono text-sm text-primary"
+              >
+              <button id="me-handle-save" class="px-4 py-3 border border-primary/20 hover:border-primary/60 hover:bg-primary/5 font-mono text-[10px] tracking-widest uppercase text-primary rounded-full">
+                Save
+              </button>
+            </div>
+            <p id="me-handle-status" class="font-mono text-[10px] text-white/30 mt-2 h-4"></p>
           </div>
         </div>
         <p class="font-mono text-[11px] text-white/40">
@@ -86,6 +101,9 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
     const nameInput = document.getElementById('me-name-input') as HTMLInputElement;
     const nameSave = document.getElementById('me-name-save') as HTMLButtonElement;
     const nameStatus = document.getElementById('me-name-status')!;
+    const handleInput = document.getElementById('me-handle-input') as HTMLInputElement;
+    const handleSave = document.getElementById('me-handle-save') as HTMLButtonElement;
+    const handleStatus = document.getElementById('me-handle-status')!;
     const fanSinceEl = document.getElementById('me-fan-since')!;
     const countEl = document.getElementById('me-count')!;
     const catalogueEl = document.getElementById('me-catalogue')!;
@@ -207,6 +225,16 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
           currentEquippedId = profile.avatar ? profile.avatar.id : null;
           handleEl.textContent = profile.handle ? '@' + profile.handle : '';
           nameInput.value = profile.display_name || '';
+          handleInput.value = profile.handle || '';
+          if (profile.can_change_handle) {
+            handleSave.disabled = false;
+            handleStatus.textContent = '';
+          } else {
+            handleSave.disabled = true;
+            handleStatus.textContent = profile.handle_change_available_at
+              ? 'You can change your handle again on ' + fmtDate(profile.handle_change_available_at) + '.'
+              : '';
+          }
           fanSinceEl.textContent = 'Fan since ' + fmtDate(profile.fan_since);
           countEl.textContent = String(profile.collection_count);
           renderEquipped(profile.avatar);
@@ -240,6 +268,37 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
         })
         .catch(e => { nameStatus.textContent = 'Could not save: ' + e.message; })
         .finally(() => { nameSave.disabled = false; });
+    });
+
+    const HANDLE_ERROR_MESSAGES: Record<string, string> = {
+      handle_taken: 'That handle is already taken.',
+      blocked_handle: 'That handle is not available.',
+    };
+
+    handleSave.addEventListener('click', () => {
+      const handle = handleInput.value.trim();
+      if (!handle) { handleStatus.textContent = 'Handle cannot be empty.'; return; }
+      handleSave.disabled = true;
+      handleStatus.textContent = 'Saving…';
+      fetch('/api/community/update', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ handle }),
+      })
+        .then(async r => {
+          if (!r.ok) {
+            const body = await r.json().catch(() => ({}));
+            if (body.error === 'handle_cooldown' && body.next_change_at) {
+              throw new Error('you can change it again on ' + fmtDate(body.next_change_at));
+            }
+            throw new Error(HANDLE_ERROR_MESSAGES[body.error] || body.error || 'save failed');
+          }
+          handleStatus.textContent = 'Saved.';
+          return load();
+        })
+        .catch(e => { handleStatus.textContent = 'Could not save: ' + e.message; })
+        .finally(() => { handleSave.disabled = false; });
     });
 
     load();

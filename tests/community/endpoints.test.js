@@ -10,7 +10,7 @@
 // cookie (via the actual signSession from functions/_lib/auth.ts, not a
 // bypass) stand in for the Pages runtime bindings.
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { DatabaseSync } from 'node:sqlite';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -18,7 +18,7 @@ import { dirname, join } from 'node:path';
 
 import { makeD1Shim } from './helpers/d1-shim.js';
 import { signSession, SESSION_COOKIE } from '../../functions/_lib/auth';
-import { ensureProfile, grantUnlocks } from '../../functions/_lib/community/repo';
+import { ensureProfile, grantUnlocks, HANDLE_CHANGE_COOLDOWN_DAYS } from '../../functions/_lib/community/repo';
 
 import { onRequestGet as meGet } from '../../functions/api/community/me';
 import { onRequestPost as updatePost } from '../../functions/api/community/update';
@@ -28,6 +28,7 @@ import { onRequestGet as directoryGet } from '../../functions/api/community/dire
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const MIGRATION = readFileSync(join(root, 'migrations/0002_fan_profiles.sql'), 'utf8');
 const MIGRATION3 = readFileSync(join(root, 'migrations/0003_handle_locked.sql'), 'utf8');
+const MIGRATION4 = readFileSync(join(root, 'migrations/0004_handle_cooldown.sql'), 'utf8');
 
 const AUTH_SECRET = 'test-only-secret-not-real';
 const FAN_EMAIL = 'endpoint-fan@example.com';
@@ -63,6 +64,7 @@ beforeEach(() => {
   raw.exec('PRAGMA foreign_keys = ON');
   raw.exec(MIGRATION);
   raw.exec(MIGRATION3);
+  raw.exec(MIGRATION4);
   seedCatalogue(raw);
   db = makeD1Shim(raw);
   kv = makeKvStub();
@@ -280,15 +282,22 @@ describe('GET /api/community/me — Stripe name never becomes a public identifie
   });
 });
 
-describe('POST /api/community/update — handle regenerates once, on the first chosen name', () => {
-  it('regenerates the handle the first time a fan sets a display name', async () => {
-    // Mirrors how /api/community/me creates a profile post-Fix-1: no name
-    // supplied, so it lands on the untouched default 'Fan' and a
+// Old model: changing display_name auto-regenerated the handle once, gated
+// by the now-removed handle_locked flag. New model: username/handle/
+// display_name are three independent things — a display_name change must
+// never move the handle, and the handle only ever changes through an
+// explicit `handle` field on this same endpoint, subject to a cooldown
+// rather than a one-shot permanent lock.
+describe('POST /api/community/update — display_name changes never touch the handle', () => {
+  it('does not regenerate the handle when a fan first sets a display name', async () => {
+    // Mirrors how /api/community/me creates a purchase-only profile: no
+    // username, so it lands on the untouched default 'Fan' and a
     // placeholder handle.
     const profile = await ensureProfile(db, {
       email: FAN_EMAIL, fanSince: Math.floor(Date.now() / 1000), displayName: null,
     });
     expect(profile.display_name).toBe('Fan');
+    const placeholderHandle = profile.handle;
     const cookie = await cookieFor(FAN_EMAIL);
 
     const res = await updatePost({
@@ -303,72 +312,14 @@ describe('POST /api/community/update — handle regenerates once, on the first c
 
     const stored = raw.prepare('SELECT display_name, handle FROM fan_profiles WHERE id = ?').get(profile.id);
     expect(stored.display_name).toBe('Ana Vex');
-    expect(stored.handle).toBe('ana-vex');
+    expect(stored.handle).toBe(placeholderHandle);
   });
 
-  it('does NOT regenerate the handle on a second rename', async () => {
+  it('does not move the handle across repeated renames, including back to "Fan"', async () => {
     const profile = await ensureProfile(db, {
       email: FAN_EMAIL, fanSince: Math.floor(Date.now() / 1000), displayName: null,
     });
-    const cookie = await cookieFor(FAN_EMAIL);
-
-    await updatePost({
-      request: req('https://morphicsmusic.com/api/community/update', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Cookie: cookie },
-        body: JSON.stringify({ display_name: 'Ana Vex' }),
-      }),
-      env,
-    });
-    const afterFirst = raw.prepare('SELECT handle FROM fan_profiles WHERE id = ?').get(profile.id);
-    expect(afterFirst.handle).toBe('ana-vex');
-
-    const res2 = await updatePost({
-      request: req('https://morphicsmusic.com/api/community/update', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Cookie: cookie },
-        body: JSON.stringify({ display_name: 'A Totally Different Name' }),
-      }),
-      env,
-    });
-    expect(res2.status).toBe(200);
-
-    const afterSecond = raw.prepare('SELECT display_name, handle FROM fan_profiles WHERE id = ?').get(profile.id);
-    expect(afterSecond.display_name).toBe('A Totally Different Name');
-    // Handle is now a permalink — the second rename must not move it, even
-    // though it no longer matches the display name.
-    expect(afterSecond.handle).toBe('ana-vex');
-  });
-
-  it('locks the handle on the first rename', async () => {
-    const profile = await ensureProfile(db, {
-      email: FAN_EMAIL, fanSince: Math.floor(Date.now() / 1000), displayName: null,
-    });
-    const cookie = await cookieFor(FAN_EMAIL);
-
-    await updatePost({
-      request: req('https://morphicsmusic.com/api/community/update', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Cookie: cookie },
-        body: JSON.stringify({ display_name: 'Ana Vex' }),
-      }),
-      env,
-    });
-    const row = raw.prepare('SELECT handle_locked FROM fan_profiles WHERE id = ?').get(profile.id);
-    expect(row.handle_locked).toBe(1);
-  });
-
-  // The bug this branch fixes: 'Fan' is a legal display name, and the old
-  // gate compared the CURRENT display_name against the literal 'Fan' to
-  // decide whether to regenerate. That means a fan could rename to a real
-  // name (regenerating once, as intended), then rename BACK to 'Fan' — which
-  // re-armed the gate — then rename again to move the handle. Repeat
-  // indefinitely. The fix (gating on handle_locked, not on the display name)
-  // must survive exactly this sequence.
-  it('renaming to the literal "Fan" does not re-arm regeneration — the handle never moves again', async () => {
-    const profile = await ensureProfile(db, {
-      email: FAN_EMAIL, fanSince: Math.floor(Date.now() / 1000), displayName: null,
-    });
+    const originalHandle = profile.handle;
     const cookie = await cookieFor(FAN_EMAIL);
     const rename = async (name) => updatePost({
       request: req('https://morphicsmusic.com/api/community/update', {
@@ -379,27 +330,171 @@ describe('POST /api/community/update — handle regenerates once, on the first c
       env,
     });
 
-    // First real name: this is the one legitimate regeneration.
     await rename('First Real Name');
-    const firstHandle = raw.prepare('SELECT handle FROM fan_profiles WHERE id = ?').get(profile.id).handle;
-    expect(firstHandle).toBe('first-real-name');
-
-    // Rename back to the untouched-default literal — under the old
-    // currentDisplayName !== 'Fan' gate this would re-arm regeneration.
     await rename('Fan');
-    expect(raw.prepare('SELECT handle FROM fan_profiles WHERE id = ?').get(profile.id).handle)
-      .toBe(firstHandle);
-
-    // Rename again — if the gate were re-armed, this would move the handle.
     await rename('Totally New Identity');
-    expect(raw.prepare('SELECT handle FROM fan_profiles WHERE id = ?').get(profile.id).handle)
-      .toBe(firstHandle);
 
-    // And once more, for good measure — the lock must hold no matter how
-    // many times this loop runs.
-    await rename('Fan');
-    await rename('Yet Another Name');
-    expect(raw.prepare('SELECT handle FROM fan_profiles WHERE id = ?').get(profile.id).handle)
-      .toBe(firstHandle);
+    const row = raw.prepare('SELECT handle FROM fan_profiles WHERE id = ?').get(profile.id);
+    expect(row.handle).toBe(originalHandle);
+  });
+});
+
+describe('POST /api/community/update — handle changes (30-day cooldown, not a permanent lock)', () => {
+  afterEach(() => { vi.useRealTimers(); });
+
+  it('a first handle change succeeds and stamps handle_changed_at', async () => {
+    const profile = await ensureProfile(db, {
+      email: FAN_EMAIL, fanSince: Math.floor(Date.now() / 1000), displayName: 'Endpoint Fan',
+    });
+    expect(profile.handle_changed_at).toBeNull();
+    const cookie = await cookieFor(FAN_EMAIL);
+
+    const res = await updatePost({
+      request: req('https://morphicsmusic.com/api/community/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Cookie: cookie },
+        body: JSON.stringify({ handle: 'ana-vex' }),
+      }),
+      env,
+    });
+    expect(res.status).toBe(200);
+
+    const row = raw.prepare('SELECT handle, handle_changed_at FROM fan_profiles WHERE id = ?').get(profile.id);
+    expect(row.handle).toBe('ana-vex');
+    expect(row.handle_changed_at).not.toBeNull();
+  });
+
+  it('rejects a second change within 30 days, with the next-allowed date in the error', async () => {
+    const profile = await ensureProfile(db, {
+      email: FAN_EMAIL, fanSince: Math.floor(Date.now() / 1000), displayName: 'Endpoint Fan',
+    });
+    let cookie = await cookieFor(FAN_EMAIL);
+    const change = async (handle) => updatePost({
+      request: req('https://morphicsmusic.com/api/community/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Cookie: cookie },
+        body: JSON.stringify({ handle }),
+      }),
+      env,
+    });
+
+    await change('first-handle');
+    const afterFirst = raw.prepare('SELECT handle, handle_changed_at FROM fan_profiles WHERE id = ?').get(profile.id);
+
+    vi.useFakeTimers();
+    vi.setSystemTime((afterFirst.handle_changed_at + 5 * 24 * 60 * 60) * 1000); // 5 days later
+    // Re-sign so the session's own 30-day expiry (unrelated to the handle
+    // cooldown) tracks the injected clock instead of going stale.
+    cookie = await cookieFor(FAN_EMAIL);
+
+    const res = await change('second-handle');
+    expect(res.status).toBe(429);
+    const body = await res.json();
+    expect(body.error).toBe('handle_cooldown');
+    expect(body.next_change_at).toBe(afterFirst.handle_changed_at + HANDLE_CHANGE_COOLDOWN_DAYS * 24 * 60 * 60);
+
+    const row = raw.prepare('SELECT handle FROM fan_profiles WHERE id = ?').get(profile.id);
+    expect(row.handle).toBe('first-handle');
+  });
+
+  it('succeeds again once the cooldown has fully elapsed', async () => {
+    const profile = await ensureProfile(db, {
+      email: FAN_EMAIL, fanSince: Math.floor(Date.now() / 1000), displayName: 'Endpoint Fan',
+    });
+    let cookie = await cookieFor(FAN_EMAIL);
+    const change = async (handle) => updatePost({
+      request: req('https://morphicsmusic.com/api/community/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Cookie: cookie },
+        body: JSON.stringify({ handle }),
+      }),
+      env,
+    });
+
+    await change('first-handle');
+    const afterFirst = raw.prepare('SELECT handle_changed_at FROM fan_profiles WHERE id = ?').get(profile.id);
+
+    vi.useFakeTimers();
+    vi.setSystemTime((afterFirst.handle_changed_at + HANDLE_CHANGE_COOLDOWN_DAYS * 24 * 60 * 60 + 1) * 1000);
+    // Re-sign so the session's own 30-day expiry (unrelated to the handle
+    // cooldown) tracks the injected clock instead of going stale.
+    cookie = await cookieFor(FAN_EMAIL);
+
+    const res = await change('second-handle');
+    expect(res.status).toBe(200);
+    const row = raw.prepare('SELECT handle FROM fan_profiles WHERE id = ?').get(profile.id);
+    expect(row.handle).toBe('second-handle');
+  });
+
+  it('rejects taking a handle someone else already holds, rather than suffixing it', async () => {
+    await ensureProfile(db, { email: 'other@b.com', fanSince: 0, displayName: 'Someone Else' });
+    const otherHandle = raw.prepare('SELECT handle FROM fan_profiles WHERE email = ?').get('other@b.com').handle;
+
+    const profile = await ensureProfile(db, {
+      email: FAN_EMAIL, fanSince: Math.floor(Date.now() / 1000), displayName: 'Endpoint Fan',
+    });
+    const cookie = await cookieFor(FAN_EMAIL);
+
+    const res = await updatePost({
+      request: req('https://morphicsmusic.com/api/community/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Cookie: cookie },
+        body: JSON.stringify({ handle: otherHandle }),
+      }),
+      env,
+    });
+    expect(res.status).toBe(409);
+    const body = await res.json();
+    expect(body.error).toBe('handle_taken');
+
+    const row = raw.prepare('SELECT handle FROM fan_profiles WHERE id = ?').get(profile.id);
+    expect(row.handle).toBe(profile.handle);
+  });
+
+  it('rejects a blocked handle like "admin"', async () => {
+    await ensureProfile(db, {
+      email: FAN_EMAIL, fanSince: Math.floor(Date.now() / 1000), displayName: 'Endpoint Fan',
+    });
+    const cookie = await cookieFor(FAN_EMAIL);
+
+    const res = await updatePost({
+      request: req('https://morphicsmusic.com/api/community/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Cookie: cookie },
+        body: JSON.stringify({ handle: 'admin' }),
+      }),
+      env,
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe('blocked_handle');
+  });
+
+  it('changing the handle leaves the login username untouched', async () => {
+    await kv.put(`customer:${FAN_EMAIL}`, JSON.stringify({
+      username: 'original_username',
+      first_seen_at: Math.floor(Date.now() / 1000),
+      purchases: [],
+    }));
+    await ensureProfile(db, {
+      email: FAN_EMAIL, fanSince: Math.floor(Date.now() / 1000), displayName: 'Endpoint Fan',
+      username: 'original_username',
+    });
+    const cookie = await cookieFor(FAN_EMAIL);
+
+    const res = await updatePost({
+      request: req('https://morphicsmusic.com/api/community/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Cookie: cookie },
+        body: JSON.stringify({ handle: 'a-brand-new-handle' }),
+      }),
+      env,
+    });
+    expect(res.status).toBe(200);
+
+    // The customer KV record — where the login username actually lives — is
+    // untouched by a community handle change.
+    const record = JSON.parse(await kv.get(`customer:${FAN_EMAIL}`));
+    expect(record.username).toBe('original_username');
   });
 });

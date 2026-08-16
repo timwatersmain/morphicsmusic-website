@@ -6,11 +6,13 @@ import { dirname, join } from 'node:path';
 import {
   ensureProfile, grantUnlocks, getProfileByHandle, getUnlockedAvatarIds,
   getRarity, getDirectory, toPublicProfile, updateProfile,
+  canChangeHandle, nextHandleChangeAt, HANDLE_CHANGE_COOLDOWN_DAYS,
 } from '../../functions/_lib/community/repo';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const UP = readFileSync(join(root, 'migrations/0002_fan_profiles.sql'), 'utf8');
 const UP3 = readFileSync(join(root, 'migrations/0003_handle_locked.sql'), 'utf8');
+const UP4 = readFileSync(join(root, 'migrations/0004_handle_cooldown.sql'), 'utf8');
 
 import { makeD1Shim } from './helpers/d1-shim.js';
 
@@ -20,6 +22,7 @@ beforeEach(() => {
   raw.exec('PRAGMA foreign_keys = ON');
   raw.exec(UP);
   raw.exec(UP3);
+  raw.exec(UP4);
   raw.exec(`INSERT INTO avatar_catalogue (id,kind,release_slug,name,art_path,unlock_rule,hint,sort_order)
     VALUES ('release:perception','release','perception','PERCEPTION','/a.webp',
             '{"type":"own_release","slug":"perception"}','Own PERCEPTION',0)`);
@@ -52,6 +55,31 @@ describe('ensureProfile', () => {
     // The email must never leak into the public-facing handle.
     expect(p.handle).not.toContain('a@b.com');
     expect(p.handle).not.toContain('b.com');
+  });
+
+  it('defaults the handle (and display name) to the account username, when one exists', async () => {
+    const p = await ensureProfile(db, { email: 'a@b.com', fanSince: 0, displayName: null, username: 'ana_vex' });
+    expect(p.display_name).toBe('ana_vex');
+    expect(p.handle).toBe('ana-vex');
+  });
+
+  it('prefers the username over a supplied display name', async () => {
+    const p = await ensureProfile(db, {
+      email: 'a@b.com', fanSince: 0, displayName: 'Some Legal Name', username: 'realuser',
+    });
+    expect(p.display_name).toBe('realuser');
+    expect(p.handle).toBe('realuser');
+  });
+
+  // Usernames allow underscores AND hyphens, but slugifyHandle collapses
+  // underscores to hyphens — so two DISTINCT usernames can slugify to the
+  // same handle. The second account must get a suffix, not a collision.
+  it('suffixes the second account when two usernames slugify to the same handle', async () => {
+    const first = await ensureProfile(db, { email: 'a@b.com', fanSince: 0, displayName: null, username: 'foo_bar' });
+    const second = await ensureProfile(db, { email: 'c@d.com', fanSince: 0, displayName: null, username: 'foo-bar' });
+    expect(first.handle).toBe('foo-bar');
+    expect(second.handle).toBe('foo-bar-2');
+    expect(first.handle).not.toBe(second.handle);
   });
 });
 
@@ -209,7 +237,7 @@ describe('toPublicProfile', () => {
       id: 1, email: 'secret@b.com', handle: 'ana', display_name: 'Ana',
       equipped_avatar_id: null, fan_since: 1, rank_points: 0,
       collection_count: 2, created_at: 0, updated_at: 0, last_seen_at: null,
-      handle_locked: 1,
+      handle_changed_at: 1700000000,
     };
     const pub = toPublicProfile(row, null);
     expect(JSON.stringify(pub)).not.toContain('secret@b.com');
@@ -217,16 +245,59 @@ describe('toPublicProfile', () => {
     expect(pub.handle).toBe('ana');
   });
 
-  it('never includes handle_locked — it is internal state, not fan-facing', () => {
+  it('never includes handle_changed_at — it is internal state, not fan-facing', () => {
     const row = {
       id: 1, email: 'secret@b.com', handle: 'ana', display_name: 'Ana',
       equipped_avatar_id: null, fan_since: 1, rank_points: 0,
       collection_count: 2, created_at: 0, updated_at: 0, last_seen_at: null,
-      handle_locked: 1,
+      handle_changed_at: 1700000000,
     };
     const pub = toPublicProfile(row, null);
-    expect('handle_locked' in pub).toBe(false);
-    expect(JSON.stringify(pub)).not.toContain('handle_locked');
+    expect('handle_changed_at' in pub).toBe(false);
+    expect(JSON.stringify(pub)).not.toContain('handle_changed_at');
+  });
+});
+
+describe('canChangeHandle / nextHandleChangeAt', () => {
+  const DAY = 24 * 60 * 60;
+
+  it('permits the change when the handle has never been changed', () => {
+    expect(canChangeHandle(null, 1_000_000)).toBe(true);
+  });
+
+  it('rejects a second change within the cooldown window', () => {
+    const changedAt = 1_000_000;
+    expect(canChangeHandle(changedAt, changedAt + DAY)).toBe(false);
+  });
+
+  it('permits a change once the cooldown has fully elapsed', () => {
+    const changedAt = 1_000_000;
+    expect(canChangeHandle(changedAt, changedAt + HANDLE_CHANGE_COOLDOWN_DAYS * DAY)).toBe(true);
+  });
+
+  it('nextHandleChangeAt is exactly cooldown-days after the last change', () => {
+    const changedAt = 1_000_000;
+    expect(nextHandleChangeAt(changedAt)).toBe(changedAt + HANDLE_CHANGE_COOLDOWN_DAYS * DAY);
+  });
+});
+
+describe('updateProfile stamps handle_changed_at on a handle write', () => {
+  it('sets handle_changed_at when the handle field is included', async () => {
+    const profile = await ensureProfile(db, { email: 'a@b.com', fanSince: 0, displayName: 'Ana' });
+    expect(profile.handle_changed_at).toBeNull();
+
+    await updateProfile(db, profile.id, { handle: 'ana-vex' });
+
+    const row = raw.prepare('SELECT handle, handle_changed_at FROM fan_profiles WHERE id = ?').get(profile.id);
+    expect(row.handle).toBe('ana-vex');
+    expect(row.handle_changed_at).not.toBeNull();
+  });
+
+  it('leaves handle_changed_at untouched when only display_name changes', async () => {
+    const profile = await ensureProfile(db, { email: 'a@b.com', fanSince: 0, displayName: 'Ana' });
+    await updateProfile(db, profile.id, { displayName: 'Someone Else' });
+    const row = raw.prepare('SELECT handle_changed_at FROM fan_profiles WHERE id = ?').get(profile.id);
+    expect(row.handle_changed_at).toBeNull();
   });
 });
 
@@ -244,10 +315,10 @@ describe('updateProfile handle race recovery', () => {
     // concurrent regenerations raced to the same free slug and both read it
     // as available before either wrote.
     await expect(
-      updateProfile(db, fanB.id, { displayName: 'Ana', handle: 'ana', handleLocked: true }),
+      updateProfile(db, fanB.id, { displayName: 'Ana', handle: 'ana' }),
     ).resolves.toBeUndefined();
 
-    const row = raw.prepare('SELECT display_name, handle, handle_locked FROM fan_profiles WHERE id = ?')
+    const row = raw.prepare('SELECT display_name, handle, handle_changed_at FROM fan_profiles WHERE id = ?')
       .get(fanB.id);
     // No exception escaped, the display name was still persisted, and the
     // fan ended up on a real handle that is NOT "ana" (either a suffixed

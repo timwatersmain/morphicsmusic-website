@@ -12,11 +12,13 @@ export interface FanProfileRow {
   updated_at: number;
   last_seen_at: number | null;
   /**
-   * Set to 1 the first time the handle is regenerated off a chosen display
-   * name, and never cleared. Internal state only — see toPublicProfile,
-   * which is a strict allow-list and must never grow this field.
+   * Unix seconds of the last handle change, or null if it has never been
+   * changed since profile creation. Drives the 30-day change cooldown (see
+   * canChangeHandle/nextHandleChangeAt in repo.ts). Internal state only —
+   * see toPublicProfile, which is a strict allow-list and must never grow
+   * this field.
    */
-  handle_locked: number;
+  handle_changed_at: number | null;
 }
 
 export interface AvatarCatalogueRow {

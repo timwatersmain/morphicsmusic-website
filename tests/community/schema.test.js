@@ -9,6 +9,8 @@ const UP = readFileSync(join(root, 'migrations/0002_fan_profiles.sql'), 'utf8');
 const DOWN = readFileSync(join(root, 'migrations/down/0002_fan_profiles.down.sql'), 'utf8');
 const UP3 = readFileSync(join(root, 'migrations/0003_handle_locked.sql'), 'utf8');
 const DOWN3 = readFileSync(join(root, 'migrations/down/0003_handle_locked.down.sql'), 'utf8');
+const UP4 = readFileSync(join(root, 'migrations/0004_handle_cooldown.sql'), 'utf8');
+const DOWN4 = readFileSync(join(root, 'migrations/down/0004_handle_cooldown.down.sql'), 'utf8');
 const TABLES = ['fan_profiles', 'avatar_catalogue', 'fan_avatar_unlocks'];
 
 const STUB = `CREATE TABLE IF NOT EXISTS d1_migrations (
@@ -93,6 +95,42 @@ describe('migration 0003', () => {
     db.exec(DOWN3);
     expect(db.prepare("SELECT name FROM d1_migrations WHERE name = '0003_handle_locked.sql'").all()).toHaveLength(0);
     expect(() => { db.exec(STUB3); db.exec(UP3); }).not.toThrow();
+  });
+});
+
+const STUB4 = `INSERT INTO d1_migrations (name, applied_at) VALUES ('0004_handle_cooldown.sql','now');`;
+
+function makeDb4() {
+  const db = makeDb3();
+  db.exec(STUB4);
+  db.exec(UP4);
+  return db;
+}
+
+describe('migration 0004', () => {
+  it('adds handle_changed_at (nullable) and drops handle_locked', () => {
+    const db = makeDb4();
+    addFan(db, 'a@b.com', 'ana');
+    const cols = db.prepare('PRAGMA table_info(fan_profiles)').all().map(c => c.name);
+    expect(cols).toContain('handle_changed_at');
+    expect(cols).not.toContain('handle_locked');
+    const row = db.prepare('SELECT handle_changed_at FROM fan_profiles').get();
+    expect(row.handle_changed_at).toBeNull();
+  });
+
+  it('is reversible — restores handle_locked and drops handle_changed_at', () => {
+    const db = makeDb4();
+    db.exec(DOWN4);
+    const cols = db.prepare('PRAGMA table_info(fan_profiles)').all().map(c => c.name);
+    expect(cols).toContain('handle_locked');
+    expect(cols).not.toContain('handle_changed_at');
+  });
+
+  it('down clears bookkeeping so up can re-run', () => {
+    const db = makeDb4();
+    db.exec(DOWN4);
+    expect(db.prepare("SELECT name FROM d1_migrations WHERE name = '0004_handle_cooldown.sql'").all()).toHaveLength(0);
+    expect(() => { db.exec(STUB4); db.exec(UP4); }).not.toThrow();
   });
 });
 
