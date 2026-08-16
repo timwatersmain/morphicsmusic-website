@@ -3,7 +3,10 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 ---
 
 <BaseLayout title="MY COMMUNITY" currentPage="/community">
-  <div class="max-w-4xl mx-auto">
+  <!-- pb-24 (96px) clears the fixed player bar (72px tall + 1px border), which
+       otherwise overlaps the last row of the avatar catalogue grid once a
+       preview is playing. See src/components/PlayerBar.astro .pb-inner height. -->
+  <div class="max-w-4xl mx-auto pb-24">
     <header class="mb-12 flex flex-wrap items-end justify-between gap-4">
       <div>
         <span class="font-mono text-xs text-secondary uppercase tracking-widest">Your profile</span>
