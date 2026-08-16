@@ -41,22 +41,40 @@ const TURNSTILE_SITE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || '';
       <span class="font-mono text-xs text-secondary uppercase tracking-widest">Account</span>
       <h1 class="font-headline font-bold text-5xl md:text-6xl text-primary uppercase tracking-tighter leading-none mt-2">SIGN IN</h1>
       <p class="font-mono text-[11px] text-white/50 mt-4 leading-relaxed">
-        We'll email a one-time link. No password — click the link to access your library.
+        Username or email, plus your password.
       </p>
     </header>
 
-    <form id="login-form" class="space-y-4">
+    <!-- Primary path: username/email + password. -->
+    <form id="password-login-form" class="space-y-4">
       <div>
-        <label class="block font-mono text-[10px] text-white/40 uppercase tracking-widest mb-2">Email</label>
+        <label for="li-identifier" class="block font-mono text-[10px] text-white/40 uppercase tracking-widest mb-2">Username or email</label>
         <input
-          type="email"
-          name="email"
+          id="li-identifier"
+          type="text"
+          name="identifier"
           required
-          autocomplete="email"
-          placeholder="you@example.com"
+          autocomplete="username"
+          placeholder="you or you@example.com"
           class="w-full px-4 py-4 bg-surface-container-low border border-white/10 focus:border-secondary outline-none font-mono text-base text-primary"
         >
       </div>
+      <div>
+        <label for="li-password" class="block font-mono text-[10px] text-white/40 uppercase tracking-widest mb-2">Password</label>
+        <input
+          id="li-password"
+          type="password"
+          name="password"
+          required
+          autocomplete="current-password"
+          placeholder="••••••••••"
+          class="w-full px-4 py-4 bg-surface-container-low border border-white/10 focus:border-secondary outline-none font-mono text-base text-primary"
+        >
+      </div>
+      <label class="flex items-center gap-2 font-mono text-[10px] text-white/40 uppercase tracking-widest cursor-pointer">
+        <input type="checkbox" name="remember" class="accent-secondary w-4 h-4">
+        Keep me signed in
+      </label>
       {TURNSTILE_SITE_KEY && (
         <div
           class="cf-turnstile flex justify-center"
@@ -67,33 +85,78 @@ const TURNSTILE_SITE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || '';
       )}
       <button
         type="submit"
-        id="submit-btn"
+        id="password-submit-btn"
         class="w-full py-4 bg-primary text-on-primary font-mono text-[11px] tracking-widest uppercase hover:bg-secondary hover:text-on-secondary transition-colors disabled:opacity-30"
       >
-        Send sign-in link
+        Sign in
       </button>
     </form>
+
+    <div id="password-error" role="alert" aria-live="assertive" class="hidden mt-6 p-6 border border-red-500/30 bg-red-500/5 font-mono text-[11px] text-red-300"></div>
+
+    <p class="mt-6 font-mono text-[10px] text-white/30 leading-relaxed">
+      <button type="button" id="show-magic-link" class="text-white/60 hover:text-white underline">Email me a sign-in link instead</button>
+      · Forgot password? <button type="button" id="forgot-password" class="text-white/60 hover:text-white underline">Use a sign-in link</button>
+    </p>
+
+    <p class="mt-4 font-mono text-[10px] text-white/30 leading-relaxed">
+      New here? <a href="/signup" class="text-white/60 hover:text-white underline">Create an account</a>
+    </p>
+
+    <!-- Secondary path: the original magic-link flow, demoted but preserved
+         in full — it's also the recovery path for a forgotten password. -->
+    <div id="magic-link-panel" class="hidden mt-10 pt-10 border-t border-white/10">
+      <h2 class="font-mono text-[10px] text-white/40 uppercase tracking-widest mb-4">Email me a link</h2>
+      <p class="font-mono text-[11px] text-white/50 mb-4 leading-relaxed">
+        We'll email a one-time link. No password — click the link to access your library.
+      </p>
+      <form id="login-form" class="space-y-4">
+        <div>
+          <label for="li-email" class="block font-mono text-[10px] text-white/40 uppercase tracking-widest mb-2">Email</label>
+          <input
+            id="li-email"
+            type="email"
+            name="email"
+            required
+            autocomplete="email"
+            placeholder="you@example.com"
+            class="w-full px-4 py-4 bg-surface-container-low border border-white/10 focus:border-secondary outline-none font-mono text-base text-primary"
+          >
+        </div>
+        {TURNSTILE_SITE_KEY && (
+          <div
+            class="cf-turnstile flex justify-center"
+            data-sitekey={TURNSTILE_SITE_KEY}
+            data-theme="dark"
+            data-size="flexible"
+          ></div>
+        )}
+        <button
+          type="submit"
+          id="submit-btn"
+          class="w-full py-4 bg-primary text-on-primary font-mono text-[11px] tracking-widest uppercase hover:bg-secondary hover:text-on-secondary transition-colors disabled:opacity-30"
+        >
+          Send sign-in link
+        </button>
+      </form>
+
+      <div id="status" class="hidden mt-8 p-6 border border-secondary/30 bg-secondary/5">
+        <div class="font-mono text-[10px] text-secondary uppercase tracking-widest mb-2">Check your email</div>
+        <p class="font-mono text-[11px] text-white/70 leading-relaxed">
+          If the address is on file, a sign-in link is on its way. Click the link in the email to access your library.
+        </p>
+      </div>
+
+      <div id="error" role="alert" aria-live="assertive" class="hidden mt-8 p-6 border border-red-500/30 bg-red-500/5 font-mono text-[11px] text-red-300"></div>
+    </div>
 
     {TURNSTILE_SITE_KEY && (
       <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
     )}
 
-    <div id="status" class="hidden mt-8 p-6 border border-secondary/30 bg-secondary/5">
-      <div class="font-mono text-[10px] text-secondary uppercase tracking-widest mb-2">Check your email</div>
-      <p class="font-mono text-[11px] text-white/70 leading-relaxed">
-        If the address is on file, a sign-in link is on its way. Click the link in the email to access your library.
-      </p>
-    </div>
-
-    <div id="error" class="hidden mt-8 p-6 border border-red-500/30 bg-red-500/5 font-mono text-[11px] text-red-300"></div>
-
     <div id="expired-banner" class="hidden mt-8 p-4 border border-secondary/20 bg-secondary/5 font-mono text-[10px] text-white/60 uppercase tracking-widest">
       That link expired — request a fresh one.
     </div>
-
-    <p class="mt-8 font-mono text-[10px] text-white/30 leading-relaxed">
-      First time here? Same form. Your account is created the moment you make a purchase — no separate sign-up.
-    </p>
     </div>
   </div>
 
@@ -133,6 +196,55 @@ const TURNSTILE_SITE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || '';
     if (params.get('expired') === '1') {
       document.getElementById('expired-banner')!.classList.remove('hidden');
     }
+
+    // Magic-link panel is demoted to a secondary option, opened either by
+    // its own toggle or by "Forgot password?" — same panel either way,
+    // since a mailed link is also the account-recovery path.
+    const magicLinkPanel = document.getElementById('magic-link-panel')!;
+    const showMagicLinkBtn = document.getElementById('show-magic-link') as HTMLButtonElement;
+    const forgotPasswordBtn = document.getElementById('forgot-password') as HTMLButtonElement;
+    function revealMagicLink() {
+      magicLinkPanel.classList.remove('hidden');
+      document.getElementById('li-email')?.focus();
+    }
+    showMagicLinkBtn.addEventListener('click', revealMagicLink);
+    forgotPasswordBtn.addEventListener('click', revealMagicLink);
+
+    // Primary path: username/email + password.
+    const pwForm = document.getElementById('password-login-form') as HTMLFormElement;
+    const pwBtn = document.getElementById('password-submit-btn') as HTMLButtonElement;
+    const pwErr = document.getElementById('password-error')!;
+
+    pwForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      pwErr.classList.add('hidden');
+      pwBtn.disabled = true;
+      pwBtn.textContent = 'Signing in…';
+      const fd = new FormData(pwForm);
+      const identifier = String(fd.get('identifier') || '').trim();
+      const password = String(fd.get('password') || '');
+      const remember = fd.get('remember') === 'on';
+      const turnstileToken = String(fd.get('cf-turnstile-response') || '');
+      try {
+        const r = await fetch('/api/auth/password-login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ identifier, password, remember, turnstile: turnstileToken }),
+        });
+        if (!r.ok) {
+          // The server deliberately returns the same generic failure for
+          // "no such account" and "wrong password" — never guess which one
+          // it was, that would undo the server-side work.
+          throw new Error('Those details didn’t match. Try again.');
+        }
+        location.href = params.get('redirect') || '/library';
+      } catch (e: any) {
+        pwErr.textContent = e.message;
+        pwErr.classList.remove('hidden');
+        pwBtn.disabled = false;
+        pwBtn.textContent = 'Sign in';
+      }
+    });
 
     const form = document.getElementById('login-form') as HTMLFormElement;
     const btn = document.getElementById('submit-btn') as HTMLButtonElement;

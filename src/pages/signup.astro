@@ -1,0 +1,205 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+// Same public/secret Turnstile split as login.astro — see that file for the
+// full rationale.
+const TURNSTILE_SITE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || '';
+---
+
+<BaseLayout title="SIGN UP" currentPage="">
+  <div class="max-w-md mx-auto pt-12">
+    <header class="mb-12">
+      <span class="font-mono text-xs text-secondary uppercase tracking-widest">Account</span>
+      <h1 class="font-headline font-bold text-5xl md:text-6xl text-primary uppercase tracking-tighter leading-none mt-2">CREATE ACCOUNT</h1>
+      <p class="font-mono text-[11px] text-white/50 mt-4 leading-relaxed">
+        Username and password — no separate verification step.
+      </p>
+    </header>
+
+    <form id="signup-form" class="space-y-4" novalidate>
+      <div>
+        <label for="su-username" class="block font-mono text-[10px] text-white/40 uppercase tracking-widest mb-2">Username</label>
+        <input
+          id="su-username"
+          type="text"
+          name="username"
+          required
+          autocomplete="username"
+          placeholder="lowercase, 3-24 characters"
+          aria-describedby="su-username-hint"
+          class="w-full px-4 py-4 bg-surface-container-low border border-white/10 focus:border-secondary outline-none font-mono text-base text-primary"
+        >
+        <p id="su-username-hint" class="font-mono text-[10px] text-white/30 mt-2">a-z, 0-9, underscore, hyphen only</p>
+      </div>
+
+      <div>
+        <label for="su-email" class="block font-mono text-[10px] text-white/40 uppercase tracking-widest mb-2">Email</label>
+        <input
+          id="su-email"
+          type="email"
+          name="email"
+          required
+          autocomplete="email"
+          placeholder="you@example.com"
+          class="w-full px-4 py-4 bg-surface-container-low border border-white/10 focus:border-secondary outline-none font-mono text-base text-primary"
+        >
+      </div>
+
+      <div>
+        <label for="su-password" class="block font-mono text-[10px] text-white/40 uppercase tracking-widest mb-2">Password</label>
+        <input
+          id="su-password"
+          type="password"
+          name="password"
+          required
+          autocomplete="new-password"
+          minlength="10"
+          placeholder="at least 10 characters"
+          class="w-full px-4 py-4 bg-surface-container-low border border-white/10 focus:border-secondary outline-none font-mono text-base text-primary"
+        >
+      </div>
+
+      <div>
+        <label for="su-confirm" class="block font-mono text-[10px] text-white/40 uppercase tracking-widest mb-2">Confirm password</label>
+        <input
+          id="su-confirm"
+          type="password"
+          name="confirm"
+          required
+          autocomplete="new-password"
+          minlength="10"
+          placeholder="type it again"
+          class="w-full px-4 py-4 bg-surface-container-low border border-white/10 focus:border-secondary outline-none font-mono text-base text-primary"
+        >
+      </div>
+
+      {TURNSTILE_SITE_KEY && (
+        <div
+          class="cf-turnstile flex justify-center"
+          data-sitekey={TURNSTILE_SITE_KEY}
+          data-theme="dark"
+          data-size="flexible"
+        ></div>
+      )}
+
+      <button
+        type="submit"
+        id="submit-btn"
+        class="w-full py-4 bg-primary text-on-primary font-mono text-[11px] tracking-widest uppercase hover:bg-secondary hover:text-on-secondary transition-colors disabled:opacity-30"
+      >
+        Create account
+      </button>
+    </form>
+
+    {TURNSTILE_SITE_KEY && (
+      <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+    )}
+
+    <div id="error" role="alert" aria-live="assertive" class="hidden mt-8 p-6 border border-red-500/30 bg-red-500/5 font-mono text-[11px] text-red-300"></div>
+
+    <p class="mt-8 font-mono text-[10px] text-white/30 leading-relaxed">
+      Already have an account? <a href="/login" class="text-white/60 hover:text-white underline">Sign in</a>
+    </p>
+  </div>
+
+  <script>
+    const form = document.getElementById('signup-form') as HTMLFormElement;
+    const btn = document.getElementById('submit-btn') as HTMLButtonElement;
+    const err = document.getElementById('error')!;
+
+    const USERNAME_RE = /^[a-z0-9_-]{3,24}$/;
+    const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+    const MIN_PASSWORD = 10;
+
+    // Fast, friendly feedback only — the server re-validates everything and
+    // is the only source of truth. This never blocks a request the server
+    // would accept, it just avoids a round trip for obvious mistakes.
+    function clientValidate(username: string, email: string, password: string, confirm: string): string | null {
+      if (!USERNAME_RE.test(username)) {
+        return 'Username must be 3-24 characters: lowercase letters, numbers, underscore, or hyphen.';
+      }
+      if (!EMAIL_RE.test(email)) {
+        return 'That email address doesn’t look right.';
+      }
+      if (password.length < MIN_PASSWORD) {
+        return `Password must be at least ${MIN_PASSWORD} characters.`;
+      }
+      if (password !== confirm) {
+        return 'Passwords don’t match.';
+      }
+      return null;
+    }
+
+    function showError(message: string) {
+      err.textContent = message;
+      err.classList.remove('hidden');
+    }
+
+    function resetButton() {
+      btn.disabled = false;
+      btn.textContent = 'Create account';
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      err.classList.add('hidden');
+
+      const fd = new FormData(form);
+      const username = String(fd.get('username') || '').trim().toLowerCase();
+      const email = String(fd.get('email') || '').trim();
+      const password = String(fd.get('password') || '');
+      const confirm = String(fd.get('confirm') || '');
+      // Turnstile drops a hidden cf-turnstile-response input into the form
+      // when the widget is present; if not (no site key) we just send an
+      // empty token and the server treats it as "challenge disabled".
+      const turnstileToken = String(fd.get('cf-turnstile-response') || '');
+
+      const validationError = clientValidate(username, email, password, confirm);
+      if (validationError) {
+        showError(validationError);
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'Creating…';
+
+      try {
+        const r = await fetch('/api/auth/signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, email, password, confirm, turnstile: turnstileToken }),
+        });
+        if (!r.ok) {
+          const data = await r.json().catch(() => ({}));
+          throw new Error(data.error || 'Could not create account');
+        }
+
+        // Signup deliberately never sets a session cookie — even on real
+        // success — so the response can't be used to probe which emails
+        // already have accounts. The client immediately follows up with the
+        // credentials the user just typed: a genuinely new signup lands
+        // signed in with no extra step, and a signup against an existing
+        // email just fails here the same way a wrong password would.
+        btn.textContent = 'Signing in…';
+        const params = new URLSearchParams(location.search);
+        const loginRes = await fetch('/api/auth/password-login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ identifier: username, password, remember: true }),
+        });
+        if (!loginRes.ok) {
+          // Deliberately generic — the whole point of signup's response
+          // shape is that this page cannot tell "email already had an
+          // account" apart from any other failure, so don't try to explain.
+          showError('Those details didn’t match. Try again.');
+          resetButton();
+          return;
+        }
+        location.href = params.get('redirect') || '/library';
+      } catch (e: any) {
+        showError(e.message);
+        resetButton();
+      }
+    });
+  </script>
+</BaseLayout>

@@ -34,6 +34,10 @@
   Cache-Control: no-store
 /login/*
   Cache-Control: no-store
+/signup
+  Cache-Control: no-store
+/signup/*
+  Cache-Control: no-store
 
 # Fan-only surfaces: never cached, never indexed. The API already returns 401
 # to signed-out callers; X-Robots-Tag stops the shells being indexed too.
