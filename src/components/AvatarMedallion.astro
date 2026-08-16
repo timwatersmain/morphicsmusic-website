@@ -1,6 +1,18 @@
 ---
 // Circular framed avatar. Release art is square cover art; the crop and ring
 // are what make a leaderboard read as people rather than as a discography.
+//
+// This component is the canonical visual spec, not a component that runs in
+// the browser: Astro components cannot execute inside a client-side
+// <script>, so the three pages below hand-roll an equivalent `medallionHtml()`
+// in plain JS instead of importing this file. When the medallion's markup or
+// styling changes, change it here first and then mirror the change into all
+// three copies:
+//   - src/pages/community/index.astro  (medallionHtml, fan wall rows)
+//   - src/pages/community/me.astro     (medallionHtml, equipped + catalogue)
+//   - src/pages/community/profile.astro
+// This duplication was reviewed and accepted; a single written spec here is
+// what keeps the three copies from drifting apart.
 interface Props {
   art?: string | null;
   name: string;
