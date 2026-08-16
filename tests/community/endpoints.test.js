@@ -492,6 +492,142 @@ describe('POST /api/community/update — display_name changes never touch the ha
   });
 });
 
+// Fix 1 (pre-deploy review): each glyph lookup in directory.ts is a KV
+// subrequest, and Cloudflare Free caps a single request at 50 subrequests.
+// These tests count `customer:` KV gets directly through the stub rather
+// than asserting on timing, per the review's instruction.
+describe('GET /api/community/directory — glyph lookups stay within the subrequest budget', () => {
+  const GLYPH_AVATAR_ID = 'tier:test-glyph-1';
+  const DUOTONE_AVATAR_ID = 'tier:test-duotone-3';
+
+  function seedGlyphAndDuotone(rawDb) {
+    rawDb.exec(`INSERT INTO avatar_catalogue
+      (id,kind,release_slug,name,art_path,unlock_rule,hint,sort_order,style,colourway,artwork_key,tier)
+      VALUES ('${GLYPH_AVATAR_ID}','special',NULL,'Cyan I','(procedural)',
+              '{"type":"tier1_default"}','Everyone starts here',2,'glyph_solid','cyan',NULL,1)`);
+    rawDb.exec(`INSERT INTO avatar_catalogue
+      (id,kind,release_slug,name,art_path,unlock_rule,hint,sort_order,style,colourway,artwork_key,tier)
+      VALUES ('${DUOTONE_AVATAR_ID}','special',NULL,'Duotone III','(procedural)',
+              '{"type":"tenure_days","days":0}','Tier 3',3,'duotone','cyan','some-art',3)`);
+  }
+
+  // Wraps the shared KV stub so `customer:` gets (glyph lookups) are counted
+  // separately from rate-limit / session-version traffic on the same
+  // binding — the thing this fix is actually about.
+  function countingKv(base) {
+    let customerGets = 0;
+    return {
+      async get(key) {
+        if (key.startsWith('customer:')) customerGets++;
+        return base.get(key);
+      },
+      async put(key, value, opts) { return base.put(key, value, opts); },
+      async delete(key) { return base.delete(key); },
+      get customerGets() { return customerGets; },
+    };
+  }
+
+  async function makeFan(email, username, avatarId) {
+    await kv.put(`customer:${email}`, JSON.stringify({
+      username, first_seen_at: Math.floor(Date.now() / 1000), purchases: [],
+    }));
+    const profile = await ensureProfile(db, {
+      email, fanSince: Math.floor(Date.now() / 1000), displayName: username, username,
+    });
+    // Equipping is gated on holding the avatar (see update.ts's not_unlocked
+    // check) — grant it directly rather than satisfying its real unlock
+    // rule, which is irrelevant to what this test is checking.
+    await grantUnlocks(db, profile.id, [{ avatarId, source: 'test', sourceRef: null }]);
+    await updatePost({
+      request: req('https://morphicsmusic.com/api/community/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Cookie: await cookieFor(email) },
+        body: JSON.stringify({ equipped_avatar_id: avatarId }),
+      }),
+      env,
+    });
+  }
+
+  it('a page of fans with no equipped avatar performs zero glyph lookups', async () => {
+    for (let i = 0; i < 5; i++) {
+      await ensureProfile(db, {
+        email: `noavatar-${i}@example.com`, fanSince: Math.floor(Date.now() / 1000), displayName: `Fan${i}`,
+      });
+    }
+    await ensureProfile(db, { email: FAN_EMAIL, fanSince: Math.floor(Date.now() / 1000), displayName: 'Viewer' });
+
+    const wrappedKv = countingKv(kv);
+    const testEnv = { ...env, DOWNLOADS: wrappedKv };
+    const cookie = await cookieFor(FAN_EMAIL);
+
+    const res = await directoryGet({
+      request: req('https://morphicsmusic.com/api/community/directory', { headers: { Cookie: cookie } }),
+      env: testEnv,
+    });
+    expect(res.status).toBe(200);
+    expect(wrappedKv.customerGets).toBe(0);
+  });
+
+  it('a page of fans wearing legacy release art or tier-3 duotone avatars performs zero glyph lookups', async () => {
+    seedGlyphAndDuotone(raw);
+    await makeFan('duotone-a@example.com', 'duotonea', DUOTONE_AVATAR_ID);
+    await makeFan('duotone-b@example.com', 'duotoneb', DUOTONE_AVATAR_ID);
+    await ensureProfile(db, { email: FAN_EMAIL, fanSince: Math.floor(Date.now() / 1000), displayName: 'Viewer' });
+
+    const wrappedKv = countingKv(kv);
+    const testEnv = { ...env, DOWNLOADS: wrappedKv };
+    const cookie = await cookieFor(FAN_EMAIL);
+
+    const res = await directoryGet({
+      request: req('https://morphicsmusic.com/api/community/directory', { headers: { Cookie: cookie } }),
+      env: testEnv,
+    });
+    expect(res.status).toBe(200);
+    const { fans } = await res.json();
+    expect(fans.some(f => f.avatar?.id === DUOTONE_AVATAR_ID)).toBe(true);
+    expect(wrappedKv.customerGets).toBe(0);
+  });
+
+  it('a limit above the cap is clamped to the maximum page size', async () => {
+    await ensureProfile(db, { email: FAN_EMAIL, fanSince: Math.floor(Date.now() / 1000), displayName: 'Viewer' });
+    const cookie = await cookieFor(FAN_EMAIL);
+
+    const res = await directoryGet({
+      request: req('https://morphicsmusic.com/api/community/directory?limit=100', { headers: { Cookie: cookie } }),
+      env,
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.limit).toBeLessThanOrEqual(40);
+  });
+
+  it('a full page of glyph-wearing fans performs one bounded KV read per fan, never one per fan times page size beyond the cap', async () => {
+    seedGlyphAndDuotone(raw);
+    const FAN_COUNT = 10;
+    for (let i = 0; i < FAN_COUNT; i++) {
+      await makeFan(`glyphfan-${i}@example.com`, `glyphname${i}`, GLYPH_AVATAR_ID);
+    }
+    await ensureProfile(db, { email: FAN_EMAIL, fanSince: Math.floor(Date.now() / 1000), displayName: 'Viewer' });
+
+    const wrappedKv = countingKv(kv);
+    const testEnv = { ...env, DOWNLOADS: wrappedKv };
+    const cookie = await cookieFor(FAN_EMAIL);
+
+    const res = await directoryGet({
+      request: req(`https://morphicsmusic.com/api/community/directory?limit=${FAN_COUNT}`, { headers: { Cookie: cookie } }),
+      env: testEnv,
+    });
+    expect(res.status).toBe(200);
+    const { fans } = await res.json();
+    const glyphWearers = fans.filter(f => f.avatar?.id === GLYPH_AVATAR_ID);
+    expect(glyphWearers.length).toBeGreaterThan(0);
+    // One glyph lookup per glyph-wearing fan on the page — never more —
+    // and bounded by the page-size cap regardless of how many fans exist.
+    expect(wrappedKv.customerGets).toBe(glyphWearers.length);
+    expect(wrappedKv.customerGets).toBeLessThanOrEqual(40);
+  });
+});
+
 describe('POST /api/community/update — handle changes (30-day cooldown, not a permanent lock)', () => {
   afterEach(() => { vi.useRealTimers(); });
 

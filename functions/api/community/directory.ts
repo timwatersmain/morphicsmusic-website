@@ -1,6 +1,7 @@
 // GET /api/community/directory?limit=&offset=
 // The fan wall: directory + leaderboard, in one paginated list.
-// Answers spec open question §10.3 — it paginates, defaulting to 48 a page.
+// Answers spec open question §10.3 — it paginates, defaulting to 40 a page
+// (see MAX_LIMIT below — the subrequest budget caps it there).
 
 import { corsHandler, preflight } from '../../_lib/cors';
 import { rateLimit, rateLimitedJson, clientIp } from '../../_lib/ratelimit';
@@ -17,25 +18,34 @@ export const onRequestGet: PagesFunction<CommunityEnv> = corsHandler<CommunityEn
 
     if (!(await requireFan(request, env))) return unauthorized();
 
+    // Cloudflare Free caps a single request at 50 subrequests, and every
+    // glyph lookup below is a KV get — one per fan on the page. This
+    // endpoint already spends ~4 (rate-limit get+put, session-version get,
+    // D1 queries), so the page size must stay well under 50 even in the
+    // worst case where every fan on the page wears a glyph avatar.
+    const MAX_LIMIT = 40;
     const url = new URL(request.url);
-    const limit = Math.min(Math.max(parseInt(url.searchParams.get('limit') || '48', 10) || 48, 1), 100);
+    const limit = Math.min(
+      Math.max(parseInt(url.searchParams.get('limit') || String(MAX_LIMIT), 10) || MAX_LIMIT, 1),
+      MAX_LIMIT,
+    );
     const offset = Math.max(parseInt(url.searchParams.get('offset') || '0', 10) || 0, 0);
 
     const rows = await getDirectory(env.GATES, { limit, offset });
     const catalogue = await getCatalogue(env.GATES);
     const byId = new Map(catalogue.map(a => [a.id, a]));
 
-    // One glyph lookup per fan on the page (a KV get each — this endpoint
-    // caps at 100 rows) run concurrently rather than serially awaited in
-    // the map below, since each is independent of the others.
-    const fans = await Promise.all(rows.map(async (r, i) => ({
-      ...toPublicProfile(
-        r,
-        r.equipped_avatar_id ? byId.get(r.equipped_avatar_id) || null : null,
-        await glyphLetterForEmail(env, r.email),
-      ),
-      position: offset + i + 1,
-    })));
+    // A glyph lookup is a KV read, and only glyph-styled avatars (tiers 1,
+    // 2, 4) render a glyph at all — no-avatar, legacy release art, and
+    // tier-3 duotone rows never touch the letter, so skip the read
+    // entirely rather than paying for a value nothing will display.
+    const GLYPH_STYLES = new Set(['glyph_solid', 'glyph_inverted', 'glyph_overlay']);
+    const fans = await Promise.all(rows.map(async (r, i) => {
+      const avatar = r.equipped_avatar_id ? byId.get(r.equipped_avatar_id) || null : null;
+      const needsGlyph = !!avatar && GLYPH_STYLES.has(avatar.style || '');
+      const glyph = needsGlyph ? await glyphLetterForEmail(env, r.email) : '';
+      return { ...toPublicProfile(r, avatar, glyph), position: offset + i + 1 };
+    }));
 
     return new Response(JSON.stringify({ fans, limit, offset, has_more: rows.length === limit }), {
       headers: { 'Content-Type': 'application/json' },
