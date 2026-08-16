@@ -29,6 +29,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const MIGRATION = readFileSync(join(root, 'migrations/0002_fan_profiles.sql'), 'utf8');
 const MIGRATION3 = readFileSync(join(root, 'migrations/0003_handle_locked.sql'), 'utf8');
 const MIGRATION4 = readFileSync(join(root, 'migrations/0004_handle_cooldown.sql'), 'utf8');
+const MIGRATION5 = readFileSync(join(root, 'migrations/0005_avatar_tiers.sql'), 'utf8');
 
 const AUTH_SECRET = 'test-only-secret-not-real';
 const FAN_EMAIL = 'endpoint-fan@example.com';
@@ -65,6 +66,7 @@ beforeEach(() => {
   raw.exec(MIGRATION);
   raw.exec(MIGRATION3);
   raw.exec(MIGRATION4);
+  raw.exec(MIGRATION5);
   seedCatalogue(raw);
   db = makeD1Shim(raw);
   kv = makeKvStub();
@@ -179,6 +181,157 @@ describe('no email in any response body', () => {
     const text = await res.text();
     expect(text).not.toContain(FAN_EMAIL);
     expect(hasEmailKey(JSON.parse(text))).toBe(false);
+  });
+});
+
+// The gap this whole task closes: toPublicProfile() used to send only
+// {id, name, art_path} for an avatar, so tiers 1/2/4 couldn't render for
+// anyone but the signed-in fan looking at themselves. These tests cover the
+// fix and its one hard privacy constraint: the glyph is derived from the
+// fan's private username, and the username itself must never appear in a
+// public payload.
+describe('public avatar payload — tier recipe + glyph, never the username', () => {
+  const SEEDED_TIER1_ID = 'tier:test-cyan-1';
+
+  function seedTier1(rawDb) {
+    rawDb.exec(`INSERT INTO avatar_catalogue
+      (id,kind,release_slug,name,art_path,unlock_rule,hint,sort_order,style,colourway,artwork_key,tier)
+      VALUES ('${SEEDED_TIER1_ID}','special',NULL,'Cyan I','(procedural)',
+              '{"type":"tier1_default"}','Everyone starts here',2,'glyph_solid','cyan',NULL,1)`);
+  }
+
+  it('a public profile carries style/colourway/artwork_key/tier and a single-character glyph, never the username', async () => {
+    seedTier1(raw);
+    const email = 'secretname-fan@example.com';
+    await kv.put(`customer:${email}`, JSON.stringify({
+      username: 'secretname', first_seen_at: Math.floor(Date.now() / 1000), purchases: [],
+    }));
+    await ensureProfile(db, {
+      email, fanSince: Math.floor(Date.now() / 1000), displayName: 'Secret Fan', username: 'secretname',
+    });
+    // ensureProfile seeds BOTH the handle and the display_name FROM the
+    // username at creation (by design — see repo.ts), so a freshly-created
+    // profile's handle and display_name would themselves literally be the
+    // string "secretname" here, defeating this test's purpose. Move both
+    // somewhere unrelated first, exactly as a real fan can via
+    // /api/community/update, so a pass here actually proves the login
+    // username stays off the wire — not just that the coincidental defaults
+    // haven't been touched yet.
+    await updatePost({
+      request: req('https://morphicsmusic.com/api/community/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Cookie: await cookieFor(email) },
+        body: JSON.stringify({
+          handle: 'public-handle-unrelated', display_name: 'Public Display Name',
+          equipped_avatar_id: SEEDED_TIER1_ID,
+        }),
+      }),
+      env,
+    });
+
+    const viewerCookie = await cookieFor(FAN_EMAIL);
+    await ensureProfile(db, { email: FAN_EMAIL, fanSince: Math.floor(Date.now() / 1000), displayName: 'Viewer' });
+
+    const res = await profileGet({
+      request: req('https://morphicsmusic.com/api/community/profile?handle=public-handle-unrelated', {
+        headers: { Cookie: viewerCookie },
+      }),
+      env,
+    });
+    expect(res.status).toBe(200);
+    const text = await res.text();
+    const body = JSON.parse(text);
+
+    expect(body.profile.handle).toBe('public-handle-unrelated');
+    expect(body.profile.avatar.style).toBe('glyph_solid');
+    expect(body.profile.avatar.colourway).toBe('cyan');
+    expect(body.profile.avatar.tier).toBe(1);
+    expect(body.profile.avatar.glyph).toBe('s');
+
+    // The hard constraint: the login username must never appear anywhere in
+    // the serialised body, even though the glyph it derived from does.
+    expect(text).not.toContain('secretname');
+  });
+
+  it('two different fans equipped with the same avatar show two different glyphs, not the viewer\'s', async () => {
+    seedTier1(raw);
+    const fanA = { email: 'alpha-fan@example.com', username: 'alphaname' };
+    const fanB = { email: 'beta-fan@example.com', username: 'betaname' };
+    for (const fan of [fanA, fanB]) {
+      await kv.put(`customer:${fan.email}`, JSON.stringify({
+        username: fan.username, first_seen_at: Math.floor(Date.now() / 1000), purchases: [],
+      }));
+      await ensureProfile(db, {
+        email: fan.email, fanSince: Math.floor(Date.now() / 1000), displayName: fan.username, username: fan.username,
+      });
+      await updatePost({
+        request: req('https://morphicsmusic.com/api/community/update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Cookie: await cookieFor(fan.email) },
+          body: JSON.stringify({ equipped_avatar_id: SEEDED_TIER1_ID }),
+        }),
+        env,
+      });
+    }
+
+    // A third fan (the viewer) looks at the fan wall — every avatar must
+    // carry ITS OWNER's glyph, not the signed-in viewer's.
+    const viewerCookie = await cookieFor(FAN_EMAIL);
+    await ensureProfile(db, { email: FAN_EMAIL, fanSince: Math.floor(Date.now() / 1000), displayName: 'Viewer' });
+
+    const res = await directoryGet({
+      request: req('https://morphicsmusic.com/api/community/directory', { headers: { Cookie: viewerCookie } }),
+      env,
+    });
+    expect(res.status).toBe(200);
+    const { fans } = await res.json();
+
+    const byGlyph = new Set(fans.filter(f => f.avatar).map(f => f.avatar.glyph));
+    expect(byGlyph.has('a')).toBe(true); // alphaname
+    expect(byGlyph.has('b')).toBe(true); // betaname
+    // The two fans' glyphs differ from each other, not just from the viewer.
+    expect(fans.find(f => f.avatar?.glyph === 'a')).not.toBe(
+      fans.find(f => f.avatar?.glyph === 'b'),
+    );
+  });
+
+  it('the directory carries the same avatar shape as the profile endpoint', async () => {
+    seedTier1(raw);
+    const email = 'shape-fan@example.com';
+    await kv.put(`customer:${email}`, JSON.stringify({
+      username: 'shapefan', first_seen_at: Math.floor(Date.now() / 1000), purchases: [],
+    }));
+    const profile = await ensureProfile(db, {
+      email, fanSince: Math.floor(Date.now() / 1000), displayName: 'Shape Fan', username: 'shapefan',
+    });
+    await updatePost({
+      request: req('https://morphicsmusic.com/api/community/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Cookie: await cookieFor(email) },
+        body: JSON.stringify({ equipped_avatar_id: SEEDED_TIER1_ID }),
+      }),
+      env,
+    });
+
+    const viewerCookie = await cookieFor(FAN_EMAIL);
+    await ensureProfile(db, { email: FAN_EMAIL, fanSince: Math.floor(Date.now() / 1000), displayName: 'Viewer' });
+
+    const profileRes = await profileGet({
+      request: req(`https://morphicsmusic.com/api/community/profile?handle=${profile.handle}`, {
+        headers: { Cookie: viewerCookie },
+      }),
+      env,
+    });
+    const dirRes = await directoryGet({
+      request: req('https://morphicsmusic.com/api/community/directory', { headers: { Cookie: viewerCookie } }),
+      env,
+    });
+    const profileBody = await profileRes.json();
+    const dirBody = await dirRes.json();
+    const dirEntry = dirBody.fans.find(f => f.handle === profile.handle);
+
+    expect(Object.keys(dirEntry.avatar).sort()).toEqual(Object.keys(profileBody.profile.avatar).sort());
+    expect(dirEntry.avatar).toEqual(profileBody.profile.avatar);
   });
 });
 

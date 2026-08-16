@@ -50,7 +50,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
   </div>
 
   <script>
-    import { avatarHtml, glyphLetterFor } from '../../scripts/avatar.js';
+    import { avatarHtml } from '../../scripts/avatar.js';
 
     const loading = document.getElementById('dir-loading')!;
     const signin = document.getElementById('dir-signin')!;
@@ -79,7 +79,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
       const html = fans.map(f => `
         <li class="flex items-center gap-4 py-4">
           <span class="font-mono text-[10px] text-white/30 w-8 text-right">${esc(f.position)}</span>
-          ${avatarHtml(f.avatar, glyphLetterFor(f.handle || ''), WALL_SIZE)}
+          ${avatarHtml(f.avatar, (f.avatar && f.avatar.glyph) || 'm', WALL_SIZE)}
           <div class="flex-1 min-w-0">
             <a href="/community/u/${encodeURIComponent(f.handle)}" class="font-headline text-lg text-primary uppercase tracking-tight hover:text-secondary transition-colors truncate block">
               ${esc(f.display_name || f.handle)}

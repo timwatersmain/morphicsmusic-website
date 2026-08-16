@@ -6,6 +6,7 @@ import { corsHandler, preflight } from '../../_lib/cors';
 import { rateLimit, rateLimitedJson, clientIp } from '../../_lib/ratelimit';
 import { requireFan, unauthorized, type CommunityEnv } from '../../_lib/community/session';
 import { getDirectory, getCatalogue, toPublicProfile } from '../../_lib/community/repo';
+import { glyphLetterForEmail } from '../../_lib/community/glyph';
 
 export const onRequestOptions: PagesFunction<CommunityEnv> = async ({ request }) => preflight(request);
 
@@ -24,10 +25,17 @@ export const onRequestGet: PagesFunction<CommunityEnv> = corsHandler<CommunityEn
     const catalogue = await getCatalogue(env.GATES);
     const byId = new Map(catalogue.map(a => [a.id, a]));
 
-    const fans = rows.map((r, i) => ({
-      ...toPublicProfile(r, r.equipped_avatar_id ? byId.get(r.equipped_avatar_id) || null : null),
+    // One glyph lookup per fan on the page (a KV get each — this endpoint
+    // caps at 100 rows) run concurrently rather than serially awaited in
+    // the map below, since each is independent of the others.
+    const fans = await Promise.all(rows.map(async (r, i) => ({
+      ...toPublicProfile(
+        r,
+        r.equipped_avatar_id ? byId.get(r.equipped_avatar_id) || null : null,
+        await glyphLetterForEmail(env, r.email),
+      ),
       position: offset + i + 1,
-    }));
+    })));
 
     return new Response(JSON.stringify({ fans, limit, offset, has_more: rows.length === limit }), {
       headers: { 'Content-Type': 'application/json' },

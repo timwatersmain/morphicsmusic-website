@@ -262,11 +262,17 @@ export async function setCollectionCount(db: D1Database, fanId: number, count: n
 /**
  * The ONLY shape that may be sent to a client. Constructed by explicit
  * allow-list rather than by deleting fields, so a column added to
- * fan_profiles later cannot leak by default.
+ * fan_profiles OR avatar_catalogue later cannot leak by default.
+ *
+ * `glyph` is the caller's job to derive (see glyphLetterForEmail in
+ * glyph.ts) and pass in — this function stays pure/sync and never touches
+ * KV itself. It is always required, even when `avatar` is null, so callers
+ * can't accidentally skip deriving it and ship a stale/wrong letter.
  */
 export function toPublicProfile(
   row: FanProfileRow,
   avatar: AvatarCatalogueRow | null,
+  glyph: string,
 ): PublicProfile {
   return {
     handle: row.handle,
@@ -274,6 +280,19 @@ export function toPublicProfile(
     fan_since: row.fan_since,
     rank_points: row.rank_points,
     collection_count: row.collection_count,
-    avatar: avatar ? { id: avatar.id, name: avatar.name, art_path: avatar.art_path } : null,
+    avatar: avatar ? {
+      id: avatar.id,
+      name: avatar.name,
+      art_path: avatar.art_path,
+      // Tier-ladder recipe fields — see PublicAvatar's doc comment.
+      // Necessary for tiers 1/2/4 to render for anyone but the signed-in
+      // viewer looking at their own avatar; null on plain release/special
+      // rows, which fall back to art_path exactly as before.
+      style: avatar.style,
+      colourway: avatar.colourway,
+      artwork_key: avatar.artwork_key,
+      tier: avatar.tier,
+      glyph,
+    } : null,
   };
 }

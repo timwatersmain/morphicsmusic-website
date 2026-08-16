@@ -19,8 +19,9 @@ interface Props {
     colourway?: string | null;
     artwork_key?: string | null;
   } | null;
-  // Already-derived via glyphLetterFor(handle) — see functions/_lib/
-  // community/glyph.ts. Ignored for legacy (style-less) avatars.
+  // Server-derived glyph letter — see the `glyph` field the API attaches
+  // to every avatar object (functions/_lib/community/glyph.ts). Ignored
+  // for legacy (style-less) avatars.
   glyphLetter?: string;
   size?: number;
   locked?: boolean;

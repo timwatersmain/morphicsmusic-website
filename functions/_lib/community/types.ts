@@ -96,6 +96,27 @@ export interface UnlockGrant {
   sourceRef: string | null;
 }
 
+/**
+ * The avatar shape sent to every client — one shape used by /me, /profile
+ * and /directory alike, so a single renderer (src/scripts/avatar.js)
+ * handles all three. `style`/`colourway`/`artwork_key`/`tier` are the
+ * tier-ladder recipe fields (null for plain release/special rows, which
+ * keep rendering from `art_path` as before). `glyph` is the single
+ * lowercase letter this avatar's OWNER renders in tiers 1/2/4 — derived
+ * server-side from that fan's private username (glyph.ts) and NEVER the
+ * username itself, which must never reach a client.
+ */
+export interface PublicAvatar {
+  id: string;
+  name: string;
+  art_path: string;
+  style: 'glyph_solid' | 'glyph_inverted' | 'duotone' | 'glyph_overlay' | null;
+  colourway: string | null;
+  artwork_key: string | null;
+  tier: 1 | 2 | 3 | 4 | null;
+  glyph: string;
+}
+
 /** Shape returned to clients. Note the absence of `email`. */
 export interface PublicProfile {
   handle: string;
@@ -103,5 +124,5 @@ export interface PublicProfile {
   fan_since: number;
   rank_points: number;
   collection_count: number;
-  avatar: { id: string; name: string; art_path: string } | null;
+  avatar: PublicAvatar | null;
 }

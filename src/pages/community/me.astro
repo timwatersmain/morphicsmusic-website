@@ -83,7 +83,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
   </div>
 
   <script>
-    import { avatarHtml, glyphLetterFor } from '../../scripts/avatar.js';
+    import { avatarHtml } from '../../scripts/avatar.js';
 
     const loading = document.getElementById('me-loading')!;
     const signin = document.getElementById('me-signin')!;
@@ -110,10 +110,11 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
       return new Date(unix * 1000).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
     }
 
-    // The fan's own glyph letter, derived from their handle (see
-    // functions/_lib/community/glyph.ts) — every glyph-styled avatar
-    // rendered on this page (equipped, catalogue, "just unlocked") is this
-    // one fan's letter, computed once per load().
+    // The fan's own glyph letter. The server derives it from their private
+    // username (functions/_lib/community/glyph.ts) and sends only the
+    // single resulting character on every avatar object in `avatars` —
+    // every glyph-styled avatar rendered on this page (equipped, catalogue,
+    // "just unlocked") is this one fan's letter, read once per load().
     let myGlyphLetter = 'm';
 
     // 84px — the picker's showcase size, big enough to tell a colourway and
@@ -244,7 +245,8 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
           content.classList.remove('hidden');
 
           const { profile, avatars, newly_unlocked } = data;
-          myGlyphLetter = glyphLetterFor(profile.handle || '');
+          myGlyphLetter = (avatars[0] && avatars[0].glyph) ||
+            (profile.avatar && profile.avatar.glyph) || 'm';
           currentEquippedId = profile.avatar ? profile.avatar.id : null;
           handleEl.textContent = profile.handle ? '@' + profile.handle : '';
           nameInput.value = profile.display_name || '';
@@ -260,12 +262,10 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
           }
           fanSinceEl.textContent = 'Fan since ' + fmtDate(profile.fan_since);
           countEl.textContent = String(profile.collection_count);
-          // profile.avatar comes from the public toPublicProfile() shape,
-          // which only carries {id, name, art_path} — it never leaks the
-          // tier recipe. `avatars` (this fan's own full catalogue, one call
-          // above) has the same id WITH style/colourway/tier, so look the
-          // equipped one up there to render it correctly at the top of the
-          // page instead of falling back to the legacy art_path path.
+          // profile.avatar (toPublicProfile()'s shape) and `avatars` items
+          // now carry the same full recipe fields, so either would render
+          // correctly; prefer the `avatars` lookup anyway since it also
+          // carries `hint`/`unlocked` this page uses elsewhere.
           const equippedFull = profile.avatar
             ? avatars.find((a: any) => a.id === profile.avatar.id) || profile.avatar
             : null;

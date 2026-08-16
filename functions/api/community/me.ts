@@ -10,6 +10,7 @@ import {
   getRarity, setCollectionCount, toPublicProfile, canChangeHandle, nextHandleChangeAt,
 } from '../../_lib/community/repo';
 import { evaluateUnlocks } from '../../_lib/community/unlocks';
+import { glyphLetterFor } from '../../_lib/community/glyph';
 
 interface CustomerRecord {
   // Deliberately no `name` field: the KV record's `name` is the Stripe
@@ -93,6 +94,11 @@ export const onRequestGet: PagesFunction<CommunityEnv> = corsHandler<CommunityEn
     const unlockedIds = new Set(await getUnlockedAvatarIds(env.GATES, profile.id));
     const rarity = await getRarity(env.GATES);
     const equipped = catalogue.find(a => a.id === profile.equipped_avatar_id) || null;
+    // Already have `record` in scope (no extra KV read needed here, unlike
+    // glyphLetterForEmail which other endpoints use for a fan they haven't
+    // otherwise loaded). Same fallback as a purchase-only customer with no
+    // username: glyphLetterFor('') lands on the house letter.
+    const glyph = glyphLetterFor(record.username || '');
 
     // The owner sees the whole catalogue: unlocked ones to equip, locked ones
     // with their hint. The locked half is the entire point — an unseen reward
@@ -104,13 +110,16 @@ export const onRequestGet: PagesFunction<CommunityEnv> = corsHandler<CommunityEn
       hint: a.hint,
       kind: a.kind,
       release_slug: a.release_slug,
-      // Tier ladder recipe fields (null for release/special rows). The
-      // glyph itself is never sent — it is derived client-side (or by the
-      // future render endpoint) from the fan's own username.
+      // Tier ladder recipe fields (null for release/special rows). `glyph`
+      // is this fan's own letter, derived server-side from their private
+      // username and never the username itself — same shape as
+      // toPublicProfile's avatar (see PublicAvatar), so avatar.js renders
+      // every avatar object on this page identically.
       style: a.style,
       colourway: a.colourway,
       artwork_key: a.artwork_key,
       tier: a.tier,
+      glyph,
       // Tier 1 is available to everyone by rule — see update.ts's equip
       // check — so it renders as unlocked even though it never gets a
       // fan_avatar_unlocks row.
@@ -120,7 +129,7 @@ export const onRequestGet: PagesFunction<CommunityEnv> = corsHandler<CommunityEn
 
     return new Response(JSON.stringify({
       profile: {
-        ...toPublicProfile({ ...profile, collection_count: owned.size }, equipped),
+        ...toPublicProfile({ ...profile, collection_count: owned.size }, equipped, glyph),
         is_self: true,
         // Self-view only augmentation (not part of toPublicProfile's public
         // allow-list) so the settings UI can tell the fan when they'll next

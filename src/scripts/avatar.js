@@ -4,9 +4,11 @@
 //   tier 2  glyph_inverted dark glyph on a solid colourway disc
 //   tier 3  duotone        photo recoloured to one colourway hue
 //   tier 4  glyph_overlay  duotone artwork + white/outlined glyph on top
-// The glyph letter is never sent by the server (see functions/_lib/community/
-// glyph.ts) — every fan wearing "tier 1 / cyan" therefore sees their own
-// letter, derived here from whatever string the caller passes in.
+// The glyph letter is derived server-side from each fan's private username
+// (see functions/_lib/community/glyph.ts) and sent as a single character on
+// every avatar object — never the username itself. This renderer stays
+// dumb about that: it just draws whatever letter the caller passes in, so
+// every fan wearing "tier 1 / cyan" sees their own letter.
 //
 // The three community pages (index/me/profile) used to each hand-roll an
 // equivalent medallionHtml(); AvatarMedallion.astro documented that copy as
@@ -107,7 +109,7 @@ function tierDiscInner(avatar, glyphLetter, sizePx) {
  * Render a fan avatar disc as an HTML string.
  *
  * @param {{ name?: string, art_path?: string|null, style?: string|null, colourway?: string|null } | null} avatar
- * @param {string} glyphLetter - already-derived single letter (glyphLetterFor(handle)); ignored for legacy rows.
+ * @param {string} glyphLetter - the server-sent `avatar.glyph` field; ignored for legacy (style-less) rows.
  * @param {number} sizePx - disc diameter in pixels.
  * @param {{ locked?: boolean, rarity?: number }} [opts]
  */

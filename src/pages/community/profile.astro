@@ -45,7 +45,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
   </div>
 
   <script>
-    import { avatarHtml, glyphLetterFor } from '../../scripts/avatar.js';
+    import { avatarHtml } from '../../scripts/avatar.js';
 
     const loading = document.getElementById('prof-loading')!;
     const signin = document.getElementById('prof-signin')!;
@@ -96,11 +96,14 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
           content.classList.remove('hidden');
 
           const { profile, shelf } = data;
-          // /api/community/profile sends only the public toPublicProfile()
-          // shape (handle, display_name, ... — see repo.ts), which is the
-          // only string this page has to derive this fan's glyph letter
-          // from; it never carries their private `username`.
-          const glyphLetter = glyphLetterFor(profile.handle || '');
+          // The server derives this fan's glyph letter from their private
+          // username (functions/_lib/community/glyph.ts) and sends only the
+          // single resulting character — never the username itself. Every
+          // avatar object in this payload (profile.avatar, each shelf item)
+          // carries the same value; fall back to the house letter only if
+          // this fan has no glyph-styled avatar at all (empty shelf).
+          const glyphLetter = (profile.avatar && profile.avatar.glyph) ||
+            (shelf[0] && shelf[0].glyph) || 'm';
           nameEl.textContent = profile.display_name || profile.handle;
           sinceEl.textContent = 'Fan since ' + fmtDate(profile.fan_since);
           countEl.textContent = `${profile.collection_count} collected`;
