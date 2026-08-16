@@ -218,7 +218,11 @@
 
   /* Media is the other big source of hard corners — artwork tiles, video
      thumbnails, avatars in the feed. */
-  img:not([alt=""]),
+     The :where() keeps this rule at zero specificity so the opt-outs below —
+     which are plain descendant selectors — actually win. Without it, the
+     `[alt]` check outweighed `h1 img` and the wordmark got its corners
+     clipped. */
+  img:where(:not([alt=""])),
   video,
   canvas.rounded-media {
     border-radius: var(--radius-lg);

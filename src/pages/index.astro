@@ -13,8 +13,8 @@ import ScrambleGrid from '../components/ScrambleGrid.astro';
          on mobile than desktop, so centring the pair together put ENTER at a
          different height on each. The wordmark hangs above it instead, which
          keeps the button in the same place on every screen. -->
-    <div class="relative z-10 flex items-center justify-center text-center px-4">
-      <h1 data-no-vt class="absolute bottom-full left-1/2 -translate-x-1/2 mb-10 md:mb-12">
+    <div class="hero-stack relative z-10 flex items-center justify-center text-center px-4">
+      <h1 data-no-vt class="hero-mark absolute bottom-full left-1/2 -translate-x-1/2 mb-10 md:mb-12">
         <img
           src="/images/logos/morphics-text-white.png"
           alt="MORPHICS"
@@ -29,3 +29,31 @@ import ScrambleGrid from '../components/ScrambleGrid.astro';
     </div>
   </section>
 </BaseLayout>
+
+<style>
+  /* The wordmark hangs above the button on tall screens (see the note above),
+     but that only works while there is room above it. In a short window the
+     absolute block slid under the fixed nav and got clipped. Below this
+     height the pair drops into normal flow and centres as one group, with
+     the wordmark scaled to whatever vertical room is actually left. */
+  @media (max-height: 760px) {
+    .hero-stack {
+      flex-direction: column;
+      gap: clamp(1rem, 4vh, 2.5rem);
+    }
+
+    .hero-mark {
+      position: static;
+      /* Tailwind's -translate-x-1/2 sets the `translate` property, not
+         `transform`, so both have to be cleared here. */
+      translate: none;
+      transform: none;
+      margin-bottom: 0;
+    }
+
+    .hero-mark img {
+      height: auto;
+      max-height: min(24vh, 6rem);
+    }
+  }
+</style>
