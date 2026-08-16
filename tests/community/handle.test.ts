@@ -59,4 +59,16 @@ describe('nextAvailableHandle', () => {
     const h = await nextAvailableHandle('ana', async () => true);
     expect(h).toMatch(/^ana-[a-z0-9]{6}$/);
   });
+
+  it('caps the random-suffix fallback at 32 characters even for a max-length root', async () => {
+    // slugifyHandle already caps a root at 32 chars, so a maximally long
+    // display name still yields a 32-char root here. Appending "-" + a
+    // 6-char suffix without a final slice would produce a 39-char handle,
+    // which profile.ts's ^[a-z0-9-]{1,32}$ check then rejects — permanently
+    // 400ing that fan's profile.
+    const longRoot = 'x'.repeat(40); // slugifyHandle trims this to 32 x's
+    const h = await nextAvailableHandle(longRoot, async () => true);
+    expect(h.length).toBeLessThanOrEqual(32);
+    expect(h).toMatch(/^[a-z0-9-]+$/);
+  });
 });

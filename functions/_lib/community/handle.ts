@@ -63,5 +63,9 @@ export async function nextAvailableHandle(
     .map(b => b.toString(36).padStart(2, '0'))
     .join('')
     .slice(0, 6);
-  return `${root}-${rand}`;
+  // `root` can itself be up to MAX_HANDLE (32) chars, so `${root}-${rand}`
+  // unsliced can run to 39 — which profile.ts's `^[a-z0-9-]{1,32}$` check
+  // then rejects, leaving that fan's profile permanently 400. Slice the
+  // final joined string, not just its parts.
+  return `${root}-${rand}`.slice(0, MAX_HANDLE);
 }
