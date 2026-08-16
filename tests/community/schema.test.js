@@ -108,4 +108,23 @@ describe('avatar unlocks', () => {
   it('constrains avatar kind', () => {
     expect(() => addAvatar(db, 'x', 'nonsense', null)).toThrow(/CHECK constraint/i);
   });
+
+  it('rejects equipped_avatar_id pointing to a nonexistent avatar', () => {
+    expect(() => db.prepare('UPDATE fan_profiles SET equipped_avatar_id = ? WHERE id = ?')
+      .run('release:nope', fanId)).toThrow(/FOREIGN KEY/i);
+  });
+
+  it('sets equipped_avatar_id to NULL when the avatar is deleted', () => {
+    db.prepare('UPDATE fan_profiles SET equipped_avatar_id = ? WHERE id = ?')
+      .run('release:perception', fanId);
+    db.prepare('DELETE FROM avatar_catalogue WHERE id = ?').run('release:perception');
+    const row = db.prepare('SELECT equipped_avatar_id FROM fan_profiles WHERE id = ?').get(fanId);
+    expect(row.equipped_avatar_id).toBeNull();
+  });
+
+  it('cascades unlocks when an avatar is deleted', () => {
+    grant(fanId, 'release:perception');
+    db.prepare('DELETE FROM avatar_catalogue WHERE id = ?').run('release:perception');
+    expect(db.prepare('SELECT COUNT(*) c FROM fan_avatar_unlocks').get().c).toBe(0);
+  });
 });
