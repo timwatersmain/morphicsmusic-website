@@ -57,7 +57,8 @@ export function buildReleaseAvatars(catalog) {
   return rows;
 }
 
-function toUpsertSql(rows) {
+/** Builds the upsert SQL for a batch of avatar rows. Exported for tests. */
+export function toUpsertSql(rows) {
   return rows.map(r => `INSERT INTO avatar_catalogue
   (id, kind, release_slug, name, art_path, unlock_rule, hint, available_from, available_until, sort_order)
 VALUES (${q(r.id)}, ${q(r.kind)}, ${q(r.release_slug)}, ${q(r.name)}, ${q(r.art_path)},
