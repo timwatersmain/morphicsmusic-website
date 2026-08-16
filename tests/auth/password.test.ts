@@ -69,4 +69,11 @@ describe('hashPassword / verifyPassword', () => {
     const result = await verifyPassword(env, 'anything', 'not-a-real-stored-hash');
     expect(result.ok).toBe(false);
   });
+
+  it('clamps an absurd configured iteration count (C6)', async () => {
+    const hugeEnv = { ...env, PASSWORD_KDF_ITERATIONS: '99999999' };
+    const hash = await hashPassword(hugeEnv, 'clamp test password');
+    const parts = hash.split('$');
+    expect(parseInt(parts[2], 10)).toBeLessThanOrEqual(200000);
+  });
 });

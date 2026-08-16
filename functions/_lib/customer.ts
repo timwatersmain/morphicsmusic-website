@@ -85,3 +85,10 @@ export async function saveCustomerRecord(env: CustomerEnv, record: CustomerRecor
 export async function saveUsernameIndex(env: CustomerEnv, usernameLower: string, email: string): Promise<void> {
   await env.DOWNLOADS.put(usernameKey(usernameLower), email.toLowerCase().trim());
 }
+
+// Delete a stale reverse-index entry when a customer changes their username.
+// Without this the old name keeps resolving (and logging in) forever, and
+// nobody else can ever claim it.
+export async function deleteUsernameIndex(env: CustomerEnv, usernameLower: string): Promise<void> {
+  await env.DOWNLOADS.delete(usernameKey(usernameLower));
+}

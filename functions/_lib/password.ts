@@ -53,10 +53,16 @@ function requirePepper(env: PasswordEnv): string {
   return pepper;
 }
 
+// Clamped to 200000 even though only server config can set this today (not
+// user input) — a runaway value here would blow the 10ms Cloudflare Free CPU
+// budget on every login, so treat it as an external input anyway.
+const MAX_ITERATIONS = 200000;
+
 function configuredIterations(env: PasswordEnv): number {
   const raw = env.PASSWORD_KDF_ITERATIONS;
   const n = raw ? parseInt(raw, 10) : DEFAULT_ITERATIONS;
-  return Number.isFinite(n) && n > 0 ? n : DEFAULT_ITERATIONS;
+  if (!Number.isFinite(n) || n <= 0) return DEFAULT_ITERATIONS;
+  return Math.min(n, MAX_ITERATIONS);
 }
 
 // HMAC-SHA256(password) keyed by the pepper. Done before PBKDF2 so the
