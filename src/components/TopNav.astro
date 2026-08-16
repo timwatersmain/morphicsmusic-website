@@ -84,14 +84,19 @@ const navItems = [
       <span class="font-headline uppercase tracking-[0.2em] text-[0.75rem] leading-none">Cart</span>
       <span id="cart-badge" class="cart-badge hidden absolute -top-1 -right-2 min-w-[16px] h-[16px] px-1 bg-secondary text-on-secondary text-[9px] font-mono font-bold rounded-full items-center justify-center">0</span>
     </button>
+    <!-- href/label default to a neutral "Account" state, not "Sign in" — we
+         cannot assert signed-out until the server definitively confirms it
+         (see the script below and src/scripts/auth-state.js). -->
     <a id="account-link" href="/login" class="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-white/40 hover:text-secondary transition-colors">
       <span class="material-symbols-outlined text-base">person</span>
-      <span id="account-link-label">Sign in</span>
+      <span id="account-link-label">Account</span>
     </a>
   </div>
 </header>
 
 <script>
+  import { decideAuthStateFromFetch } from '../scripts/auth-state.js';
+
   // Cart trigger wiring — kept out of inline onclick= so script-src can
   // drop 'unsafe-inline'. Both the mobile and desktop buttons carry the
   // [data-cart-open] hook and dispatch the same custom event the drawer
@@ -120,16 +125,52 @@ const navItems = [
     else window.addEventListener('load', start, { once: true });
   }
 
-  fetch('/api/auth/me', { credentials: 'include' })
-    .then(r => r.json())
-    .then((data: any) => {
-      if (data && data.email) {
-        const a = document.getElementById('account-link') as HTMLAnchorElement;
-        const lbl = document.getElementById('account-link-label')!;
-        if (a) a.href = '/library';
-        if (lbl) lbl.textContent = 'Library';
+  const CACHE_KEY = 'morphics_auth_cache_v1';
+  const accountLink = document.getElementById('account-link') as HTMLAnchorElement | null;
+  const accountLabel = document.getElementById('account-link-label');
+
+  function paint(state: 'signed-in' | 'signed-out' | 'unknown', email: string | null) {
+    if (!accountLink || !accountLabel) return;
+    if (state === 'signed-in') {
+      accountLink.href = '/library';
+      accountLabel.textContent = 'Library';
+    } else if (state === 'signed-out') {
+      accountLink.href = '/login';
+      accountLabel.textContent = 'Sign in';
+    } else {
+      // Neutral: we don't know yet (or the check failed). Never assert
+      // "Sign in" here — a valid 30-day session could still be sitting in
+      // the browser. /login itself will sort out signed-in vs signed-out
+      // on click, so pointing there is a safe, recoverable default.
+      accountLink.href = '/login';
+      accountLabel.textContent = 'Account';
+    }
+  }
+
+  // Paint from the last known state on frame 1 so there is no "Sign in"
+  // flash while the network round-trip to /api/auth/me is in flight.
+  // localStorage can throw in Safari private mode — never let that break
+  // the nav.
+  try {
+    const cached = localStorage.getItem(CACHE_KEY);
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      if (parsed && (parsed.state === 'signed-in' || parsed.state === 'signed-out')) {
+        paint(parsed.state, parsed.email ?? null);
       }
-    })
-    .catch(() => {});
+    }
+  } catch {}
+
+  decideAuthStateFromFetch(fetch('/api/auth/me', { credentials: 'include' })).then(({ state, email }) => {
+    paint(state, email);
+    // Only a definitive answer is worth caching — caching 'unknown' would
+    // let a stale rate-limit/error response poison the next page load's
+    // first frame.
+    if (state === 'signed-in' || state === 'signed-out') {
+      try {
+        localStorage.setItem(CACHE_KEY, JSON.stringify({ state, email }));
+      } catch {}
+    }
+  });
 </script>
 
