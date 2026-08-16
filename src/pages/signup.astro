@@ -54,6 +54,7 @@ const TURNSTILE_SITE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || '';
           required
           autocomplete="new-password"
           minlength="10"
+          maxlength="256"
           placeholder="at least 10 characters"
           class="w-full px-4 py-4 bg-surface-container-low border border-white/10 focus:border-secondary outline-none font-mono text-base text-primary"
         >
@@ -68,6 +69,7 @@ const TURNSTILE_SITE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || '';
           required
           autocomplete="new-password"
           minlength="10"
+          maxlength="256"
           placeholder="type it again"
           class="w-full px-4 py-4 bg-surface-container-low border border-white/10 focus:border-secondary outline-none font-mono text-base text-primary"
         >
@@ -103,6 +105,8 @@ const TURNSTILE_SITE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || '';
   </div>
 
   <script>
+    import { postSignupRedirect } from '../scripts/auth-flow.js';
+
     const form = document.getElementById('signup-form') as HTMLFormElement;
     const btn = document.getElementById('submit-btn') as HTMLButtonElement;
     const err = document.getElementById('error')!;
@@ -110,6 +114,7 @@ const TURNSTILE_SITE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || '';
     const USERNAME_RE = /^[a-z0-9_-]{3,24}$/;
     const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
     const MIN_PASSWORD = 10;
+    const MAX_PASSWORD = 256; // matches the server-side cap; keeps a giant
 
     // Fast, friendly feedback only — the server re-validates everything and
     // is the only source of truth. This never blocks a request the server
@@ -123,6 +128,9 @@ const TURNSTILE_SITE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || '';
       }
       if (password.length < MIN_PASSWORD) {
         return `Password must be at least ${MIN_PASSWORD} characters.`;
+      }
+      if (password.length > MAX_PASSWORD) {
+        return `Password must be ${MAX_PASSWORD} characters or fewer.`;
       }
       if (password !== confirm) {
         return 'Passwords don’t match.';
@@ -176,26 +184,14 @@ const TURNSTILE_SITE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || '';
 
         // Signup deliberately never sets a session cookie — even on real
         // success — so the response can't be used to probe which emails
-        // already have accounts. The client immediately follows up with the
-        // credentials the user just typed: a genuinely new signup lands
-        // signed in with no extra step, and a signup against an existing
-        // email just fails here the same way a wrong password would.
-        btn.textContent = 'Signing in…';
-        const params = new URLSearchParams(location.search);
-        const loginRes = await fetch('/api/auth/password-login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ identifier: username, password, remember: true }),
-        });
-        if (!loginRes.ok) {
-          // Deliberately generic — the whole point of signup's response
-          // shape is that this page cannot tell "email already had an
-          // account" apart from any other failure, so don't try to explain.
-          showError('Those details didn’t match. Try again.');
-          resetButton();
-          return;
-        }
-        location.href = params.get('redirect') || '/library';
+        // already have accounts, and it never returns a Turnstile token
+        // the client could forward (tokens are single-use, and signup just
+        // consumed its own). Rather than making a second, tokenless
+        // password-login call that a Turnstile-protected site would always
+        // reject, hand off to /login, which renders its own fresh widget.
+        // /login prefills the identifier and shows a "created" banner so
+        // typing the password is the only thing left to do.
+        location.href = postSignupRedirect(username, location.search);
       } catch (e: any) {
         showError(e.message);
         resetButton();

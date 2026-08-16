@@ -263,6 +263,38 @@ describe('POST /api/auth/password-login', () => {
   });
 });
 
+describe('POST /api/auth/password-login with Turnstile enabled', () => {
+  beforeEach(async () => {
+    const res = await signup({ username: 'tsfan', email: 'tsfan@example.com', password: 'correctpassword1', confirm: 'correctpassword1' });
+    expect(res.status).toBe(200);
+  });
+
+  // Pins the exact production bug from the security review: signup.astro
+  // used to follow a successful signup with an immediate password-login
+  // call carrying no `turnstile` field (the signup token is single-use and
+  // already spent). With TURNSTILE_SECRET_KEY configured, verifyTurnstile
+  // rejects an empty token before any network call — so that follow-up
+  // call failed 100% of the time on the live site, telling every real
+  // signup it had failed. The fix (signup.astro) redirects to /login
+  // instead of making this call; this test guards the server behavior the
+  // fix depends on: an empty token must be rejected when Turnstile is on.
+  it('rejects a login with no turnstile token when a secret is configured, with no network call', async () => {
+    const withSecret = { ...env, TURNSTILE_SECRET_KEY: 'test-secret-not-real' };
+    const res = await passwordLoginPost({
+      request: req('https://morphicsmusic.com/api/auth/password-login', { identifier: 'tsfan', password: 'correctpassword1' }),
+      env: withSecret,
+      waitUntil,
+    } as any);
+    expect(res.status).toBe(401);
+    expect(await res.json()).toEqual({ error: 'invalid_credentials' });
+  });
+
+  it('still succeeds with no turnstile secret configured (local dev shape used by the rest of this suite)', async () => {
+    const res = await passwordLogin({ identifier: 'tsfan', password: 'correctpassword1' });
+    expect(res.status).toBe(200);
+  });
+});
+
 describe('session TTL / remember me', () => {
   beforeEach(async () => {
     const res = await signup({ username: 'rememberfan', email: 'rememberfan@example.com', password: 'correctpassword1', confirm: 'correctpassword1' });

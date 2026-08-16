@@ -45,6 +45,11 @@ const TURNSTILE_SITE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || '';
       </p>
     </header>
 
+    <!-- Shown when arriving from a successful /signup via ?created=1. Text
+         content is set via textContent in the script below, never
+         innerHTML — the query string is attacker-controllable. -->
+    <div id="created-banner" role="status" class="hidden mb-8 p-6 border border-secondary/30 bg-secondary/5 font-mono text-[11px] text-white/70 leading-relaxed"></div>
+
     <!-- Primary path: username/email + password. -->
     <form id="password-login-form" class="space-y-4">
       <div>
@@ -123,9 +128,16 @@ const TURNSTILE_SITE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || '';
             class="w-full px-4 py-4 bg-surface-container-low border border-white/10 focus:border-secondary outline-none font-mono text-base text-primary"
           >
         </div>
+        {/* No "cf-turnstile" class here on purpose — that class is what
+            Turnstile's implicit auto-render picks up on script load, and
+            this container starts hidden (parent panel is display:none
+            until revealMagicLink() runs). A managed challenge can't be
+            completed inside a hidden element, so this widget is rendered
+            explicitly, on demand, once the panel is actually visible. */}
         {TURNSTILE_SITE_KEY && (
           <div
-            class="cf-turnstile flex justify-center"
+            id="magic-turnstile"
+            class="flex justify-center"
             data-sitekey={TURNSTILE_SITE_KEY}
             data-theme="dark"
             data-size="flexible"
@@ -162,6 +174,7 @@ const TURNSTILE_SITE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || '';
 
   <script>
     import { decideAuthStateFromFetch } from '../scripts/auth-state.js';
+    import { parseCreatedState } from '../scripts/auth-flow.js';
 
     const formPanel = document.getElementById('login-form-panel')!;
     const signedInPanel = document.getElementById('signed-in-panel')!;
@@ -197,14 +210,52 @@ const TURNSTILE_SITE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || '';
       document.getElementById('expired-banner')!.classList.remove('hidden');
     }
 
+    // Arrived from a successful /signup. `username` is attacker-controllable
+    // URL input — always textContent, never innerHTML.
+    const { created, username: createdUsername } = parseCreatedState(location.search);
+    if (created) {
+      const banner = document.getElementById('created-banner')!;
+      banner.textContent = 'Account created. Sign in to continue.';
+      banner.classList.remove('hidden');
+      const identifierInput = document.getElementById('li-identifier') as HTMLInputElement;
+      if (createdUsername) identifierInput.value = createdUsername;
+      document.getElementById('li-password')?.focus();
+    }
+
     // Magic-link panel is demoted to a secondary option, opened either by
     // its own toggle or by "Forgot password?" — same panel either way,
     // since a mailed link is also the account-recovery path.
     const magicLinkPanel = document.getElementById('magic-link-panel')!;
     const showMagicLinkBtn = document.getElementById('show-magic-link') as HTMLButtonElement;
     const forgotPasswordBtn = document.getElementById('forgot-password') as HTMLButtonElement;
+
+    // The magic-link Turnstile widget is deliberately NOT auto-rendered by
+    // the implicit "cf-turnstile" class (see the markup comment) — it lives
+    // inside a panel that starts hidden, and a managed challenge can't be
+    // completed inside display:none. Render it explicitly, once, the first
+    // time the panel actually becomes visible. window.turnstile may not be
+    // loaded yet (the script tag is async), so retry briefly rather than
+    // assuming it's ready.
+    let magicWidgetRendered = false;
+    function renderMagicWidgetWhenReady(attempts = 0) {
+      const turnstile = (window as any).turnstile;
+      const container = document.getElementById('magic-turnstile');
+      if (!container || magicWidgetRendered) return;
+      if (turnstile) {
+        turnstile.render(container, {
+          sitekey: container.dataset.sitekey,
+          theme: 'dark',
+          size: 'flexible',
+        });
+        magicWidgetRendered = true;
+        return;
+      }
+      if (attempts < 40) setTimeout(() => renderMagicWidgetWhenReady(attempts + 1), 250);
+    }
+
     function revealMagicLink() {
       magicLinkPanel.classList.remove('hidden');
+      renderMagicWidgetWhenReady();
       document.getElementById('li-email')?.focus();
     }
     showMagicLinkBtn.addEventListener('click', revealMagicLink);
