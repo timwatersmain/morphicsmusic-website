@@ -55,5 +55,12 @@
 # returning visitors kept the old font, which had no glyph for the icon, long
 # after the deploy that added it.) Matches the immutable Cache-Control already
 # used for /api/preview and /api/social-media/[key].
-/fonts/*
+# SCOPED TO THE HASHED FILE ON PURPOSE. Only MaterialSymbols-Subset carries a
+# content hash in its name, so only it can safely be pinned forever — a change
+# produces a new URL. The other faces (Rubik, GeistMono, Inter, SpaceGrotesk,
+# MorphianTrial) still have stable filenames, and a blanket /fonts/* immutable
+# rule would freeze a stale copy in every returning visitor's browser for a
+# year. That is precisely the bug this commit exists to fix; do not widen this
+# glob until those fonts are hashed too.
+/fonts/MaterialSymbols-Subset.*
   Cache-Control: public, max-age=31536000, immutable
