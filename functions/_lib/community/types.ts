@@ -65,9 +65,9 @@ export interface AvatarCatalogueRow {
   available_until: number | null;
   sort_order: number;
   /**
-   * Four-tier avatar ladder (see functions/_lib/community/glyph.ts and
-   * colourways.ts). NULL for release/special rows — this is a second,
-   * additive axis, not a replacement for `art_path`.
+   * Four-tier avatar ladder (see colourways.ts). NULL for release/special
+   * rows — this is a second, additive axis, not a replacement for
+   * `art_path`.
    */
   style: 'glyph_solid' | 'glyph_inverted' | 'duotone' | 'glyph_overlay' | null;
   /** Named key into COLOURWAYS (colourways.ts), never a raw hex value. */
@@ -132,10 +132,7 @@ export interface UnlockGrant {
  * and /directory alike, so a single renderer (src/scripts/avatar.js)
  * handles all three. `style`/`colourway`/`artwork_key`/`tier` are the
  * tier-ladder recipe fields (null for plain release/special rows, which
- * keep rendering from `art_path` as before). `glyph` is the single
- * lowercase letter this avatar's OWNER renders in tiers 1/2/4 — derived
- * server-side from that fan's private username (glyph.ts) and NEVER the
- * username itself, which must never reach a client.
+ * keep rendering from `art_path` as before).
  */
 export interface PublicAvatar {
   id: string;
@@ -145,7 +142,6 @@ export interface PublicAvatar {
   colourway: string | null;
   artwork_key: string | null;
   tier: 1 | 2 | 3 | 4 | null;
-  glyph: string;
 }
 
 /**

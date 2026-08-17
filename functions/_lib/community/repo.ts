@@ -328,11 +328,6 @@ export async function ensureSpriteAssignment(db: D1Database, profile: FanProfile
  * The ONLY shape that may be sent to a client. Constructed by explicit
  * allow-list rather than by deleting fields, so a column added to
  * fan_profiles OR avatar_catalogue later cannot leak by default.
- *
- * `glyph` is the caller's job to derive (see glyphLetterForEmail in
- * glyph.ts) and pass in — this function stays pure/sync and never touches
- * KV itself. It is always required, even when `avatar` is null, so callers
- * can't accidentally skip deriving it and ship a stale/wrong letter.
  */
 /** Which of the four per-stage columns holds the fan's current-stage sprite ref. */
 function currentSpriteRef(row: FanProfileRow, stage: CreatureStage): string | null {
@@ -347,7 +342,6 @@ function currentSpriteRef(row: FanProfileRow, stage: CreatureStage): string | nu
 export function toPublicProfile(
   row: FanProfileRow,
   avatar: AvatarCatalogueRow | null,
-  glyph: string,
 ): PublicProfile {
   // row.stage is undefined (not just null) for any plain object built before
   // migration 0006 existed — e.g. hand-built rows in older tests — so `||`
@@ -371,7 +365,6 @@ export function toPublicProfile(
       colourway: avatar.colourway,
       artwork_key: avatar.artwork_key,
       tier: avatar.tier,
-      glyph,
     } : null,
     creature: {
       stage,

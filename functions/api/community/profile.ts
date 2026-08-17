@@ -11,7 +11,6 @@ import { requireFan, unauthorized, type CommunityEnv } from '../../_lib/communit
 import {
   getProfileByHandle, getUnlockedAvatarIds, getCatalogue, getRarity, toPublicProfile,
 } from '../../_lib/community/repo';
-import { glyphLetterForEmail } from '../../_lib/community/glyph';
 
 export const onRequestOptions: PagesFunction<CommunityEnv> = async ({ request }) => preflight(request);
 
@@ -40,10 +39,6 @@ export const onRequestGet: PagesFunction<CommunityEnv> = corsHandler<CommunityEn
     const unlocked = new Set(await getUnlockedAvatarIds(env.GATES, profile.id));
     const rarity = await getRarity(env.GATES);
     const equipped = catalogue.find(a => a.id === profile.equipped_avatar_id) || null;
-    // This fan's own glyph letter — one value, reused on every shelf item and
-    // on the equipped avatar. Derived from their private username (never
-    // sent itself); see glyphLetterForEmail's doc comment.
-    const glyph = await glyphLetterForEmail(env, profile.email);
 
     // Only what this fan HAS. A visitor does not get to see somebody else's
     // locked list — that is the owner's to-do list, not a public fact.
@@ -55,11 +50,11 @@ export const onRequestGet: PagesFunction<CommunityEnv> = corsHandler<CommunityEn
         // Same tier-ladder shape as toPublicProfile's avatar — see
         // PublicAvatar — so avatar.js renders shelf tiles identically to
         // the equipped avatar and the fan-wall/directory entries.
-        style: a.style, colourway: a.colourway, artwork_key: a.artwork_key, tier: a.tier, glyph,
+        style: a.style, colourway: a.colourway, artwork_key: a.artwork_key, tier: a.tier,
       }));
 
     return new Response(JSON.stringify({
-      profile: { ...toPublicProfile(profile, equipped, glyph), is_self: false },
+      profile: { ...toPublicProfile(profile, equipped), is_self: false },
       shelf,
     }), { headers: { 'Content-Type': 'application/json' } });
   },

@@ -154,17 +154,10 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
       return new Date(unix * 1000).toLocaleDateString(undefined, { year: 'numeric', month: 'long' });
     }
 
-    // The fan's own glyph letter. The server derives it from their private
-    // username (functions/_lib/community/glyph.ts) and sends only the
-    // single resulting character on every avatar object in `avatars` —
-    // every glyph-styled avatar rendered on this page (equipped, catalogue,
-    // "just unlocked") is this one fan's letter, read once per load().
-    let myGlyphLetter = 'm';
-
-    // 84px — the picker's showcase size, big enough to tell a colourway and
-    // a stroked tier-4 glyph apart in a 6-wide grid. The single large hero
-    // slot up top now shows the creature (see CREATURE_SIZE below), not a
-    // tier avatar — equipping one still highlights it in this grid.
+    // 84px — the picker's showcase size, big enough to tell colourways apart
+    // in a 6-wide grid. The single large hero slot up top now shows the
+    // creature (see CREATURE_SIZE below), not a tier avatar — equipping one
+    // still highlights it in this grid.
     const TILE_SIZE = 84;
 
     // This is the reward moment the whole feature exists for: `newly_unlocked`
@@ -183,7 +176,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
       unlockedBanner.classList.remove('hidden');
       unlockedList.innerHTML = won.map(a => `
         <li class="text-center">
-          ${avatarHtml(a, myGlyphLetter, TILE_SIZE)}
+          ${avatarHtml(a, TILE_SIZE)}
           <p class="font-mono text-[10px] text-primary uppercase tracking-widest mt-2">${esc(a.name)}</p>
         </li>
       `).join('');
@@ -266,7 +259,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
             data-unlocked="${a.unlocked ? '1' : '0'}"
             class="avatar-pick inline-block ${a.unlocked ? 'cursor-pointer' : 'cursor-default'} ${a.id === currentEquippedId ? 'drop-shadow-[0_0_8px_#00F0FF]' : ''}"
           >
-            ${avatarHtml(a, myGlyphLetter, TILE_SIZE, { locked: !a.unlocked, rarity: a.rarity })}
+            ${avatarHtml(a, TILE_SIZE, { locked: !a.unlocked, rarity: a.rarity })}
           </button>
           <p class="font-mono text-[9px] text-white/40 uppercase tracking-widest mt-2 leading-tight">
             ${a.unlocked ? esc(a.name) : esc(a.hint || 'Locked')}
@@ -403,8 +396,6 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
           content.classList.remove('hidden');
 
           const { profile, avatars, newly_unlocked } = data;
-          myGlyphLetter = (avatars[0] && avatars[0].glyph) ||
-            (profile.avatar && profile.avatar.glyph) || 'm';
           currentEquippedId = profile.avatar ? profile.avatar.id : null;
           handleEl.textContent = profile.handle ? '@' + profile.handle : '';
           nameInput.value = profile.display_name || '';

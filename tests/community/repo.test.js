@@ -243,7 +243,7 @@ describe('toPublicProfile', () => {
       collection_count: 2, created_at: 0, updated_at: 0, last_seen_at: null,
       handle_changed_at: 1700000000,
     };
-    const pub = toPublicProfile(row, null, 'a');
+    const pub = toPublicProfile(row, null);
     expect(JSON.stringify(pub)).not.toContain('secret@b.com');
     expect('email' in pub).toBe(false);
     expect(pub.handle).toBe('ana');
@@ -256,12 +256,12 @@ describe('toPublicProfile', () => {
       collection_count: 2, created_at: 0, updated_at: 0, last_seen_at: null,
       handle_changed_at: 1700000000,
     };
-    const pub = toPublicProfile(row, null, 'a');
+    const pub = toPublicProfile(row, null);
     expect('handle_changed_at' in pub).toBe(false);
     expect(JSON.stringify(pub)).not.toContain('handle_changed_at');
   });
 
-  it('carries the tier-ladder recipe fields and the passed-in glyph on the avatar', () => {
+  it('carries the tier-ladder recipe fields on the avatar', () => {
     const row = {
       id: 1, email: 'secret@b.com', handle: 'ana', display_name: 'Ana',
       equipped_avatar_id: 'tier:cyan-1', fan_since: 1, rank_points: 0,
@@ -274,10 +274,10 @@ describe('toPublicProfile', () => {
       available_from: null, available_until: null, sort_order: 0,
       style: 'glyph_solid', colourway: 'cyan', artwork_key: null, tier: 1,
     };
-    const pub = toPublicProfile(row, avatar, 's');
+    const pub = toPublicProfile(row, avatar);
     expect(pub.avatar).toEqual({
       id: 'tier:cyan-1', name: 'Cyan I', art_path: '(procedural)',
-      style: 'glyph_solid', colourway: 'cyan', artwork_key: null, tier: 1, glyph: 's',
+      style: 'glyph_solid', colourway: 'cyan', artwork_key: null, tier: 1,
     });
   });
 
@@ -294,7 +294,7 @@ describe('toPublicProfile', () => {
       hint: '', available_from: null, available_until: null, sort_order: 0,
       style: null, colourway: null, artwork_key: null, tier: null,
     };
-    const pub = toPublicProfile(row, avatar, 's');
+    const pub = toPublicProfile(row, avatar);
     expect(pub.avatar.style).toBeNull();
     expect(pub.avatar.art_path).toBe('/images/visuals/perception-960.webp');
   });

@@ -188,13 +188,13 @@ describe('no email in any response body', () => {
   });
 });
 
-// The gap this whole task closes: toPublicProfile() used to send only
-// {id, name, art_path} for an avatar, so tiers 1/2/4 couldn't render for
-// anyone but the signed-in fan looking at themselves. These tests cover the
-// fix and its one hard privacy constraint: the glyph is derived from the
-// fan's private username, and the username itself must never appear in a
-// public payload.
-describe('public avatar payload — tier recipe + glyph, never the username', () => {
+// toPublicProfile() sends the tier-ladder recipe fields for an equipped
+// avatar (style/colourway/artwork_key/tier) so tiers 1/2/4 can render for
+// anyone, not just the signed-in fan looking at themselves — but never a
+// per-fan glyph letter (that derivation, and the KV lookup behind it, has
+// been removed: the pixel-sprite creature is every fan's public avatar now).
+// The login username must still never appear in a public payload.
+describe('public avatar payload — tier recipe fields, never the username', () => {
   const SEEDED_TIER1_ID = 'tier:test-cyan-1';
 
   function seedTier1(rawDb) {
@@ -204,7 +204,7 @@ describe('public avatar payload — tier recipe + glyph, never the username', ()
               '{"type":"tier1_default"}','Everyone starts here',2,'glyph_solid','cyan',NULL,1)`);
   }
 
-  it('a public profile carries style/colourway/artwork_key/tier and a single-character glyph, never the username', async () => {
+  it('a public profile carries style/colourway/artwork_key/tier, never a glyph field or the username', async () => {
     seedTier1(raw);
     const email = 'secretname-fan@example.com';
     await kv.put(`customer:${email}`, JSON.stringify({
@@ -250,53 +250,11 @@ describe('public avatar payload — tier recipe + glyph, never the username', ()
     expect(body.profile.avatar.style).toBe('glyph_solid');
     expect(body.profile.avatar.colourway).toBe('cyan');
     expect(body.profile.avatar.tier).toBe(1);
-    expect(body.profile.avatar.glyph).toBe('s');
+    expect('glyph' in body.profile.avatar).toBe(false);
 
     // The hard constraint: the login username must never appear anywhere in
-    // the serialised body, even though the glyph it derived from does.
+    // the serialised body.
     expect(text).not.toContain('secretname');
-  });
-
-  it('two different fans equipped with the same avatar show two different glyphs, not the viewer\'s', async () => {
-    seedTier1(raw);
-    const fanA = { email: 'alpha-fan@example.com', username: 'alphaname' };
-    const fanB = { email: 'beta-fan@example.com', username: 'betaname' };
-    for (const fan of [fanA, fanB]) {
-      await kv.put(`customer:${fan.email}`, JSON.stringify({
-        username: fan.username, first_seen_at: Math.floor(Date.now() / 1000), purchases: [],
-      }));
-      await ensureProfile(db, {
-        email: fan.email, fanSince: Math.floor(Date.now() / 1000), displayName: fan.username, username: fan.username,
-      });
-      await updatePost({
-        request: req('https://morphicsmusic.com/api/community/update', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Cookie: await cookieFor(fan.email) },
-          body: JSON.stringify({ equipped_avatar_id: SEEDED_TIER1_ID }),
-        }),
-        env,
-      });
-    }
-
-    // A third fan (the viewer) looks at the fan wall — every avatar must
-    // carry ITS OWNER's glyph, not the signed-in viewer's.
-    const viewerCookie = await cookieFor(FAN_EMAIL);
-    await ensureProfile(db, { email: FAN_EMAIL, fanSince: Math.floor(Date.now() / 1000), displayName: 'Viewer' });
-
-    const res = await directoryGet({
-      request: req('https://morphicsmusic.com/api/community/directory', { headers: { Cookie: viewerCookie } }),
-      env,
-    });
-    expect(res.status).toBe(200);
-    const { fans } = await res.json();
-
-    const byGlyph = new Set(fans.filter(f => f.avatar).map(f => f.avatar.glyph));
-    expect(byGlyph.has('a')).toBe(true); // alphaname
-    expect(byGlyph.has('b')).toBe(true); // betaname
-    // The two fans' glyphs differ from each other, not just from the viewer.
-    expect(fans.find(f => f.avatar?.glyph === 'a')).not.toBe(
-      fans.find(f => f.avatar?.glyph === 'b'),
-    );
   });
 
   it('the directory carries the same avatar shape as the profile endpoint', async () => {
@@ -632,18 +590,22 @@ describe('POST /api/community/update — display_name changes never touch the ha
   });
 });
 
-// Fix 1 (pre-deploy review): each glyph lookup in directory.ts is a KV
-// subrequest, and Cloudflare Free caps a single request at 50 subrequests.
-// These tests count `customer:` KV gets directly through the stub rather
-// than asserting on timing, per the review's instruction.
-describe('GET /api/community/directory — glyph lookups stay within the subrequest budget', () => {
-  const GLYPH_AVATAR_ID = 'tier:test-glyph-1';
+// Regression coverage for the glyph-derivation removal: directory.ts used to
+// perform up to one `customer:` KV get per fan on the page (deriving a
+// letter nothing displays), which on a 40-fan page pushed close to
+// Cloudflare Free's 50-subrequest cap. That lookup is gone — this suite
+// proves it stays gone by counting `customer:` KV gets directly through the
+// stub, for a full page of fans wearing every avatar shape (none, legacy
+// release art, tier-1 glyph-styled, tier-3 duotone) rather than asserting on
+// timing.
+describe('GET /api/community/directory — no per-fan KV reads', () => {
+  const TIER1_AVATAR_ID = 'tier:test-glyph-1';
   const DUOTONE_AVATAR_ID = 'tier:test-duotone-3';
 
-  function seedGlyphAndDuotone(rawDb) {
+  function seedTier1AndDuotone(rawDb) {
     rawDb.exec(`INSERT INTO avatar_catalogue
       (id,kind,release_slug,name,art_path,unlock_rule,hint,sort_order,style,colourway,artwork_key,tier)
-      VALUES ('${GLYPH_AVATAR_ID}','special',NULL,'Cyan I','(procedural)',
+      VALUES ('${TIER1_AVATAR_ID}','special',NULL,'Cyan I','(procedural)',
               '{"type":"tier1_default"}','Everyone starts here',2,'glyph_solid','cyan',NULL,1)`);
     rawDb.exec(`INSERT INTO avatar_catalogue
       (id,kind,release_slug,name,art_path,unlock_rule,hint,sort_order,style,colourway,artwork_key,tier)
@@ -651,9 +613,8 @@ describe('GET /api/community/directory — glyph lookups stay within the subrequ
               '{"type":"tenure_days","days":0}','Tier 3',3,'duotone','cyan','some-art',3)`);
   }
 
-  // Wraps the shared KV stub so `customer:` gets (glyph lookups) are counted
-  // separately from rate-limit / session-version traffic on the same
-  // binding — the thing this fix is actually about.
+  // Wraps the shared KV stub so `customer:` gets are counted separately from
+  // rate-limit / session-version traffic on the same binding.
   function countingKv(base) {
     let customerGets = 0;
     return {
@@ -688,8 +649,12 @@ describe('GET /api/community/directory — glyph lookups stay within the subrequ
     });
   }
 
-  it('a page of fans with no equipped avatar performs zero glyph lookups', async () => {
-    for (let i = 0; i < 5; i++) {
+  it('a full page of fans, wearing every avatar shape, performs zero customer KV reads', async () => {
+    seedTier1AndDuotone(raw);
+    await makeFan('tier1-a@example.com', 'tier1a', TIER1_AVATAR_ID);
+    await makeFan('tier1-b@example.com', 'tier1b', TIER1_AVATAR_ID);
+    await makeFan('duotone-a@example.com', 'duotonea', DUOTONE_AVATAR_ID);
+    for (let i = 0; i < 3; i++) {
       await ensureProfile(db, {
         email: `noavatar-${i}@example.com`, fanSince: Math.floor(Date.now() / 1000), displayName: `Fan${i}`,
       });
@@ -705,25 +670,8 @@ describe('GET /api/community/directory — glyph lookups stay within the subrequ
       env: testEnv,
     });
     expect(res.status).toBe(200);
-    expect(wrappedKv.customerGets).toBe(0);
-  });
-
-  it('a page of fans wearing legacy release art or tier-3 duotone avatars performs zero glyph lookups', async () => {
-    seedGlyphAndDuotone(raw);
-    await makeFan('duotone-a@example.com', 'duotonea', DUOTONE_AVATAR_ID);
-    await makeFan('duotone-b@example.com', 'duotoneb', DUOTONE_AVATAR_ID);
-    await ensureProfile(db, { email: FAN_EMAIL, fanSince: Math.floor(Date.now() / 1000), displayName: 'Viewer' });
-
-    const wrappedKv = countingKv(kv);
-    const testEnv = { ...env, DOWNLOADS: wrappedKv };
-    const cookie = await cookieFor(FAN_EMAIL);
-
-    const res = await directoryGet({
-      request: req('https://morphicsmusic.com/api/community/directory', { headers: { Cookie: cookie } }),
-      env: testEnv,
-    });
-    expect(res.status).toBe(200);
     const { fans } = await res.json();
+    expect(fans.some(f => f.avatar?.id === TIER1_AVATAR_ID)).toBe(true);
     expect(fans.some(f => f.avatar?.id === DUOTONE_AVATAR_ID)).toBe(true);
     expect(wrappedKv.customerGets).toBe(0);
   });
@@ -739,32 +687,6 @@ describe('GET /api/community/directory — glyph lookups stay within the subrequ
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.limit).toBeLessThanOrEqual(40);
-  });
-
-  it('a full page of glyph-wearing fans performs one bounded KV read per fan, never one per fan times page size beyond the cap', async () => {
-    seedGlyphAndDuotone(raw);
-    const FAN_COUNT = 10;
-    for (let i = 0; i < FAN_COUNT; i++) {
-      await makeFan(`glyphfan-${i}@example.com`, `glyphname${i}`, GLYPH_AVATAR_ID);
-    }
-    await ensureProfile(db, { email: FAN_EMAIL, fanSince: Math.floor(Date.now() / 1000), displayName: 'Viewer' });
-
-    const wrappedKv = countingKv(kv);
-    const testEnv = { ...env, DOWNLOADS: wrappedKv };
-    const cookie = await cookieFor(FAN_EMAIL);
-
-    const res = await directoryGet({
-      request: req(`https://morphicsmusic.com/api/community/directory?limit=${FAN_COUNT}`, { headers: { Cookie: cookie } }),
-      env: testEnv,
-    });
-    expect(res.status).toBe(200);
-    const { fans } = await res.json();
-    const glyphWearers = fans.filter(f => f.avatar?.id === GLYPH_AVATAR_ID);
-    expect(glyphWearers.length).toBeGreaterThan(0);
-    // One glyph lookup per glyph-wearing fan on the page — never more —
-    // and bounded by the page-size cap regardless of how many fans exist.
-    expect(wrappedKv.customerGets).toBe(glyphWearers.length);
-    expect(wrappedKv.customerGets).toBeLessThanOrEqual(40);
   });
 });
 

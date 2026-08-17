@@ -98,14 +98,6 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
           content.classList.remove('hidden');
 
           const { profile, shelf } = data;
-          // The server derives this fan's glyph letter from their private
-          // username (functions/_lib/community/glyph.ts) and sends only the
-          // single resulting character — never the username itself. Every
-          // avatar object in this payload (profile.avatar, each shelf item)
-          // carries the same value; fall back to the house letter only if
-          // this fan has no glyph-styled avatar at all (empty shelf).
-          const glyphLetter = (profile.avatar && profile.avatar.glyph) ||
-            (shelf[0] && shelf[0].glyph) || 'm';
           nameEl.textContent = profile.display_name || profile.handle;
           sinceEl.textContent = 'Morphics since ' + fmtDate(profile.fan_since);
           countEl.textContent = `${profile.collection_count} collected`;
@@ -120,7 +112,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
           } else {
             shelfEl.innerHTML = shelf.map((a: any) => `
               <li class="text-center">
-                ${avatarHtml(a, glyphLetter, 84, { rarity: a.rarity })}
+                ${avatarHtml(a, 84, { rarity: a.rarity })}
                 <p class="font-mono text-[9px] text-white/40 uppercase tracking-widest mt-2 leading-tight">${esc(a.name)}</p>
               </li>
             `).join('');

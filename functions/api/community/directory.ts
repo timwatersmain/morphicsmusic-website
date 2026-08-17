@@ -7,7 +7,6 @@ import { corsHandler, preflight } from '../../_lib/cors';
 import { rateLimit, rateLimitedJson, clientIp } from '../../_lib/ratelimit';
 import { requireFan, unauthorized, type CommunityEnv } from '../../_lib/community/session';
 import { getDirectory, getCatalogue, toPublicProfile } from '../../_lib/community/repo';
-import { glyphLetterForEmail } from '../../_lib/community/glyph';
 
 export const onRequestOptions: PagesFunction<CommunityEnv> = async ({ request }) => preflight(request);
 
@@ -18,18 +17,16 @@ export const onRequestGet: PagesFunction<CommunityEnv> = corsHandler<CommunityEn
 
     if (!(await requireFan(request, env))) return unauthorized();
 
-    // Cloudflare Free caps a single request at 50 subrequests, and every
-    // glyph lookup below is a KV get — one per fan on the page. This
-    // endpoint spends 5 fixed subrequests (rate-limit get+put, session-
-    // version get, getDirectory, getCatalogue), so the page size must stay
-    // well under 50 even in the worst case where every fan on the page wears
-    // a glyph avatar (5 fixed + 40 glyph KV reads = 45, still under the cap).
-    // Creature sprite refs/colourway add ZERO subrequests here: they live as
-    // plain columns on the fan_profiles row getDirectory already reads (see
-    // sprites.ts/toPublicProfile) — no per-fan or whole-roster D1/KV read,
-    // unlike the retired species_catalogue lookup this replaced (that used
-    // to be a 6th fixed read; removing it is a net improvement, not just
-    // neutral).
+    // Cloudflare Free caps a single request at 50 subrequests. This endpoint
+    // spends 5 fixed subrequests (rate-limit get+put, session-version get,
+    // getDirectory, getCatalogue) and zero per-fan reads — the page used to
+    // also pay for a KV glyph lookup per glyph-styled avatar (up to 40 more),
+    // but the glyph letter is no longer derived or sent anywhere, so that
+    // cost is gone. Worst case is now a flat 5, regardless of page size.
+    // Creature sprite refs/colourway add ZERO subrequests here either: they
+    // live as plain columns on the fan_profiles row getDirectory already
+    // reads (see sprites.ts/toPublicProfile) — no per-fan or whole-roster
+    // D1/KV read, unlike the retired species_catalogue lookup this replaced.
     const MAX_LIMIT = 40;
     const url = new URL(request.url);
     const limit = Math.min(
@@ -42,17 +39,10 @@ export const onRequestGet: PagesFunction<CommunityEnv> = corsHandler<CommunityEn
     const catalogue = await getCatalogue(env.GATES);
     const byId = new Map(catalogue.map(a => [a.id, a]));
 
-    // A glyph lookup is a KV read, and only glyph-styled avatars (tiers 1,
-    // 2, 4) render a glyph at all — no-avatar, legacy release art, and
-    // tier-3 duotone rows never touch the letter, so skip the read
-    // entirely rather than paying for a value nothing will display.
-    const GLYPH_STYLES = new Set(['glyph_solid', 'glyph_inverted', 'glyph_overlay']);
-    const fans = await Promise.all(rows.map(async (r, i) => {
+    const fans = rows.map((r, i) => {
       const avatar = r.equipped_avatar_id ? byId.get(r.equipped_avatar_id) || null : null;
-      const needsGlyph = !!avatar && GLYPH_STYLES.has(avatar.style || '');
-      const glyph = needsGlyph ? await glyphLetterForEmail(env, r.email) : '';
-      return { ...toPublicProfile(r, avatar, glyph), position: offset + i + 1 };
-    }));
+      return { ...toPublicProfile(r, avatar), position: offset + i + 1 };
+    });
 
     return new Response(JSON.stringify({ fans, limit, offset, has_more: rows.length === limit }), {
       headers: { 'Content-Type': 'application/json' },
