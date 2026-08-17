@@ -1,0 +1,314 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="ACCOUNT" currentPage="">
+  <div class="max-w-md mx-auto pt-12">
+    <!-- Shown only after /api/auth/me confirms a live session (same pattern
+         as login.astro's signed-in panel and community/*.astro's signin
+         panel). Never assume signed-in until that check resolves. -->
+    <div id="acct-loading" class="font-mono text-[11px] text-white/40">Loading…</div>
+
+    <div id="acct-signin" class="hidden p-8 border border-white/10 text-center">
+      <p class="font-mono text-[11px] text-white/40 leading-relaxed mb-4">
+        Sign in to manage your sign-in details.
+      </p>
+      <a id="acct-signin-link" href="/login?redirect=/account" class="inline-block px-6 py-3 bg-primary text-on-primary font-mono text-[11px] tracking-widest uppercase hover:bg-secondary hover:text-on-secondary transition-colors">
+        Sign in
+      </a>
+    </div>
+
+    <div id="acct-content" class="hidden">
+      <header class="mb-12">
+        <span class="font-mono text-xs text-secondary uppercase tracking-widest">Account</span>
+        <h1 class="font-headline font-bold text-5xl md:text-6xl text-primary uppercase tracking-tighter leading-none mt-2">SIGN-IN DETAILS</h1>
+        <p class="font-mono text-[11px] text-white/50 mt-4 leading-relaxed">
+          Signed in as <span id="acct-email" class="text-white/80"></span>
+        </p>
+      </header>
+
+      <!-- No password set yet: first-time setup. -->
+      <div id="acct-setup-panel" class="hidden">
+        <p class="font-mono text-[11px] text-white/50 mb-6 leading-relaxed">
+          Your account has no username or password yet — you can only sign in
+          with a mailed link right now. Set one up so you can sign in directly
+          any time.
+        </p>
+        <form id="acct-setup-form" class="space-y-4" novalidate>
+          <div>
+            <label for="su-username" class="block font-mono text-[10px] text-white/40 uppercase tracking-widest mb-2">Username</label>
+            <input
+              id="su-username"
+              type="text"
+              name="username"
+              required
+              autocomplete="username"
+              placeholder="lowercase, 3-24 characters"
+              aria-describedby="su-username-hint"
+              class="w-full px-4 py-4 bg-surface-container-low border border-white/10 focus:border-secondary outline-none font-mono text-base text-primary"
+            >
+            <p id="su-username-hint" class="font-mono text-[10px] text-white/30 mt-2">a-z, 0-9, underscore, hyphen only</p>
+          </div>
+          <div>
+            <label for="su-password" class="block font-mono text-[10px] text-white/40 uppercase tracking-widest mb-2">Password</label>
+            <input
+              id="su-password"
+              type="password"
+              name="password"
+              required
+              autocomplete="new-password"
+              minlength="10"
+              maxlength="256"
+              placeholder="at least 10 characters"
+              class="w-full px-4 py-4 bg-surface-container-low border border-white/10 focus:border-secondary outline-none font-mono text-base text-primary"
+            >
+          </div>
+          <div>
+            <label for="su-confirm" class="block font-mono text-[10px] text-white/40 uppercase tracking-widest mb-2">Confirm password</label>
+            <input
+              id="su-confirm"
+              type="password"
+              name="confirm"
+              required
+              autocomplete="new-password"
+              minlength="10"
+              maxlength="256"
+              placeholder="type it again"
+              class="w-full px-4 py-4 bg-surface-container-low border border-white/10 focus:border-secondary outline-none font-mono text-base text-primary"
+            >
+          </div>
+          <button
+            type="submit"
+            id="su-submit-btn"
+            class="w-full py-4 bg-primary text-on-primary font-mono text-[11px] tracking-widest uppercase hover:bg-secondary hover:text-on-secondary transition-colors disabled:opacity-30"
+          >
+            Set up sign-in
+          </button>
+        </form>
+        <div id="su-error" role="alert" aria-live="assertive" class="hidden mt-6 p-6 border border-red-500/30 bg-red-500/5 font-mono text-[11px] text-red-300"></div>
+        <div id="su-success" role="status" class="hidden mt-6 p-6 border border-secondary/30 bg-secondary/5 font-mono text-[11px] text-white/70 leading-relaxed"></div>
+      </div>
+
+      <!-- Password already set: change/update form, requires current password. -->
+      <div id="acct-update-panel" class="hidden">
+        <p class="font-mono text-[11px] text-white/50 mb-6 leading-relaxed">
+          Signed in as <span id="acct-current-username" class="text-white/80"></span>. Update your
+          username or password below.
+        </p>
+        <form id="acct-update-form" class="space-y-4" novalidate>
+          <div>
+            <label for="up-current-password" class="block font-mono text-[10px] text-white/40 uppercase tracking-widest mb-2">Current password</label>
+            <input
+              id="up-current-password"
+              type="password"
+              name="current_password"
+              required
+              autocomplete="current-password"
+              placeholder="••••••••••"
+              class="w-full px-4 py-4 bg-surface-container-low border border-white/10 focus:border-secondary outline-none font-mono text-base text-primary"
+            >
+          </div>
+          <div>
+            <label for="up-username" class="block font-mono text-[10px] text-white/40 uppercase tracking-widest mb-2">Username</label>
+            <input
+              id="up-username"
+              type="text"
+              name="username"
+              required
+              autocomplete="username"
+              placeholder="lowercase, 3-24 characters"
+              aria-describedby="up-username-hint"
+              class="w-full px-4 py-4 bg-surface-container-low border border-white/10 focus:border-secondary outline-none font-mono text-base text-primary"
+            >
+            <p id="up-username-hint" class="font-mono text-[10px] text-white/30 mt-2">a-z, 0-9, underscore, hyphen only</p>
+          </div>
+          <div>
+            <label for="up-password" class="block font-mono text-[10px] text-white/40 uppercase tracking-widest mb-2">New password</label>
+            <input
+              id="up-password"
+              type="password"
+              name="password"
+              required
+              autocomplete="new-password"
+              minlength="10"
+              maxlength="256"
+              placeholder="at least 10 characters"
+              class="w-full px-4 py-4 bg-surface-container-low border border-white/10 focus:border-secondary outline-none font-mono text-base text-primary"
+            >
+          </div>
+          <div>
+            <label for="up-confirm" class="block font-mono text-[10px] text-white/40 uppercase tracking-widest mb-2">Confirm new password</label>
+            <input
+              id="up-confirm"
+              type="password"
+              name="confirm"
+              required
+              autocomplete="new-password"
+              minlength="10"
+              maxlength="256"
+              placeholder="type it again"
+              class="w-full px-4 py-4 bg-surface-container-low border border-white/10 focus:border-secondary outline-none font-mono text-base text-primary"
+            >
+          </div>
+          <button
+            type="submit"
+            id="up-submit-btn"
+            class="w-full py-4 bg-primary text-on-primary font-mono text-[11px] tracking-widest uppercase hover:bg-secondary hover:text-on-secondary transition-colors disabled:opacity-30"
+          >
+            Update sign-in details
+          </button>
+        </form>
+        <div id="up-error" role="alert" aria-live="assertive" class="hidden mt-6 p-6 border border-red-500/30 bg-red-500/5 font-mono text-[11px] text-red-300"></div>
+        <div id="up-success" role="status" class="hidden mt-6 p-6 border border-secondary/30 bg-secondary/5 font-mono text-[11px] text-white/70 leading-relaxed"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    import { decideAuthStateFromFetch } from '../scripts/auth-state.js';
+    import { clientValidate, describeSetPasswordError } from '../scripts/account-setup.js';
+
+    // Every dynamic value below is rendered via textContent, never
+    // innerHTML, so no esc() helper is needed on this page — kept as a
+    // house-style note for future edits: reach for textContent first.
+
+    const loading = document.getElementById('acct-loading')!;
+    const signin = document.getElementById('acct-signin')!;
+    const signinLink = document.getElementById('acct-signin-link') as HTMLAnchorElement;
+    const content = document.getElementById('acct-content')!;
+    const emailEl = document.getElementById('acct-email')!;
+    const setupPanel = document.getElementById('acct-setup-panel')!;
+    const updatePanel = document.getElementById('acct-update-panel')!;
+    const currentUsernameEl = document.getElementById('acct-current-username')!;
+
+    const redirectTarget = '/account';
+    signinLink.href = '/login?redirect=' + encodeURIComponent(redirectTarget);
+
+    // Which panel to show is a matter of "does a password already exist",
+    // not something /api/auth/me tells us — that endpoint only confirms the
+    // session. /api/auth/status reads the same customer record set-password
+    // writes and reports that one field directly. (Community's profile
+    // handle is NOT usable for this — every fan gets one, password or not.)
+    // If the call fails for any reason, fail toward the safer "first-time
+    // setup" copy — worst case a customer with a password already set sees
+    // the setup form's extra "current password" step missing on THIS
+    // attempt, and the server rejects it (401) rather than silently
+    // succeeding, so there is no security gap, just an extra round trip.
+    async function loadAccountState(): Promise<{ hasPassword: boolean; username: string | null }> {
+      try {
+        const r = await fetch('/api/auth/status', { credentials: 'include' });
+        if (!r.ok) return { hasPassword: false, username: null };
+        const data = await r.json();
+        return { hasPassword: !!data.has_password, username: data.username || null };
+      } catch {
+        return { hasPassword: false, username: null };
+      }
+    }
+
+    decideAuthStateFromFetch(fetch('/api/auth/me', { credentials: 'include' })).then(async ({ state, email }) => {
+      loading.classList.add('hidden');
+      if (state !== 'signed-in' || !email) {
+        // 'signed-out' and 'unknown' both fail toward the sign-in prompt —
+        // never show the form to a visitor we can't confirm is signed in.
+        signin.classList.remove('hidden');
+        return;
+      }
+
+      emailEl.textContent = email;
+      content.classList.remove('hidden');
+
+      const { hasPassword, username } = await loadAccountState();
+      if (hasPassword) {
+        currentUsernameEl.textContent = username ? '@' + username : email;
+        updatePanel.classList.remove('hidden');
+        (document.getElementById('up-username') as HTMLInputElement).value = username || '';
+      } else {
+        setupPanel.classList.remove('hidden');
+      }
+    });
+
+    function wireForm(opts: {
+      form: HTMLFormElement;
+      btn: HTMLButtonElement;
+      btnLabel: string;
+      errBox: HTMLElement;
+      successBox: HTMLElement;
+      includeCurrentPassword: boolean;
+      successMessage: (username: string) => string;
+    }) {
+      const { form, btn, btnLabel, errBox, successBox, includeCurrentPassword, successMessage } = opts;
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        errBox.classList.add('hidden');
+        successBox.classList.add('hidden');
+
+        const fd = new FormData(form);
+        const username = String(fd.get('username') || '').trim().toLowerCase();
+        const password = String(fd.get('password') || '');
+        const confirm = String(fd.get('confirm') || '');
+        const currentPassword = includeCurrentPassword ? String(fd.get('current_password') || '') : '';
+
+        const validationError = clientValidate({ username, password, confirm });
+        if (validationError) {
+          errBox.textContent = validationError;
+          errBox.classList.remove('hidden');
+          return;
+        }
+
+        btn.disabled = true;
+        btn.textContent = 'Saving…';
+
+        try {
+          const body: Record<string, string> = { username, password, confirm };
+          if (includeCurrentPassword) body.current_password = currentPassword;
+
+          const r = await fetch('/api/auth/set-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify(body),
+          });
+          const data = await r.json().catch(() => ({}));
+          if (!r.ok) {
+            throw new Error(describeSetPasswordError(r.status, data));
+          }
+
+          successBox.textContent = successMessage(username);
+          successBox.classList.remove('hidden');
+          currentUsernameEl.textContent = '@' + username;
+          (document.getElementById('up-username') as HTMLInputElement)!.value = username;
+          form.reset();
+          setupPanel.classList.add('hidden');
+          updatePanel.classList.remove('hidden');
+          (document.getElementById('up-username') as HTMLInputElement)!.value = username;
+        } catch (e: any) {
+          errBox.textContent = e.message;
+          errBox.classList.remove('hidden');
+        } finally {
+          btn.disabled = false;
+          btn.textContent = btnLabel;
+        }
+      });
+    }
+
+    wireForm({
+      form: document.getElementById('acct-setup-form') as HTMLFormElement,
+      btn: document.getElementById('su-submit-btn') as HTMLButtonElement,
+      btnLabel: 'Set up sign-in',
+      errBox: document.getElementById('su-error')!,
+      successBox: document.getElementById('su-success')!,
+      includeCurrentPassword: false,
+      successMessage: (username) => `You're all set — you can now sign in with the username "${username}" or your email, plus this password.`,
+    });
+
+    wireForm({
+      form: document.getElementById('acct-update-form') as HTMLFormElement,
+      btn: document.getElementById('up-submit-btn') as HTMLButtonElement,
+      btnLabel: 'Update sign-in details',
+      errBox: document.getElementById('up-error')!,
+      successBox: document.getElementById('up-success')!,
+      includeCurrentPassword: true,
+      successMessage: (username) => `Saved — sign in with "${username}" or your email, plus your new password. You've been signed out everywhere else.`,
+    });
+  </script>
+</BaseLayout>

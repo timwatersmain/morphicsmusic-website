@@ -6,6 +6,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { onRequestPost as signupPost } from '../../functions/api/auth/signup';
 import { onRequestPost as passwordLoginPost } from '../../functions/api/auth/password-login';
 import { onRequestPost as setPasswordPost } from '../../functions/api/auth/set-password';
+import { onRequestGet as authStatusGet } from '../../functions/api/auth/status';
 import { signSession, verifySession, getSessionVer, SESSION_COOKIE } from '../../functions/_lib/auth';
 
 function makeKvStub() {
@@ -517,5 +518,52 @@ describe('POST /api/auth/set-password (C3, C4)', () => {
       );
       expect(res.status).toBe(400);
     });
+  });
+});
+
+describe('GET /api/auth/status', () => {
+  function statusReq(cookie?: string) {
+    const headers: Record<string, string> = {};
+    if (cookie) headers.Cookie = `${SESSION_COOKIE}=${encodeURIComponent(cookie)}`;
+    return authStatusGet({
+      request: new Request('https://morphicsmusic.com/api/auth/status', { headers }),
+      env,
+      waitUntil,
+    } as any);
+  }
+
+  it('401s a signed-out caller', async () => {
+    const res = await statusReq();
+    expect(res.status).toBe(401);
+  });
+
+  // The whole reason this endpoint exists: /account needs to tell a
+  // purchase-only, magic-link-signed-in customer apart from one who already
+  // has a password, using a signal /api/community/me's handle can't give it
+  // (every fan gets a handle, password or not).
+  it('reports has_password: false and username: null for a magic-link-only customer with no password', async () => {
+    const email = 'magiclinkonly2@example.com';
+    await kv.put(`customer:${email}`, JSON.stringify({
+      email, name: null, first_seen_at: 1, last_seen_at: 1, purchases: [],
+    }));
+    const ver = await getSessionVer(env, email);
+    const cookie = await signSession(AUTH_SECRET, email, ver);
+
+    const res = await statusReq(cookie);
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data).toEqual({ email, has_password: false, username: null });
+  });
+
+  it('reports has_password: true and the username once one is set', async () => {
+    const signupRes = await signup({ username: 'statusfan', email: 'statusfan@example.com', password: 'originalpassword1', confirm: 'originalpassword1' });
+    expect(signupRes.status).toBe(200);
+    const loginRes = await passwordLogin({ identifier: 'statusfan', password: 'originalpassword1' });
+    const cookie = cookieValue(loginRes)!;
+
+    const res = await statusReq(cookie);
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data).toEqual({ email: 'statusfan@example.com', has_password: true, username: 'statusfan' });
   });
 });

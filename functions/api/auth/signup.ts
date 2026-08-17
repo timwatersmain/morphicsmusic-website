@@ -84,11 +84,12 @@ async function sendDuplicateEmail(env: Env, request: Request, to: string): Promi
     console.error('signup duplicate-email token issue failed:', e);
   }
   const html = `<div style="font-family:-apple-system,sans-serif;background:#0a0a0f;color:#e8e8ec;padding:32px;max-width:560px;margin:auto">
-      <h1 style="font-weight:700;letter-spacing:-0.02em">Someone tried to sign up with your email</h1>
-      <p>You already have a Morphics account with this address. Click below to sign in — no password needed.</p>
+      <h1 style="font-weight:700;letter-spacing:-0.02em">You already have an account</h1>
+      <p>This email already has a Morphics account. Click below to sign in — no password needed.</p>
       <p style="margin:24px 0">
         <a href="${url}" style="background:#fff;color:#000;padding:14px 24px;text-decoration:none;font-family:monospace;letter-spacing:0.1em;text-transform:uppercase;font-size:11px">Sign in</a>
       </p>
+      <p>Once you're signed in, you can set a username and password at <a href="${origin}/account" style="color:#e8e8ec">${origin}/account</a> so you don't need a mailed link next time.</p>
       <p style="opacity:0.4;font-size:11px;margin-top:32px">If this wasn't you, no action is needed — no account changes were made. Link expires in 15 minutes.</p>
     </div>`;
   try {
