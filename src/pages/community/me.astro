@@ -112,7 +112,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
     const esc = (s: any) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
 
     function fmtDate(unix: number) {
-      return new Date(unix * 1000).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+      return new Date(unix * 1000).toLocaleDateString(undefined, { year: 'numeric', month: 'long' });
     }
 
     // The fan's own glyph letter. The server derives it from their private
@@ -265,7 +265,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
               ? 'You can change your handle again on ' + fmtDate(profile.handle_change_available_at) + '.'
               : '';
           }
-          fanSinceEl.textContent = 'Fan since ' + fmtDate(profile.fan_since);
+          fanSinceEl.textContent = 'Morphics since ' + fmtDate(profile.fan_since);
           countEl.textContent = String(profile.collection_count);
           // profile.avatar (toPublicProfile()'s shape) and `avatars` items
           // now carry the same full recipe fields, so either would render

@@ -63,7 +63,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
     const esc = (s: any) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
 
     function fmtDate(unix: number) {
-      return new Date(unix * 1000).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+      return new Date(unix * 1000).toLocaleDateString(undefined, { year: 'numeric', month: 'long' });
     }
 
     function showError(message: string) {
@@ -105,7 +105,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
           const glyphLetter = (profile.avatar && profile.avatar.glyph) ||
             (shelf[0] && shelf[0].glyph) || 'm';
           nameEl.textContent = profile.display_name || profile.handle;
-          sinceEl.textContent = 'Fan since ' + fmtDate(profile.fan_since);
+          sinceEl.textContent = 'Morphics since ' + fmtDate(profile.fan_since);
           countEl.textContent = `${profile.collection_count} collected`;
           avatarEl.innerHTML = avatarHtml(profile.avatar, glyphLetter, 112);
 
