@@ -17,11 +17,55 @@
 //   scale 3 (96px canvas)  — the ~96px profile-page avatar. 96 = 32 * 3
 //     exactly, so this fills the frame edge to edge with no padding at all.
 
-import { frame, sequence } from './vendor/recipes.js';
+import { frame, sequence, bbox, toGrid } from './vendor/recipes.js';
 import { paletteOf, COLORWAYS } from './vendor/colorways.js';
 import { SPRITE_DATA_URL } from './data-url.generated.js';
 
 const COLOURWAY_BY_ID = Object.fromEntries(COLORWAYS.map(c => [c.id, c]));
+
+// The author's own rules say sprite art is only "roughly centred with room
+// to move" in its 32x32 grid — the recipes rely on that slack to translate
+// the creature around for animation. Drawing the grid centred (as before)
+// therefore left the creature itself off-centre in the circular avatar by
+// however much its ink happened to be offset within the grid.
+//
+// The fix: centre the INK's bounding box instead of the grid, but derive
+// that offset from the sprite's BASE grid ONLY, once, and reuse it as a
+// constant for every animation frame and every XP level of that sprite.
+// Recentring per frame would cancel out the recipe's deliberate motion;
+// recentring per XP level would make the creature appear to slide as it
+// grows (XP resizes/fractures the ink — see vendor/recipes.js's applyXp).
+// Anchoring on the untouched base keeps the offset a fixed per-sprite
+// constant that animation and growth then happen around.
+const baseCentreOffsetCache = new Map(); // ref -> { dx, dy }
+// Exported for tests only — production code always reaches this through the
+// cache above, via animateOne/drawStaticOne.
+export function baseCentreOffset(sprite) {
+  let off = baseCentreOffsetCache.get(sprite.ref);
+  if (off) return off;
+  const b = bbox(toGrid(sprite.base));
+  if (b.r1 < 0) {
+    // No ink at all (shouldn't happen for a real sprite) — nothing to centre.
+    off = { dx: 0, dy: 0 };
+  } else {
+    // Cell (r, c) occupies the unit pixel square [c, c+1) x [r, r+1), so the
+    // ink's true pixel-space centre is (c0+c1+1)/2, not (c0+c1)/2 — the
+    // extra +1 accounts for cell c1's own width. The frame's centre is at
+    // half the 32px grid, i.e. 16. Round to land on an integer pixel offset:
+    // this is nearest-neighbour pixel art at integer scale, and a
+    // fractional offset would blur/shimmer it. An odd remainder (bbox width
+    // or height even vs the +1 correction) rounds via Math.round, which
+    // breaks exact .5 ties up (toward the bottom/right) — a one-pixel bias
+    // that's imperceptible and, unlike alternating or truncating, keeps the
+    // offset a pure, order-independent function of the base grid.
+    off = {
+      dx: Math.round(16 - (b.c0 + b.c1 + 1) / 2),
+      dy: Math.round(16 - (b.r0 + b.r1 + 1) / 2),
+    };
+  }
+  baseCentreOffsetCache.set(sprite.ref, off);
+  return off;
+}
 
 let spritesPromise = null;
 /**
@@ -45,8 +89,14 @@ const REDUCED_MOTION = typeof matchMedia === 'function'
   ? matchMedia('(prefers-reduced-motion: reduce)')
   : { matches: false, addEventListener() {} };
 
-/** Draw one 32x32 grid onto a canvas at an integer `scale`, nearest-neighbour. */
-function paintGrid(canvas, grid, palette, scale) {
+/**
+ * Draw one 32x32 grid onto a canvas at an integer `scale`, nearest-neighbour,
+ * offset by `centre` (a { dx, dy } from baseCentreOffset) so the sprite's ink
+ * — not its raw grid — lands centred in the frame. `centre` is in 32-grid
+ * pixel units; it gets multiplied by `scale` for the destination draw so the
+ * shift stays an integer destination pixel at any scale.
+ */
+function paintGrid(canvas, grid, palette, scale, centre) {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
   ctx.imageSmoothingEnabled = false;
@@ -73,7 +123,13 @@ function paintGrid(canvas, grid, palette, scale) {
     }
   }
   octx.putImageData(img, 0, 0);
-  ctx.drawImage(off, 0, 0, 32, 32, 0, 0, 32 * scale, 32 * scale);
+  const dx = (centre && centre.dx) || 0;
+  const dy = (centre && centre.dy) || 0;
+  // Pixels that shift past the canvas edge are simply not drawn (drawImage
+  // clips to the canvas) — fine here since sprite art never touches the
+  // grid edge (see vendor/README.txt's art rules), so a centring shift of a
+  // few px never clips real ink.
+  ctx.drawImage(off, 0, 0, 32, 32, dx * scale, dy * scale, 32 * scale, 32 * scale);
 }
 
 /**
@@ -103,7 +159,8 @@ async function animateOne(canvas) {
   const xp = Math.max(0, Math.min(100, Number(spec.xp) || 0));
   const order = sequence(sprite.loop);
 
-  const draw = i => paintGrid(canvas, frame(sprite, xp, order[i % order.length]), palette, scale);
+  const centre = baseCentreOffset(sprite);
+  const draw = i => paintGrid(canvas, frame(sprite, xp, order[i % order.length]), palette, scale, centre);
 
   draw(0);
   if (REDUCED_MOTION.matches) return; // static frame 0 only — see the module doc comment
@@ -159,7 +216,7 @@ async function drawStaticOne(canvas) {
 
   const colourway = COLOURWAY_BY_ID[spec.colourway] || COLOURWAY_BY_ID.cyan;
   const palette = paletteOf(colourway);
-  paintGrid(canvas, frame(sprite, 0, 0), palette, scale);
+  paintGrid(canvas, frame(sprite, 0, 0), palette, scale, baseCentreOffset(sprite));
 }
 
 /**
