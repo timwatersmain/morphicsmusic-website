@@ -19,6 +19,8 @@ const UP7 = readFileSync(join(root, 'migrations/0007_sprites.sql'), 'utf8');
 const DOWN7 = readFileSync(join(root, 'migrations/down/0007_sprites.down.sql'), 'utf8');
 const UP8 = readFileSync(join(root, 'migrations/0008_sprite_override.sql'), 'utf8');
 const DOWN8 = readFileSync(join(root, 'migrations/down/0008_sprite_override.down.sql'), 'utf8');
+const UP9 = readFileSync(join(root, 'migrations/0009_native_colourway.sql'), 'utf8');
+const DOWN9 = readFileSync(join(root, 'migrations/down/0009_native_colourway.down.sql'), 'utf8');
 const TABLES = ['fan_profiles', 'avatar_catalogue', 'fan_avatar_unlocks'];
 
 const STUB = `CREATE TABLE IF NOT EXISTS d1_migrations (
@@ -498,6 +500,57 @@ describe('migration 0008', () => {
     db.exec(DOWN8);
     expect(db.prepare("SELECT name FROM d1_migrations WHERE name = '0008_sprite_override.sql'").all()).toHaveLength(0);
     expect(() => { db.exec(STUB8); db.exec(UP8); }).not.toThrow();
+  });
+});
+
+const STUB9 = `INSERT INTO d1_migrations (name, applied_at) VALUES ('0009_native_colourway.sql','now');`;
+
+function makeDb9() {
+  const db = makeDb8();
+  db.exec(STUB9);
+  db.exec(UP9);
+  return db;
+}
+
+describe('migration 0009', () => {
+  it('widens the colourway CHECK to also accept the native sentinel', () => {
+    const db = makeDb9();
+    addFan(db, 'a@b.com', 'ana');
+    expect(() => db.prepare("UPDATE fan_profiles SET colourway = 'native' WHERE handle = 'ana'").run())
+      .not.toThrow();
+    expect(db.prepare("SELECT colourway FROM fan_profiles WHERE handle = 'ana'").get().colourway).toBe('native');
+  });
+
+  it('still rejects anything outside the 12 ids + native', () => {
+    const db = makeDb9();
+    addFan(db, 'a@b.com', 'ana');
+    expect(() => db.prepare("UPDATE fan_profiles SET colourway = 'not-a-real-colourway' WHERE handle = 'ana'").run())
+      .toThrow(/CHECK constraint/i);
+  });
+
+  it('preserves an existing override_sprite value across the rebuild', () => {
+    const db = makeDb9();
+    addFan(db, 'a@b.com', 'ana');
+    db.prepare("UPDATE fan_profiles SET override_sprite = 'A147' WHERE handle = 'ana'").run();
+    expect(db.prepare("SELECT override_sprite FROM fan_profiles WHERE handle = 'ana'").get().override_sprite)
+      .toBe('A147');
+  });
+
+  it('is reversible — narrows the CHECK back to the 12 ids and clears any native rows to NULL', () => {
+    const db = makeDb9();
+    addFan(db, 'a@b.com', 'ana');
+    db.prepare("UPDATE fan_profiles SET colourway = 'native' WHERE handle = 'ana'").run();
+    db.exec(DOWN9);
+    expect(db.prepare("SELECT colourway FROM fan_profiles WHERE handle = 'ana'").get().colourway).toBeNull();
+    expect(() => db.prepare("UPDATE fan_profiles SET colourway = 'native' WHERE handle = 'ana'").run())
+      .toThrow(/CHECK constraint/i);
+  });
+
+  it('down clears bookkeeping so up can re-run', () => {
+    const db = makeDb9();
+    db.exec(DOWN9);
+    expect(db.prepare("SELECT name FROM d1_migrations WHERE name = '0009_native_colourway.sql'").all()).toHaveLength(0);
+    expect(() => { db.exec(STUB9); db.exec(UP9); }).not.toThrow();
   });
 });
 

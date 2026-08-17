@@ -19,6 +19,7 @@ import { dirname, join } from 'node:path';
 import { makeD1Shim } from './helpers/d1-shim.js';
 import { signSession, SESSION_COOKIE } from '../../functions/_lib/auth';
 import { ensureProfile, grantUnlocks, HANDLE_CHANGE_COOLDOWN_DAYS } from '../../functions/_lib/community/repo';
+import { NATIVE_COLOURWAY } from '../../functions/_lib/community/sprites';
 
 import { onRequestGet as meGet } from '../../functions/api/community/me';
 import { onRequestPost as updatePost } from '../../functions/api/community/update';
@@ -33,6 +34,7 @@ const MIGRATION5 = readFileSync(join(root, 'migrations/0005_avatar_tiers.sql'), 
 const MIGRATION6 = readFileSync(join(root, 'migrations/0006_creatures.sql'), 'utf8');
 const MIGRATION7 = readFileSync(join(root, 'migrations/0007_sprites.sql'), 'utf8');
 const MIGRATION8 = readFileSync(join(root, 'migrations/0008_sprite_override.sql'), 'utf8');
+const MIGRATION9 = readFileSync(join(root, 'migrations/0009_native_colourway.sql'), 'utf8');
 
 const AUTH_SECRET = 'test-only-secret-not-real';
 const FAN_EMAIL = 'endpoint-fan@example.com';
@@ -73,6 +75,7 @@ beforeEach(() => {
   raw.exec(MIGRATION6);
   raw.exec(MIGRATION7);
   raw.exec(MIGRATION8);
+  raw.exec(MIGRATION9);
   seedCatalogue(raw);
   db = makeD1Shim(raw);
   kv = makeKvStub();
@@ -505,6 +508,98 @@ describe('POST /api/community/update — admin name bypass', () => {
 // The admin-only permanent sprite override (migration 0008) — lets the site
 // owner wear any of the 401 sprites regardless of his own stage. Gated on
 // the exact same requireAdmin session check as the name/handle bypass
+// The NATIVE_COLOURWAY sentinel ("render the sprite's own authored
+// palette") — available to every fan, not just admins, since this is a
+// rendering choice, unlike the admin-only sprite override tested below.
+describe('POST /api/community/update — colourway, including the NATIVE_COLOURWAY sentinel', () => {
+  it('a fan can set colourway to the sentinel, and it persists', async () => {
+    const profile = await ensureProfile(db, {
+      email: FAN_EMAIL, fanSince: Math.floor(Date.now() / 1000), displayName: 'Endpoint Fan',
+    });
+    const cookie = await cookieFor(FAN_EMAIL);
+
+    const res = await updatePost({
+      request: req('https://morphicsmusic.com/api/community/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Cookie: cookie },
+        body: JSON.stringify({ colourway: NATIVE_COLOURWAY }),
+      }),
+      env,
+    });
+    expect(res.status).toBe(200);
+    expect(raw.prepare('SELECT colourway FROM fan_profiles WHERE id = ?').get(profile.id).colourway)
+      .toBe(NATIVE_COLOURWAY);
+  });
+
+  it('still rejects a made-up colourway id — the sentinel is an addition, not a loosened check', async () => {
+    const profile = await ensureProfile(db, {
+      email: FAN_EMAIL, fanSince: Math.floor(Date.now() / 1000), displayName: 'Endpoint Fan',
+    });
+    const cookie = await cookieFor(FAN_EMAIL);
+    const before = raw.prepare('SELECT colourway FROM fan_profiles WHERE id = ?').get(profile.id).colourway;
+
+    const res = await updatePost({
+      request: req('https://morphicsmusic.com/api/community/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Cookie: cookie },
+        body: JSON.stringify({ colourway: 'not-a-real-colourway' }),
+      }),
+      env,
+    });
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe('invalid_colourway');
+    expect(raw.prepare('SELECT colourway FROM fan_profiles WHERE id = ?').get(profile.id).colourway).toBe(before);
+  });
+
+  it('a fan who never chose one is unaffected — keeps their deterministically assigned colourway', async () => {
+    const profile = await ensureProfile(db, {
+      email: FAN_EMAIL, fanSince: Math.floor(Date.now() / 1000), displayName: 'Endpoint Fan',
+    });
+    const before = raw.prepare('SELECT colourway FROM fan_profiles WHERE id = ?').get(profile.id).colourway;
+    expect(before).not.toBeNull();
+    expect(before).not.toBe(NATIVE_COLOURWAY);
+
+    const res = await meGet({
+      request: req('https://morphicsmusic.com/api/community/me', { headers: { Cookie: await cookieFor(FAN_EMAIL) } }),
+      env,
+    });
+    const body = await res.json();
+    expect(body.profile.creature.colourway).toBe(before);
+  });
+
+  it('works in combination with an admin sprite override — both persist independently', async () => {
+    const ADMIN_EMAIL = 'owner-native@example.com';
+    env.ADMIN_EMAILS = ADMIN_EMAIL;
+    const profile = await ensureProfile(db, {
+      email: ADMIN_EMAIL, fanSince: Math.floor(Date.now() / 1000), displayName: 'Owner',
+    });
+    const cookie = await cookieFor(ADMIN_EMAIL);
+
+    const res = await updatePost({
+      request: req('https://morphicsmusic.com/api/community/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Cookie: cookie },
+        body: JSON.stringify({ colourway: NATIVE_COLOURWAY, override_sprite: 'A001' }),
+      }),
+      env,
+    });
+    expect(res.status).toBe(200);
+
+    const row = raw.prepare('SELECT colourway, override_sprite FROM fan_profiles WHERE id = ?').get(profile.id);
+    expect(row.colourway).toBe(NATIVE_COLOURWAY);
+    expect(row.override_sprite).toBe('A001');
+
+    // The overridden sprite's OWN palette is what native means here — the
+    // server's job is just to hand back that A001 ref plus the sentinel;
+    // the client renderer (renderer.js's paletteForSpec) resolves it to
+    // sprite.palette rather than any of the 12 named colourways.
+    const meRes = await meGet({ request: req('https://morphicsmusic.com/api/community/me', { headers: { Cookie: cookie } }), env });
+    const body = await meRes.json();
+    expect(body.profile.creature.colourway).toBe(NATIVE_COLOURWAY);
+    expect(body.profile.creature.sprite_ref).toBe('A001');
+  });
+});
+
 // above, reused rather than duplicated (see update.ts).
 describe('POST /api/community/update — override_sprite (admin-only)', () => {
   const ADMIN_EMAIL = 'owner-sprite@example.com';

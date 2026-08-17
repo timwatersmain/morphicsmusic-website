@@ -126,8 +126,9 @@ export const onRequestPost: PagesFunction<CommunityEnv> = corsHandler<CommunityE
       // Species/sprites are fate (fixed at profile creation, see
       // ensureProfile in repo.ts); colourway is the one part of the
       // creature the fan actually chooses — see setCreatureColourway. The
-      // 12 valid ids come from the vendored export (sprites.ts's
-      // isValidColourway), never a hand-maintained list here.
+      // 12 valid ids (plus the NATIVE_COLOURWAY sentinel, meaning "use the
+      // sprite's own authored palette") come from sprites.ts's
+      // isValidColourway, never a hand-maintained list here.
       if (!isValidColourway(body.colourway)) return json({ error: 'invalid_colourway' }, 400);
       await setCreatureColourway(env.GATES, profile.id, body.colourway);
     }

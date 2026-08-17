@@ -56,21 +56,25 @@ export function creatureAvatarHtml(creature, sizePx) {
 }
 
 /**
- * One tile in the admin sprite picker (/community/me): a static (frame 0
- * only — see renderer.js's initCreatureCanvasesLazy) render of a single
- * sprite ref in a given colourway, at a small fixed size. Deliberately NOT
- * built from a PublicCreature — the picker browses sprites that are not
- * necessarily this fan's own stage sprites, so there is no `stage`/`xp` to
- * thread through; it always shows the sprite's resting frame.
+ * One tile in the admin sprite picker (/community/me): a static preview of
+ * a single sprite ref, at a small fixed size, ALWAYS full-grown (XP 100)
+ * and in its own native palette — a collection view is for judging each
+ * creature's authored final form, not the viewer's own progress or colour
+ * choice. Those two overrides are applied by renderer.js's drawStaticOne
+ * (the function initCreatureCanvasesLazy uses to paint these tiles), not
+ * here — this just builds the spec; no `colourway` param is threaded
+ * through anymore because the preview never varies by viewer colourway.
+ * Deliberately NOT built from a PublicCreature — the picker browses sprites
+ * that are not necessarily this fan's own stage sprites, so there is no
+ * `stage` to thread through either.
  *
  * @param {string} ref
- * @param {string} colourway
  * @param {number} sizePx - always scale-1 (native 32px art), since the
  *   picker's whole point is showing many sprites at once in a compact grid.
  * @param {boolean} selected - true for the currently-equipped override.
  */
-export function spriteTileHtml(ref, colourway, sizePx, selected) {
-  const spec = esc(JSON.stringify({ ref, colourway: colourway || 'cyan' }));
+export function spriteTileHtml(ref, sizePx, selected) {
+  const spec = esc(JSON.stringify({ ref }));
   const ring = selected ? 'border-secondary ring-2 ring-secondary/60' : 'border-white/10';
   return `<div class="rounded-full overflow-hidden border-2 ${ring} grid place-items-center bg-surface-container-high" ` +
     `style="width:${sizePx}px;height:${sizePx}px">` +
