@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   assignSpriteRefs, assignSpriteForStage, assignColourway, isValidColourway, isValidSpriteRef, COLOURWAY_IDS,
+  NATIVE_COLOURWAY,
 } from '../../functions/_lib/community/sprites';
 import { SPRITE_REFS_BY_STAGE } from '../../functions/_lib/community/sprite-refs.generated';
 
@@ -75,6 +76,17 @@ describe('isValidColourway', () => {
     // id (functions/_lib/community/colourways.ts's own, separate 6-id
     // space) that happens not to also be one of the 12 creature colourways.
     expect(isValidColourway('mint')).toBe(false);
+  });
+
+  // NATIVE_COLOURWAY ("render the sprite's own authored palette") is a
+  // sentinel accepted ALONGSIDE the 12 real ids, not a loosening of the
+  // check into "any string" — see isValidColourway's doc comment.
+  it('accepts the NATIVE_COLOURWAY sentinel', () => {
+    expect(isValidColourway(NATIVE_COLOURWAY)).toBe(true);
+  });
+
+  it('the sentinel is not one of the 12 real ids (a distinct, explicit value)', () => {
+    expect(COLOURWAY_IDS).not.toContain(NATIVE_COLOURWAY);
   });
 });
 

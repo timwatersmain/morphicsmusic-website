@@ -17,6 +17,9 @@
 
 import { SPRITE_REFS_BY_STAGE } from './sprite-refs.generated';
 import { COLORWAYS } from '../../../src/scripts/sprites/vendor/colorways';
+import { NATIVE_COLOURWAY } from '../../../src/scripts/sprites/native-palette';
+
+export { NATIVE_COLOURWAY };
 
 export type SpriteStage = 'egg' | 'grub' | 'pupa' | 'adult';
 
@@ -89,9 +92,15 @@ export async function assignSpriteRefs(email: string): Promise<SpriteAssignment>
   return { sprite_egg: egg, sprite_grub: grub, sprite_pupa: pupa, sprite_adult: adult, colourway };
 }
 
-/** Whether `id` is one of the 12 real colourways — the only values update.ts may persist. */
+/**
+ * Whether `id` is one of the 12 real colourways OR the NATIVE_COLOURWAY
+ * sentinel ("render the sprite's own authored palette") — the only values
+ * update.ts may persist into fan_profiles.colourway. Deliberately still an
+ * allow-list, not "any string": adding the sentinel must never loosen this
+ * into accepting arbitrary input.
+ */
 export function isValidColourway(id: string): boolean {
-  return COLOURWAY_IDS.includes(id);
+  return id === NATIVE_COLOURWAY || COLOURWAY_IDS.includes(id);
 }
 
 /**

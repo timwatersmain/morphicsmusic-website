@@ -112,7 +112,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
           </button>
         </div>
         <p class="font-mono text-[10px] text-white/30 mb-4">
-          Browse all 401 sprites in your current colour. Picking one shows it everywhere your creature appears — the fan wall, this page, and public profiles — regardless of your actual stage. Your rank label is unaffected.
+          Browse all 401 sprites, each shown here full-grown in its own native colours. Picking one shows it everywhere your creature appears — the fan wall, this page, and public profiles — rendered at YOUR actual stage, XP and colourway. Your rank label is unaffected.
         </p>
         <p id="me-sprite-status" class="font-mono text-[10px] text-white/30 mb-4 h-4"></p>
         <div id="me-sprite-groups" class="space-y-8"></div>
@@ -134,6 +134,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
     import { creatureAvatarHtml, spriteTileHtml } from '../../scripts/sprites/creature-avatar.js';
     import { initCreatureCanvases, initCreatureCanvasesLazy, loadSprites } from '../../scripts/sprites/renderer.js';
     import { COLORWAYS } from '../../scripts/sprites/vendor/colorways.js';
+    import { NATIVE_COLOURWAY } from '../../scripts/sprites/native-palette.js';
 
     const loading = document.getElementById('me-loading')!;
     const signin = document.getElementById('me-signin')!;
@@ -219,9 +220,42 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 
     let currentColourway: string | null = null;
 
-    function renderColourwayPicker(creature: any) {
+    // A conic sweep through the sprite's own 4 tones — visually distinct
+    // from the 12 solid-colour discs, which is the point: this option isn't
+    // "a 13th colour", it's "no recolouring at all". Falls back to a neutral
+    // grey sweep while the sprite data hasn't loaded yet or has no ref.
+    async function nativeSwatchStyle(creature: any): Promise<string> {
+      const fallback = 'background:conic-gradient(#2a2a2a,#6a6a6a,#a8a8a8,#2a2a2a)';
+      const ref = creature && creature.sprite_ref;
+      if (!ref) return fallback;
+      try {
+        const sprites = await loadSprites();
+        const palette = sprites.get(ref)?.palette;
+        if (!palette) return fallback;
+        return `background:conic-gradient(${palette['1']},${palette['2']},${palette['3']},${palette['1']})`;
+      } catch {
+        return fallback;
+      }
+    }
+
+    async function renderColourwayPicker(creature: any) {
+      // Set synchronously, before the swatch-style await below, so
+      // renderSpritePicker (called right after this in load()) always sees
+      // the up-to-date value even though this function itself is async.
       currentColourway = (creature && creature.colourway) || null;
-      colourwaysEl.innerHTML = COLORWAYS.map((cw: any) => `
+      const nativeStyle = await nativeSwatchStyle(creature);
+      const nativeBtn = `
+        <li>
+          <button
+            type="button"
+            data-colourway="${NATIVE_COLOURWAY}"
+            title="ORIGINAL — as drawn"
+            class="colourway-pick w-8 h-8 rounded-full border-2 transition-all ${NATIVE_COLOURWAY === currentColourway ? 'border-primary scale-110' : 'border-white/10 hover:border-white/40'}"
+            style="${nativeStyle}"
+          ></button>
+        </li>
+      `;
+      colourwaysEl.innerHTML = nativeBtn + COLORWAYS.map((cw: any) => `
         <li>
           <button
             type="button"
@@ -290,11 +324,13 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 
     // The underlying sprite dataset is fetched once and cached by
     // loadSprites() itself (shared with renderer.js's own animation path),
-    // so rebuilding this grid on every load() (e.g. after picking a sprite,
-    // or changing colourway) re-fetches nothing over the network — it just
-    // rebuilds 401 lightweight placeholder canvases and re-defers their
-    // actual paint to scroll visibility, which is what keeps a colourway
-    // change reflected in the preview.
+    // so rebuilding this grid on every load() (e.g. after picking a sprite)
+    // re-fetches nothing over the network — it just rebuilds 401 lightweight
+    // placeholder canvases and re-defers their actual paint to scroll
+    // visibility. Each tile always previews full-grown (XP 100) in its own
+    // native palette — see spriteTileHtml/drawStaticOne — so this grid is
+    // NOT affected by the viewer's colourway; only which ref is selected
+    // (currentOverride) changes on rebuild.
     function renderSpritePicker(profile: any) {
       currentOverride = profile.override_sprite || null;
       if (!profile.is_admin) {
@@ -323,7 +359,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
                 ${items.map((s: any) => `
                   <li class="text-center">
                     <button type="button" data-ref="${esc(s.ref)}" class="sprite-pick inline-block cursor-pointer" title="${esc(s.name || s.ref)}">
-                      ${spriteTileHtml(s.ref, currentColourway || 'cyan', SPRITE_TILE_SIZE, s.ref === currentOverride)}
+                      ${spriteTileHtml(s.ref, SPRITE_TILE_SIZE, s.ref === currentOverride)}
                     </button>
                   </li>
                 `).join('')}

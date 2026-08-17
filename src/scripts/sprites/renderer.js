@@ -20,8 +20,23 @@
 import { frame, sequence } from './vendor/recipes.js';
 import { paletteOf, COLORWAYS } from './vendor/colorways.js';
 import { SPRITE_DATA_URL } from './data-url.generated.js';
+import { NATIVE_COLOURWAY } from './native-palette.js';
 
 const COLOURWAY_BY_ID = Object.fromEntries(COLORWAYS.map(c => [c.id, c]));
+
+/**
+ * The palette to paint `sprite` with, given a render spec's `colourwayId`.
+ * NATIVE_COLOURWAY means "use the sprite's own authored palette" (see
+ * vendor/README.txt's SPRITE FORMAT: every sprite carries its own
+ * `palette`) instead of recolouring with one of the 12 named colourways.
+ * Pulled out as a pure function — no canvas/DOM — so it is unit-testable on
+ * its own; animateOne/drawStaticOne are the only callers.
+ */
+export function paletteForSpec(colourwayId, sprite) {
+  if (colourwayId === NATIVE_COLOURWAY) return sprite.palette;
+  const colourway = COLOURWAY_BY_ID[colourwayId] || COLOURWAY_BY_ID.cyan;
+  return paletteOf(colourway);
+}
 
 let spritesPromise = null;
 /**
@@ -98,8 +113,7 @@ async function animateOne(canvas) {
   canvas.width = 32 * scale;
   canvas.height = 32 * scale;
 
-  const colourway = COLOURWAY_BY_ID[spec.colourway] || COLOURWAY_BY_ID.cyan;
-  const palette = paletteOf(colourway);
+  const palette = paletteForSpec(spec.colourway, sprite);
   const xp = Math.max(0, Math.min(100, Number(spec.xp) || 0));
   const order = sequence(sprite.loop);
 
@@ -143,7 +157,35 @@ export function initCreatureCanvases(root = document) {
   });
 }
 
-/** Same JSON-spec parse + sprite lookup as animateOne, but paints frame 0 only — no fps loop, no MutationObserver. */
+/**
+ * Same JSON-spec parse + sprite lookup as animateOne, but for the admin
+ * sprite picker/collection grid (see initCreatureCanvasesLazy below and
+ * creature-avatar.js's spriteTileHtml, the only builder of the specs this
+ * reads) — no fps loop, no MutationObserver.
+ *
+ * PREVIEW-ONLY OVERRIDES, hardcoded rather than read from spec: a
+ * collection view is for judging each creature's authored final form, not
+ * the viewer's own progress or colour choice, so this always paints at XP
+ * 100 (full growth) in the sprite's OWN native palette (sprite.palette) —
+ * regardless of any xp/colourway spec.colourway might carry. This is
+ * DELIBERATELY separate from animateOne/paletteForSpec, which drive the
+ * fan's actual equipped avatar (fan wall, /community/me hero, public
+ * profiles) off their real stage, real XP and chosen colourway (or native,
+ * if THEY picked it). Do not unify these two paths — that would either
+ * make the picker reflect the viewer again, or make the equipped avatar
+ * always render full-grown/native, both wrong.
+ */
+/**
+ * The (grid, palette) pair a picker tile paints with for a given sprite —
+ * always full growth in the sprite's own native palette. Pulled out as a
+ * pure function (no canvas/DOM), same reasoning as paletteForSpec, so the
+ * "always XP 100, always native" preview rule is unit-testable without a
+ * canvas.
+ */
+export function pickerPreviewFor(sprite) {
+  return { grid: frame(sprite, 100, 0), palette: sprite.palette };
+}
+
 async function drawStaticOne(canvas) {
   let spec;
   try { spec = JSON.parse(canvas.dataset.creature || '{}'); } catch { return; }
@@ -157,9 +199,8 @@ async function drawStaticOne(canvas) {
   canvas.width = 32 * scale;
   canvas.height = 32 * scale;
 
-  const colourway = COLOURWAY_BY_ID[spec.colourway] || COLOURWAY_BY_ID.cyan;
-  const palette = paletteOf(colourway);
-  paintGrid(canvas, frame(sprite, 0, 0), palette, scale);
+  const { grid, palette } = pickerPreviewFor(sprite);
+  paintGrid(canvas, grid, palette, scale);
 }
 
 /**

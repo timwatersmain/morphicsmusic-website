@@ -43,6 +43,8 @@
     "d1:rollback:sprites": "npx --yes wrangler d1 execute GATES --config tools/d1/wrangler.toml --remote --file=migrations/down/0007_sprites.down.sql",
     "d1:rollback:sprite-override:local": "npx --yes wrangler d1 execute GATES --config tools/d1/wrangler.toml --local --file=migrations/down/0008_sprite_override.down.sql",
     "d1:rollback:sprite-override": "npx --yes wrangler d1 execute GATES --config tools/d1/wrangler.toml --remote --file=migrations/down/0008_sprite_override.down.sql",
+    "d1:rollback:native-colourway:local": "npx --yes wrangler d1 execute GATES --config tools/d1/wrangler.toml --local --file=migrations/down/0009_native_colourway.down.sql",
+    "d1:rollback:native-colourway": "npx --yes wrangler d1 execute GATES --config tools/d1/wrangler.toml --remote --file=migrations/down/0009_native_colourway.down.sql",
     "build:sprites": "node scripts/build-sprite-assets.mjs",
     "rebuild:fans": "node scripts/rebuild-fan-projection.mjs"
   },
