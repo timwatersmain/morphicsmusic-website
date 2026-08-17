@@ -18,7 +18,7 @@ import {
 } from '../../_lib/community/repo';
 import { isValidDisplayName, isBlockedName, slugifyHandle } from '../../_lib/community/handle';
 import { requireAdmin } from '../../_lib/admin';
-import { isValidColourway } from '../../_lib/community/sprites';
+import { isValidColourway, isValidSpriteRef } from '../../_lib/community/sprites';
 
 export const onRequestOptions: PagesFunction<CommunityEnv> = async ({ request }) => preflight(request);
 
@@ -30,7 +30,10 @@ export const onRequestPost: PagesFunction<CommunityEnv> = corsHandler<CommunityE
     const email = await requireFan(request, env);
     if (!email) return unauthorized();
 
-    let body: { display_name?: string; handle?: string; equipped_avatar_id?: string; colourway?: string };
+    let body: {
+      display_name?: string; handle?: string; equipped_avatar_id?: string; colourway?: string;
+      override_sprite?: string | null;
+    };
     try { body = await request.json(); } catch { return json({ error: 'invalid json' }, 400); }
 
     const profile = await getProfileByEmail(env.GATES, email);
@@ -45,6 +48,7 @@ export const onRequestPost: PagesFunction<CommunityEnv> = corsHandler<CommunityE
 
     const fields: {
       displayName?: string; equippedAvatarId?: string | null; handle?: string;
+      overrideSprite?: string | null;
     } = {};
 
     if (body.display_name !== undefined) {
@@ -98,6 +102,23 @@ export const onRequestPost: PagesFunction<CommunityEnv> = corsHandler<CommunityE
           if (!unlocked.includes(wanted)) return json({ error: 'not_unlocked' }, 403);
         }
         fields.equippedAvatarId = wanted;
+      }
+    }
+
+    if (body.override_sprite !== undefined) {
+      // Server-side gate — this is the security-critical check. Hiding the
+      // picker in the UI is not access control; a non-admin POSTing this
+      // field directly (including trying to clear someone else's override
+      // with null) must be refused here, not merely by omission in the
+      // markup. Never a second/duplicate admin check — reuses the same
+      // requireAdmin result computed above.
+      if (!isAdmin) return json({ error: 'admin_only' }, 403);
+      if (body.override_sprite === null) {
+        fields.overrideSprite = null;
+      } else {
+        const ref = String(body.override_sprite);
+        if (!isValidSpriteRef(ref)) return json({ error: 'invalid_sprite' }, 400);
+        fields.overrideSprite = ref;
       }
     }
 

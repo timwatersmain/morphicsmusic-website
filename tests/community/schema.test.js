@@ -17,6 +17,8 @@ const UP6 = readFileSync(join(root, 'migrations/0006_creatures.sql'), 'utf8');
 const DOWN6 = readFileSync(join(root, 'migrations/down/0006_creatures.down.sql'), 'utf8');
 const UP7 = readFileSync(join(root, 'migrations/0007_sprites.sql'), 'utf8');
 const DOWN7 = readFileSync(join(root, 'migrations/down/0007_sprites.down.sql'), 'utf8');
+const UP8 = readFileSync(join(root, 'migrations/0008_sprite_override.sql'), 'utf8');
+const DOWN8 = readFileSync(join(root, 'migrations/down/0008_sprite_override.down.sql'), 'utf8');
 const TABLES = ['fan_profiles', 'avatar_catalogue', 'fan_avatar_unlocks'];
 
 const STUB = `CREATE TABLE IF NOT EXISTS d1_migrations (
@@ -455,6 +457,47 @@ describe('migration 0007', () => {
     db.exec(DOWN7);
     expect(db.prepare("SELECT name FROM d1_migrations WHERE name = '0007_sprites.sql'").all()).toHaveLength(0);
     expect(() => { db.exec(STUB7); db.exec(UP7); }).not.toThrow();
+  });
+});
+
+const STUB8 = `INSERT INTO d1_migrations (name, applied_at) VALUES ('0008_sprite_override.sql','now');`;
+
+function makeDb8() {
+  const db = makeDb7();
+  db.exec(STUB8);
+  db.exec(UP8);
+  return db;
+}
+
+describe('migration 0008', () => {
+  it('adds override_sprite, nullable, defaulting to NULL', () => {
+    const db = makeDb8();
+    addFan(db, 'a@b.com', 'ana');
+    const cols = db.prepare('PRAGMA table_info(fan_profiles)').all().map(c => c.name);
+    expect(cols).toContain('override_sprite');
+    const row = db.prepare("SELECT override_sprite FROM fan_profiles WHERE handle = 'ana'").get();
+    expect(row.override_sprite).toBeNull();
+  });
+
+  it('accepts any TEXT value (validity is enforced at the application layer, not by a CHECK)', () => {
+    const db = makeDb8();
+    addFan(db, 'a@b.com', 'ana');
+    expect(() => db.prepare("UPDATE fan_profiles SET override_sprite = 'A147' WHERE handle = 'ana'").run())
+      .not.toThrow();
+  });
+
+  it('is reversible — drops override_sprite', () => {
+    const db = makeDb8();
+    db.exec(DOWN8);
+    const cols = db.prepare('PRAGMA table_info(fan_profiles)').all().map(c => c.name);
+    expect(cols).not.toContain('override_sprite');
+  });
+
+  it('down clears bookkeeping so up can re-run', () => {
+    const db = makeDb8();
+    db.exec(DOWN8);
+    expect(db.prepare("SELECT name FROM d1_migrations WHERE name = '0008_sprite_override.sql'").all()).toHaveLength(0);
+    expect(() => { db.exec(STUB8); db.exec(UP8); }).not.toThrow();
   });
 });
 

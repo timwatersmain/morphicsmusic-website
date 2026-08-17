@@ -36,6 +36,12 @@ const SPRITE_SALT = 'morphics-creature-sprite-salt-v1';
 
 export const COLOURWAY_IDS: string[] = COLORWAYS.map((c: { id: string }) => c.id);
 
+// Flattened once at module load — the same 401 refs SPRITE_REFS_BY_STAGE
+// carries, just without the per-stage grouping. Used only to validate a
+// ref exists at all (see isValidSpriteRef); assignment still walks the
+// per-stage arrays directly.
+const ALL_SPRITE_REFS: Set<string> = new Set(Object.values(SPRITE_REFS_BY_STAGE).flat());
+
 async function sha256Hex(input: string): Promise<string> {
   const bytes = new TextEncoder().encode(input);
   // Web Crypto, not a Node built-in — this runs in the Workers runtime.
@@ -86,4 +92,15 @@ export async function assignSpriteRefs(email: string): Promise<SpriteAssignment>
 /** Whether `id` is one of the 12 real colourways — the only values update.ts may persist. */
 export function isValidColourway(id: string): boolean {
   return COLOURWAY_IDS.includes(id);
+}
+
+/**
+ * Whether `ref` is one of the 401 real sprite refs — the only values
+ * update.ts may persist into fan_profiles.override_sprite (migration 0008).
+ * This is the server-side gate on the admin sprite picker: a POST straight
+ * to the API with a made-up ref must be rejected here, not merely hidden
+ * from the UI.
+ */
+export function isValidSpriteRef(ref: string): boolean {
+  return ALL_SPRITE_REFS.has(ref);
 }

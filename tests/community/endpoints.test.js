@@ -32,6 +32,7 @@ const MIGRATION4 = readFileSync(join(root, 'migrations/0004_handle_cooldown.sql'
 const MIGRATION5 = readFileSync(join(root, 'migrations/0005_avatar_tiers.sql'), 'utf8');
 const MIGRATION6 = readFileSync(join(root, 'migrations/0006_creatures.sql'), 'utf8');
 const MIGRATION7 = readFileSync(join(root, 'migrations/0007_sprites.sql'), 'utf8');
+const MIGRATION8 = readFileSync(join(root, 'migrations/0008_sprite_override.sql'), 'utf8');
 
 const AUTH_SECRET = 'test-only-secret-not-real';
 const FAN_EMAIL = 'endpoint-fan@example.com';
@@ -71,6 +72,7 @@ beforeEach(() => {
   raw.exec(MIGRATION5);
   raw.exec(MIGRATION6);
   raw.exec(MIGRATION7);
+  raw.exec(MIGRATION8);
   seedCatalogue(raw);
   db = makeD1Shim(raw);
   kv = makeKvStub();
@@ -497,6 +499,142 @@ describe('POST /api/community/update — admin name bypass', () => {
     });
     expect(res.status).toBe(400);
     expect((await res.json()).error).toBe('blocked_name');
+  });
+});
+
+// The admin-only permanent sprite override (migration 0008) — lets the site
+// owner wear any of the 401 sprites regardless of his own stage. Gated on
+// the exact same requireAdmin session check as the name/handle bypass
+// above, reused rather than duplicated (see update.ts).
+describe('POST /api/community/update — override_sprite (admin-only)', () => {
+  const ADMIN_EMAIL = 'owner-sprite@example.com';
+
+  it('a non-admin session is refused, and the stored value is unchanged', async () => {
+    env.ADMIN_EMAILS = ADMIN_EMAIL; // admin exists, but THIS caller isn't them
+    const profile = await ensureProfile(db, {
+      email: FAN_EMAIL, fanSince: Math.floor(Date.now() / 1000), displayName: 'Endpoint Fan',
+    });
+    const cookie = await cookieFor(FAN_EMAIL);
+
+    const res = await updatePost({
+      request: req('https://morphicsmusic.com/api/community/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Cookie: cookie },
+        body: JSON.stringify({ override_sprite: 'A001' }),
+      }),
+      env,
+    });
+    expect(res.status).toBe(403);
+
+    // Assert against the database, not just the response.
+    const row = raw.prepare('SELECT override_sprite FROM fan_profiles WHERE id = ?').get(profile.id);
+    expect(row.override_sprite).toBeNull();
+  });
+
+  it('a non-admin cannot even clear an override with null — same refusal', async () => {
+    env.ADMIN_EMAILS = ADMIN_EMAIL;
+    const profile = await ensureProfile(db, {
+      email: FAN_EMAIL, fanSince: Math.floor(Date.now() / 1000), displayName: 'Endpoint Fan',
+    });
+    raw.prepare('UPDATE fan_profiles SET override_sprite = ? WHERE id = ?').run('A001', profile.id);
+    const cookie = await cookieFor(FAN_EMAIL);
+
+    const res = await updatePost({
+      request: req('https://morphicsmusic.com/api/community/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Cookie: cookie },
+        body: JSON.stringify({ override_sprite: null }),
+      }),
+      env,
+    });
+    expect(res.status).toBe(403);
+    const row = raw.prepare('SELECT override_sprite FROM fan_profiles WHERE id = ?').get(profile.id);
+    expect(row.override_sprite).toBe('A001');
+  });
+
+  it('an admin can set an override, and can clear it again with null', async () => {
+    env.ADMIN_EMAILS = ADMIN_EMAIL;
+    const profile = await ensureProfile(db, {
+      email: ADMIN_EMAIL, fanSince: Math.floor(Date.now() / 1000), displayName: 'Owner',
+    });
+    const cookie = await cookieFor(ADMIN_EMAIL);
+
+    const setRes = await updatePost({
+      request: req('https://morphicsmusic.com/api/community/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Cookie: cookie },
+        body: JSON.stringify({ override_sprite: 'A001' }),
+      }),
+      env,
+    });
+    expect(setRes.status).toBe(200);
+    expect(raw.prepare('SELECT override_sprite FROM fan_profiles WHERE id = ?').get(profile.id).override_sprite)
+      .toBe('A001');
+
+    const clearRes = await updatePost({
+      request: req('https://morphicsmusic.com/api/community/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Cookie: cookie },
+        body: JSON.stringify({ override_sprite: null }),
+      }),
+      env,
+    });
+    expect(clearRes.status).toBe(200);
+    expect(raw.prepare('SELECT override_sprite FROM fan_profiles WHERE id = ?').get(profile.id).override_sprite)
+      .toBeNull();
+  });
+
+  it('an admin gets refused for a made-up or non-existent sprite ref', async () => {
+    env.ADMIN_EMAILS = ADMIN_EMAIL;
+    const profile = await ensureProfile(db, {
+      email: ADMIN_EMAIL, fanSince: Math.floor(Date.now() / 1000), displayName: 'Owner',
+    });
+    const cookie = await cookieFor(ADMIN_EMAIL);
+
+    const res = await updatePost({
+      request: req('https://morphicsmusic.com/api/community/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Cookie: cookie },
+        body: JSON.stringify({ override_sprite: 'NOT-A-REAL-REF' }),
+      }),
+      env,
+    });
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe('invalid_sprite');
+    expect(raw.prepare('SELECT override_sprite FROM fan_profiles WHERE id = ?').get(profile.id).override_sprite)
+      .toBeNull();
+  });
+
+  it('the override changes the rendered sprite but not the rank label, and XP mode follows the override sprite\'s own stage', async () => {
+    env.ADMIN_EMAILS = ADMIN_EMAIL;
+    const nowSec = Math.floor(Date.now() / 1000);
+    const profile = await ensureProfile(db, { email: ADMIN_EMAIL, fanSince: nowSec, displayName: 'Owner' });
+    // Force the admin's REAL stage to 'egg' — an adult override on an egg
+    // fan is exactly the "look grown, still ranked Egg" scenario the spec
+    // calls out.
+    raw.prepare("UPDATE fan_profiles SET stage = 'egg', ep = 0 WHERE id = ?").run(profile.id);
+    const cookie = await cookieFor(ADMIN_EMAIL);
+
+    await updatePost({
+      request: req('https://morphicsmusic.com/api/community/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Cookie: cookie },
+        body: JSON.stringify({ override_sprite: 'A001' }), // A001 = adult stage sprite
+      }),
+      env,
+    });
+
+    const res = await meGet({ request: req('https://morphicsmusic.com/api/community/me', { headers: { Cookie: cookie } }), env });
+    const body = await res.json();
+    // Sprite shown is the adult override...
+    expect(body.profile.creature.sprite_ref).toBe('A001');
+    // ...but the rank/stage the fan has actually earned is untouched.
+    expect(body.profile.creature.stage).toBe('egg');
+    // XP mode itself (crack vs grow) is derived client-side from the
+    // rendered sprite's OWN `stage` field (see recipes.js's frame(), which
+    // reads sprite.stage, not the fan's) once the client fetches the full
+    // sprite record by this ref — the server's only job is to hand back the
+    // correct ref, which this asserts.
   });
 });
 

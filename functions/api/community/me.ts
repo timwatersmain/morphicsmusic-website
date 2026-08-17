@@ -12,6 +12,7 @@ import {
 } from '../../_lib/community/repo';
 import { evaluateUnlocks } from '../../_lib/community/unlocks';
 import { evaluateCreature } from '../../_lib/community/creature';
+import { requireAdmin } from '../../_lib/admin';
 
 interface CustomerRecord {
   // Deliberately no `name` field: the KV record's `name` is the Stripe
@@ -37,6 +38,12 @@ export const onRequestGet: PagesFunction<CommunityEnv> = corsHandler<CommunityEn
 
     const email = await requireFan(request, env);
     if (!email) return unauthorized();
+
+    // Drives the admin-only sprite-override picker on /community/me (see
+    // that page's script). Purely a UI-visibility hint — the actual write
+    // is re-checked server-side by update.ts via the same requireAdmin, so
+    // this flag alone controls nothing security-relevant.
+    const isAdmin = !!(await requireAdmin(request, env));
 
     // Ownership and tenure still come from KV — it remains the source of truth.
     const raw = await env.DOWNLOADS.get(`customer:${email}`);
@@ -165,6 +172,16 @@ export const onRequestGet: PagesFunction<CommunityEnv> = corsHandler<CommunityEn
         // Self-view only, same reasoning as can_change_handle above — lets
         // the UI show a one-time hatch celebration on the visit that caused it.
         just_hatched: creatureUpdate.justHatched,
+        // Self-view only augmentation, same pattern as can_change_handle —
+        // toPublicProfile's allow-list stays untouched by this feature.
+        // is_admin gates the picker's visibility client-side; the actual
+        // write is re-gated server-side by update.ts regardless of what a
+        // client sends. override_sprite is surfaced raw (not folded into
+        // creature.sprite_ref, which already reflects it via
+        // toPublicProfile) so the picker can highlight the current
+        // selection without re-deriving it.
+        is_admin: isAdmin,
+        override_sprite: profile.override_sprite,
       },
       avatars,
       newly_unlocked: grants.filter(g => !heldBefore.has(g.avatarId)).map(g => g.avatarId),

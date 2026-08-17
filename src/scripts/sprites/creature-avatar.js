@@ -54,3 +54,27 @@ export function creatureAvatarHtml(creature, sizePx) {
     `style="width:${artPx}px;height:${artPx}px;image-rendering:pixelated" aria-hidden="true"></canvas>` +
     `</div></div>`;
 }
+
+/**
+ * One tile in the admin sprite picker (/community/me): a static (frame 0
+ * only — see renderer.js's initCreatureCanvasesLazy) render of a single
+ * sprite ref in a given colourway, at a small fixed size. Deliberately NOT
+ * built from a PublicCreature — the picker browses sprites that are not
+ * necessarily this fan's own stage sprites, so there is no `stage`/`xp` to
+ * thread through; it always shows the sprite's resting frame.
+ *
+ * @param {string} ref
+ * @param {string} colourway
+ * @param {number} sizePx - always scale-1 (native 32px art), since the
+ *   picker's whole point is showing many sprites at once in a compact grid.
+ * @param {boolean} selected - true for the currently-equipped override.
+ */
+export function spriteTileHtml(ref, colourway, sizePx, selected) {
+  const spec = esc(JSON.stringify({ ref, colourway: colourway || 'cyan' }));
+  const ring = selected ? 'border-secondary ring-2 ring-secondary/60' : 'border-white/10';
+  return `<div class="rounded-full overflow-hidden border-2 ${ring} grid place-items-center bg-surface-container-high" ` +
+    `style="width:${sizePx}px;height:${sizePx}px">` +
+    `<canvas data-creature="${spec}" data-scale="1" width="32" height="32" ` +
+    `style="width:${sizePx}px;height:${sizePx}px;image-rendering:pixelated" aria-hidden="true"></canvas>` +
+    `</div>`;
+}

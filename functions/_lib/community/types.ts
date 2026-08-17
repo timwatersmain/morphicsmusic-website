@@ -50,6 +50,16 @@ export interface FanProfileRow {
   colourway: string | null;
   /** Unix seconds of the moment stage first left 'egg', or NULL pre-hatch. */
   hatched_at: number | null;
+  /**
+   * Admin-only permanent sprite override (migration 0008). NULL means
+   * normal stage-derived rendering. When set, this ref is rendered
+   * INSTEAD OF the stage-derived sprite_egg/grub/pupa/adult column,
+   * everywhere the creature appears — see repo.ts's currentSpriteRef. Never
+   * changes `stage` (the rank label) or `ep`/`stage_xp`. Only ever written
+   * by update.ts after requireAdmin passes and sprites.ts's isValidSpriteRef
+   * confirms the ref is real.
+   */
+  override_sprite: string | null;
 }
 
 export interface AvatarCatalogueRow {

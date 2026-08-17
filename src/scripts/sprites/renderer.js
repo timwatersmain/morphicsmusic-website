@@ -24,8 +24,15 @@ import { SPRITE_DATA_URL } from './data-url.generated.js';
 const COLOURWAY_BY_ID = Object.fromEntries(COLORWAYS.map(c => [c.id, c]));
 
 let spritesPromise = null;
-/** Map<ref, sprite> for the whole vendored set, fetched once and cached. */
-function loadSprites() {
+/**
+ * Map<ref, sprite> for the whole vendored set, fetched once and cached.
+ * Exported so the admin sprite picker (/community/me) can group the full
+ * 401-sprite catalogue by stage without a second copy of this fetch/cache
+ * — the client already has this whole dataset for rendering, and pulling
+ * the same data server-side would mean shipping the ~613KB asset (or a
+ * second generated index) through a Workers function for no reason.
+ */
+export function loadSprites() {
   if (!spritesPromise) {
     spritesPromise = fetch(SPRITE_DATA_URL)
       .then(r => { if (!r.ok) throw new Error(`sprite data fetch failed: ${r.status}`); return r.json(); })
@@ -134,4 +141,54 @@ export function initCreatureCanvases(root = document) {
     canvas.setAttribute('data-creature-init', '1');
     animateOne(canvas);
   });
+}
+
+/** Same JSON-spec parse + sprite lookup as animateOne, but paints frame 0 only — no fps loop, no MutationObserver. */
+async function drawStaticOne(canvas) {
+  let spec;
+  try { spec = JSON.parse(canvas.dataset.creature || '{}'); } catch { return; }
+  if (!spec.ref) return;
+
+  const sprites = await loadSprites();
+  const sprite = sprites.get(spec.ref);
+  if (!sprite) return; // stale ref — leave the canvas blank rather than throw
+
+  const scale = Number(canvas.dataset.scale) || 1;
+  canvas.width = 32 * scale;
+  canvas.height = 32 * scale;
+
+  const colourway = COLOURWAY_BY_ID[spec.colourway] || COLOURWAY_BY_ID.cyan;
+  const palette = paletteOf(colourway);
+  paintGrid(canvas, frame(sprite, 0, 0), palette, scale);
+}
+
+/**
+ * For a picker/grid of MANY creatures (e.g. the admin sprite picker on
+ * /community/me, which browses all 401 sprites) — each canvas is drawn
+ * once, statically, and only once it actually scrolls into view. Mounting
+ * 401 `<canvas data-creature>` placeholders is cheap; painting all 401
+ * (createImageData + a full sprite fetch/lookup each) at once is what
+ * janks the page, so that work is deferred to an IntersectionObserver
+ * instead of running eagerly like initCreatureCanvases does for the one or
+ * two creatures a normal page shows.
+ */
+export function initCreatureCanvasesLazy(root = document) {
+  const canvases = root.querySelectorAll('canvas[data-creature]:not([data-creature-init])');
+  if (!canvases.length) return;
+  if (typeof IntersectionObserver !== 'function') {
+    // No IO support: fall back to drawing everything immediately rather
+    // than showing permanently-blank tiles.
+    canvases.forEach(c => { c.setAttribute('data-creature-init', '1'); drawStaticOne(c); });
+    return;
+  }
+  const io = new IntersectionObserver(entries => {
+    for (const entry of entries) {
+      if (!entry.isIntersecting) continue;
+      const canvas = entry.target;
+      io.unobserve(canvas);
+      canvas.setAttribute('data-creature-init', '1');
+      drawStaticOne(canvas);
+    }
+  }, { rootMargin: '200px' });
+  canvases.forEach(c => io.observe(c));
 }

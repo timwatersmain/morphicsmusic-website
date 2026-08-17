@@ -204,7 +204,7 @@ export async function getDirectory(
 }
 
 function buildProfileSets(
-  fields: { displayName?: string; equippedAvatarId?: string | null },
+  fields: { displayName?: string; equippedAvatarId?: string | null; overrideSprite?: string | null },
   handle: string | undefined,
   t: number,
 ): { sets: string[]; args: unknown[] } {
@@ -212,6 +212,10 @@ function buildProfileSets(
   const args: unknown[] = [];
   if (fields.displayName !== undefined) { sets.push('display_name = ?'); args.push(fields.displayName); }
   if (fields.equippedAvatarId !== undefined) { sets.push('equipped_avatar_id = ?'); args.push(fields.equippedAvatarId); }
+  // Gated to admin callers and ref-validated by update.ts before this is
+  // ever reached — this function trusts its caller, same as every other
+  // field here.
+  if (fields.overrideSprite !== undefined) { sets.push('override_sprite = ?'); args.push(fields.overrideSprite); }
   if (handle !== undefined) {
     sets.push('handle = ?'); args.push(handle);
     // Every write of the handle column — deliberate or the collision-retry
@@ -236,7 +240,10 @@ async function runProfileUpdate(
 export async function updateProfile(
   db: D1Database,
   fanId: number,
-  fields: { displayName?: string; equippedAvatarId?: string | null; handle?: string },
+  fields: {
+    displayName?: string; equippedAvatarId?: string | null; handle?: string;
+    overrideSprite?: string | null;
+  },
 ): Promise<void> {
   const t = now();
   if (fields.handle === undefined) {
@@ -329,8 +336,15 @@ export async function ensureSpriteAssignment(db: D1Database, profile: FanProfile
  * allow-list rather than by deleting fields, so a column added to
  * fan_profiles OR avatar_catalogue later cannot leak by default.
  */
-/** Which of the four per-stage columns holds the fan's current-stage sprite ref. */
+/**
+ * The sprite ref to render for this fan. An admin override (migration 0008)
+ * wins unconditionally, regardless of the fan's real stage — that's the
+ * whole point (see currentSpriteRef's caller, toPublicProfile, and the
+ * override_sprite column doc comment on FanProfileRow). Otherwise falls
+ * through to the normal stage-derived per-stage column.
+ */
 function currentSpriteRef(row: FanProfileRow, stage: CreatureStage): string | null {
+  if (row.override_sprite) return row.override_sprite;
   switch (stage) {
     case 'egg': return row.sprite_egg;
     case 'grub': return row.sprite_grub;

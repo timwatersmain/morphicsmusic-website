@@ -98,6 +98,26 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
         <p id="me-colourway-status" class="font-mono text-[10px] text-white/30 mt-3 h-4"></p>
       </section>
 
+      <!-- Admin-only: wear any of the 401 sprites, permanently, regardless
+           of your own stage. Hidden entirely for a non-admin (profile.is_admin
+           is false) — and the server refuses the write independently of
+           this being hidden, see /api/community/update's override_sprite
+           handling. -->
+      <section id="me-admin-sprite-section" class="hidden border border-secondary/30 p-6">
+        <div class="flex items-baseline gap-3 mb-2">
+          <span class="font-mono text-xs text-secondary uppercase">Admin — wear any creature</span>
+          <div class="h-[1px] flex-1 bg-outline-variant/30"></div>
+          <button id="me-sprite-clear" class="font-mono text-[10px] text-white/40 hover:text-secondary uppercase tracking-widest border border-white/10 hover:border-secondary/30 px-3 py-1 rounded-full">
+            Clear override
+          </button>
+        </div>
+        <p class="font-mono text-[10px] text-white/30 mb-4">
+          Browse all 401 sprites in your current colour. Picking one shows it everywhere your creature appears — the fan wall, this page, and public profiles — regardless of your actual stage. Your rank label is unaffected.
+        </p>
+        <p id="me-sprite-status" class="font-mono text-[10px] text-white/30 mb-4 h-4"></p>
+        <div id="me-sprite-groups" class="space-y-8"></div>
+      </section>
+
       <!-- Populated from /api/library — the same endpoint /library uses — so
            a fan's purchases are reachable from their profile without a
            second API. Hidden until we know there's something (or nothing)
@@ -111,8 +131,8 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 
   <script>
     import { avatarHtml } from '../../scripts/avatar.js';
-    import { creatureAvatarHtml } from '../../scripts/sprites/creature-avatar.js';
-    import { initCreatureCanvases } from '../../scripts/sprites/renderer.js';
+    import { creatureAvatarHtml, spriteTileHtml } from '../../scripts/sprites/creature-avatar.js';
+    import { initCreatureCanvases, initCreatureCanvasesLazy, loadSprites } from '../../scripts/sprites/renderer.js';
     import { COLORWAYS } from '../../scripts/sprites/vendor/colorways.js';
 
     const loading = document.getElementById('me-loading')!;
@@ -126,6 +146,10 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
     const creatureEl = document.getElementById('me-creature')!;
     const colourwaysEl = document.getElementById('me-colourways')!;
     const colourwayStatus = document.getElementById('me-colourway-status')!;
+    const spriteSection = document.getElementById('me-admin-sprite-section')!;
+    const spriteGroupsEl = document.getElementById('me-sprite-groups')!;
+    const spriteStatus = document.getElementById('me-sprite-status')!;
+    const spriteClearBtn = document.getElementById('me-sprite-clear') as HTMLButtonElement;
     const nameInput = document.getElementById('me-name-input') as HTMLInputElement;
     const nameSave = document.getElementById('me-name-save') as HTMLButtonElement;
     const nameStatus = document.getElementById('me-name-status')!;
@@ -232,6 +256,92 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
         })
         .catch(e => { colourwayStatus.textContent = 'Could not save: ' + e.message; });
     }
+
+    // Admin sprite-override picker. Server-gated independently (see
+    // /api/community/update's override_sprite handling) — hiding this
+    // section for a non-admin is a UX nicety, not the security boundary.
+    const SPRITE_STAGE_GROUPS = [
+      { stage: 'egg', heading: 'Egg' },
+      { stage: 'grub', heading: 'Grub' },
+      { stage: 'pupa', heading: 'Pupa' },
+      { stage: 'adult', heading: 'Adult' },
+    ];
+    const SPRITE_TILE_SIZE = 44;
+    let currentOverride: string | null = null;
+
+    function setOverride(ref: string | null) {
+      spriteStatus.textContent = 'Saving…';
+      fetch('/api/community/update', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ override_sprite: ref }),
+      })
+        .then(async r => {
+          if (!r.ok) {
+            const body = await r.json().catch(() => ({}));
+            throw new Error(body.error || 'save failed');
+          }
+          spriteStatus.textContent = 'Saved.';
+          return load();
+        })
+        .catch(e => { spriteStatus.textContent = 'Could not save: ' + e.message; });
+    }
+
+    // The underlying sprite dataset is fetched once and cached by
+    // loadSprites() itself (shared with renderer.js's own animation path),
+    // so rebuilding this grid on every load() (e.g. after picking a sprite,
+    // or changing colourway) re-fetches nothing over the network — it just
+    // rebuilds 401 lightweight placeholder canvases and re-defers their
+    // actual paint to scroll visibility, which is what keeps a colourway
+    // change reflected in the preview.
+    function renderSpritePicker(profile: any) {
+      currentOverride = profile.override_sprite || null;
+      if (!profile.is_admin) {
+        spriteSection.classList.add('hidden');
+        return;
+      }
+      spriteSection.classList.remove('hidden');
+      spriteClearBtn.disabled = !currentOverride;
+
+      loadSprites().then((sprites: Map<string, any>) => {
+        const byStage = new Map<string, any[]>();
+        for (const sprite of sprites.values()) {
+          if (!byStage.has(sprite.stage)) byStage.set(sprite.stage, []);
+          byStage.get(sprite.stage)!.push(sprite);
+        }
+        spriteGroupsEl.innerHTML = SPRITE_STAGE_GROUPS
+          .map(({ stage, heading }) => ({ stage, heading, items: (byStage.get(stage) || []).sort((a, b) => a.ref.localeCompare(b.ref)) }))
+          .filter(g => g.items.length)
+          .map(({ stage, heading, items }) => `
+            <div>
+              <div class="flex items-baseline gap-3 mb-4">
+                <span class="font-mono text-xs text-secondary uppercase">${esc(heading)} <span class="text-white/30">(${items.length})</span></span>
+                <div class="h-[1px] flex-1 bg-outline-variant/30"></div>
+              </div>
+              <ul class="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 gap-3">
+                ${items.map((s: any) => `
+                  <li class="text-center">
+                    <button type="button" data-ref="${esc(s.ref)}" class="sprite-pick inline-block cursor-pointer" title="${esc(s.name || s.ref)}">
+                      ${spriteTileHtml(s.ref, currentColourway || 'cyan', SPRITE_TILE_SIZE, s.ref === currentOverride)}
+                    </button>
+                  </li>
+                `).join('')}
+              </ul>
+            </div>
+          `).join('');
+
+        spriteGroupsEl.querySelectorAll<HTMLButtonElement>('.sprite-pick').forEach(btn => {
+          btn.addEventListener('click', () => setOverride(btn.dataset.ref!));
+        });
+        // Static frame-0 draws deferred to scroll-into-view — mounting all
+        // 401 canvases as placeholders is cheap, painting them all at once
+        // is not (see initCreatureCanvasesLazy's doc comment).
+        initCreatureCanvasesLazy(spriteGroupsEl);
+      });
+    }
+
+    spriteClearBtn.addEventListener('click', () => setOverride(null));
 
     // Tier 1 is always available (the "six options" every fan gets on day
     // one); tier 2 unlocks by finishing account setup; tiers 3-4 are granted
@@ -413,6 +523,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
           countEl.textContent = String(profile.collection_count);
           renderCreature(profile.creature);
           renderColourwayPicker(profile.creature);
+          renderSpritePicker(profile);
           renderCatalogue(avatars);
           renderNewlyUnlocked(newly_unlocked, avatars);
           loadLibrary();

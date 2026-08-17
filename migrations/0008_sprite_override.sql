@@ -1,0 +1,32 @@
+-- 0008_sprite_override.sql
+-- Lets an admin (gated server-side by functions/_lib/admin.ts's requireAdmin,
+-- never by the UI alone) wear any of the 401 vendored sprites permanently,
+-- regardless of their own creature's real stage/progress.
+--
+-- NULL (the default for every existing row) means normal behaviour: the
+-- fan's creature renders from their stage-derived sprite_egg/grub/pupa/adult
+-- column exactly as before. A non-NULL value is a sprite ref (e.g. "A147")
+-- that OVERRIDES the rendered sprite everywhere the creature appears — see
+-- repo.ts's currentSpriteRef — while leaving `stage` (the rank label) and
+-- `ep`/`stage_xp` completely untouched; the override changes what a fan
+-- looks like, never what they've earned.
+--
+-- No CHECK constraint here, unlike `colourway`'s 12-item enum in 0007: the
+-- sprite set is 401 refs and can grow/shrink as the vendored export changes
+-- (see scripts/build-sprite-assets.mjs), so hard-coding the list into a
+-- CHECK would need a migration every time the art set does. Validity is
+-- instead enforced at the application layer, against the same generated
+-- ref index sprites.ts already uses for assignment — see
+-- sprites.ts's isValidSpriteRef, called from update.ts before this column
+-- is ever written.
+--
+-- A single nullable column with no CHECK and no FK needs no table rebuild —
+-- ALTER TABLE ADD COLUMN is enough, same as 0005_avatar_tiers.sql's four
+-- columns. (The PRAGMA foreign_keys OFF/ON dance in 0007 was only needed
+-- because THAT migration had to rebuild fan_profiles for a CHECK-constraint
+-- change; nothing here triggers that path, so nothing here needs the
+-- cascade-delete guard either.)
+--
+-- Rollback: see migrations/down/0008_sprite_override.down.sql
+
+ALTER TABLE fan_profiles ADD COLUMN override_sprite TEXT;

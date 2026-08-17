@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  assignSpriteRefs, assignSpriteForStage, assignColourway, isValidColourway, COLOURWAY_IDS,
+  assignSpriteRefs, assignSpriteForStage, assignColourway, isValidColourway, isValidSpriteRef, COLOURWAY_IDS,
 } from '../../functions/_lib/community/sprites';
 import { SPRITE_REFS_BY_STAGE } from '../../functions/_lib/community/sprite-refs.generated';
 
@@ -75,5 +75,29 @@ describe('isValidColourway', () => {
     // id (functions/_lib/community/colourways.ts's own, separate 6-id
     // space) that happens not to also be one of the 12 creature colourways.
     expect(isValidColourway('mint')).toBe(false);
+  });
+});
+
+// Server-side gate for the admin sprite override (migration 0008) — the
+// only check standing between a POST body and a bogus value landing in
+// fan_profiles.override_sprite. See update.ts's override_sprite handling.
+describe('isValidSpriteRef', () => {
+  it('accepts a real ref from every stage', () => {
+    for (const stage of ['egg', 'grub', 'pupa', 'adult'] as const) {
+      expect(isValidSpriteRef(SPRITE_REFS_BY_STAGE[stage][0])).toBe(true);
+    }
+  });
+
+  it('accepts all 401 refs in the set', () => {
+    const all = Object.values(SPRITE_REFS_BY_STAGE).flat();
+    expect(all.length).toBe(401);
+    for (const ref of all) expect(isValidSpriteRef(ref)).toBe(true);
+  });
+
+  it('rejects a made-up or non-existent ref', () => {
+    expect(isValidSpriteRef('NOT-A-REAL-REF')).toBe(false);
+    expect(isValidSpriteRef('')).toBe(false);
+    // Close-but-wrong: a real prefix with an out-of-range number.
+    expect(isValidSpriteRef('E999')).toBe(false);
   });
 });
