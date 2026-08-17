@@ -2,7 +2,11 @@
 // as its first argument so tests can inject a node:sqlite shim.
 
 import { nextAvailableHandle, isValidDisplayName, isBlockedName } from './handle';
-import type { AvatarCatalogueRow, FanProfileRow, PublicProfile, UnlockGrant } from './types';
+import type {
+  AvatarCatalogueRow, CreatureSpeciesRow, FanProfileRow, PublicProfile, UnlockGrant,
+} from './types';
+import { nextStageThreshold, type CreatureStage } from './ep';
+import { creatureArtPath } from './creature';
 
 const now = () => Math.floor(Date.now() / 1000);
 
@@ -259,6 +263,39 @@ export async function setCollectionCount(db: D1Database, fanId: number, count: n
     .bind(count, now(), fanId).run();
 }
 
+/** The full creature_species roster, including inactive rows — callers filter as needed. */
+export async function getSpeciesCatalogue(db: D1Database): Promise<CreatureSpeciesRow[]> {
+  const { results } = await db.prepare('SELECT * FROM creature_species ORDER BY id')
+    .all<CreatureSpeciesRow>();
+  return results || [];
+}
+
+export async function getSpeciesById(db: D1Database, id: string): Promise<CreatureSpeciesRow | null> {
+  return db.prepare('SELECT * FROM creature_species WHERE id = ?').bind(id).first<CreatureSpeciesRow>();
+}
+
+/**
+ * Persist a fan's creature progress — see evaluateCreature in creature.ts,
+ * which computes what to write. Called on every profile read (idempotent:
+ * writing the same species/stage twice is harmless), which is what makes
+ * visiting your own profile the trigger for advancing.
+ */
+export async function saveCreatureProgress(
+  db: D1Database,
+  fanId: number,
+  update: { ep: number; stage: string; species: string | null; hatchedAt: number | null },
+): Promise<void> {
+  await db.prepare(
+    'UPDATE fan_profiles SET ep = ?, stage = ?, species = ?, hatched_at = ?, updated_at = ? WHERE id = ?',
+  ).bind(update.ep, update.stage, update.species, update.hatchedAt, now(), fanId).run();
+}
+
+/** The fan's own choice — species is fate, colourway is the one thing they pick. */
+export async function setCreatureColourway(db: D1Database, fanId: number, colourway: string): Promise<void> {
+  await db.prepare('UPDATE fan_profiles SET creature_colourway = ?, updated_at = ? WHERE id = ?')
+    .bind(colourway, now(), fanId).run();
+}
+
 /**
  * The ONLY shape that may be sent to a client. Constructed by explicit
  * allow-list rather than by deleting fields, so a column added to
@@ -273,7 +310,15 @@ export function toPublicProfile(
   row: FanProfileRow,
   avatar: AvatarCatalogueRow | null,
   glyph: string,
+  // Optional: the fan's assigned species row, if known and already hatched.
+  // Omitted (or null) is exactly correct for an egg — see creatureArtPath —
+  // and lets every existing call site keep working unchanged.
+  speciesRow: CreatureSpeciesRow | null = null,
 ): PublicProfile {
+  // row.stage is undefined (not just null) for any plain object built before
+  // migration 0006 existed — e.g. hand-built rows in older tests — so `||`
+  // rather than `??` deliberately treats both as "egg".
+  const stage = (row.stage || 'egg') as CreatureStage;
   return {
     handle: row.handle,
     display_name: row.display_name,
@@ -294,5 +339,14 @@ export function toPublicProfile(
       tier: avatar.tier,
       glyph,
     } : null,
+    creature: {
+      stage,
+      species: row.species || null,
+      species_name: speciesRow ? speciesRow.name : null,
+      colourway: row.creature_colourway || null,
+      ep: row.ep || 0,
+      next_stage_ep: nextStageThreshold(stage),
+      art_path: creatureArtPath(speciesRow, stage),
+    },
   };
 }
