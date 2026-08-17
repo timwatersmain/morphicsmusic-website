@@ -8,8 +8,10 @@ import { requireFan, unauthorized, type CommunityEnv } from '../../_lib/communit
 import {
   ensureProfile, getCatalogue, getUnlockedAvatarIds, grantUnlocks,
   getRarity, setCollectionCount, toPublicProfile, canChangeHandle, nextHandleChangeAt,
+  getSpeciesCatalogue, saveCreatureProgress,
 } from '../../_lib/community/repo';
 import { evaluateUnlocks } from '../../_lib/community/unlocks';
+import { evaluateCreature } from '../../_lib/community/creature';
 import { glyphLetterFor } from '../../_lib/community/glyph';
 
 interface CustomerRecord {
@@ -91,6 +93,28 @@ export const onRequestGet: PagesFunction<CommunityEnv> = corsHandler<CommunityEn
     await grantUnlocks(env.GATES, profile.id, grants);
     await setCollectionCount(env.GATES, profile.id, owned.size);
 
+    // Visiting your own profile is what advances your creature — this runs
+    // on every /me read, same idempotent-on-every-visit shape as the unlock
+    // engine above. See evaluateCreature: stage never regresses and species
+    // is assigned once, permanently, at the moment stage first leaves 'egg'.
+    const speciesRoster = await getSpeciesCatalogue(env.GATES);
+    const tenureDays = Math.max(0, (nowSec - profile.fan_since) / 86400);
+    const creatureUpdate = await evaluateCreature(
+      profile,
+      { purchaseCount: owned.size, tenureDays, engagementActions: 0 },
+      speciesRoster,
+      nowSec,
+    );
+    await saveCreatureProgress(env.GATES, profile.id, {
+      ep: creatureUpdate.ep,
+      stage: creatureUpdate.stage,
+      species: creatureUpdate.species,
+      hatchedAt: creatureUpdate.hatchedAt,
+    });
+    const speciesRow = creatureUpdate.species
+      ? speciesRoster.find(s => s.id === creatureUpdate.species) || null
+      : null;
+
     const unlockedIds = new Set(await getUnlockedAvatarIds(env.GATES, profile.id));
     const rarity = await getRarity(env.GATES);
     const equipped = catalogue.find(a => a.id === profile.equipped_avatar_id) || null;
@@ -129,7 +153,14 @@ export const onRequestGet: PagesFunction<CommunityEnv> = corsHandler<CommunityEn
 
     return new Response(JSON.stringify({
       profile: {
-        ...toPublicProfile({ ...profile, collection_count: owned.size }, equipped, glyph),
+        ...toPublicProfile({
+          ...profile,
+          collection_count: owned.size,
+          ep: creatureUpdate.ep,
+          stage: creatureUpdate.stage,
+          species: creatureUpdate.species,
+          hatched_at: creatureUpdate.hatchedAt,
+        }, equipped, glyph, speciesRow),
         is_self: true,
         // Self-view only augmentation (not part of toPublicProfile's public
         // allow-list) so the settings UI can tell the fan when they'll next
@@ -139,6 +170,9 @@ export const onRequestGet: PagesFunction<CommunityEnv> = corsHandler<CommunityEn
         handle_change_available_at: profile.handle_changed_at === null
           ? null
           : nextHandleChangeAt(profile.handle_changed_at),
+        // Self-view only, same reasoning as can_change_handle above — lets
+        // the UI show a one-time hatch celebration on the visit that caused it.
+        just_hatched: creatureUpdate.justHatched,
       },
       avatars,
       newly_unlocked: grants.filter(g => !heldBefore.has(g.avatarId)).map(g => g.avatarId),

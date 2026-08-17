@@ -30,6 +30,7 @@ const MIGRATION = readFileSync(join(root, 'migrations/0002_fan_profiles.sql'), '
 const MIGRATION3 = readFileSync(join(root, 'migrations/0003_handle_locked.sql'), 'utf8');
 const MIGRATION4 = readFileSync(join(root, 'migrations/0004_handle_cooldown.sql'), 'utf8');
 const MIGRATION5 = readFileSync(join(root, 'migrations/0005_avatar_tiers.sql'), 'utf8');
+const MIGRATION6 = readFileSync(join(root, 'migrations/0006_creatures.sql'), 'utf8');
 
 const AUTH_SECRET = 'test-only-secret-not-real';
 const FAN_EMAIL = 'endpoint-fan@example.com';
@@ -67,6 +68,7 @@ beforeEach(() => {
   raw.exec(MIGRATION3);
   raw.exec(MIGRATION4);
   raw.exec(MIGRATION5);
+  raw.exec(MIGRATION6);
   seedCatalogue(raw);
   db = makeD1Shim(raw);
   kv = makeKvStub();

@@ -19,6 +19,31 @@ export interface FanProfileRow {
    * this field.
    */
   handle_changed_at: number | null;
+  /** Evolution Points — see functions/_lib/community/ep.ts. Always >= 0. */
+  ep: number;
+  /**
+   * NULL means "egg" — read that way by toPublicProfile, not defaulted by
+   * the schema, so a pre-migration row never needs a backfill write to be
+   * correct. See functions/_lib/community/ep.ts's CreatureStage.
+   */
+  stage: 'egg' | 'larva' | 'chrysalis' | 'emergent' | null;
+  /** Assigned once at hatch, permanent thereafter. NULL pre-hatch. */
+  species: string | null;
+  /** The one part of the creature the fan chooses. Named key into COLOURWAYS. */
+  creature_colourway: string | null;
+  /** Unix seconds of the hatch moment, or NULL pre-hatch. */
+  hatched_at: number | null;
+}
+
+/** A row from the creature_species catalogue (migration 0006). */
+export interface CreatureSpeciesRow {
+  id: string;
+  name: string | null;
+  rarity_weight: number;
+  /** Art for a given stage resolves to /images/creatures/<art_prefix>-<stage>.webp. */
+  art_prefix: string;
+  /** 0/1 — eligible for NEW assignments. Never affects an already-assigned fan. */
+  active: number;
 }
 
 export interface AvatarCatalogueRow {
@@ -117,6 +142,24 @@ export interface PublicAvatar {
   glyph: string;
 }
 
+/**
+ * The creature shape sent to every client — same "one shape, three
+ * endpoints" idea as PublicAvatar. `art_path` is null while the fan is
+ * still an egg (the UI falls back to `avatar`, the existing glyph render —
+ * see the module doc comment on ep.ts) or if species assignment has not
+ * happened yet for any reason. `next_stage_ep` is null once `stage` is
+ * 'emergent' — there is nowhere further to grow.
+ */
+export interface PublicCreature {
+  stage: 'egg' | 'larva' | 'chrysalis' | 'emergent';
+  species: string | null;
+  species_name: string | null;
+  colourway: string | null;
+  ep: number;
+  next_stage_ep: number | null;
+  art_path: string | null;
+}
+
 /** Shape returned to clients. Note the absence of `email`. */
 export interface PublicProfile {
   handle: string;
@@ -125,4 +168,5 @@ export interface PublicProfile {
   rank_points: number;
   collection_count: number;
   avatar: PublicAvatar | null;
+  creature: PublicCreature;
 }

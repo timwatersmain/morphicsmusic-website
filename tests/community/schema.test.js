@@ -13,6 +13,8 @@ const UP4 = readFileSync(join(root, 'migrations/0004_handle_cooldown.sql'), 'utf
 const DOWN4 = readFileSync(join(root, 'migrations/down/0004_handle_cooldown.down.sql'), 'utf8');
 const UP5 = readFileSync(join(root, 'migrations/0005_avatar_tiers.sql'), 'utf8');
 const DOWN5 = readFileSync(join(root, 'migrations/down/0005_avatar_tiers.down.sql'), 'utf8');
+const UP6 = readFileSync(join(root, 'migrations/0006_creatures.sql'), 'utf8');
+const DOWN6 = readFileSync(join(root, 'migrations/down/0006_creatures.down.sql'), 'utf8');
 const TABLES = ['fan_profiles', 'avatar_catalogue', 'fan_avatar_unlocks'];
 
 const STUB = `CREATE TABLE IF NOT EXISTS d1_migrations (
@@ -222,6 +224,80 @@ describe('migration 0005', () => {
     db.exec(DOWN5);
     expect(db.prepare("SELECT name FROM d1_migrations WHERE name = '0005_avatar_tiers.sql'").all()).toHaveLength(0);
     expect(() => { db.exec(STUB5); db.exec(UP5); }).not.toThrow();
+  });
+});
+
+const STUB6 = `INSERT INTO d1_migrations (name, applied_at) VALUES ('0006_creatures.sql','now');`;
+
+function makeDb6() {
+  const db = makeDb5();
+  db.exec(STUB6);
+  db.exec(UP6);
+  return db;
+}
+
+describe('migration 0006', () => {
+  it('creates creature_species', () => {
+    const t = tables(makeDb6());
+    expect(t).toContain('creature_species');
+  });
+
+  it('adds ep (defaulting to 0), stage/species/creature_colourway/hatched_at (all nullable) to fan_profiles', () => {
+    const db = makeDb6();
+    addFan(db, 'a@b.com', 'ana');
+    const cols = db.prepare('PRAGMA table_info(fan_profiles)').all().map(c => c.name);
+    for (const c of ['ep', 'stage', 'species', 'creature_colourway', 'hatched_at']) expect(cols).toContain(c);
+    const row = db.prepare('SELECT ep, stage, species, creature_colourway, hatched_at FROM fan_profiles').get();
+    expect(row.ep).toBe(0);
+    expect(row.stage).toBeNull();
+    expect(row.species).toBeNull();
+    expect(row.creature_colourway).toBeNull();
+    expect(row.hatched_at).toBeNull();
+  });
+
+  it('enforces the stage CHECK constraint', () => {
+    const db = makeDb6();
+    addFan(db, 'a@b.com', 'ana');
+    expect(() => db.prepare("UPDATE fan_profiles SET stage = 'nonsense' WHERE handle = 'ana'").run())
+      .toThrow(/CHECK constraint/i);
+  });
+
+  it('accepts every valid stage value, and NULL', () => {
+    const db = makeDb6();
+    addFan(db, 'a@b.com', 'ana');
+    for (const s of ['egg', 'larva', 'chrysalis', 'emergent', null]) {
+      expect(() => db.prepare('UPDATE fan_profiles SET stage = ? WHERE handle = ?').run(s, 'ana')).not.toThrow();
+    }
+  });
+
+  it('enforces the creature_species.active CHECK constraint', () => {
+    const db = makeDb6();
+    expect(() => db.prepare(
+      `INSERT INTO creature_species (id, name, rarity_weight, art_prefix, active) VALUES ('x', 'N', 100, 'x', 2)`,
+    ).run()).toThrow(/CHECK constraint/i);
+  });
+
+  it('creature_species.active defaults to 1', () => {
+    const db = makeDb6();
+    db.prepare(`INSERT INTO creature_species (id, name, art_prefix) VALUES ('x', 'N', 'x')`).run();
+    const row = db.prepare('SELECT active, rarity_weight FROM creature_species WHERE id = ?').get('x');
+    expect(row.active).toBe(1);
+    expect(row.rarity_weight).toBe(100);
+  });
+
+  it('is reversible — drops the five columns and the table', () => {
+    const db = makeDb6();
+    db.exec(DOWN6);
+    const cols = db.prepare('PRAGMA table_info(fan_profiles)').all().map(c => c.name);
+    for (const c of ['ep', 'stage', 'species', 'creature_colourway', 'hatched_at']) expect(cols).not.toContain(c);
+    expect(tables(db)).not.toContain('creature_species');
+  });
+
+  it('down clears bookkeeping so up can re-run', () => {
+    const db = makeDb6();
+    db.exec(DOWN6);
+    expect(db.prepare("SELECT name FROM d1_migrations WHERE name = '0006_creatures.sql'").all()).toHaveLength(0);
+    expect(() => { db.exec(STUB6); db.exec(UP6); }).not.toThrow();
   });
 });
 
