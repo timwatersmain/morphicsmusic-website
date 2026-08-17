@@ -86,6 +86,17 @@ describe('POST /api/auth/signup validation', () => {
     const res = await signup({ username: 'admin', email: 'e@example.com', password: 'longenoughpw1', confirm: 'longenoughpw1' });
     expect(res.status).toBe(400);
   });
+
+  // The hole this whole change is designed to avoid: signup has no verified
+  // session, so trusting "the submitted email is the admin email" would let
+  // ANYONE who merely knows the owner's address claim a reserved name. The
+  // admin bypass must never reach this endpoint — this test fails loudly if
+  // someone later "helpfully" wires it in here.
+  it('rejects a blocked username even when the submitted email is the admin email', async () => {
+    env.ADMIN_EMAILS = 'e2@example.com';
+    const res = await signup({ username: 'morphics', email: 'e2@example.com', password: 'longenoughpw1', confirm: 'longenoughpw1' });
+    expect(res.status).toBe(400);
+  });
 });
 
 describe('POST /api/auth/signup success + duplicates', () => {
@@ -431,5 +442,80 @@ describe('POST /api/auth/set-password (C3, C4)', () => {
     expect(oldNameLogin.status).toBe(401);
     const newNameLogin = await passwordLogin({ identifier: 'newname', password: 'anotherpassword1' });
     expect(newNameLogin.status).toBe(200);
+  });
+
+  describe('admin name bypass', () => {
+    it('a non-admin session is still refused a blocked username', async () => {
+      env.ADMIN_EMAILS = 'someoneelse@example.com'; // admin exists, but not this caller
+      const signupRes = await signup({ username: 'notadmin1', email: 'notadmin1@example.com', password: 'originalpassword1', confirm: 'originalpassword1' });
+      expect(signupRes.status).toBe(200);
+      const loginRes = await passwordLogin({ identifier: 'notadmin1', password: 'originalpassword1' });
+      const cookie = cookieValue(loginRes)!;
+
+      const res = await setPassword(
+        { username: 'morphics', password: 'anotherpassword1', confirm: 'anotherpassword1', current_password: 'originalpassword1' },
+        cookie,
+      );
+      expect(res.status).toBe(400);
+    });
+
+    it('an admin session may take a blocked username', async () => {
+      const email = 'realowner@example.com';
+      env.ADMIN_EMAILS = email;
+      const signupRes = await signup({ username: 'tempname', email, password: 'originalpassword1', confirm: 'originalpassword1' });
+      expect(signupRes.status).toBe(200);
+      const loginRes = await passwordLogin({ identifier: 'tempname', password: 'originalpassword1' });
+      const cookie = cookieValue(loginRes)!;
+
+      const res = await setPassword(
+        { username: 'morphics', password: 'anotherpassword1', confirm: 'anotherpassword1', current_password: 'originalpassword1' },
+        cookie,
+      );
+      expect(res.status).toBe(200);
+
+      const login = await passwordLogin({ identifier: 'morphics', password: 'anotherpassword1' });
+      expect(login.status).toBe(200);
+    });
+
+    it('an admin is still subject to the username character-set rule and to uniqueness', async () => {
+      const email = 'realowner2@example.com';
+      env.ADMIN_EMAILS = email;
+      const signupRes = await signup({ username: 'tempname2', email, password: 'originalpassword1', confirm: 'originalpassword1' });
+      expect(signupRes.status).toBe(200);
+      const loginRes = await passwordLogin({ identifier: 'tempname2', password: 'originalpassword1' });
+      const cookie = cookieValue(loginRes)!;
+
+      // Fails the USERNAME_RE character-set/length rule regardless of admin status.
+      const badChars = await setPassword(
+        { username: 'not valid!', password: 'anotherpassword1', confirm: 'anotherpassword1', current_password: 'originalpassword1' },
+        cookie,
+      );
+      expect(badChars.status).toBe(400);
+
+      // Someone else already owns this exact (non-blocked) username — still
+      // rejected for an admin, uniqueness is not part of the bypass.
+      const otherSignup = await signup({ username: 'alreadytaken', email: 'other@example.com', password: 'originalpassword1', confirm: 'originalpassword1' });
+      expect(otherSignup.status).toBe(200);
+      const taken = await setPassword(
+        { username: 'alreadytaken', password: 'anotherpassword1', confirm: 'anotherpassword1', current_password: 'originalpassword1' },
+        cookie,
+      );
+      expect(taken.status).toBe(400);
+    });
+
+    it('with ADMIN_EMAILS unset, nobody is an admin and blocked usernames stay blocked', async () => {
+      delete env.ADMIN_EMAILS;
+      const email = 'realowner3@example.com';
+      const signupRes = await signup({ username: 'tempname3', email, password: 'originalpassword1', confirm: 'originalpassword1' });
+      expect(signupRes.status).toBe(200);
+      const loginRes = await passwordLogin({ identifier: 'tempname3', password: 'originalpassword1' });
+      const cookie = cookieValue(loginRes)!;
+
+      const res = await setPassword(
+        { username: 'morphics', password: 'anotherpassword1', confirm: 'anotherpassword1', current_password: 'originalpassword1' },
+        cookie,
+      );
+      expect(res.status).toBe(400);
+    });
   });
 });

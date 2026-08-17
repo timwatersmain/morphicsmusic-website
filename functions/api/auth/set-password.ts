@@ -27,6 +27,7 @@ import { corsHandler, preflight } from '../../_lib/cors';
 import { rateLimit } from '../../_lib/ratelimit';
 import { hashPassword, verifyPassword } from '../../_lib/password';
 import { isBlockedName } from '../../_lib/community/handle';
+import { requireAdmin } from '../../_lib/admin';
 import {
   getCustomerRecord,
   getCustomerByUsername,
@@ -78,7 +79,13 @@ export const onRequestPost: PagesFunction<Env> = corsHandler<Env>(async ({ reque
   if (!USERNAME_RE.test(usernameLower)) {
     return new Response(JSON.stringify({ error: 'username must be 3-24 characters: a-z, 0-9, underscore, hyphen' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
   }
-  if (isBlockedName(usernameLower)) {
+  // The blocklist bypass is gated on the caller's verified session email
+  // (requireAdmin re-checks the same cookie above), NEVER on an email
+  // submitted in the request body. Signup has no such session to check
+  // against, which is exactly why this bypass must never move there — a
+  // signup body can claim any email without proving ownership of it.
+  const isAdmin = !!(await requireAdmin(request, env));
+  if (!isAdmin && isBlockedName(usernameLower)) {
     return new Response(JSON.stringify({ error: 'that username is not available' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
   }
   if (password.length < MIN_PASSWORD) {

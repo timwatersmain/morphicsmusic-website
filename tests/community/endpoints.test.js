@@ -402,6 +402,142 @@ describe('POST /api/community/update — blocked display names', () => {
   });
 });
 
+// The blocklist exists to stop FANS from impersonating the artist. The site
+// owner himself must still be able to use his own name — gated strictly on
+// an authenticated admin session (env.ADMIN_EMAILS + a verified cookie),
+// never on anything the request claims about itself.
+describe('POST /api/community/update — admin name bypass', () => {
+  const ADMIN_EMAIL = 'owner@example.com';
+
+  it('a non-admin session is still refused a blocked display name and handle', async () => {
+    env.ADMIN_EMAILS = ADMIN_EMAIL; // admin exists, but THIS caller isn't them
+    await ensureProfile(db, {
+      email: FAN_EMAIL, fanSince: Math.floor(Date.now() / 1000), displayName: 'Endpoint Fan',
+    });
+    const cookie = await cookieFor(FAN_EMAIL);
+
+    const nameRes = await updatePost({
+      request: req('https://morphicsmusic.com/api/community/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Cookie: cookie },
+        body: JSON.stringify({ display_name: 'morphics' }),
+      }),
+      env,
+    });
+    expect(nameRes.status).toBe(400);
+    expect((await nameRes.json()).error).toBe('blocked_name');
+
+    const handleRes = await updatePost({
+      request: req('https://morphicsmusic.com/api/community/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Cookie: cookie },
+        body: JSON.stringify({ handle: 'morphics' }),
+      }),
+      env,
+    });
+    expect(handleRes.status).toBe(400);
+    expect((await handleRes.json()).error).toBe('blocked_handle');
+  });
+
+  it('an admin session may set a blocked display name and handle', async () => {
+    env.ADMIN_EMAILS = ADMIN_EMAIL;
+    await ensureProfile(db, {
+      email: ADMIN_EMAIL, fanSince: Math.floor(Date.now() / 1000), displayName: 'Owner',
+    });
+    const cookie = await cookieFor(ADMIN_EMAIL);
+
+    const nameRes = await updatePost({
+      request: req('https://morphicsmusic.com/api/community/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Cookie: cookie },
+        body: JSON.stringify({ display_name: 'Morphics' }),
+      }),
+      env,
+    });
+    expect(nameRes.status).toBe(200);
+
+    const handleRes = await updatePost({
+      request: req('https://morphicsmusic.com/api/community/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Cookie: cookie },
+        body: JSON.stringify({ handle: 'morphicsmusic' }),
+      }),
+      env,
+    });
+    expect(handleRes.status).toBe(200);
+
+    const row = raw.prepare('SELECT display_name, handle FROM fan_profiles WHERE email = ?').get(ADMIN_EMAIL);
+    expect(row.display_name).toBe('Morphics');
+    expect(row.handle).toBe('morphicsmusic');
+  });
+
+  it('an admin is still subject to length/char-set validation and the handle cooldown', async () => {
+    env.ADMIN_EMAILS = ADMIN_EMAIL;
+    const profile = await ensureProfile(db, {
+      email: ADMIN_EMAIL, fanSince: Math.floor(Date.now() / 1000), displayName: 'Owner',
+    });
+    const cookie = await cookieFor(ADMIN_EMAIL);
+
+    // Display name too short still fails, admin or not.
+    const tooShort = await updatePost({
+      request: req('https://morphicsmusic.com/api/community/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Cookie: cookie },
+        body: JSON.stringify({ display_name: 'x' }),
+      }),
+      env,
+    });
+    expect(tooShort.status).toBe(400);
+    expect((await tooShort.json()).error).toBe('invalid_name');
+
+    // First (blocked) handle change succeeds and starts the cooldown...
+    const first = await updatePost({
+      request: req('https://morphicsmusic.com/api/community/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Cookie: cookie },
+        body: JSON.stringify({ handle: 'admin' }),
+      }),
+      env,
+    });
+    expect(first.status).toBe(200);
+
+    // ...so a second change, even to another blocked name, is still
+    // cooldown-limited exactly like a fan's would be.
+    const second = await updatePost({
+      request: req('https://morphicsmusic.com/api/community/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Cookie: cookie },
+        body: JSON.stringify({ handle: 'official' }),
+      }),
+      env,
+    });
+    expect(second.status).toBe(429);
+    expect((await second.json()).error).toBe('handle_cooldown');
+
+    const row = raw.prepare('SELECT handle FROM fan_profiles WHERE id = ?').get(profile.id);
+    expect(row.handle).toBe('admin');
+  });
+
+  it('with ADMIN_EMAILS unset, nobody is an admin and blocked names stay blocked', async () => {
+    delete env.ADMIN_EMAILS;
+    await ensureProfile(db, {
+      email: ADMIN_EMAIL, fanSince: Math.floor(Date.now() / 1000), displayName: 'Owner',
+    });
+    const cookie = await cookieFor(ADMIN_EMAIL);
+
+    const res = await updatePost({
+      request: req('https://morphicsmusic.com/api/community/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Cookie: cookie },
+        body: JSON.stringify({ display_name: 'morphics' }),
+      }),
+      env,
+    });
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe('blocked_name');
+  });
+});
+
 // Whole-branch review Fix 1: record.name in the KV customer blob is the
 // Stripe cardholder's LEGAL NAME (customer_details.name). It must never
 // reach display_name or, through the handle derivation, a public URL — and

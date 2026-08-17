@@ -17,6 +17,7 @@ import {
   canChangeHandle, nextHandleChangeAt,
 } from '../../_lib/community/repo';
 import { isValidDisplayName, isBlockedName, slugifyHandle } from '../../_lib/community/handle';
+import { requireAdmin } from '../../_lib/admin';
 
 export const onRequestOptions: PagesFunction<CommunityEnv> = async ({ request }) => preflight(request);
 
@@ -34,6 +35,13 @@ export const onRequestPost: PagesFunction<CommunityEnv> = corsHandler<CommunityE
     const profile = await getProfileByEmail(env.GATES, email);
     if (!profile) return json({ error: 'no profile' }, 404);
 
+    // Gated on the session that requireFan already verified above — NEVER
+    // on anything the request body claims. This lets the site owner use
+    // his own name; it must stay session-only and must never be ported to
+    // an unauthenticated path like signup, where an email in the body
+    // proves nothing about who is asking.
+    const isAdmin = !!(await requireAdmin(request, env));
+
     const fields: {
       displayName?: string; equippedAvatarId?: string | null; handle?: string;
     } = {};
@@ -41,7 +49,7 @@ export const onRequestPost: PagesFunction<CommunityEnv> = corsHandler<CommunityE
     if (body.display_name !== undefined) {
       const name = String(body.display_name).trim();
       if (!isValidDisplayName(name)) return json({ error: 'invalid_name' }, 400);
-      if (isBlockedName(name)) return json({ error: 'blocked_name' }, 400);
+      if (!isAdmin && isBlockedName(name)) return json({ error: 'blocked_name' }, 400);
       fields.displayName = name;
     }
 
@@ -51,7 +59,7 @@ export const onRequestPost: PagesFunction<CommunityEnv> = corsHandler<CommunityE
       // just the two things that actually matter: reserved words, and
       // whether someone else already owns the exact string requested.
       const wanted = slugifyHandle(String(body.handle));
-      if (isBlockedName(wanted)) return json({ error: 'blocked_handle' }, 400);
+      if (!isAdmin && isBlockedName(wanted)) return json({ error: 'blocked_handle' }, 400);
 
       if (wanted !== profile.handle) {
         if (!canChangeHandle(profile.handle_changed_at, Math.floor(Date.now() / 1000))) {
