@@ -83,6 +83,13 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
         </p>
       </section>
 
+      <!-- Populated from /api/library — the same endpoint /library uses — so
+           a fan's purchases are reachable from their profile without a
+           second API. Hidden until we know there's something (or nothing)
+           to show; left hidden entirely on a 401 since /library itself
+           already owns the signed-out UX. -->
+      <div id="me-library" class="hidden"></div>
+
       <div id="me-catalogue" class="space-y-10"></div>
     </div>
   </div>
@@ -108,8 +115,20 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
     const fanSinceEl = document.getElementById('me-fan-since')!;
     const countEl = document.getElementById('me-count')!;
     const catalogueEl = document.getElementById('me-catalogue')!;
+    const libraryEl = document.getElementById('me-library')!;
 
     const esc = (s: any) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
+    // Copied verbatim from src/pages/library.astro so the two surfaces
+    // render owned-file links identically.
+    const safeImg = (s: any) => {
+      const v = String(s ?? '');
+      return /^(https?:|\/)/.test(v) ? v : '';
+    };
+    function fmtFileSize(b: number) {
+      if (b > 1e9) return (b / 1e9).toFixed(2) + ' GB';
+      if (b > 1e6) return (b / 1e6).toFixed(1) + ' MB';
+      return Math.ceil(b / 1024) + ' KB';
+    }
 
     function fmtDate(unix: number) {
       return new Date(unix * 1000).toLocaleDateString(undefined, { year: 'numeric', month: 'long' });
@@ -233,6 +252,75 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
         .catch(() => { nameStatus.textContent = 'Could not equip that avatar.'; });
     }
 
+    // Rendering approach copied from src/pages/library.astro (the section
+    // markup, download-link construction, and esc()/safeImg() usage are all
+    // taken verbatim) — this is an additional surface onto the same
+    // /api/library data, not a rebuild of it. /library itself is untouched.
+    function loadLibrary() {
+      fetch('/api/library', { credentials: 'include' })
+        .then(async r => {
+          // 401 here just means the session lapsed between the profile call
+          // and this one — /library already owns the signed-out experience,
+          // so we simply leave this section out rather than show an error.
+          if (r.status === 401) return null;
+          if (!r.ok) throw new Error(await r.text());
+          return r.json();
+        })
+        .then((data: any) => {
+          if (!data) return;
+          if (!data.releases.length) {
+            libraryEl.classList.remove('hidden');
+            libraryEl.innerHTML = `
+              <div class="flex items-baseline gap-3 mb-4">
+                <span class="font-mono text-xs text-secondary uppercase">Your library</span>
+                <div class="h-[1px] flex-1 bg-outline-variant/30"></div>
+              </div>
+              <div class="p-8 border border-white/10 text-center">
+                <p class="font-mono text-[11px] text-white/40 leading-relaxed">
+                  Nothing here yet. Browse the <a href="/store" class="text-secondary underline">store</a> — your library populates the moment you buy something.
+                </p>
+              </div>`;
+            return;
+          }
+          const releasesHtml = data.releases.map((r: any) => `
+            <section class="border border-white/5 p-6">
+              <div class="flex items-center gap-4 mb-4">
+                <img src="${esc(safeImg(r.artwork))}" alt="" loading="lazy" class="w-16 h-16 object-cover bg-white/5" />
+                <div class="flex-1">
+                  <div class="font-mono text-[10px] text-secondary uppercase tracking-widest">${esc(r.type)}</div>
+                  <h2 class="font-headline text-2xl text-primary uppercase tracking-tight">${esc(r.title)}</h2>
+                </div>
+              </div>
+              ${r.files.length === 0
+                ? `<p class="font-mono text-[11px] text-white/30">Files coming soon — check back shortly.</p>`
+                : `<ul class="divide-y divide-white/5 border-y border-white/5">
+                    ${r.files.map((f: any) => `
+                      <li class="flex items-center gap-4 py-3">
+                        <span class="font-mono text-[10px] text-white/30 uppercase">${esc(f.ext)}</span>
+                        <span class="flex-1 font-mono text-[11px] text-white/80 truncate">${esc(f.filename)}</span>
+                        <span class="font-mono text-[10px] text-white/40">${esc(fmtFileSize(f.size))}</span>
+                        <a href="/api/download?key=${encodeURIComponent(f.key)}"
+                           class="px-3 py-2 border border-primary/20 hover:border-primary/60 hover:bg-primary/5 font-mono text-[10px] tracking-widest uppercase text-primary rounded-full">
+                          Download
+                        </a>
+                      </li>
+                    `).join('')}
+                  </ul>`
+              }
+            </section>
+          `).join('');
+          libraryEl.classList.remove('hidden');
+          libraryEl.innerHTML = `
+            <div class="flex items-baseline gap-3 mb-4">
+              <span class="font-mono text-xs text-secondary uppercase">Your library</span>
+              <div class="h-[1px] flex-1 bg-outline-variant/30"></div>
+            </div>
+            <div class="space-y-4">${releasesHtml}</div>`;
+        })
+        // Non-fatal: the rest of the profile still works without this section.
+        .catch(() => {});
+    }
+
     function load() {
       return fetch('/api/community/me', { credentials: 'include' })
         .then(async r => {
@@ -277,6 +365,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
           renderEquipped(equippedFull);
           renderCatalogue(avatars);
           renderNewlyUnlocked(newly_unlocked, avatars);
+          loadLibrary();
         })
         .catch(e => {
           loading.classList.add('hidden');

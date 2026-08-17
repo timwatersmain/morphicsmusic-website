@@ -131,8 +131,8 @@ const navItems = [
   function paint(state: 'signed-in' | 'signed-out' | 'unknown', email: string | null) {
     if (!accountLink || !accountLabel) return;
     if (state === 'signed-in') {
-      accountLink.href = '/library';
-      accountLabel.textContent = 'Library';
+      accountLink.href = '/community/me';
+      accountLabel.textContent = 'Your profile';
     } else if (state === 'signed-out') {
       accountLink.href = '/login';
       accountLabel.textContent = 'Sign in';
