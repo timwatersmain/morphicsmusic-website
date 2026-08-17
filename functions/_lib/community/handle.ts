@@ -8,9 +8,12 @@ const MAX_NAME = 40;
 // Names that would let someone impersonate the artist or staff, plus every
 // path segment used under /community so a handle can never shadow a real
 // route. Add to this list rather than inventing a second check elsewhere.
+// 'morphics' and 'morphicsmusic' are deliberately NOT reserved: they are the
+// owner's own name, and reserving them only ever locked him out of it. Staff
+// and route words stay blocked.
 const BLOCKED = new Set([
   'admin', 'administrator', 'moderator', 'mod', 'support', 'staff', 'official',
-  'morphics', 'morphicsmusic', 'root', 'system', 'null', 'undefined',
+  'root', 'system', 'null', 'undefined',
   'me', 'u', 'community', 'login', 'library', 'store', 'music', 'visuals',
   'social', 'download', 'api', 'unlock',
 ]);

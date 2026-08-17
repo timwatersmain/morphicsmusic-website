@@ -36,12 +36,17 @@ describe('isValidDisplayName', () => {
 });
 
 describe('isBlockedName', () => {
-  it.each(['admin', 'Admin', 'ADMIN', 'morphics', 'moderator', 'support'])(
+  it.each(['admin', 'Admin', 'ADMIN', 'official', 'moderator', 'support'])(
     'blocks impersonation: %s', n => expect(isBlockedName(n)).toBe(true));
   it('blocks reserved route words so handles cannot shadow pages', () => {
     expect(isBlockedName('me')).toBe(true);
     expect(isBlockedName('u')).toBe(true);
   });
+  it("allows the owner's own name — it was only ever reserved against fans", () => {
+    expect(isBlockedName('morphics')).toBe(false);
+    expect(isBlockedName('morphicsmusic')).toBe(false);
+  });
+
   it('allows an ordinary name', () => {
     expect(isBlockedName('Ana Vex')).toBe(false);
   });

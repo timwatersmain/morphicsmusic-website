@@ -94,7 +94,7 @@ describe('POST /api/auth/signup validation', () => {
   // someone later "helpfully" wires it in here.
   it('rejects a blocked username even when the submitted email is the admin email', async () => {
     env.ADMIN_EMAILS = 'e2@example.com';
-    const res = await signup({ username: 'morphics', email: 'e2@example.com', password: 'longenoughpw1', confirm: 'longenoughpw1' });
+    const res = await signup({ username: 'moderator', email: 'e2@example.com', password: 'longenoughpw1', confirm: 'longenoughpw1' });
     expect(res.status).toBe(400);
   });
 });
@@ -453,7 +453,7 @@ describe('POST /api/auth/set-password (C3, C4)', () => {
       const cookie = cookieValue(loginRes)!;
 
       const res = await setPassword(
-        { username: 'morphics', password: 'anotherpassword1', confirm: 'anotherpassword1', current_password: 'originalpassword1' },
+        { username: 'moderator', password: 'anotherpassword1', confirm: 'anotherpassword1', current_password: 'originalpassword1' },
         cookie,
       );
       expect(res.status).toBe(400);
@@ -468,12 +468,12 @@ describe('POST /api/auth/set-password (C3, C4)', () => {
       const cookie = cookieValue(loginRes)!;
 
       const res = await setPassword(
-        { username: 'morphics', password: 'anotherpassword1', confirm: 'anotherpassword1', current_password: 'originalpassword1' },
+        { username: 'moderator', password: 'anotherpassword1', confirm: 'anotherpassword1', current_password: 'originalpassword1' },
         cookie,
       );
       expect(res.status).toBe(200);
 
-      const login = await passwordLogin({ identifier: 'morphics', password: 'anotherpassword1' });
+      const login = await passwordLogin({ identifier: 'moderator', password: 'anotherpassword1' });
       expect(login.status).toBe(200);
     });
 
@@ -512,7 +512,7 @@ describe('POST /api/auth/set-password (C3, C4)', () => {
       const cookie = cookieValue(loginRes)!;
 
       const res = await setPassword(
-        { username: 'morphics', password: 'anotherpassword1', confirm: 'anotherpassword1', current_password: 'originalpassword1' },
+        { username: 'moderator', password: 'anotherpassword1', confirm: 'anotherpassword1', current_password: 'originalpassword1' },
         cookie,
       );
       expect(res.status).toBe(400);

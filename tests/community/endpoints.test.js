@@ -420,7 +420,7 @@ describe('POST /api/community/update — admin name bypass', () => {
       request: req('https://morphicsmusic.com/api/community/update', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Cookie: cookie },
-        body: JSON.stringify({ display_name: 'morphics' }),
+        body: JSON.stringify({ display_name: 'moderator' }),
       }),
       env,
     });
@@ -431,7 +431,7 @@ describe('POST /api/community/update — admin name bypass', () => {
       request: req('https://morphicsmusic.com/api/community/update', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Cookie: cookie },
-        body: JSON.stringify({ handle: 'morphics' }),
+        body: JSON.stringify({ handle: 'moderator' }),
       }),
       env,
     });
@@ -529,7 +529,7 @@ describe('POST /api/community/update — admin name bypass', () => {
       request: req('https://morphicsmusic.com/api/community/update', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Cookie: cookie },
-        body: JSON.stringify({ display_name: 'morphics' }),
+        body: JSON.stringify({ display_name: 'moderator' }),
       }),
       env,
     });
