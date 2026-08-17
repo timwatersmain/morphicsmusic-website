@@ -27,6 +27,7 @@
 
 import { COLOURWAYS } from '../../functions/_lib/community/colourways';
 import { glyphLetterFor } from '../../functions/_lib/community/glyph';
+import { GLYPH_OFFSETS } from './avatar-glyph-offsets.generated';
 
 export { glyphLetterFor };
 
@@ -56,20 +57,63 @@ const safeImg = s => {
 // instead of eating into the letterform — text-stroke straddles the fill
 // edge on both sides and visibly thickens/blurs the glyph at small sizes,
 // and it is Safari-only without a duplicated non-prefixed fallback anyway.
+// The outline used to scale with font size (0.14 * fontSize, 2px floor) —
+// that was ~4px raw (≈2px visible, see below) at a 40px avatar's fontSize,
+// but ~8px raw (≈4px visible) at 84px, which read as heavy and closed up
+// the glyph's counters. An outline is a legibility device: it needs to
+// separate the mark from a busy photo behind it, which is a property of
+// RENDERED pixels, not of the glyph's size. So it is now a size-INDEPENDENT
+// constant, clamped only so it can't vanish on a vanishingly small disc or
+// swallow one entirely.
+//
+// paint-order="stroke fill" paints the fill over the inner half of the
+// stroke, so only the outer ~half of stroke-width actually shows as a ring
+// — a raw width of 4 renders as a ~2px visible separation, which is what
+// the original 40px case measured as the minimum that survives
+// anti-aliasing (see the incident this replaced: 0.06x measured to ~1px
+// and disappeared entirely). SVG stroke-width is in the viewBox's user
+// units, which the browser maps to the element's CSS pixel box (viewBox is
+// `0 0 sizePx sizePx` at width/height 100%) and then rasterises at the
+// display's native resolution — so this number is already a CSS-pixel
+// width and reads crisp on a 2x/3x display without any extra DPR math.
+const STROKE_RAW_PX = 4; // ≈2px visible ring after paint-order halving
+function strokeWidthFor(sizePx) {
+  return Math.max(1, Math.min(STROKE_RAW_PX, sizePx * 0.25));
+}
+
 function glyphSvg(letter, { fill, stroke, sizePx, scale }) {
   const fontSize = Math.round(sizePx * scale);
-  // paint-order="stroke fill" paints the fill OVER the inner half of the
-  // stroke, so only the outer ~half of stroke-width actually shows as a
-  // ring — a 0.06 multiplier measured that way to ~1px at 40px, and
-  // anti-aliasing ate it entirely (verified: it was indistinguishable from
-  // the plain AA edge in a screenshot). 0.14 with a 2px floor keeps a
-  // visible outline surviving at 40px without visibly fattening the
-  // letterform at 84px+.
   const strokeAttrs = stroke
-    ? ` stroke="${stroke}" stroke-width="${Math.max(2, Math.round(fontSize * 0.14))}" paint-order="stroke fill" stroke-linejoin="round"`
+    ? ` stroke="${stroke}" stroke-width="${strokeWidthFor(sizePx)}" paint-order="stroke fill" stroke-linejoin="round"`
     : '';
+  // Per-letter ink-centring (see avatar-glyph-offsets.generated.js for the
+  // full derivation and why it's split like this). Both numbers are
+  // fractions of fontSize, so the correction scales correctly whether this
+  // is a 40px tier-1 glyph (scale 0.6) or an 84px tier-4 overlay glyph
+  // (scale 0.72) — it always tracks the ACTUAL rendered font size, never
+  // the disc size.
+  //
+  // Horizontal: text-anchor="middle" (kept — it's well-behaved on this
+  // axis) plus a small dx delta correcting advance-box-centre vs
+  // ink-centre.
+  //
+  // Vertical: dominant-baseline="middle" is deliberately NOT used, even
+  // though this specific font/engine combination centres reasonably well
+  // with it. "middle" is one of the least consistently implemented SVG/CSS
+  // text properties — during this fix, testing it against a font that
+  // FAILED to load (a bug in the verification harness, not this file)
+  // showed it can resolve per glyph-identity rather than actual ink, up to
+  // several px off at 84px, entirely independent of the font's own
+  // outlines. Rather than depend on however any given engine happens to
+  // resolve "middle" for Morphian specifically, y is computed directly
+  // from the font's own metrics against the default (alphabetic) baseline
+  // — a precisely specified SVG behaviour with no engine judgment call
+  // left in it.
+  const off = GLYPH_OFFSETS[letter] || { dx: 0, dy: 0 };
+  const dx = (off.dx * fontSize).toFixed(2);
+  const y = (sizePx / 2 + off.dy * fontSize).toFixed(2);
   return `<svg viewBox="0 0 ${sizePx} ${sizePx}" width="100%" height="100%" aria-hidden="true" focusable="false">` +
-    `<text x="50%" y="52%" text-anchor="middle" dominant-baseline="middle" font-family="Morphian" font-size="${fontSize}"` +
+    `<text x="50%" y="${y}" dx="${dx}" text-anchor="middle" font-family="Morphian" font-size="${fontSize}"` +
     ` fill="${fill}"${strokeAttrs}>${esc(letter)}</text></svg>`;
 }
 

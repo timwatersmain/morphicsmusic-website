@@ -115,3 +115,42 @@ describe('glyphLetterFor is re-exported for callers to derive a fan\'s letter fr
     expect(glyphLetterFor('skratchwax')).toBe('s');
   });
 });
+
+describe('glyph_overlay stroke width is constant in rendered pixels, not proportional to disc size', () => {
+  // Regression for the "too-thick outline at 84px" fix. The OLD formula
+  // (0.14 * fontSize, 2px floor) gave stroke-width 4 at a 40px avatar's
+  // fontSize but 8 at 84px — doubling with size, which is exactly the bug:
+  // a legibility device that gets heavier as the avatar gets bigger, when
+  // it should stay ~constant so it neither vanishes nor dominates.
+  const strokeWidth = (html) => Number(html.match(/stroke-width="([\d.]+)"/)[1]);
+
+  it('is identical at 40px and 84px (both land in the normal, non-clamped range)', () => {
+    const at40 = avatarHtml({ style: 'glyph_overlay', colourway: 'cyan', art_path: '/x.webp' }, 'm', 40);
+    const at84 = avatarHtml({ style: 'glyph_overlay', colourway: 'cyan', art_path: '/x.webp' }, 'm', 84);
+    expect(strokeWidth(at40)).toBe(strokeWidth(at84));
+  });
+
+  it('is thinner at 84px than the old size-proportional formula would have produced (8)', () => {
+    const at84 = avatarHtml({ style: 'glyph_overlay', colourway: 'cyan', art_path: '/x.webp' }, 'm', 84);
+    expect(strokeWidth(at84)).toBeLessThan(8);
+  });
+
+  it('matches the old formula\'s value at 40px (4) — the 40px legibility case this was built around is unchanged', () => {
+    const at40 = avatarHtml({ style: 'glyph_overlay', colourway: 'cyan', art_path: '/x.webp' }, 'm', 40);
+    expect(strokeWidth(at40)).toBe(4);
+  });
+
+  it('never vanishes to 0 or dominates the disc on an extreme (very small) size', () => {
+    const tiny = avatarHtml({ style: 'glyph_overlay', colourway: 'cyan', art_path: '/x.webp' }, 'm', 8);
+    const w = strokeWidth(tiny);
+    expect(w).toBeGreaterThan(0);
+    expect(w).toBeLessThanOrEqual(8 * 0.25);
+  });
+
+  it('tiers 1-2 (glyph_solid/glyph_inverted) have no stroke at all — unaffected by this fix', () => {
+    const solid = avatarHtml({ style: 'glyph_solid', colourway: 'cyan' }, 'm', 84);
+    const inverted = avatarHtml({ style: 'glyph_inverted', colourway: 'mint' }, 'm', 84);
+    expect(solid).not.toContain('stroke-width');
+    expect(inverted).not.toContain('stroke-width');
+  });
+});
