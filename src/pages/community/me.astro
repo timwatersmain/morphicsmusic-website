@@ -46,7 +46,11 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 
       <section class="border border-white/5 p-6">
         <div class="flex items-center gap-6 mb-6">
-          <div id="me-equipped"></div>
+          <!-- The creature (pixel-sprite) render is this fan's primary
+               avatar, replacing the glyph medallion — see creature-avatar.js.
+               The tier-ladder avatar picker further down the page is a
+               separate collectible system and is untouched by this. -->
+          <div id="me-creature"></div>
           <div class="flex-1">
             <label class="block font-mono text-[10px] text-white/40 uppercase tracking-widest mb-2">Display name</label>
             <div class="flex gap-2">
@@ -83,6 +87,17 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
         </p>
       </section>
 
+      <!-- Colourway picker: the one part of the creature a fan actually
+           chooses (species/sprite refs are fixed at signup). -->
+      <section class="border border-white/5 p-6">
+        <div class="flex items-baseline gap-3 mb-4">
+          <span class="font-mono text-xs text-secondary uppercase">Creature colour</span>
+          <div class="h-[1px] flex-1 bg-outline-variant/30"></div>
+        </div>
+        <ul id="me-colourways" class="flex flex-wrap gap-3"></ul>
+        <p id="me-colourway-status" class="font-mono text-[10px] text-white/30 mt-3 h-4"></p>
+      </section>
+
       <!-- Populated from /api/library — the same endpoint /library uses — so
            a fan's purchases are reachable from their profile without a
            second API. Hidden until we know there's something (or nothing)
@@ -96,6 +111,9 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 
   <script>
     import { avatarHtml } from '../../scripts/avatar.js';
+    import { creatureAvatarHtml } from '../../scripts/sprites/creature-avatar.js';
+    import { initCreatureCanvases } from '../../scripts/sprites/renderer.js';
+    import { COLORWAYS } from '../../scripts/sprites/vendor/colorways.js';
 
     const loading = document.getElementById('me-loading')!;
     const signin = document.getElementById('me-signin')!;
@@ -105,7 +123,9 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
     const handleEl = document.getElementById('me-handle')!;
     const unlockedBanner = document.getElementById('me-unlocked-banner')!;
     const unlockedList = document.getElementById('me-unlocked-list')!;
-    const equippedEl = document.getElementById('me-equipped')!;
+    const creatureEl = document.getElementById('me-creature')!;
+    const colourwaysEl = document.getElementById('me-colourways')!;
+    const colourwayStatus = document.getElementById('me-colourway-status')!;
     const nameInput = document.getElementById('me-name-input') as HTMLInputElement;
     const nameSave = document.getElementById('me-name-save') as HTMLButtonElement;
     const nameStatus = document.getElementById('me-name-status')!;
@@ -142,10 +162,10 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
     let myGlyphLetter = 'm';
 
     // 84px — the picker's showcase size, big enough to tell a colourway and
-    // a stroked tier-4 glyph apart in a 6-wide grid. 112px for the single
-    // large equipped avatar up top.
+    // a stroked tier-4 glyph apart in a 6-wide grid. The single large hero
+    // slot up top now shows the creature (see CREATURE_SIZE below), not a
+    // tier avatar — equipping one still highlights it in this grid.
     const TILE_SIZE = 84;
-    const EQUIPPED_SIZE = 112;
 
     // This is the reward moment the whole feature exists for: `newly_unlocked`
     // is a list of avatar ids granted THIS load (computed server-side in
@@ -171,8 +191,53 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 
     let currentEquippedId: string | null = null;
 
-    function renderEquipped(avatar: any) {
-      equippedEl.innerHTML = avatarHtml(avatar, myGlyphLetter, EQUIPPED_SIZE);
+    // 96px — an exact 3x multiple of the sprite's 32px grid, so the render
+    // fills the frame edge to edge (see creature-avatar.js's scale choice).
+    const CREATURE_SIZE = 96;
+
+    function renderCreature(creature: any) {
+      creatureEl.innerHTML = creatureAvatarHtml(creature, CREATURE_SIZE);
+      initCreatureCanvases(creatureEl);
+    }
+
+    let currentColourway: string | null = null;
+
+    function renderColourwayPicker(creature: any) {
+      currentColourway = (creature && creature.colourway) || null;
+      colourwaysEl.innerHTML = COLORWAYS.map((cw: any) => `
+        <li>
+          <button
+            type="button"
+            data-colourway="${cw.id}"
+            title="${cw.name}"
+            class="colourway-pick w-8 h-8 rounded-full border-2 transition-all ${cw.id === currentColourway ? 'border-primary scale-110' : 'border-white/10 hover:border-white/40'}"
+            style="background:${cw.p[1]}"
+          ></button>
+        </li>
+      `).join('');
+      colourwaysEl.querySelectorAll<HTMLButtonElement>('.colourway-pick').forEach(btn => {
+        btn.addEventListener('click', () => setColourway(btn.dataset.colourway!));
+      });
+    }
+
+    function setColourway(colourway: string) {
+      if (colourway === currentColourway) return;
+      colourwayStatus.textContent = 'Saving…';
+      fetch('/api/community/update', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ colourway }),
+      })
+        .then(async r => {
+          if (!r.ok) {
+            const body = await r.json().catch(() => ({}));
+            throw new Error(body.error || 'save failed');
+          }
+          colourwayStatus.textContent = 'Saved.';
+          return load();
+        })
+        .catch(e => { colourwayStatus.textContent = 'Could not save: ' + e.message; });
     }
 
     // Tier 1 is always available (the "six options" every fan gets on day
@@ -355,14 +420,8 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
           }
           fanSinceEl.textContent = 'Morphics since ' + fmtDate(profile.fan_since);
           countEl.textContent = String(profile.collection_count);
-          // profile.avatar (toPublicProfile()'s shape) and `avatars` items
-          // now carry the same full recipe fields, so either would render
-          // correctly; prefer the `avatars` lookup anyway since it also
-          // carries `hint`/`unlocked` this page uses elsewhere.
-          const equippedFull = profile.avatar
-            ? avatars.find((a: any) => a.id === profile.avatar.id) || profile.avatar
-            : null;
-          renderEquipped(equippedFull);
+          renderCreature(profile.creature);
+          renderColourwayPicker(profile.creature);
           renderCatalogue(avatars);
           renderNewlyUnlocked(newly_unlocked, avatars);
           loadLibrary();

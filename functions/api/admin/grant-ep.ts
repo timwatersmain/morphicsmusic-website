@@ -1,10 +1,11 @@
 // POST /api/admin/grant-ep   { email, amount }
 //
 // Adds `amount` EP to a fan directly (on top of whatever computeEp would
-// give them from purchases/tenure/engagement) and re-runs the same stage/
-// hatch decision the natural path uses (see grantEp in creature.ts) — so an
-// admin grant that pushes a fan out of 'egg' hatches them exactly like a
-// real visit would, with the same permanent, deterministic species pick.
+// give them from purchases/tenure/engagement) and re-runs the same stage
+// decision the natural path uses (see grantEp in creature.ts) — so an admin
+// grant that pushes a fan out of 'egg' advances them exactly like a real
+// visit would. Sprite refs/colourway were already fixed at profile creation
+// and are untouched here.
 //
 // A caller who is not a listed admin gets the same 404 an unknown route
 // would — see requireAdmin/adminNotFound in _lib/admin.ts. Never a 403,
@@ -12,7 +13,7 @@
 
 import { corsHandler, preflight } from '../../_lib/cors';
 import { requireAdmin, adminNotFound, type AdminEnv } from '../../_lib/admin';
-import { getProfileByEmail, getSpeciesCatalogue, saveCreatureProgress } from '../../_lib/community/repo';
+import { getProfileByEmail, saveCreatureProgress } from '../../_lib/community/repo';
 import { grantEp } from '../../_lib/community/creature';
 
 interface Env extends AdminEnv {
@@ -43,17 +44,16 @@ export const onRequestPost: PagesFunction<Env> = corsHandler<Env>(
     if (!profile) return json({ error: 'no fan profile for that email' }, 404);
 
     const now = Math.floor(Date.now() / 1000);
-    const speciesRoster = await getSpeciesCatalogue(env.GATES);
-    const update = await grantEp(profile, amount, speciesRoster, now);
+    const update = grantEp(profile, amount);
+    const hatchedAt = update.justHatched ? now : profile.hatched_at;
     await saveCreatureProgress(env.GATES, profile.id, {
-      ep: update.ep, stage: update.stage, species: update.species, hatchedAt: update.hatchedAt,
+      ep: update.ep, stage: update.stage, hatchedAt,
     });
 
     return json({
       ok: true,
       ep: update.ep,
       stage: update.stage,
-      species: update.species,
       just_hatched: update.justHatched,
     });
   },

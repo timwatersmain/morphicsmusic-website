@@ -39,8 +39,9 @@
     "d1:seed:avatar-tiers": "npx --yes wrangler d1 execute GATES --config tools/d1/wrangler.toml --remote --file=tools/d1/seed-avatar-tiers.sql",
     "d1:rollback:creatures:local": "npx --yes wrangler d1 execute GATES --config tools/d1/wrangler.toml --local --file=migrations/down/0006_creatures.down.sql",
     "d1:rollback:creatures": "npx --yes wrangler d1 execute GATES --config tools/d1/wrangler.toml --remote --file=migrations/down/0006_creatures.down.sql",
-    "d1:seed:creature-species:local": "npx --yes wrangler d1 execute GATES --config tools/d1/wrangler.toml --local --file=tools/d1/seed-creature-species.sql",
-    "d1:seed:creature-species": "npx --yes wrangler d1 execute GATES --config tools/d1/wrangler.toml --remote --file=tools/d1/seed-creature-species.sql",
+    "d1:rollback:sprites:local": "npx --yes wrangler d1 execute GATES --config tools/d1/wrangler.toml --local --file=migrations/down/0007_sprites.down.sql",
+    "d1:rollback:sprites": "npx --yes wrangler d1 execute GATES --config tools/d1/wrangler.toml --remote --file=migrations/down/0007_sprites.down.sql",
+    "build:sprites": "node scripts/build-sprite-assets.mjs",
     "rebuild:fans": "node scripts/rebuild-fan-projection.mjs"
   },
   "dependencies": {

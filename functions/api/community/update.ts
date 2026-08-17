@@ -14,10 +14,11 @@ import { rateLimit, rateLimitedJson, clientIp } from '../../_lib/ratelimit';
 import { requireFan, unauthorized, type CommunityEnv } from '../../_lib/community/session';
 import {
   getProfileByEmail, getProfileByHandle, getUnlockedAvatarIds, getAvatarById, updateProfile,
-  canChangeHandle, nextHandleChangeAt,
+  canChangeHandle, nextHandleChangeAt, setCreatureColourway,
 } from '../../_lib/community/repo';
 import { isValidDisplayName, isBlockedName, slugifyHandle } from '../../_lib/community/handle';
 import { requireAdmin } from '../../_lib/admin';
+import { isValidColourway } from '../../_lib/community/sprites';
 
 export const onRequestOptions: PagesFunction<CommunityEnv> = async ({ request }) => preflight(request);
 
@@ -29,7 +30,7 @@ export const onRequestPost: PagesFunction<CommunityEnv> = corsHandler<CommunityE
     const email = await requireFan(request, env);
     if (!email) return unauthorized();
 
-    let body: { display_name?: string; handle?: string; equipped_avatar_id?: string };
+    let body: { display_name?: string; handle?: string; equipped_avatar_id?: string; colourway?: string };
     try { body = await request.json(); } catch { return json({ error: 'invalid json' }, 400); }
 
     const profile = await getProfileByEmail(env.GATES, email);
@@ -98,6 +99,16 @@ export const onRequestPost: PagesFunction<CommunityEnv> = corsHandler<CommunityE
         }
         fields.equippedAvatarId = wanted;
       }
+    }
+
+    if (body.colourway !== undefined) {
+      // Species/sprites are fate (fixed at profile creation, see
+      // ensureProfile in repo.ts); colourway is the one part of the
+      // creature the fan actually chooses — see setCreatureColourway. The
+      // 12 valid ids come from the vendored export (sprites.ts's
+      // isValidColourway), never a hand-maintained list here.
+      if (!isValidColourway(body.colourway)) return json({ error: 'invalid_colourway' }, 400);
+      await setCreatureColourway(env.GATES, profile.id, body.colourway);
     }
 
     await updateProfile(env.GATES, profile.id, fields);

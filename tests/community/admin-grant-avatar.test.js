@@ -23,6 +23,8 @@ const MIGRATION = readFileSync(join(root, 'migrations/0002_fan_profiles.sql'), '
 const MIGRATION3 = readFileSync(join(root, 'migrations/0003_handle_locked.sql'), 'utf8');
 const MIGRATION4 = readFileSync(join(root, 'migrations/0004_handle_cooldown.sql'), 'utf8');
 const MIGRATION5 = readFileSync(join(root, 'migrations/0005_avatar_tiers.sql'), 'utf8');
+const MIGRATION6 = readFileSync(join(root, 'migrations/0006_creatures.sql'), 'utf8');
+const MIGRATION7 = readFileSync(join(root, 'migrations/0007_sprites.sql'), 'utf8');
 
 const AUTH_SECRET = 'test-only-secret-not-real';
 const ADMIN_EMAIL = 'admin@morphicsmusic.com';
@@ -47,6 +49,8 @@ beforeEach(() => {
   raw.exec(MIGRATION3);
   raw.exec(MIGRATION4);
   raw.exec(MIGRATION5);
+  raw.exec(MIGRATION6);
+  raw.exec(MIGRATION7);
   raw.exec(`INSERT INTO avatar_catalogue
     (id, kind, release_slug, name, art_path, unlock_rule, hint, sort_order, style, colourway, artwork_key, tier)
     VALUES ('${TIER3_ID}', 'special', NULL, 'Duotone Cyan', '/v.webp', '{"type":"manual"}', 'gift', 0, 'duotone', 'cyan', 'dscf3589', 3)`);

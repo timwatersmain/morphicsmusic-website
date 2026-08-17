@@ -1,9 +1,10 @@
 // POST /api/admin/force-hatch   { email }
 //
-// Forces a fan out of 'egg' regardless of current EP — see forceHatch in
-// creature.ts. Still refuses to hatch if the species roster has no active
-// rows (there would be nothing to assign), and is a no-op — not an error —
-// for a fan who has already hatched, since hatching is permanent.
+// Forces a fan's stage out of 'egg' regardless of current EP — see
+// forceHatch in creature.ts. A no-op — not an error — for a fan already past
+// 'egg', since stage never regresses. Sprite refs/colourway are untouched:
+// they were already assigned at profile creation (see sprites.ts), so there
+// is nothing left for this endpoint to assign — it only ever moves `stage`.
 //
 // A caller who is not a listed admin gets the same 404 an unknown route
 // would — see requireAdmin/adminNotFound in _lib/admin.ts. Never a 403,
@@ -11,7 +12,7 @@
 
 import { corsHandler, preflight } from '../../_lib/cors';
 import { requireAdmin, adminNotFound, type AdminEnv } from '../../_lib/admin';
-import { getProfileByEmail, getSpeciesCatalogue, saveCreatureProgress } from '../../_lib/community/repo';
+import { getProfileByEmail, saveCreatureProgress } from '../../_lib/community/repo';
 import { forceHatch } from '../../_lib/community/creature';
 
 interface Env extends AdminEnv {
@@ -39,21 +40,16 @@ export const onRequestPost: PagesFunction<Env> = corsHandler<Env>(
     if (!profile) return json({ error: 'no fan profile for that email' }, 404);
 
     const now = Math.floor(Date.now() / 1000);
-    const speciesRoster = await getSpeciesCatalogue(env.GATES);
-    const update = await forceHatch(profile, speciesRoster, now);
+    const update = forceHatch(profile);
+    const hatchedAt = update.justHatched ? now : profile.hatched_at;
     await saveCreatureProgress(env.GATES, profile.id, {
-      ep: update.ep, stage: update.stage, species: update.species, hatchedAt: update.hatchedAt,
+      ep: update.ep, stage: update.stage, hatchedAt,
     });
-
-    if (!update.species) {
-      return json({ ok: false, error: 'no active species in creature_species — seed the roster first' }, 409);
-    }
 
     return json({
       ok: true,
       ep: update.ep,
       stage: update.stage,
-      species: update.species,
       just_hatched: update.justHatched,
     });
   },

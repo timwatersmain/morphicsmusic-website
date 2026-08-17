@@ -10,7 +10,6 @@ import { rateLimit, rateLimitedJson, clientIp } from '../../_lib/ratelimit';
 import { requireFan, unauthorized, type CommunityEnv } from '../../_lib/community/session';
 import {
   getProfileByHandle, getUnlockedAvatarIds, getCatalogue, getRarity, toPublicProfile,
-  getSpeciesById,
 } from '../../_lib/community/repo';
 import { glyphLetterForEmail } from '../../_lib/community/glyph';
 
@@ -45,9 +44,6 @@ export const onRequestGet: PagesFunction<CommunityEnv> = corsHandler<CommunityEn
     // on the equipped avatar. Derived from their private username (never
     // sent itself); see glyphLetterForEmail's doc comment.
     const glyph = await glyphLetterForEmail(env, profile.email);
-    // Single-row lookup — this endpoint returns exactly one fan, unlike
-    // directory.ts, so there is no per-row-in-a-list cost to worry about here.
-    const speciesRow = profile.species ? await getSpeciesById(env.GATES, profile.species) : null;
 
     // Only what this fan HAS. A visitor does not get to see somebody else's
     // locked list — that is the owner's to-do list, not a public fact.
@@ -63,7 +59,7 @@ export const onRequestGet: PagesFunction<CommunityEnv> = corsHandler<CommunityEn
       }));
 
     return new Response(JSON.stringify({
-      profile: { ...toPublicProfile(profile, equipped, glyph, speciesRow), is_self: false },
+      profile: { ...toPublicProfile(profile, equipped, glyph), is_self: false },
       shelf,
     }), { headers: { 'Content-Type': 'application/json' } });
   },

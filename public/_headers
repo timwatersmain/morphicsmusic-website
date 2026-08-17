@@ -68,3 +68,13 @@
 # glob until those fonts are hashed too.
 /fonts/MaterialSymbols-Subset.*
   Cache-Control: public, max-age=31536000, immutable
+
+# scripts/build-sprite-assets.mjs content-hashes the vendored sprite export
+# (src/scripts/sprites/vendor/sprites-kept.json, 613KB) into this filename —
+# same reasoning as the icon font rule above: a changed file gets a new URL,
+# so pinning it forever is safe, and this glob is SCOPED TO THE HASHED FILE
+# ON PURPOSE. A blanket /sprites/* rule would freeze stale bytes in every
+# returning visitor's browser after the next sprite export, exactly the bug
+# class the icon-font rule above exists to avoid — do not widen this glob.
+/sprites/sprites.*.json
+  Cache-Control: public, max-age=31536000, immutable

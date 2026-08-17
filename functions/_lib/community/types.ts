@@ -24,26 +24,32 @@ export interface FanProfileRow {
   /**
    * NULL means "egg" — read that way by toPublicProfile, not defaulted by
    * the schema, so a pre-migration row never needs a backfill write to be
-   * correct. See functions/_lib/community/ep.ts's CreatureStage.
+   * correct. See functions/_lib/community/ep.ts's CreatureStage. Values are
+   * the sprite export's own names (egg/grub/pupa/adult) as of migration
+   * 0007 — see that migration's header comment for the rename from the
+   * pre-launch placeholder names.
    */
-  stage: 'egg' | 'larva' | 'chrysalis' | 'emergent' | null;
-  /** Assigned once at hatch, permanent thereafter. NULL pre-hatch. */
-  species: string | null;
-  /** The one part of the creature the fan chooses. Named key into COLOURWAYS. */
-  creature_colourway: string | null;
-  /** Unix seconds of the hatch moment, or NULL pre-hatch. */
+  stage: 'egg' | 'grub' | 'pupa' | 'adult' | null;
+  /**
+   * One sprite ref per stage (e.g. "A147"), assigned once at profile
+   * creation and permanent thereafter — see
+   * functions/_lib/community/sprites.ts. NULL only for a fan whose profile
+   * predates migration 0007 and hasn't had a lazy backfill run yet (see
+   * repo.ts's ensureSpriteAssignment).
+   */
+  sprite_egg: string | null;
+  sprite_grub: string | null;
+  sprite_pupa: string | null;
+  sprite_adult: string | null;
+  /**
+   * The one part of the creature the fan chooses. Named key into the
+   * vendored COLORWAYS (src/scripts/sprites/vendor/colorways.js), assigned
+   * deterministically at creation like the sprite refs but changeable later
+   * — see setCreatureColourway.
+   */
+  colourway: string | null;
+  /** Unix seconds of the moment stage first left 'egg', or NULL pre-hatch. */
   hatched_at: number | null;
-}
-
-/** A row from the creature_species catalogue (migration 0006). */
-export interface CreatureSpeciesRow {
-  id: string;
-  name: string | null;
-  rarity_weight: number;
-  /** Art for a given stage resolves to /images/creatures/<art_prefix>-<stage>.webp. */
-  art_prefix: string;
-  /** 0/1 — eligible for NEW assignments. Never affects an already-assigned fan. */
-  active: number;
 }
 
 export interface AvatarCatalogueRow {
@@ -144,20 +150,24 @@ export interface PublicAvatar {
 
 /**
  * The creature shape sent to every client — same "one shape, three
- * endpoints" idea as PublicAvatar. `art_path` is null while the fan is
- * still an egg (the UI falls back to `avatar`, the existing glyph render —
- * see the module doc comment on ep.ts) or if species assignment has not
- * happened yet for any reason. `next_stage_ep` is null once `stage` is
- * 'emergent' — there is nowhere further to grow.
+ * endpoints" idea as PublicAvatar. `sprite_ref` is the ref for the fan's
+ * CURRENT stage only (looked up from the per-stage columns on
+ * FanProfileRow server-side — see toPublicProfile) since that's the only one
+ * the renderer draws; it is null only for a legacy row that hasn't had a
+ * sprite assignment backfilled yet (see repo.ts's ensureSpriteAssignment).
+ * `stage_xp` is 0..100, the percentage through the current stage's EP band
+ * (see ep.ts's stageXp) — this is what src/scripts/sprites feeds into the
+ * vendored recipes.js's frame() so the art responds continuously to
+ * progress, not just to stage changes. `next_stage_ep` is null once `stage`
+ * is 'adult' — there is nowhere further to grow.
  */
 export interface PublicCreature {
-  stage: 'egg' | 'larva' | 'chrysalis' | 'emergent';
-  species: string | null;
-  species_name: string | null;
+  stage: 'egg' | 'grub' | 'pupa' | 'adult';
+  sprite_ref: string | null;
   colourway: string | null;
   ep: number;
+  stage_xp: number;
   next_stage_ep: number | null;
-  art_path: string | null;
 }
 
 /** Shape returned to clients. Note the absence of `email`. */

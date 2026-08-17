@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  computeEp, stageForEp, nextStageThreshold, resolveStage, EP_WEIGHTS, STAGE_THRESHOLDS,
+  computeEp, stageForEp, nextStageThreshold, resolveStage, stageXp, EP_WEIGHTS, STAGE_THRESHOLDS,
 } from '../../functions/_lib/community/ep';
 
 describe('computeEp', () => {
@@ -50,50 +50,50 @@ describe('stageForEp / thresholds', () => {
     expect(stageForEp(0)).toBe('egg');
   });
 
-  it('boundary just below larva threshold is still egg', () => {
-    expect(stageForEp(STAGE_THRESHOLDS.larva - 1)).toBe('egg');
+  it('boundary just below grub threshold is still egg', () => {
+    expect(stageForEp(STAGE_THRESHOLDS.grub - 1)).toBe('egg');
   });
 
-  it('boundary exactly at larva threshold is larva', () => {
-    expect(stageForEp(STAGE_THRESHOLDS.larva)).toBe('larva');
+  it('boundary exactly at grub threshold is grub', () => {
+    expect(stageForEp(STAGE_THRESHOLDS.grub)).toBe('grub');
   });
 
-  it('boundary just below chrysalis threshold is still larva', () => {
-    expect(stageForEp(STAGE_THRESHOLDS.chrysalis - 1)).toBe('larva');
+  it('boundary just below pupa threshold is still grub', () => {
+    expect(stageForEp(STAGE_THRESHOLDS.pupa - 1)).toBe('grub');
   });
 
-  it('boundary exactly at chrysalis threshold is chrysalis', () => {
-    expect(stageForEp(STAGE_THRESHOLDS.chrysalis)).toBe('chrysalis');
+  it('boundary exactly at pupa threshold is pupa', () => {
+    expect(stageForEp(STAGE_THRESHOLDS.pupa)).toBe('pupa');
   });
 
-  it('boundary just below emergent threshold is still chrysalis', () => {
-    expect(stageForEp(STAGE_THRESHOLDS.emergent - 1)).toBe('chrysalis');
+  it('boundary just below adult threshold is still pupa', () => {
+    expect(stageForEp(STAGE_THRESHOLDS.adult - 1)).toBe('pupa');
   });
 
-  it('boundary exactly at emergent threshold is emergent', () => {
-    expect(stageForEp(STAGE_THRESHOLDS.emergent)).toBe('emergent');
+  it('boundary exactly at adult threshold is adult', () => {
+    expect(stageForEp(STAGE_THRESHOLDS.adult)).toBe('adult');
   });
 
-  it('stays emergent well past the threshold', () => {
-    expect(stageForEp(STAGE_THRESHOLDS.emergent * 10)).toBe('emergent');
+  it('stays adult well past the threshold', () => {
+    expect(stageForEp(STAGE_THRESHOLDS.adult * 10)).toBe('adult');
   });
 });
 
 describe('nextStageThreshold', () => {
-  it('egg -> larva threshold', () => {
-    expect(nextStageThreshold('egg')).toBe(STAGE_THRESHOLDS.larva);
+  it('egg -> grub threshold', () => {
+    expect(nextStageThreshold('egg')).toBe(STAGE_THRESHOLDS.grub);
   });
 
-  it('larva -> chrysalis threshold', () => {
-    expect(nextStageThreshold('larva')).toBe(STAGE_THRESHOLDS.chrysalis);
+  it('grub -> pupa threshold', () => {
+    expect(nextStageThreshold('grub')).toBe(STAGE_THRESHOLDS.pupa);
   });
 
-  it('chrysalis -> emergent threshold', () => {
-    expect(nextStageThreshold('chrysalis')).toBe(STAGE_THRESHOLDS.emergent);
+  it('pupa -> adult threshold', () => {
+    expect(nextStageThreshold('pupa')).toBe(STAGE_THRESHOLDS.adult);
   });
 
-  it('emergent has no further threshold', () => {
-    expect(nextStageThreshold('emergent')).toBeNull();
+  it('adult has no further threshold', () => {
+    expect(nextStageThreshold('adult')).toBeNull();
   });
 });
 
@@ -103,21 +103,59 @@ describe('resolveStage — never regresses', () => {
   });
 
   it('advances a fan from their stored stage when EP now justifies more', () => {
-    expect(resolveStage(STAGE_THRESHOLDS.chrysalis, 'larva')).toBe('chrysalis');
+    expect(resolveStage(STAGE_THRESHOLDS.pupa, 'grub')).toBe('pupa');
   });
 
   it('never demotes when EP drops below what the current stage would imply', () => {
     // e.g. a weight tuned down later, or EP computed differently — the fan
-    // already earned 'chrysalis' and must keep it even if today's EP alone
-    // would only justify 'larva'.
-    expect(resolveStage(STAGE_THRESHOLDS.larva, 'chrysalis')).toBe('chrysalis');
+    // already earned 'pupa' and must keep it even if today's EP alone
+    // would only justify 'grub'.
+    expect(resolveStage(STAGE_THRESHOLDS.grub, 'pupa')).toBe('pupa');
   });
 
-  it('never demotes even all the way from emergent to egg-level EP', () => {
-    expect(resolveStage(0, 'emergent')).toBe('emergent');
+  it('never demotes even all the way from adult to egg-level EP', () => {
+    expect(resolveStage(0, 'adult')).toBe('adult');
   });
 
   it('stays at egg if EP still does not justify hatching', () => {
-    expect(resolveStage(STAGE_THRESHOLDS.larva - 1, 'egg')).toBe('egg');
+    expect(resolveStage(STAGE_THRESHOLDS.grub - 1, 'egg')).toBe('egg');
+  });
+});
+
+describe('stageXp — 0..100 within the current stage band', () => {
+  it('is 0 at the very start of egg', () => {
+    expect(stageXp(0, 'egg')).toBe(0);
+  });
+
+  it('is 0 exactly at the start of a later stage (band boundary)', () => {
+    expect(stageXp(STAGE_THRESHOLDS.grub, 'grub')).toBe(0);
+    expect(stageXp(STAGE_THRESHOLDS.pupa, 'pupa')).toBe(0);
+    expect(stageXp(STAGE_THRESHOLDS.adult, 'adult')).toBe(0);
+  });
+
+  it('is 100 (not more) right at the next stage boundary, viewed from below', () => {
+    expect(stageXp(STAGE_THRESHOLDS.grub - 1, 'egg')).toBeLessThan(100);
+    expect(stageXp(STAGE_THRESHOLDS.grub, 'egg')).toBe(100);
+    expect(stageXp(STAGE_THRESHOLDS.pupa, 'grub')).toBe(100);
+    expect(stageXp(STAGE_THRESHOLDS.adult, 'pupa')).toBe(100);
+  });
+
+  it('is halfway through a band at its midpoint', () => {
+    const mid = Math.floor((STAGE_THRESHOLDS.grub + STAGE_THRESHOLDS.pupa) / 2);
+    expect(stageXp(mid, 'grub')).toBeCloseTo(50, 0);
+  });
+
+  it('clamps to [0, 100] even for an out-of-sync (ep, stage) pair', () => {
+    expect(stageXp(0, 'adult')).toBe(0);
+    expect(stageXp(STAGE_THRESHOLDS.adult * 100, 'adult')).toBe(100);
+    expect(stageXp(-50, 'egg')).toBe(0);
+  });
+
+  it('adult (the top stage) still produces a finite, growing percentage', () => {
+    const near = stageXp(STAGE_THRESHOLDS.adult + 10, 'adult');
+    const further = stageXp(STAGE_THRESHOLDS.adult + 100, 'adult');
+    expect(near).toBeGreaterThan(0);
+    expect(further).toBeGreaterThan(near);
+    expect(further).toBeLessThanOrEqual(100);
   });
 });

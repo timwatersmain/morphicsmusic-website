@@ -8,7 +8,7 @@ import { requireFan, unauthorized, type CommunityEnv } from '../../_lib/communit
 import {
   ensureProfile, getCatalogue, getUnlockedAvatarIds, grantUnlocks,
   getRarity, setCollectionCount, toPublicProfile, canChangeHandle, nextHandleChangeAt,
-  getSpeciesCatalogue, saveCreatureProgress,
+  saveCreatureProgress, ensureSpriteAssignment,
 } from '../../_lib/community/repo';
 import { evaluateUnlocks } from '../../_lib/community/unlocks';
 import { evaluateCreature } from '../../_lib/community/creature';
@@ -68,6 +68,11 @@ export const onRequestGet: PagesFunction<CommunityEnv> = corsHandler<CommunityEn
       // later via /api/community/update.
       username: record.username || null,
     });
+    // One-time lazy backfill for a fan whose profile predates migration
+    // 0007 — no-op (no extra write) for everyone assigned already. See
+    // ensureSpriteAssignment's doc comment for why this lives on the
+    // self-view only.
+    const profileWithSprites = await ensureSpriteAssignment(env.GATES, profile);
 
     const catalogue = await getCatalogue(env.GATES);
     // Read the shelf BEFORE granting. Reading it afterwards would already
@@ -95,25 +100,22 @@ export const onRequestGet: PagesFunction<CommunityEnv> = corsHandler<CommunityEn
 
     // Visiting your own profile is what advances your creature — this runs
     // on every /me read, same idempotent-on-every-visit shape as the unlock
-    // engine above. See evaluateCreature: stage never regresses and species
-    // is assigned once, permanently, at the moment stage first leaves 'egg'.
-    const speciesRoster = await getSpeciesCatalogue(env.GATES);
+    // engine above. Sprite refs/colourway are NOT re-derived here — they
+    // were fixed at creation (or by ensureSpriteAssignment above); only
+    // stage/ep ever change on a read.
     const tenureDays = Math.max(0, (nowSec - profile.fan_since) / 86400);
     const creatureUpdate = await evaluateCreature(
       profile,
       { purchaseCount: owned.size, tenureDays, engagementActions: 0 },
-      speciesRoster,
-      nowSec,
     );
+    // hatchedAt is permanent once set, never touched again — carry the
+    // existing value forward except on the exact visit that just crossed it.
+    const hatchedAt = creatureUpdate.justHatched ? nowSec : profile.hatched_at;
     await saveCreatureProgress(env.GATES, profile.id, {
       ep: creatureUpdate.ep,
       stage: creatureUpdate.stage,
-      species: creatureUpdate.species,
-      hatchedAt: creatureUpdate.hatchedAt,
+      hatchedAt,
     });
-    const speciesRow = creatureUpdate.species
-      ? speciesRoster.find(s => s.id === creatureUpdate.species) || null
-      : null;
 
     const unlockedIds = new Set(await getUnlockedAvatarIds(env.GATES, profile.id));
     const rarity = await getRarity(env.GATES);
@@ -154,13 +156,12 @@ export const onRequestGet: PagesFunction<CommunityEnv> = corsHandler<CommunityEn
     return new Response(JSON.stringify({
       profile: {
         ...toPublicProfile({
-          ...profile,
+          ...profileWithSprites,
           collection_count: owned.size,
           ep: creatureUpdate.ep,
           stage: creatureUpdate.stage,
-          species: creatureUpdate.species,
-          hatched_at: creatureUpdate.hatchedAt,
-        }, equipped, glyph, speciesRow),
+          hatched_at: hatchedAt,
+        }, equipped, glyph),
         is_self: true,
         // Self-view only augmentation (not part of toPublicProfile's public
         // allow-list) so the settings UI can tell the fan when they'll next

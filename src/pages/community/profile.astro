@@ -46,6 +46,8 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 
   <script>
     import { avatarHtml } from '../../scripts/avatar.js';
+    import { creatureAvatarHtml } from '../../scripts/sprites/creature-avatar.js';
+    import { initCreatureCanvases } from '../../scripts/sprites/renderer.js';
 
     const loading = document.getElementById('prof-loading')!;
     const signin = document.getElementById('prof-signin')!;
@@ -107,7 +109,11 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
           nameEl.textContent = profile.display_name || profile.handle;
           sinceEl.textContent = 'Morphics since ' + fmtDate(profile.fan_since);
           countEl.textContent = `${profile.collection_count} collected`;
-          avatarEl.innerHTML = avatarHtml(profile.avatar, glyphLetter, 112);
+          // The creature (pixel-sprite) render replaces the glyph medallion
+          // as this fan's primary avatar — see creature-avatar.js. 96px is
+          // an exact 3x multiple of the sprite's 32px grid.
+          avatarEl.innerHTML = creatureAvatarHtml(profile.creature, 96);
+          initCreatureCanvases(avatarEl);
 
           if (!shelf.length) {
             shelfEmpty.classList.remove('hidden');

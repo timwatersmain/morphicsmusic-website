@@ -3,10 +3,10 @@
 
 import { nextAvailableHandle, isValidDisplayName, isBlockedName } from './handle';
 import type {
-  AvatarCatalogueRow, CreatureSpeciesRow, FanProfileRow, PublicProfile, UnlockGrant,
+  AvatarCatalogueRow, FanProfileRow, PublicProfile, UnlockGrant,
 } from './types';
-import { nextStageThreshold, type CreatureStage } from './ep';
-import { creatureArtPath } from './creature';
+import { nextStageThreshold, stageXp, type CreatureStage } from './ep';
+import { assignSpriteRefs } from './sprites';
 
 const now = () => Math.floor(Date.now() / 1000);
 
@@ -79,11 +79,21 @@ export async function ensureProfile(
   const handle = await nextAvailableHandle(name, async h => !!(await getProfileByHandle(db, h)));
   const t = now();
 
+  // Sprite refs (one per stage) and colourway are fixed HERE, at creation —
+  // never re-rolled, never assigned lazily on a "hatch" moment like the
+  // retired species model. See sprites.ts's module doc comment.
+  const sprites = await assignSpriteRefs(email);
+
   try {
     await db.prepare(
-      `INSERT INTO fan_profiles (email, handle, display_name, fan_since, created_at, updated_at, last_seen_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    ).bind(email, handle, name, opts.fanSince, t, t, t).run();
+      `INSERT INTO fan_profiles
+         (email, handle, display_name, fan_since, created_at, updated_at, last_seen_at,
+          sprite_egg, sprite_grub, sprite_pupa, sprite_adult, colourway)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).bind(
+      email, handle, name, opts.fanSince, t, t, t,
+      sprites.sprite_egg, sprites.sprite_grub, sprites.sprite_pupa, sprites.sprite_adult, sprites.colourway,
+    ).run();
   } catch (err) {
     // A concurrent request created this profile between our read above and
     // this insert. The unique index on email makes that insert THROW — it
@@ -263,37 +273,55 @@ export async function setCollectionCount(db: D1Database, fanId: number, count: n
     .bind(count, now(), fanId).run();
 }
 
-/** The full creature_species roster, including inactive rows — callers filter as needed. */
-export async function getSpeciesCatalogue(db: D1Database): Promise<CreatureSpeciesRow[]> {
-  const { results } = await db.prepare('SELECT * FROM creature_species ORDER BY id')
-    .all<CreatureSpeciesRow>();
-  return results || [];
-}
-
-export async function getSpeciesById(db: D1Database, id: string): Promise<CreatureSpeciesRow | null> {
-  return db.prepare('SELECT * FROM creature_species WHERE id = ?').bind(id).first<CreatureSpeciesRow>();
-}
-
 /**
- * Persist a fan's creature progress — see evaluateCreature in creature.ts,
- * which computes what to write. Called on every profile read (idempotent:
- * writing the same species/stage twice is harmless), which is what makes
- * visiting your own profile the trigger for advancing.
+ * Persist a fan's creature stage progress — see evaluateCreature in
+ * creature.ts, which computes what to write. Called on every profile read
+ * (idempotent: writing the same stage twice is harmless), which is what
+ * makes visiting your own profile the trigger for advancing. `hatchedAt` is
+ * passed through unchanged by every caller once set — see me.ts.
  */
 export async function saveCreatureProgress(
   db: D1Database,
   fanId: number,
-  update: { ep: number; stage: string; species: string | null; hatchedAt: number | null },
+  update: { ep: number; stage: string; hatchedAt: number | null },
 ): Promise<void> {
   await db.prepare(
-    'UPDATE fan_profiles SET ep = ?, stage = ?, species = ?, hatched_at = ?, updated_at = ? WHERE id = ?',
-  ).bind(update.ep, update.stage, update.species, update.hatchedAt, now(), fanId).run();
+    'UPDATE fan_profiles SET ep = ?, stage = ?, hatched_at = ?, updated_at = ? WHERE id = ?',
+  ).bind(update.ep, update.stage, update.hatchedAt, now(), fanId).run();
 }
 
-/** The fan's own choice — species is fate, colourway is the one thing they pick. */
+/**
+ * A fan's own choice — sprite refs are fate (fixed at creation, see
+ * ensureProfile), colourway is the one thing they pick. update.ts is
+ * responsible for validating `colourway` is one of the 12 real ids
+ * (sprites.ts's isValidColourway) before this is ever called.
+ */
 export async function setCreatureColourway(db: D1Database, fanId: number, colourway: string): Promise<void> {
-  await db.prepare('UPDATE fan_profiles SET creature_colourway = ?, updated_at = ? WHERE id = ?')
+  await db.prepare('UPDATE fan_profiles SET colourway = ?, updated_at = ? WHERE id = ?')
     .bind(colourway, now(), fanId).run();
+}
+
+/**
+ * Backfill sprite refs + colourway for a fan whose profile predates
+ * migration 0007 (sprite_egg etc. are NULL). No-op for anyone assigned
+ * already — this must never re-roll an existing assignment. Deliberately
+ * NOT called from directory.ts or profile.ts (see their subrequest budget
+ * comments); only me.ts's self-view calls this, since that keeps the write
+ * cost to "once, ever, per legacy fan, on their own visit" rather than a
+ * write fanning out across every row a directory/profile read touches.
+ */
+export async function ensureSpriteAssignment(db: D1Database, profile: FanProfileRow): Promise<FanProfileRow> {
+  if (profile.sprite_egg) return profile;
+  const sprites = await assignSpriteRefs(profile.email);
+  await db.prepare(
+    `UPDATE fan_profiles
+       SET sprite_egg = ?, sprite_grub = ?, sprite_pupa = ?, sprite_adult = ?, colourway = ?, updated_at = ?
+       WHERE id = ? AND sprite_egg IS NULL`,
+  ).bind(
+    sprites.sprite_egg, sprites.sprite_grub, sprites.sprite_pupa, sprites.sprite_adult, sprites.colourway,
+    now(), profile.id,
+  ).run();
+  return { ...profile, ...sprites };
 }
 
 /**
@@ -306,14 +334,20 @@ export async function setCreatureColourway(db: D1Database, fanId: number, colour
  * KV itself. It is always required, even when `avatar` is null, so callers
  * can't accidentally skip deriving it and ship a stale/wrong letter.
  */
+/** Which of the four per-stage columns holds the fan's current-stage sprite ref. */
+function currentSpriteRef(row: FanProfileRow, stage: CreatureStage): string | null {
+  switch (stage) {
+    case 'egg': return row.sprite_egg;
+    case 'grub': return row.sprite_grub;
+    case 'pupa': return row.sprite_pupa;
+    case 'adult': return row.sprite_adult;
+  }
+}
+
 export function toPublicProfile(
   row: FanProfileRow,
   avatar: AvatarCatalogueRow | null,
   glyph: string,
-  // Optional: the fan's assigned species row, if known and already hatched.
-  // Omitted (or null) is exactly correct for an egg — see creatureArtPath —
-  // and lets every existing call site keep working unchanged.
-  speciesRow: CreatureSpeciesRow | null = null,
 ): PublicProfile {
   // row.stage is undefined (not just null) for any plain object built before
   // migration 0006 existed — e.g. hand-built rows in older tests — so `||`
@@ -341,12 +375,11 @@ export function toPublicProfile(
     } : null,
     creature: {
       stage,
-      species: row.species || null,
-      species_name: speciesRow ? speciesRow.name : null,
-      colourway: row.creature_colourway || null,
+      sprite_ref: currentSpriteRef(row, stage),
+      colourway: row.colourway || null,
       ep: row.ep || 0,
+      stage_xp: stageXp(row.ep || 0, stage),
       next_stage_ep: nextStageThreshold(stage),
-      art_path: creatureArtPath(speciesRow, stage),
     },
   };
 }

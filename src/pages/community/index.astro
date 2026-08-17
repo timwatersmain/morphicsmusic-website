@@ -54,7 +54,8 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
   </div>
 
   <script>
-    import { avatarHtml } from '../../scripts/avatar.js';
+    import { creatureAvatarHtml } from '../../scripts/sprites/creature-avatar.js';
+    import { initCreatureCanvases } from '../../scripts/sprites/renderer.js';
 
     const loading = document.getElementById('dir-loading')!;
     const signin = document.getElementById('dir-signin')!;
@@ -68,7 +69,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
     const esc = (s: any) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
 
 
-    const STAGE_LABELS = { egg: 'Egg', larva: 'Larva', chrysalis: 'Chrysalis', emergent: 'Emergent' };
+    const STAGE_LABELS = { egg: 'Egg', grub: 'Grub', pupa: 'Pupa', adult: 'Adult' };
     function stageLabel(stage) {
       return STAGE_LABELS[stage] || STAGE_LABELS.egg;
     }
@@ -88,18 +89,19 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
       const html = fans.map(f => `
         <li class="flex items-center gap-4 py-4">
           <span class="font-mono text-[10px] text-white/30 w-8 text-right">${esc(f.position)}</span>
-          ${avatarHtml(f.avatar, (f.avatar && f.avatar.glyph) || 'm', WALL_SIZE)}
+          ${creatureAvatarHtml(f.creature, WALL_SIZE)}
           <div class="flex-1 min-w-0">
             <a href="/community/u/${encodeURIComponent(f.handle)}" class="font-headline text-lg text-primary uppercase tracking-tight hover:text-secondary transition-colors truncate block">
               ${esc(f.display_name || f.handle)}
             </a>
             <span class="font-mono text-[10px] text-white/40 uppercase tracking-widest">Morphics since ${esc(fmtDate(f.fan_since))}</span>
           </div>
-          <span class="font-mono text-[11px] text-secondary uppercase tracking-widest">${esc(stageLabel(f.stage))}</span>
+          <span class="font-mono text-[11px] text-secondary uppercase tracking-widest">${esc(stageLabel(f.creature && f.creature.stage))}</span>
         </li>
       `).join('');
       if (append) list.innerHTML += html;
       else list.innerHTML = html;
+      initCreatureCanvases(list);
     }
 
     function load(append = false) {

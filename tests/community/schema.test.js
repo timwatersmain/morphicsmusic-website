@@ -15,6 +15,8 @@ const UP5 = readFileSync(join(root, 'migrations/0005_avatar_tiers.sql'), 'utf8')
 const DOWN5 = readFileSync(join(root, 'migrations/down/0005_avatar_tiers.down.sql'), 'utf8');
 const UP6 = readFileSync(join(root, 'migrations/0006_creatures.sql'), 'utf8');
 const DOWN6 = readFileSync(join(root, 'migrations/down/0006_creatures.down.sql'), 'utf8');
+const UP7 = readFileSync(join(root, 'migrations/0007_sprites.sql'), 'utf8');
+const DOWN7 = readFileSync(join(root, 'migrations/down/0007_sprites.down.sql'), 'utf8');
 const TABLES = ['fan_profiles', 'avatar_catalogue', 'fan_avatar_unlocks'];
 
 const STUB = `CREATE TABLE IF NOT EXISTS d1_migrations (
@@ -298,6 +300,161 @@ describe('migration 0006', () => {
     db.exec(DOWN6);
     expect(db.prepare("SELECT name FROM d1_migrations WHERE name = '0006_creatures.sql'").all()).toHaveLength(0);
     expect(() => { db.exec(STUB6); db.exec(UP6); }).not.toThrow();
+  });
+});
+
+const STUB7 = `INSERT INTO d1_migrations (name, applied_at) VALUES ('0007_sprites.sql','now');`;
+
+function makeDb7() {
+  const db = makeDb6();
+  db.exec(STUB7);
+  db.exec(UP7);
+  return db;
+}
+
+describe('migration 0007', () => {
+  it('renames stage CHECK values to egg/grub/pupa/adult and rejects the old names', () => {
+    const db = makeDb7();
+    addFan(db, 'a@b.com', 'ana');
+    for (const s of ['egg', 'grub', 'pupa', 'adult', null]) {
+      expect(() => db.prepare('UPDATE fan_profiles SET stage = ? WHERE handle = ?').run(s, 'ana')).not.toThrow();
+    }
+    for (const s of ['larva', 'chrysalis', 'emergent']) {
+      expect(() => db.prepare('UPDATE fan_profiles SET stage = ? WHERE handle = ?').run(s, 'ana'))
+        .toThrow(/CHECK constraint/i);
+    }
+  });
+
+  it('rewrites existing rows: larva -> grub, chrysalis -> pupa, emergent -> adult, egg/NULL untouched', () => {
+    // Build the row under the OLD (0006) schema first, then apply 0007 on
+    // top — this is the actual migration path a populated table takes,
+    // unlike makeDb7() alone which never has pre-existing data to translate.
+    const db = makeDb6();
+    addFan(db, 'egg@b.com', 'egg-fan');
+    addFan(db, 'larva@b.com', 'larva-fan');
+    addFan(db, 'chrysalis@b.com', 'chrysalis-fan');
+    addFan(db, 'emergent@b.com', 'emergent-fan');
+    addFan(db, 'legacy@b.com', 'legacy-fan'); // stage stays NULL
+    db.prepare("UPDATE fan_profiles SET stage = 'egg' WHERE handle = 'egg-fan'").run();
+    db.prepare("UPDATE fan_profiles SET stage = 'larva' WHERE handle = 'larva-fan'").run();
+    db.prepare("UPDATE fan_profiles SET stage = 'chrysalis' WHERE handle = 'chrysalis-fan'").run();
+    db.prepare("UPDATE fan_profiles SET stage = 'emergent' WHERE handle = 'emergent-fan'").run();
+
+    db.exec(STUB7);
+    db.exec(UP7);
+
+    const stageOf = handle => db.prepare('SELECT stage FROM fan_profiles WHERE handle = ?').get(handle).stage;
+    expect(stageOf('egg-fan')).toBe('egg');
+    expect(stageOf('larva-fan')).toBe('grub');
+    expect(stageOf('chrysalis-fan')).toBe('pupa');
+    expect(stageOf('emergent-fan')).toBe('adult');
+    expect(stageOf('legacy-fan')).toBeNull();
+  });
+
+  it('preserves id, and everything that references fan_profiles.id by that id, across the rebuild', () => {
+    const db = makeDb6();
+    const id = addFan(db, 'a@b.com', 'ana');
+    addAvatar(db, 'release:x');
+    db.prepare(`INSERT INTO fan_avatar_unlocks (fan_id, avatar_id, unlocked_at, source)
+      VALUES (?, 'release:x', 0, 'own_release')`).run(id);
+
+    db.exec(STUB7);
+    db.exec(UP7);
+
+    const row = db.prepare('SELECT id FROM fan_profiles WHERE handle = ?').get('ana');
+    expect(row.id).toBe(id);
+    const unlock = db.prepare('SELECT * FROM fan_avatar_unlocks WHERE fan_id = ?').get(id);
+    expect(unlock).toBeTruthy();
+    expect(unlock.avatar_id).toBe('release:x');
+  });
+
+  it('a fan created after the migration keeps getting a fresh, never-reused id', () => {
+    const db = makeDb6();
+    const before = addFan(db, 'a@b.com', 'ana');
+    db.exec(STUB7);
+    db.exec(UP7);
+    const after = addFan(db, 'c@d.com', 'carlos');
+    expect(after).toBeGreaterThan(before);
+  });
+
+  it('adds sprite_egg/grub/pupa/adult and colourway — all nullable', () => {
+    const db = makeDb7();
+    addFan(db, 'a@b.com', 'ana');
+    const cols = db.prepare('PRAGMA table_info(fan_profiles)').all().map(c => c.name);
+    for (const c of ['sprite_egg', 'sprite_grub', 'sprite_pupa', 'sprite_adult', 'colourway']) {
+      expect(cols).toContain(c);
+    }
+    const row = db.prepare(`SELECT sprite_egg, sprite_grub, sprite_pupa, sprite_adult, colourway
+      FROM fan_profiles WHERE handle = 'ana'`).get();
+    expect(row.sprite_egg).toBeNull();
+    expect(row.sprite_grub).toBeNull();
+    expect(row.sprite_pupa).toBeNull();
+    expect(row.sprite_adult).toBeNull();
+    expect(row.colourway).toBeNull();
+  });
+
+  it('drops species and creature_colourway (superseded by sprite_* / colourway)', () => {
+    const db = makeDb7();
+    const cols = db.prepare('PRAGMA table_info(fan_profiles)').all().map(c => c.name);
+    expect(cols).not.toContain('species');
+    expect(cols).not.toContain('creature_colourway');
+  });
+
+  it('drops creature_species — superseded by fixed sprite refs, nothing reads it anymore', () => {
+    expect(tables(makeDb7())).not.toContain('creature_species');
+  });
+
+  it('enforces the colourway CHECK constraint against the 12 real ids', () => {
+    const db = makeDb7();
+    addFan(db, 'a@b.com', 'ana');
+    expect(() => db.prepare("UPDATE fan_profiles SET colourway = 'not-a-real-colourway' WHERE handle = 'ana'").run())
+      .toThrow(/CHECK constraint/i);
+    for (const id of [
+      'crimson', 'ember', 'amber', 'citron', 'leaf', 'jade',
+      'cyan', 'azure', 'indigo', 'violet', 'magenta', 'rose', null,
+    ]) {
+      expect(() => db.prepare('UPDATE fan_profiles SET colourway = ? WHERE handle = ?').run(id, 'ana')).not.toThrow();
+    }
+  });
+
+  it('preserves the email/handle uniqueness and the leaderboard index across the rebuild', () => {
+    const db = makeDb7();
+    addFan(db, 'a@b.com', 'ana');
+    expect(() => addFan(db, 'a@b.com', 'other')).toThrow(/UNIQUE constraint/i);
+    expect(() => addFan(db, 'c@d.com', 'ana')).toThrow(/UNIQUE constraint/i);
+    const idx = db.prepare("SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='fan_profiles'")
+      .all().map(r => r.name);
+    expect(idx).toEqual(expect.arrayContaining([
+      'idx_fan_profiles_email', 'idx_fan_profiles_handle', 'idx_fan_profiles_board',
+    ]));
+  });
+
+  it('is reversible — restores the old stage names, species/creature_colourway, and creature_species', () => {
+    const db = makeDb6();
+    addFan(db, 'a@b.com', 'ana');
+    db.prepare("UPDATE fan_profiles SET stage = 'egg' WHERE handle = 'ana'").run();
+    db.exec(STUB7);
+    db.exec(UP7);
+    db.prepare("UPDATE fan_profiles SET stage = 'adult' WHERE handle = 'ana'").run();
+
+    db.exec(DOWN7);
+
+    const cols = db.prepare('PRAGMA table_info(fan_profiles)').all().map(c => c.name);
+    for (const c of ['sprite_egg', 'sprite_grub', 'sprite_pupa', 'sprite_adult', 'colourway']) {
+      expect(cols).not.toContain(c);
+    }
+    expect(cols).toContain('species');
+    expect(cols).toContain('creature_colourway');
+    expect(tables(db)).toContain('creature_species');
+    const row = db.prepare("SELECT stage FROM fan_profiles WHERE handle = 'ana'").get();
+    expect(row.stage).toBe('emergent');
+  });
+
+  it('down clears bookkeeping so up can re-run', () => {
+    const db = makeDb7();
+    db.exec(DOWN7);
+    expect(db.prepare("SELECT name FROM d1_migrations WHERE name = '0007_sprites.sql'").all()).toHaveLength(0);
+    expect(() => { db.exec(STUB7); db.exec(UP7); }).not.toThrow();
   });
 });
 

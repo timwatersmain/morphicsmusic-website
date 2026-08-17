@@ -13,6 +13,8 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const UP = readFileSync(join(root, 'migrations/0002_fan_profiles.sql'), 'utf8');
 const UP3 = readFileSync(join(root, 'migrations/0003_handle_locked.sql'), 'utf8');
 const UP4 = readFileSync(join(root, 'migrations/0004_handle_cooldown.sql'), 'utf8');
+const UP6 = readFileSync(join(root, 'migrations/0006_creatures.sql'), 'utf8');
+const UP7 = readFileSync(join(root, 'migrations/0007_sprites.sql'), 'utf8');
 
 import { makeD1Shim } from './helpers/d1-shim.js';
 
@@ -23,6 +25,8 @@ beforeEach(() => {
   raw.exec(UP);
   raw.exec(UP3);
   raw.exec(UP4);
+  raw.exec(UP6);
+  raw.exec(UP7);
   raw.exec(`INSERT INTO avatar_catalogue (id,kind,release_slug,name,art_path,unlock_rule,hint,sort_order)
     VALUES ('release:perception','release','perception','PERCEPTION','/a.webp',
             '{"type":"own_release","slug":"perception"}','Own PERCEPTION',0)`);

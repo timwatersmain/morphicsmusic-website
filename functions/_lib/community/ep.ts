@@ -6,10 +6,25 @@
 // Weights are named constants in ONE place, not scattered magic numbers,
 // because they will be tuned as real usage data comes in.
 
-export type CreatureStage = 'egg' | 'larva' | 'chrysalis' | 'emergent';
+// Stage keys match the vendored sprite export exactly (see
+// src/scripts/sprites/vendor/README.txt) — egg/grub/pupa/adult — so there is
+// no translation layer between what's stored and what the art is authored
+// against. Migration 0007 renamed these from the pre-launch placeholder
+// names (larva/chrysalis/emergent); see that migration's header comment.
+// Display wording is a SEPARATE concern — see STAGE_LABELS below — so
+// copy can change without ever touching a stored value.
+export type CreatureStage = 'egg' | 'grub' | 'pupa' | 'adult';
 
 // Ordered low to high — every place that needs "is X past Y" walks this.
-const STAGE_ORDER: CreatureStage[] = ['egg', 'larva', 'chrysalis', 'emergent'];
+const STAGE_ORDER: CreatureStage[] = ['egg', 'grub', 'pupa', 'adult'];
+
+/** Fan-facing wording for each stored stage key. Never used as a lookup key itself. */
+export const STAGE_LABELS: Record<CreatureStage, string> = {
+  egg: 'Egg',
+  grub: 'Grub',
+  pupa: 'Pupa',
+  adult: 'Adult',
+};
 
 export const EP_WEIGHTS = {
   // Purchases are the strongest signal a fan is real and invested.
@@ -27,9 +42,9 @@ export const EP_WEIGHTS = {
 // around for a few weeks should hatch, not grind — see computeEp's doc
 // comment for the arithmetic that keeps this true.
 export const STAGE_THRESHOLDS: Record<Exclude<CreatureStage, 'egg'>, number> = {
-  larva: 50,
-  chrysalis: 200,
-  emergent: 600,
+  grub: 50,
+  pupa: 200,
+  adult: 600,
 };
 
 export interface EpInputs {
@@ -49,7 +64,7 @@ export interface EpInputs {
  * Pure EP total from the three signals. Never negative.
  *
  * Worked example: one purchase (45) plus a month of tenure (30 * 0.2 = 6)
- * is 51 EP — just past the 50-EP larva threshold, so a fan who buys a
+ * is 51 EP — just past the 50-EP grub threshold, so a fan who buys a
  * release and sticks around for about a month hatches. Two purchases
  * (90 EP) hatch immediately, with no tenure needed at all. A ladder nobody
  * climbs is worse than no ladder, so these weights are deliberately
@@ -68,9 +83,9 @@ export function computeEp(inputs: EpInputs): number {
 
 /** Which stage a given EP total qualifies for, taken in isolation (no history). */
 export function stageForEp(ep: number): CreatureStage {
-  if (ep >= STAGE_THRESHOLDS.emergent) return 'emergent';
-  if (ep >= STAGE_THRESHOLDS.chrysalis) return 'chrysalis';
-  if (ep >= STAGE_THRESHOLDS.larva) return 'larva';
+  if (ep >= STAGE_THRESHOLDS.adult) return 'adult';
+  if (ep >= STAGE_THRESHOLDS.pupa) return 'pupa';
+  if (ep >= STAGE_THRESHOLDS.grub) return 'grub';
   return 'egg';
 }
 
@@ -93,4 +108,39 @@ export function resolveStage(ep: number, currentStage: CreatureStage | null): Cr
   const computed = stageForEp(ep);
   const current = currentStage || 'egg';
   return STAGE_ORDER.indexOf(computed) > STAGE_ORDER.indexOf(current) ? computed : current;
+}
+
+/**
+ * EP the fan already had on entering `stage`, and the width of that stage's
+ * band — the two numbers stageXp needs. 'egg' starts at 0 with a band as
+ * wide as the gap to 'grub'. The top stage ('adult') has no upper threshold
+ * (nextStageThreshold returns null), so it reuses the WIDTH of the band
+ * below it rather than dividing by Infinity — an arbitrary but stable choice
+ * that keeps growth visually continuous across the pupa->adult boundary
+ * instead of jumping straight to "fully grown".
+ */
+function stageBand(stage: CreatureStage): { start: number; width: number } {
+  const idx = STAGE_ORDER.indexOf(stage);
+  const start = idx === 0 ? 0 : STAGE_THRESHOLDS[STAGE_ORDER[idx] as Exclude<CreatureStage, 'egg'>];
+  const next = STAGE_ORDER[idx + 1] as Exclude<CreatureStage, 'egg'> | undefined;
+  if (next) return { start, width: STAGE_THRESHOLDS[next] - start };
+  // Top stage: reuse the previous band's width so the curve stays continuous.
+  const prevStart = idx <= 1 ? 0 : STAGE_THRESHOLDS[STAGE_ORDER[idx - 1] as Exclude<CreatureStage, 'egg'>];
+  return { start, width: Math.max(1, start - prevStart) };
+}
+
+/**
+ * Percentage (0..100) through `stage`'s own EP band — what recipes.js's
+ * frame(sprite, xp, frameIndex) wants as `xp`, per the vendored README: eggs
+ * and pupae crack progressively across this range, grubs and adults grow
+ * across it. Deliberately re-based per stage rather than using raw EP
+ * directly, so "a fan near hatching" always means "near 100" regardless of
+ * which stage they're in. Clamped to [0, 100] — resolveStage guarantees `ep`
+ * is high enough for `stage` to have been reached, but this stays defensive
+ * against a stale/out-of-sync (ep, stage) pair.
+ */
+export function stageXp(ep: number, stage: CreatureStage): number {
+  const { start, width } = stageBand(stage);
+  const pct = ((ep - start) / width) * 100;
+  return Math.max(0, Math.min(100, pct));
 }
