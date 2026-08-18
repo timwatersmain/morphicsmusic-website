@@ -60,8 +60,17 @@ export function baseCentreOffset(sprite) {
     // that's imperceptible and, unlike alternating or truncating, keeps the
     // offset a pure, order-independent function of the base grid.
     off = {
-      dx: Math.round(16 - (b.c0 + b.c1 + 1) / 2),
-      dy: Math.round(16 - (b.r0 + b.r1 + 1) / 2),
+      // Round HALF-DOWN, not Math.round. When the ink is an even number of
+      // cells wide the true centre lands exactly on a half-pixel, and
+      // Math.round breaks those ties upward — nudging every such sprite one
+      // pixel right and down, which reads as a consistent rightward lean
+      // across the whole set. Math.ceil(x - 0.5) ties the other way, toward
+      // left and up, which sits better against a circular frame.
+      // `|| 0` normalises JavaScript's negative zero: Math.ceil(-0.5) is -0,
+      // which behaves identically in arithmetic but is not deep-equal to 0
+      // and would make an offset of "none" compare unequal to itself.
+      dx: Math.ceil(16 - (b.c0 + b.c1 + 1) / 2 - 0.5) || 0,
+      dy: Math.ceil(16 - (b.r0 + b.r1 + 1) / 2 - 0.5) || 0,
     };
   }
   baseCentreOffsetCache.set(sprite.ref, off);
