@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeStageProgress, rankLadder, STAGE_ORDER, STAGE_LABELS } from '../../src/scripts/community/xp-progress';
+import { computeStageProgress, rankLadder, STAGE_ORDER, STAGE_LABELS, MILESTONE_STEP } from '../../src/scripts/community/xp-progress';
 import { STAGE_THRESHOLDS } from '../../functions/_lib/community/ep';
 
 describe('computeStageProgress', () => {
@@ -32,20 +32,43 @@ describe('computeStageProgress', () => {
     expect(p.pct).toBeLessThan(90);
   });
 
-  it('final stage returns a completed state instead of dividing by a missing threshold', () => {
-    const p = computeStageProgress({ ep: 700, stage: 'adult', next_stage_ep: null });
+  it('final stage keeps earning: no next stage, but a live milestone band instead of a dead 100%', () => {
+    const ep = STAGE_THRESHOLDS.adult + 100;
+    const p = computeStageProgress({ ep, stage: 'adult', next_stage_ep: null });
     expect(p.isFinal).toBe(true);
-    expect(p.pct).toBe(100);
     expect(p.nextStage).toBeNull();
     expect(p.nextLabel).toBeNull();
     expect(p.epForStage).toBeNull();
-    expect(() => computeStageProgress({ ep: 700, stage: 'adult', next_stage_ep: null })).not.toThrow();
+    expect(p.milestone).not.toBeNull();
+    expect(p.milestone!.index).toBe(1);
+    expect(p.milestone!.epInto).toBe(100);
+    expect(p.milestone!.epRemaining).toBe(MILESTONE_STEP - 100);
+    expect(p.milestone!.target).toBe(STAGE_THRESHOLDS.adult + MILESTONE_STEP);
+    expect(p.pct).toBeCloseTo((100 / MILESTONE_STEP) * 100, 5);
   });
 
-  it('EP far above the final threshold still does not produce over-100% fill', () => {
-    const p = computeStageProgress({ ep: 999999, stage: 'adult', next_stage_ep: null });
-    expect(p.pct).toBe(100);
+  it('an Emergent fan who earns more moves the bar — it does not sit pinned', () => {
+    const a = computeStageProgress({ ep: STAGE_THRESHOLDS.adult + 10, stage: 'adult', next_stage_ep: null });
+    const b = computeStageProgress({ ep: STAGE_THRESHOLDS.adult + 200, stage: 'adult', next_stage_ep: null });
+    expect(b.pct).toBeGreaterThan(a.pct);
+    expect(b.totalEp).toBeGreaterThan(a.totalEp);
+  });
+
+  it('milestones roll over rather than overflowing past 100% fill', () => {
+    const p = computeStageProgress({ ep: STAGE_THRESHOLDS.adult + MILESTONE_STEP * 3 + 5, stage: 'adult', next_stage_ep: null });
+    expect(p.milestone!.index).toBe(4);
+    expect(p.milestone!.epInto).toBe(5);
     expect(p.pct).toBeLessThanOrEqual(100);
+    expect(p.pct).toBeGreaterThanOrEqual(0);
+  });
+
+  it('totalEp is the raw lifetime figure at every stage, never re-based to a band', () => {
+    const mid = computeStageProgress({ ep: 480, stage: 'pupa', next_stage_ep: STAGE_THRESHOLDS.adult });
+    expect(mid.totalEp).toBe(480);
+    expect(mid.epInStage).toBe(480 - STAGE_THRESHOLDS.pupa);
+    const top = computeStageProgress({ ep: 999999, stage: 'adult', next_stage_ep: null });
+    expect(top.totalEp).toBe(999999);
+    expect(top.pct).toBeLessThanOrEqual(100);
   });
 
   it('egg at zero EP is a valid lower boundary, not an error state', () => {
@@ -76,6 +99,15 @@ describe('rankLadder', () => {
 
   it('always covers all four stages in order', () => {
     expect(rankLadder('grub').map(s => s.stage)).toEqual(STAGE_ORDER);
+  });
+
+  it('each rung states the lifetime XP it costs to reach, straight from STAGE_THRESHOLDS', () => {
+    expect(rankLadder('egg').map(s => s.requiredEp)).toEqual([
+      0,
+      STAGE_THRESHOLDS.grub,
+      STAGE_THRESHOLDS.pupa,
+      STAGE_THRESHOLDS.adult,
+    ]);
   });
 
   it('reuses the same STAGE_LABELS the fan wall imports, so the two can never drift', () => {

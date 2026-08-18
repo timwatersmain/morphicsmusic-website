@@ -3,6 +3,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { DELETE_GRACE_DAYS } from '../../functions/_lib/community/repo';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const UP = readFileSync(join(root, 'migrations/0002_fan_profiles.sql'), 'utf8');
@@ -25,6 +26,11 @@ const UP10 = readFileSync(join(root, 'migrations/0010_engagement_ep.sql'), 'utf8
 const DOWN10 = readFileSync(join(root, 'migrations/down/0010_engagement_ep.down.sql'), 'utf8');
 const UP11 = readFileSync(join(root, 'migrations/0011_profile_bio_privacy.sql'), 'utf8');
 const DOWN11 = readFileSync(join(root, 'migrations/down/0011_profile_bio_privacy.down.sql'), 'utf8');
+const UP12 = readFileSync(join(root, 'migrations/0012_profile_soft_delete.sql'), 'utf8');
+const DOWN12 = readFileSync(join(root, 'migrations/down/0012_profile_soft_delete.down.sql'), 'utf8');
+const PURGE_SWEEP = readFileSync(join(root, 'tools/d1/purge-deleted-profiles.sql'), 'utf8');
+const UP14 = readFileSync(join(root, 'migrations/0014_xp_events.sql'), 'utf8');
+const DOWN14 = readFileSync(join(root, 'migrations/down/0014_xp_events.down.sql'), 'utf8');
 const TABLES = ['fan_profiles', 'avatar_catalogue', 'fan_avatar_unlocks'];
 
 const STUB = `CREATE TABLE IF NOT EXISTS d1_migrations (
@@ -752,5 +758,181 @@ describe('migration 0011', () => {
     expect(db.prepare("SELECT name FROM d1_migrations WHERE name = '0011_profile_bio_privacy.sql'").all())
       .toHaveLength(0);
     expect(() => { db.exec(STUB11); db.exec(UP11); }).not.toThrow();
+  });
+});
+
+const STUB12 = `INSERT INTO d1_migrations (name, applied_at) VALUES ('0012_profile_soft_delete.sql','now');`;
+
+function makeDb12() {
+  const db = makeDb11();
+  db.exec(STUB12);
+  db.exec(UP12);
+  return db;
+}
+
+describe('migration 0012', () => {
+  it('adds deleted_at, NULL for every existing fan — nobody is retroactively deleted', () => {
+    const db = makeDb11();
+    addFan(db, 'a@b.com', 'ana');
+    db.exec(STUB12);
+    db.exec(UP12);
+    expect(db.prepare("SELECT deleted_at FROM fan_profiles WHERE handle = 'ana'").get().deleted_at)
+      .toBeNull();
+  });
+
+  it('preserves existing rows, including bio, engagement and creature state', () => {
+    const db = makeDb11();
+    addFan(db, 'a@b.com', 'ana');
+    db.prepare(`UPDATE fan_profiles SET bio = 'hello', colourway = 'native', ep = 240,
+      stage = 'pupa', engagement_ep = 85 WHERE handle = 'ana'`).run();
+    db.exec(STUB12);
+    db.exec(UP12);
+    const row = db.prepare("SELECT * FROM fan_profiles WHERE handle = 'ana'").get();
+    expect(row.bio).toBe('hello');
+    expect(row.colourway).toBe('native');
+    expect(row.ep).toBe(240);
+    expect(row.stage).toBe('pupa');
+    expect(row.engagement_ep).toBe(85);
+  });
+
+  it('keeps the handle index covering deleted rows, so a handle stays reserved', () => {
+    const db = makeDb12();
+    addFan(db, 'a@b.com', 'ana');
+    db.prepare("UPDATE fan_profiles SET deleted_at = 1000 WHERE handle = 'ana'").run();
+    // The unique index must still bite: a second 'ana' cannot be inserted
+    // while the first is inside its restore window.
+    expect(() => addFan(db, 'other@b.com', 'ana')).toThrow();
+  });
+
+  it('down purges pending deletions rather than resurrecting them onto the wall', () => {
+    const db = makeDb12();
+    addAvatar(db, 'release:perception');
+    addFan(db, 'a@b.com', 'ana');
+    addFan(db, 'b@b.com', 'bo');
+    const deleted = db.prepare("SELECT id FROM fan_profiles WHERE handle = 'ana'").get().id;
+    db.prepare("UPDATE fan_profiles SET deleted_at = 1000 WHERE handle = 'ana'").run();
+    db.prepare('INSERT INTO fan_avatar_unlocks (fan_id, avatar_id, source, unlocked_at) VALUES (?,?,?,?)')
+      .run(deleted, 'release:perception', 'own_release', 1);
+
+    db.exec(DOWN12);
+
+    const cols = db.prepare('PRAGMA table_info(fan_profiles)').all().map(c => c.name);
+    expect(cols).not.toContain('deleted_at');
+    // The soft-deleted fan is gone for real, ledger and all...
+    expect(db.prepare("SELECT COUNT(*) c FROM fan_profiles WHERE handle = 'ana'").get().c).toBe(0);
+    expect(db.prepare('SELECT COUNT(*) c FROM fan_avatar_unlocks WHERE fan_id = ?').get(deleted).c).toBe(0);
+    // ...and the live fan is untouched.
+    expect(db.prepare("SELECT COUNT(*) c FROM fan_profiles WHERE handle = 'bo'").get().c).toBe(1);
+  });
+
+  it('down clears bookkeeping so up can re-run', () => {
+    const db = makeDb12();
+    db.exec(DOWN12);
+    expect(db.prepare("SELECT name FROM d1_migrations WHERE name = '0012_profile_soft_delete.sql'").all())
+      .toHaveLength(0);
+    expect(() => { db.exec(STUB12); db.exec(UP12); }).not.toThrow();
+  });
+});
+
+// The sweep is a raw .sql file run by wrangler, so nothing else type-checks
+// it or notices if the schema moves underneath it. These run the real file.
+describe('tools/d1/purge-deleted-profiles.sql', () => {
+  const DAY = 24 * 60 * 60;
+  const nowSec = () => Math.floor(Date.now() / 1000);
+
+  function seed(db, handle, email, deletedAt) {
+    addFan(db, email, handle);
+    const id = db.prepare('SELECT id FROM fan_profiles WHERE handle = ?').get(handle).id;
+    if (deletedAt !== null) {
+      db.prepare('UPDATE fan_profiles SET deleted_at = ? WHERE id = ?').run(deletedAt, id);
+    }
+    db.prepare('INSERT INTO fan_avatar_unlocks (fan_id, avatar_id, unlocked_at, source) VALUES (?,?,0,?)')
+      .run(id, 'release:perception', 'own_release');
+    return id;
+  }
+
+  it('purges lapsed profiles and their unlocks, and touches nothing else', () => {
+    const db = makeDb12();
+    addAvatar(db, 'release:perception');
+    const lapsed = seed(db, 'lapsed', 'lapsed@b.com', nowSec() - 31 * DAY);
+    const recent = seed(db, 'recent', 'recent@b.com', nowSec() - 2 * DAY);
+    const live = seed(db, 'live', 'live@b.com', null);
+
+    db.exec(PURGE_SWEEP);
+
+    expect(db.prepare('SELECT COUNT(*) c FROM fan_profiles WHERE id = ?').get(lapsed).c).toBe(0);
+    expect(db.prepare('SELECT COUNT(*) c FROM fan_avatar_unlocks WHERE fan_id = ?').get(lapsed).c).toBe(0);
+    // Still inside its window — the sweep must not front-run the deadline.
+    expect(db.prepare('SELECT COUNT(*) c FROM fan_profiles WHERE id = ?').get(recent).c).toBe(1);
+    // Never deleted at all — deleted_at IS NULL must never satisfy the filter.
+    expect(db.prepare('SELECT COUNT(*) c FROM fan_profiles WHERE id = ?').get(live).c).toBe(1);
+    expect(db.prepare('SELECT COUNT(*) c FROM fan_avatar_unlocks WHERE fan_id = ?').get(live).c).toBe(1);
+  });
+
+  it('is safe to run twice', () => {
+    const db = makeDb12();
+    addAvatar(db, 'release:perception');
+    seed(db, 'lapsed', 'lapsed@b.com', nowSec() - 31 * DAY);
+    db.exec(PURGE_SWEEP);
+    expect(() => db.exec(PURGE_SWEEP)).not.toThrow();
+    expect(db.prepare('SELECT COUNT(*) c FROM fan_profiles').get().c).toBe(0);
+  });
+
+  it('uses the same window as DELETE_GRACE_DAYS — a drifted constant would purge early or late', () => {
+    expect(PURGE_SWEEP).toContain(String(DELETE_GRACE_DAYS * DAY));
+  });
+});
+
+const STUB14 = `INSERT INTO d1_migrations (name, applied_at) VALUES ('0014_xp_events.sql','now');`;
+
+function makeDb14() {
+  const db = makeDb12();
+  db.exec(STUB14);
+  db.exec(UP14);
+  return db;
+}
+
+describe('migration 0014', () => {
+  it('creates xp_events with no rows — nobody is retroactively granted anything', () => {
+    const db = makeDb14();
+    expect(db.prepare('SELECT COUNT(*) c FROM xp_events').get().c).toBe(0);
+  });
+
+  it('enforces event_key uniqueness — this index IS the idempotency guarantee', () => {
+    const db = makeDb14();
+    addFan(db, 'a@b.com', 'ana');
+    const id = db.prepare("SELECT id FROM fan_profiles WHERE handle = 'ana'").get().id;
+    const ins = () => db.prepare(
+      'INSERT INTO xp_events (fan_id, action_type, xp_amount, event_key, created_at) VALUES (?,?,?,?,?)',
+    ).run(id, 'admin_grant', 100, 'same-key', 1);
+    ins();
+    expect(ins).toThrow();
+  });
+
+  it('accepts a negative amount, because a correction is a negative row', () => {
+    const db = makeDb14();
+    addFan(db, 'a@b.com', 'ana');
+    const id = db.prepare("SELECT id FROM fan_profiles WHERE handle = 'ana'").get().id;
+    expect(() => db.prepare(
+      'INSERT INTO xp_events (fan_id, action_type, xp_amount, event_key, created_at) VALUES (?,?,?,?,?)',
+    ).run(id, 'admin_correction', -50, 'k1', 1)).not.toThrow();
+  });
+
+  it('cascades when a fan is purged, so no ledger outlives its fan', () => {
+    const db = makeDb14();
+    addFan(db, 'a@b.com', 'ana');
+    const id = db.prepare("SELECT id FROM fan_profiles WHERE handle = 'ana'").get().id;
+    db.prepare('INSERT INTO xp_events (fan_id, action_type, xp_amount, event_key, created_at) VALUES (?,?,?,?,?)')
+      .run(id, 'admin_grant', 100, 'k1', 1);
+    db.prepare('DELETE FROM fan_profiles WHERE id = ?').run(id);
+    expect(db.prepare('SELECT COUNT(*) c FROM xp_events').get().c).toBe(0);
+  });
+
+  it('down clears bookkeeping so up can re-run', () => {
+    const db = makeDb14();
+    db.exec(DOWN14);
+    expect(db.prepare("SELECT name FROM d1_migrations WHERE name = '0014_xp_events.sql'").all())
+      .toHaveLength(0);
+    expect(() => { db.exec(STUB14); db.exec(UP14); }).not.toThrow();
   });
 });

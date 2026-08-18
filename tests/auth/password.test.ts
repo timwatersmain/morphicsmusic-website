@@ -58,8 +58,16 @@ describe('hashPassword / verifyPassword', () => {
   it('a tampered stored string fails', async () => {
     const hash = await hashPassword(env, 'tamper test password');
     const parts = hash.split('$');
-    // Flip a character in the hash segment.
-    const tamperedHashSeg = parts[4].slice(0, -1) + (parts[4].slice(-1) === 'A' ? 'B' : 'A');
+    // Flip a character in the MIDDLE of the hash segment, never the last
+    // one. The segment is unpadded base64, so its final character carries
+    // only a couple of significant bits — flipping that one changes only
+    // the ignored low bits about 9% of the time, decoding to byte-identical
+    // output. The "tampered" hash then verifies correctly and this test
+    // fails, which is exactly the intermittent failure it used to produce.
+    const seg = parts[4];
+    const mid = Math.floor(seg.length / 2);
+    const tamperedHashSeg =
+      seg.slice(0, mid) + (seg[mid] === 'A' ? 'B' : 'A') + seg.slice(mid + 1);
     const tampered = [parts[0], parts[1], parts[2], parts[3], tamperedHashSeg].join('$');
     const result = await verifyPassword(env, 'tamper test password', tampered);
     expect(result.ok).toBe(false);

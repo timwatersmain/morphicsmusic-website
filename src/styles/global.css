@@ -289,7 +289,9 @@
 
 @layer components {
   .neural-bg {
-    background: radial-gradient(circle at 50% 50%, #131313 0%, #0A0A0A 100%);
+    /* Flat grey — the drifting-particle canvas and the radial vignette were
+       removed; the background is deliberately inert now. */
+    background: #131313;
   }
 
   .glass-panel {

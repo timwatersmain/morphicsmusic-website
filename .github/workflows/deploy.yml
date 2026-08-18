@@ -6,7 +6,25 @@ on:
   workflow_dispatch:
 
 jobs:
+  # The deploy hook is a fire-and-forget POST: once it is sent, Cloudflare
+  # builds and publishes whatever is on main, and nothing downstream can stop
+  # it. So the tests cannot run "alongside" the deploy — they have to be a
+  # separate job the deploy DEPENDS ON, or a red suite ships anyway.
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      # `npm ci` not `npm install`: it installs exactly the lockfile, so CI
+      # can never pass against a dependency tree that no one else has.
+      - run: npm ci
+      - run: npm test
+
   deploy:
+    needs: test
     runs-on: ubuntu-latest
     steps:
       - name: Trigger Cloudflare Pages deploy

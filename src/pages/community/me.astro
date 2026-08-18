@@ -10,12 +10,19 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
         <h1 class="font-headline font-bold text-5xl md:text-7xl text-primary uppercase tracking-tighter leading-none mt-2">YOUR PROFILE</h1>
         <p id="me-handle" class="font-mono text-[11px] text-white/50 mt-4"></p>
       </div>
-      <div class="flex gap-3">
-        <a href="/community" class="font-mono text-[10px] text-white/40 hover:text-secondary uppercase tracking-widest border border-white/10 hover:border-secondary/30 px-4 py-2 rounded-full">
-          View fan wall
-        </a>
-      </div>
     </header>
+
+    <!-- The account side of a Morphics identity lives across three pages —
+         this one (who you are + what you own), /library (receipts) and
+         /account (sign-in details). Without a shared strip between them
+         each one is a dead end you can only reach from the nav, which is
+         what every ordinary profile page solves with exactly this row. -->
+    <nav aria-label="Profile sections" class="flex flex-wrap gap-2 mb-12">
+      <span aria-current="page" class="font-mono text-[10px] uppercase tracking-widest border border-primary bg-primary/10 text-primary px-4 py-2 rounded-full">Profile</span>
+      <a href="/library" data-astro-reload class="font-mono text-[10px] text-white/40 hover:text-secondary uppercase tracking-widest border border-white/10 hover:border-secondary/30 px-4 py-2 rounded-full">Orders &amp; receipts</a>
+      <a href="/account" data-astro-reload class="font-mono text-[10px] text-white/40 hover:text-secondary uppercase tracking-widest border border-white/10 hover:border-secondary/30 px-4 py-2 rounded-full">Sign-in details</a>
+      <a href="/community" class="font-mono text-[10px] text-white/40 hover:text-secondary uppercase tracking-widest border border-white/10 hover:border-secondary/30 px-4 py-2 rounded-full">Fan wall</a>
+    </nav>
 
     <div id="me-loading" class="font-mono text-[11px] text-white/40">Loading your profile…</div>
 
@@ -30,6 +37,57 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 
     <div id="me-error" class="hidden p-8 border border-white/10 rounded-[var(--radius-lg)] text-center">
       <p id="me-error-msg" class="font-mono text-[11px] text-white/40 leading-relaxed"></p>
+    </div>
+
+    <!-- Shown INSTEAD of the whole profile when /api/community/me reports a
+         profile inside its delete grace window. It is deliberately the only
+         thing on the page: a fan whose profile is pending deletion has
+         exactly two decisions to make, and burying them under a profile
+         they've already deleted would be incoherent. -->
+    <div id="me-pending-delete" class="hidden p-8 border border-error/30 rounded-[var(--radius-lg)]">
+      <p class="font-mono text-[11px] text-error uppercase tracking-widest mb-4">Profile deleted</p>
+      <p class="font-mono text-[11px] text-white/60 leading-relaxed mb-3">
+        You deleted <span id="me-pending-handle" class="text-white/80"></span>. It is hidden from the fan wall and from everyone who had your link.
+      </p>
+      <p class="font-mono text-[11px] text-white/60 leading-relaxed mb-6">
+        Nothing is gone yet — your bio, rank, XP and creature are all still here, and you can bring them back exactly as they were until
+        <span id="me-pending-until" class="text-white/80"></span>. After that it is deleted for good and cannot be recovered.
+      </p>
+      <p class="font-mono text-[10px] text-white/30 leading-relaxed mb-6">
+        Your account, your purchases and your library were never affected and stay yours either way.
+      </p>
+      <div class="flex flex-wrap gap-3">
+        <button id="me-restore-btn" class="px-6 py-3 rounded-full bg-primary text-on-primary font-mono text-[11px] tracking-widest uppercase hover:bg-secondary hover:text-on-secondary transition-colors">
+          Restore my profile
+        </button>
+        <button id="me-discard-start" class="px-6 py-3 border border-white/15 hover:border-error/40 hover:text-error font-mono text-[10px] tracking-widest uppercase text-white/50 rounded-full transition-colors">
+          Delete permanently now
+        </button>
+      </div>
+
+      <!-- Discarding forfeits the window early, so it is destructive and
+           takes the same password proof the original deletion did. -->
+      <div id="me-discard-confirm" class="hidden mt-6 pt-6 border-t border-error/20">
+        <label for="me-discard-password" class="block font-mono text-[10px] text-white/50 leading-relaxed mb-3">
+          This skips the rest of your recovery window and deletes the profile immediately. Enter your account password to confirm.
+        </label>
+        <div class="flex flex-wrap gap-2">
+          <input
+            id="me-discard-password"
+            type="password"
+            autocomplete="current-password"
+            placeholder="••••••••••"
+            class="flex-1 min-w-[12rem] px-4 py-3 bg-surface-container-low border border-white/10 focus:border-error outline-none font-mono text-sm text-white/80 rounded-[var(--radius)]"
+          >
+          <button id="me-discard-cancel" class="px-4 py-3 border border-white/15 hover:border-white/40 font-mono text-[10px] tracking-widest uppercase text-white/50 rounded-full">
+            Cancel
+          </button>
+          <button id="me-discard-go" disabled class="px-4 py-3 border border-error/40 enabled:hover:bg-error/10 disabled:opacity-30 disabled:cursor-not-allowed font-mono text-[10px] tracking-widest uppercase text-error rounded-full transition-colors">
+            Delete permanently
+          </button>
+        </div>
+      </div>
+      <p id="me-pending-status" role="status" class="font-mono text-[10px] text-white/30 mt-4 min-h-4 leading-relaxed"></p>
     </div>
 
     <div id="me-content" class="hidden space-y-12">
@@ -88,6 +146,14 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
                visible — that visibility is the point (see brief). -->
           <ol id="me-rank-ladder" aria-label="Evolution stages" class="flex flex-wrap gap-2 mb-6"></ol>
 
+          <!-- Lifetime total first, and always: it is the number that only
+               ever goes up, so it is the one a fan should see before any
+               re-based per-stage figure. -->
+          <div class="flex items-baseline gap-3 mb-4">
+            <span id="me-xp-total" class="font-headline text-4xl text-primary tabular-nums"></span>
+            <span class="font-mono text-[10px] text-white/40 uppercase tracking-widest">Total XP earned</span>
+          </div>
+
           <div>
             <div class="flex items-baseline justify-between gap-3 mb-2">
               <span id="me-xp-stage-label" class="font-mono text-[11px] text-primary uppercase tracking-widest"></span>
@@ -109,6 +175,27 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
         </div>
       </section>
 
+      <!-- Free-song token picker. Shown only while /api/library reports a
+           granted-but-unspent token (see loadLibrary below). Choosing is
+           permanent, so it always routes through the confirm dialog below
+           rather than spending on click. -->
+      <section id="me-free-token" class="hidden mb-10">
+        <div class="flex items-baseline gap-3 mb-4">
+          <span class="font-mono text-xs text-secondary uppercase">Free song token</span>
+          <div class="h-[1px] flex-1 bg-outline-variant/30"></div>
+        </div>
+        <p class="font-mono text-[11px] text-white/40 leading-relaxed mb-4">
+          Thanks for verifying your email — pick any one track below and it's yours to download, free, forever. You can only choose once, so choose carefully.
+        </p>
+        <ul id="me-free-token-list" class="divide-y divide-white/5 border-y border-white/5"></ul>
+      </section>
+
+      <!-- Populated from /api/library — the same endpoint /library uses — so
+           a fan's purchases are reachable from their profile without a
+           second API. Hidden until we know there's something (or nothing)
+           to show; left hidden entirely on a 401 since /library itself
+           already owns the signed-out UX. -->
+      <div id="me-library" class="hidden"></div>
       <!-- Bio: the fan writes this, it shows on their public profile. Its
            length cap and sanitising live server-side in
            functions/_lib/community/bio.ts; the counter here mirrors that
@@ -203,56 +290,74 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
         <div class="mt-6 pt-6 border-t border-error/20">
           <p class="font-mono text-[11px] text-error uppercase tracking-widest">Delete profile</p>
           <p class="font-mono text-[10px] text-white/30 mt-2 leading-relaxed max-w-md">
-            Deletes your handle, bio, rank, EP and creature for good. Your account and everything you've bought stay exactly as they are — signing in again starts you a brand new profile from scratch.
+            Hides your handle, bio, rank, XP and creature immediately, and deletes them permanently after 30 days. Change your mind inside those 30 days and you can restore all of it from this page. Your account and everything you've bought stay exactly as they are either way.
           </p>
           <button id="me-delete-start" class="mt-4 px-4 py-3 border border-error/40 hover:bg-error/10 font-mono text-[10px] tracking-widest uppercase text-error rounded-full transition-colors">
             Delete my profile
           </button>
 
-          <!-- Typed confirmation, not a second button: the fan has to
-               reproduce their own handle, which no mis-click can do. -->
+          <!-- Three deliberate steps, plus the account password, and none of
+               them is a button you can reach by mashing the same spot:
+               step 1 acknowledges WHAT is destroyed, step 2 makes you
+               reproduce your own handle (no mis-click can), step 3 asks for
+               the password a live session cookie alone cannot supply. The
+               password is verified server-side in
+               functions/api/community/delete.ts — this dialog is the
+               deliberateness, that endpoint is the enforcement. -->
           <div id="me-delete-confirm" class="hidden mt-4 p-4 border border-error/30 rounded-[var(--radius-lg)]">
-            <label for="me-delete-input" id="me-delete-prompt" class="block font-mono text-[10px] text-white/50 leading-relaxed mb-3"></label>
-            <div class="flex flex-wrap gap-2">
+            <p id="me-delete-step-count" class="font-mono text-[10px] text-error uppercase tracking-widest mb-3"></p>
+
+            <!-- Step 1: understand the consequence. -->
+            <div id="me-delete-step-1">
+              <p class="font-mono text-[10px] text-white/50 leading-relaxed mb-3">
+                Your handle, bio, rank, XP, unlocks and creature disappear from the fan wall and from anyone holding your link, straight away.
+              </p>
+              <p class="font-mono text-[10px] text-white/50 leading-relaxed mb-3">
+                You have 30 days to change your mind: come back to this page and restore all of it exactly as it was. Your handle stays reserved for you the whole time. After 30 days it is deleted permanently and cannot be recovered.
+              </p>
+              <p class="font-mono text-[10px] text-white/50 leading-relaxed mb-4">
+                Your account, your purchases and everything in your library are untouched and stay yours for life.
+              </p>
+            </div>
+
+            <!-- Step 2: reproduce your own handle. -->
+            <div id="me-delete-step-2" class="hidden">
+              <label for="me-delete-input" id="me-delete-prompt" class="block font-mono text-[10px] text-white/50 leading-relaxed mb-3"></label>
               <input
                 id="me-delete-input"
                 type="text"
                 autocomplete="off"
-                class="flex-1 min-w-[12rem] px-4 py-3 bg-surface-container-low border border-white/10 focus:border-error outline-none font-mono text-sm text-white/80 rounded-[var(--radius)]"
+                class="w-full px-4 py-3 bg-surface-container-low border border-white/10 focus:border-error outline-none font-mono text-sm text-white/80 rounded-[var(--radius)]"
               >
+            </div>
+
+            <!-- Step 3: prove it is you at the keyboard, right now. -->
+            <div id="me-delete-step-3" class="hidden">
+              <label for="me-delete-password" class="block font-mono text-[10px] text-white/50 leading-relaxed mb-3">
+                Last step. Enter your account password to confirm.
+              </label>
+              <input
+                id="me-delete-password"
+                type="password"
+                autocomplete="current-password"
+                placeholder="••••••••••"
+                class="w-full px-4 py-3 bg-surface-container-low border border-white/10 focus:border-error outline-none font-mono text-sm text-white/80 rounded-[var(--radius)]"
+              >
+            </div>
+
+            <div class="flex flex-wrap gap-2 mt-4">
               <button id="me-delete-cancel" class="px-4 py-3 border border-white/15 hover:border-white/40 font-mono text-[10px] tracking-widest uppercase text-white/50 rounded-full">
                 Cancel
               </button>
               <button id="me-delete-go" disabled class="px-4 py-3 border border-error/40 enabled:hover:bg-error/10 disabled:opacity-30 disabled:cursor-not-allowed font-mono text-[10px] tracking-widest uppercase text-error rounded-full transition-colors">
-                Delete for good
+                Continue
               </button>
             </div>
-            <p id="me-delete-status" class="font-mono text-[10px] text-white/30 mt-3 h-4"></p>
+            <p id="me-delete-status" role="status" class="font-mono text-[10px] text-white/30 mt-3 min-h-4 leading-relaxed"></p>
           </div>
         </div>
       </section>
 
-      <!-- Free-song token picker. Shown only while /api/library reports a
-           granted-but-unspent token (see loadLibrary below). Choosing is
-           permanent, so it always routes through the confirm dialog below
-           rather than spending on click. -->
-      <section id="me-free-token" class="hidden mb-10">
-        <div class="flex items-baseline gap-3 mb-4">
-          <span class="font-mono text-xs text-secondary uppercase">Free song token</span>
-          <div class="h-[1px] flex-1 bg-outline-variant/30"></div>
-        </div>
-        <p class="font-mono text-[11px] text-white/40 leading-relaxed mb-4">
-          Thanks for verifying your email — pick any one track below and it's yours to download, free, forever. You can only choose once, so choose carefully.
-        </p>
-        <ul id="me-free-token-list" class="divide-y divide-white/5 border-y border-white/5"></ul>
-      </section>
-
-      <!-- Populated from /api/library — the same endpoint /library uses — so
-           a fan's purchases are reachable from their profile without a
-           second API. Hidden until we know there's something (or nothing)
-           to show; left hidden entirely on a 401 since /library itself
-           already owns the signed-out UX. -->
-      <div id="me-library" class="hidden"></div>
     </div>
   </div>
 
@@ -275,6 +380,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
     import { COLORWAYS } from '../../scripts/sprites/vendor/colorways.js';
     import { NATIVE_COLOURWAY } from '../../scripts/sprites/native-palette.js';
     import { computeStageProgress, rankLadder, STAGE_LABELS, type RankStatus } from '../../scripts/community/xp-progress';
+    import { libraryHtml, safeImg } from '../../scripts/library-view';
     // The cap is the SERVER's constant, imported rather than re-typed — a
     // counter that disagrees with the write path is worse than no counter.
     import { MAX_BIO_LENGTH } from '../../../functions/_lib/community/bio';
@@ -314,6 +420,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
     const rankLadderEl = document.getElementById('me-rank-ladder')!;
     const xpStageLabelEl = document.getElementById('me-xp-stage-label')!;
     const xpNumbersEl = document.getElementById('me-xp-numbers')!;
+    const xpTotalEl = document.getElementById('me-xp-total')!;
     const xpFillEl = document.getElementById('me-xp-fill')!;
     const xpNextEl = document.getElementById('me-xp-next')!;
     const bioInput = document.getElementById('me-bio-input') as HTMLTextAreaElement;
@@ -331,19 +438,21 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
     const deleteCancel = document.getElementById('me-delete-cancel') as HTMLButtonElement;
     const deleteGo = document.getElementById('me-delete-go') as HTMLButtonElement;
     const deleteStatus = document.getElementById('me-delete-status')!;
+    const deletePassword = document.getElementById('me-delete-password') as HTMLInputElement;
+    const deleteStepCount = document.getElementById('me-delete-step-count')!;
+    const pendingBox = document.getElementById('me-pending-delete')!;
+    const pendingHandle = document.getElementById('me-pending-handle')!;
+    const pendingUntil = document.getElementById('me-pending-until')!;
+    const pendingStatus = document.getElementById('me-pending-status')!;
+    const restoreBtn = document.getElementById('me-restore-btn') as HTMLButtonElement;
+    const discardStart = document.getElementById('me-discard-start') as HTMLButtonElement;
+    const discardBox = document.getElementById('me-discard-confirm')!;
+    const discardPassword = document.getElementById('me-discard-password') as HTMLInputElement;
+    const discardCancel = document.getElementById('me-discard-cancel') as HTMLButtonElement;
+    const discardGo = document.getElementById('me-discard-go') as HTMLButtonElement;
+    const deleteSteps = [1, 2, 3].map(n => document.getElementById('me-delete-step-' + n)!);
 
     const esc = (s: any) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
-    // Copied verbatim from src/pages/library.astro so the two surfaces
-    // render owned-file links identically.
-    const safeImg = (s: any) => {
-      const v = String(s ?? '');
-      return /^(https?:|\/)/.test(v) ? v : '';
-    };
-    function fmtFileSize(b: number) {
-      if (b > 1e9) return (b / 1e9).toFixed(2) + ' GB';
-      if (b > 1e6) return (b / 1e6).toFixed(1) + ' MB';
-      return Math.ceil(b / 1024) + ' KB';
-    }
 
     function fmtDate(unix: number) {
       return new Date(unix * 1000).toLocaleDateString(undefined, { year: 'numeric', month: 'long' });
@@ -379,7 +488,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
           <span
             class="inline-flex items-center px-3 py-1.5 rounded-full border font-mono text-[10px] uppercase tracking-widest transition-all ${LADDER_STATUS_CLASSES[step.status]}"
             ${step.status === 'current' ? 'aria-current="step"' : ''}
-          >${esc(step.label)}<span class="sr-only">${esc(LADDER_STATUS_HINT[step.status])}</span></span>
+          >${esc(step.label)}<span class="opacity-50 ml-2 normal-case">${esc(step.requiredEp)} XP</span><span class="sr-only">${esc(LADDER_STATUS_HINT[step.status])}</span></span>
         </li>
       `).join('');
     }
@@ -392,21 +501,25 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
       });
 
       xpStageLabelEl.textContent = progress.stageLabel;
+      xpTotalEl.textContent = progress.totalEp.toLocaleString();
       xpFillEl.style.width = progress.pct + '%';
       xpFillEl.setAttribute('aria-valuenow', String(Math.round(progress.pct)));
       xpFillEl.setAttribute(
         'aria-valuetext',
         progress.isFinal
-          ? `${progress.epInStage} EP — max stage reached`
-          : `${progress.epInStage} of ${progress.epForStage} EP toward ${progress.nextLabel}`,
+          ? `${progress.totalEp} EP total — ${progress.milestone!.epInto} of ${progress.milestone!.width} EP toward milestone ${progress.milestone!.index}`
+          : `${progress.totalEp} EP total — ${progress.epInStage} of ${progress.epForStage} EP toward ${progress.nextLabel}`,
       );
 
       if (progress.isFinal) {
-        // Achievement state, not an empty/broken bar — the bar itself is
-        // forced full (see computeStageProgress) and the copy reads as
-        // "done", not as a truncated "X of Y" that has no Y.
-        xpNumbersEl.textContent = progress.epInStage + ' EP';
-        xpNextEl.textContent = 'Fully evolved — max stage reached.';
+        // Emergent is the last STAGE, not the end of earning. The bar keeps
+        // filling across repeating milestone bands (see MILESTONE_STEP), so
+        // a fan who is fully grown still watches a number move.
+        const m = progress.milestone!;
+        xpNumbersEl.textContent = m.epInto + ' / ' + m.width + ' EP · milestone ' + m.index;
+        xpNextEl.textContent =
+          'Fully evolved — Emergent is the final stage, and XP keeps counting: '
+          + m.epRemaining + ' EP to ' + m.target + ' XP.';
       } else {
         // Both numbers are re-based to THIS stage's own band (not raw EP
         // against a fixed total) so they always agree with the bar's fill —
@@ -660,54 +773,17 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
         .then((data: any) => {
           if (!data) return;
           renderFreeTokenPicker(data.free_song_choices || []);
-          if (!data.releases.length) {
-            libraryEl.classList.remove('hidden');
-            libraryEl.innerHTML = `
-              <div class="flex items-baseline gap-3 mb-4">
-                <span class="font-mono text-xs text-secondary uppercase">Your library</span>
-                <div class="h-[1px] flex-1 bg-outline-variant/30"></div>
-              </div>
-              <div class="p-8 border border-white/10 rounded-[var(--radius-lg)] text-center">
-                <p class="font-mono text-[11px] text-white/40 leading-relaxed">
-                  Nothing here yet. Browse the <a href="/store" class="text-secondary underline">store</a> — your library populates the moment you buy something.
-                </p>
-              </div>`;
-            return;
-          }
-          const releasesHtml = data.releases.map((r: any) => `
-            <section class="border border-white/5 p-6">
-              <div class="flex items-center gap-4 mb-4">
-                <img src="${esc(safeImg(r.artwork))}" alt="" loading="lazy" class="w-16 h-16 object-cover bg-white/5" />
-                <div class="flex-1">
-                  <div class="font-mono text-[10px] text-secondary uppercase tracking-widest">${esc(r.type)}</div>
-                  <h2 class="font-headline text-2xl text-primary uppercase tracking-tight">${esc(r.title)}</h2>
-                </div>
-              </div>
-              ${r.files.length === 0
-                ? `<p class="font-mono text-[11px] text-white/30">Files coming soon — check back shortly.</p>`
-                : `<ul class="divide-y divide-white/5 border-y border-white/5">
-                    ${r.files.map((f: any) => `
-                      <li class="flex items-center gap-4 py-3">
-                        <span class="font-mono text-[10px] text-white/30 uppercase">${esc(f.ext)}</span>
-                        <span class="flex-1 font-mono text-[11px] text-white/80 truncate">${esc(f.filename)}</span>
-                        <span class="font-mono text-[10px] text-white/40">${esc(fmtFileSize(f.size))}</span>
-                        <a href="/api/download?key=${encodeURIComponent(f.key)}"
-                           class="px-3 py-2 border border-primary/20 hover:border-primary/60 hover:bg-primary/5 font-mono text-[10px] tracking-widest uppercase text-primary rounded-full">
-                          Download
-                        </a>
-                      </li>
-                    `).join('')}
-                  </ul>`
-              }
-            </section>
-          `).join('');
           libraryEl.classList.remove('hidden');
+          // Same renderer /library uses, so music, fonts/plugins and the
+          // "yours for life" wording are identical on both surfaces.
+          // Receipts stay on /library — this block is the collection.
           libraryEl.innerHTML = `
-            <div class="flex items-baseline gap-3 mb-4">
-              <span class="font-mono text-xs text-secondary uppercase">Your library</span>
+            <div class="flex items-baseline gap-3 mb-6">
+              <span class="font-mono text-xs text-secondary uppercase">Your collection</span>
               <div class="h-[1px] flex-1 bg-outline-variant/30"></div>
+              <a href="/library" class="font-mono text-[10px] text-white/40 hover:text-secondary uppercase tracking-widest">Orders &amp; receipts</a>
             </div>
-            <div class="space-y-4">${releasesHtml}</div>`;
+            <div class="space-y-12">${libraryHtml(data)}</div>`;
         })
         // Non-fatal: the rest of the profile still works without this section.
         .catch(() => {});
@@ -727,6 +803,16 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
         .then((data: any) => {
           if (!data) return;
           loading.classList.add('hidden');
+
+          // Pending deletion: the restore panel REPLACES the profile rather
+          // than sitting alongside it. Returning early here also means none
+          // of the profile wiring below ever runs against a payload that
+          // has no `profile` on it.
+          if (data.deleted) {
+            renderPendingDelete(data.deleted);
+            return;
+          }
+
           content.classList.remove('hidden');
 
           const { profile } = data;
@@ -854,44 +940,177 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
         .finally(() => { location.href = '/'; });
     });
 
+    // ---- Pending deletion (restore / discard) ------------------------------
+    function renderPendingDelete(pending: any) {
+      pendingBox.classList.remove('hidden');
+      pendingHandle.textContent = pending.handle ? '@' + pending.handle : 'your profile';
+      // A date, not "30 days": the window started when they deleted, which
+      // may have been weeks ago, so a relative figure would be a lie.
+      pendingUntil.textContent = new Date(pending.restore_until * 1000)
+        .toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+    }
+
+    restoreBtn.addEventListener('click', () => {
+      restoreBtn.disabled = true;
+      pendingStatus.textContent = 'Restoring…';
+      fetch('/api/community/restore', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      })
+        .then(async r => {
+          if (r.status === 410) throw new Error('That recovery window has closed — the profile is gone for good. Signing in again starts a new one.');
+          if (!r.ok) throw new Error('Could not restore right now — try again shortly.');
+          // Reload rather than re-render: the profile is live again, and a
+          // fresh load is the one path guaranteed to paint all of it.
+          location.reload();
+        })
+        .catch(e => {
+          pendingStatus.textContent = e.message;
+          restoreBtn.disabled = false;
+        });
+    });
+
+    discardStart.addEventListener('click', () => {
+      discardBox.classList.remove('hidden');
+      discardStart.classList.add('hidden');
+      discardPassword.value = '';
+      discardGo.disabled = true;
+      discardPassword.focus();
+    });
+
+    discardCancel.addEventListener('click', () => {
+      discardBox.classList.add('hidden');
+      discardStart.classList.remove('hidden');
+      discardPassword.value = '';
+      pendingStatus.textContent = '';
+    });
+
+    discardPassword.addEventListener('input', () => {
+      discardGo.disabled = discardPassword.value.length === 0;
+    });
+
+    discardGo.addEventListener('click', () => {
+      discardGo.disabled = true;
+      pendingStatus.textContent = 'Deleting…';
+      fetch('/api/community/restore', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ discard: true, password: discardPassword.value }),
+      })
+        .then(async r => {
+          if (r.ok) { location.href = '/community'; return; }
+          const data = await r.json().catch(() => ({}));
+          throw new Error(describeDeleteError(r.status, data.error || 'delete failed'));
+        })
+        .catch(e => {
+          pendingStatus.textContent = e.message;
+          discardPassword.value = '';
+          discardGo.disabled = true;
+        });
+    });
+
     // ---- Delete profile ---------------------------------------------------
+    // Three steps, advanced one at a time by the same Continue button, whose
+    // label only becomes destructive on the last one. Step gating here is
+    // about deliberateness; the endpoint re-checks the handle AND the
+    // password itself, so a caller skipping this UI gains nothing.
+    const DELETE_STEPS = 3;
+    let deleteStep = 1;
+
+    function renderDeleteStep() {
+      deleteSteps.forEach((el, i) => el.classList.toggle('hidden', i + 1 !== deleteStep));
+      deleteStepCount.textContent = `Step ${deleteStep} of ${DELETE_STEPS}`;
+      if (deleteStep === 1) {
+        deleteGo.textContent = 'I understand — continue';
+        deleteGo.disabled = false;
+      } else if (deleteStep === 2) {
+        deletePrompt.textContent = `Type your handle (${myHandle}) exactly to continue.`;
+        deleteGo.textContent = 'Continue';
+        deleteGo.disabled = deleteInput.value.trim().toLowerCase() !== myHandle;
+        deleteInput.focus();
+      } else {
+        deleteGo.textContent = 'Delete my profile';
+        deleteGo.disabled = deletePassword.value.length === 0;
+        deletePassword.focus();
+      }
+    }
+
+    function resetDeleteFlow() {
+      deleteStep = 1;
+      deleteInput.value = '';
+      deletePassword.value = '';
+      deleteStatus.textContent = '';
+      renderDeleteStep();
+    }
+
     deleteStart.addEventListener('click', () => {
       deleteBox.classList.remove('hidden');
       deleteStart.classList.add('hidden');
-      deletePrompt.textContent = `Type your handle (${myHandle}) to confirm. This cannot be undone.`;
-      deleteInput.value = '';
-      deleteGo.disabled = true;
-      deleteInput.focus();
+      resetDeleteFlow();
     });
 
     deleteCancel.addEventListener('click', () => {
       deleteBox.classList.add('hidden');
       deleteStart.classList.remove('hidden');
-      deleteStatus.textContent = '';
+      resetDeleteFlow();
     });
 
     deleteInput.addEventListener('input', () => {
-      deleteGo.disabled = deleteInput.value.trim().toLowerCase() !== myHandle;
+      if (deleteStep === 2) deleteGo.disabled = deleteInput.value.trim().toLowerCase() !== myHandle;
     });
 
+    deletePassword.addEventListener('input', () => {
+      if (deleteStep === 3) deleteGo.disabled = deletePassword.value.length === 0;
+    });
+
+    // A wrong password must NOT drop the fan back to step 1 to retype
+    // everything — that punishes a typo. It stays on step 3 with the field
+    // cleared and the reason stated.
+    function describeDeleteError(status: number, error: string): string {
+      if (error === 'bad_password') return 'That password is not right. Nothing was deleted — try again.';
+      if (error === 'password_not_set') return 'This account has no password yet. Set one under Sign-in details (/account) first — deleting a profile requires it.';
+      if (error === 'confirm_mismatch') return 'The handle did not match. Nothing was deleted.';
+      if (status === 429) return 'Too many attempts. Wait a while and try again.';
+      return 'Could not delete: ' + error;
+    }
+
     deleteGo.addEventListener('click', () => {
+      if (deleteStep < DELETE_STEPS) {
+        deleteStep += 1;
+        deleteStatus.textContent = '';
+        renderDeleteStep();
+        return;
+      }
+
       deleteGo.disabled = true;
       deleteStatus.textContent = 'Deleting…';
       fetch('/api/community/delete', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ confirm_handle: deleteInput.value.trim().toLowerCase() }),
+        body: JSON.stringify({
+          confirm_handle: deleteInput.value.trim().toLowerCase(),
+          password: deletePassword.value,
+        }),
       })
         .then(async r => {
-          if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || 'delete failed');
+          if (!r.ok) {
+            const data = await r.json().catch(() => ({}));
+            const err: any = new Error(describeDeleteError(r.status, data.error || 'delete failed'));
+            err.handled = true;
+            throw err;
+          }
           // Same reasoning as sign-out: this page is now rendering a profile
           // that no longer exists, so leave rather than re-render it.
           location.href = '/community';
         })
         .catch(e => {
-          deleteStatus.textContent = 'Could not delete: ' + e.message;
-          deleteGo.disabled = false;
+          deleteStatus.textContent = e.handled ? e.message : 'Could not delete: ' + e.message;
+          deletePassword.value = '';
+          deleteGo.disabled = true;
         });
     });
 

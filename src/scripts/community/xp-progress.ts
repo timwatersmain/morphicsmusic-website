@@ -21,6 +21,8 @@ export interface RankLadderStep {
   stage: CreatureStage;
   label: string;
   status: RankStatus;
+  /** Lifetime EP needed to reach this stage. 0 for egg — everyone starts there. */
+  requiredEp: number;
 }
 
 /**
@@ -38,6 +40,10 @@ export function rankLadder(currentStage: CreatureStage): RankLadderStep[] {
     stage,
     label: STAGE_LABELS[stage],
     status: i < currentIdx ? 'passed' : i === currentIdx ? 'current' : 'ahead',
+    // Carried on the step itself so the ladder can state its own entry
+    // price — "Chrysalis, 200 XP" — instead of a fan having to guess what
+    // the stage ahead of them actually costs.
+    requiredEp: stage === 'egg' ? 0 : STAGE_THRESHOLDS[stage],
   }));
 }
 
@@ -57,6 +63,30 @@ export interface CreatureProgressInput {
   next_stage_ep: number | null;
 }
 
+/**
+ * Once a fan is Emergent there is no fifth stage to climb to, but EP keeps
+ * accruing (tenure alone guarantees it) and a bar pinned at 100% forever
+ * hides that. Past the top threshold the bar therefore measures progress
+ * toward the next MILESTONE — a repeating band the same width as the
+ * pupa->adult one, so the pace of the bar never changes at the moment a fan
+ * emerges. Milestones are a display concept only: nothing server-side reads
+ * them, no stage or sprite changes, and the rank stays Emergent forever.
+ */
+export const MILESTONE_STEP = STAGE_THRESHOLDS.adult - STAGE_THRESHOLDS.pupa;
+
+export interface Milestone {
+  /** 1-based: the first milestone after emerging is 1. */
+  index: number;
+  /** Absolute EP total at which this milestone is reached. */
+  target: number;
+  /** EP earned into the current milestone band (0..width). */
+  epInto: number;
+  /** Width of a milestone band — constant, but returned so callers never re-derive it. */
+  width: number;
+  /** EP still to go. */
+  epRemaining: number;
+}
+
 export interface StageProgress {
   stage: CreatureStage;
   stageLabel: string;
@@ -70,6 +100,10 @@ export interface StageProgress {
   epInStage: number;
   /** Width of the current stage's band — "EP needed" for display. null at the final stage. */
   epForStage: number | null;
+  /** Lifetime EP total, exactly as stored — never re-based to a stage band. */
+  totalEp: number;
+  /** Only set at the final stage: the repeating post-Emergent band the bar tracks. */
+  milestone: Milestone | null;
 }
 
 /**
@@ -82,9 +116,13 @@ export interface StageProgress {
  *
  * Never divides by `next_stage_ep` when it's null (the top stage): that
  * naive `ep / next_stage_ep` is exactly the "empty or broken rectangle"
- * failure mode the brief calls out, so the final stage short-circuits to an
- * explicit completed state (pct 100, isFinal true) before any division
- * happens.
+ * failure mode the brief calls out, so the final stage branches off before
+ * any division happens and fills across a milestone band instead (see
+ * MILESTONE_STEP) — Emergent keeps earning, so the bar keeps moving.
+ *
+ * `totalEp` is always the raw lifetime total, at every stage, so a surface
+ * can show "what you've earned in all" alongside "where that puts you"
+ * without doing arithmetic of its own.
  */
 export function computeStageProgress(input: CreatureProgressInput): StageProgress {
   const stage = input.stage;
@@ -96,15 +134,27 @@ export function computeStageProgress(input: CreatureProgressInput): StageProgres
   const epInStage = Math.max(0, ep - start);
 
   if (isFinal) {
+    // Keep the bar alive past the top of the ladder: it now fills across a
+    // repeating milestone band instead of sitting pinned at 100% for good.
+    const index = Math.floor(epInStage / MILESTONE_STEP) + 1;
+    const epInto = epInStage % MILESTONE_STEP;
     return {
       stage,
       stageLabel: STAGE_LABELS[stage],
       nextStage: null,
       nextLabel: null,
-      pct: 100,
+      pct: (epInto / MILESTONE_STEP) * 100,
       isFinal: true,
       epInStage,
       epForStage: null,
+      totalEp: ep,
+      milestone: {
+        index,
+        target: start + index * MILESTONE_STEP,
+        epInto,
+        width: MILESTONE_STEP,
+        epRemaining: MILESTONE_STEP - epInto,
+      },
     };
   }
 
@@ -119,5 +169,7 @@ export function computeStageProgress(input: CreatureProgressInput): StageProgres
     isFinal: false,
     epInStage: Math.min(epInStage, width),
     epForStage: width,
+    totalEp: ep,
+    milestone: null,
   };
 }

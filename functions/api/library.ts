@@ -5,8 +5,10 @@ import { readCookie, verifySession, SESSION_COOKIE, LEGACY_SESSION_COOKIE } from
 import { corsHandler, preflight } from '../_lib/cors';
 import { rateLimit, rateLimitedJson, clientIp } from '../_lib/ratelimit';
 import { isReleased } from '../_lib/release-gate.mjs';
+import { ownedDigital } from '../_lib/entitlements';
 import manifest from '../../src/data/masters-manifest.json';
 import catalog from '../../src/data/music-catalog.json';
+import digitalData from '../../src/data/digital.json';
 
 interface CustomerRecord {
   email: string;
@@ -17,6 +19,7 @@ interface CustomerRecord {
     purchased_at: number;
     stripe_session_id: string;
     music_release_slugs: string[];
+    digital_slugs?: string[];
     merch_items: Array<{ printful_variant_id?: number; quantity: number }>;
     amount_total: number;
     currency: string;
@@ -49,7 +52,7 @@ export const onRequestGet: PagesFunction<Env> = corsHandler<Env>(async ({ reques
   const raw = await env.DOWNLOADS.get(`customer:${email}`);
   if (!raw) {
     return new Response(JSON.stringify({
-      email, purchases: [], releases: [],
+      email, purchases: [], releases: [], digital: [],
       free_token: { granted: false, spent_key: null },
       free_song_choices: [],
     }), { headers: { 'Content-Type': 'application/json' } });
@@ -105,6 +108,7 @@ export const onRequestGet: PagesFunction<Env> = corsHandler<Env>(async ({ reques
   const purchases = (record.purchases || []).map(p => ({
     purchased_at: p.purchased_at,
     music_release_slugs: p.music_release_slugs,
+    digital_slugs: p.digital_slugs || [],
     amount_total: p.amount_total,
     currency: p.currency,
   }));
@@ -133,6 +137,11 @@ export const onRequestGet: PagesFunction<Env> = corsHandler<Env>(async ({ reques
     first_seen_at: record.first_seen_at,
     purchases,
     releases,
+    // Digital products (typefaces, plugins, packs) the customer bought.
+    // /api/download's cookie path has always served these to their owner
+    // with no expiry and no use cap; until now nothing listed them, so a
+    // buyer had no way back to the file after the emailed link aged out.
+    digital: ownedDigital(record, digitalData as any),
     free_token: freeToken,
     free_song_choices: freeSongChoices,
   }), { headers: { 'Content-Type': 'application/json' } });

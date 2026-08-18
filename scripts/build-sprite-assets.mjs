@@ -12,8 +12,15 @@
 //      list per stage (no grids/palettes), small enough to bundle directly
 //      into the Workers function that assigns each fan their sprites. This
 //      keeps sprite ASSIGNMENT (server-side, cheap) separate from sprite
-//      RENDERING (client-side, needs the full 613KB) — the server never
-//      needs to fetch the big JSON at all.
+//      RENDERING — the server never needs to fetch the big JSON at all.
+//   4. public/sprites/ref/<REF>.json — ONE file per sprite (~1-2KB), so the
+//      server can now render a single creature to a PNG (for Discord embeds,
+//      see functions/api/community/creature/[handle].ts) by fetching just
+//      that sprite. This is what keeps point 3's promise true: rendering one
+//      creature must never mean pulling 613KB into a Worker with a 10ms CPU
+//      budget. These are NOT content-hashed — they are addressed by ref,
+//      which is stable forever (a fan's sprite refs are fixed at profile
+//      creation), so the URL must be stable too.
 //
 // Usage: node scripts/build-sprite-assets.mjs
 // No network, no external deps — safe to re-run any time the vendored data
@@ -63,6 +70,19 @@ export function refsByStage(sprites) {
   return out;
 }
 
+// Pure: the per-sprite payload the PNG renderer needs — the grid, the stage
+// (which picks the XP transform), and the sprite's own authored palette (for
+// the 'native' colourway). Everything else in the export is either for the
+// animation the server never runs, or catalogue metadata.
+export function renderPayload(sprite) {
+  return {
+    ref: sprite.ref,
+    stage: sprite.stage,
+    base: sprite.base,
+    palette: sprite.palette,
+  };
+}
+
 if (import.meta.url === `file://${process.argv[1]}`) {
   const raw = readFileSync(SOURCE);
   const sprites = JSON.parse(raw.toString('utf8'));
@@ -98,6 +118,23 @@ export const SPRITE_REFS_BY_STAGE: Record<'egg' | 'grub' | 'pupa' | 'adult', str
 `;
   writeFileSync(REFS_MODULE, refsSrc);
 
+  const refDir = join(SPRITES_DIR, 'ref');
+  mkdirSync(refDir, { recursive: true });
+  let refBytes = 0;
+  for (const sprite of sprites) {
+    // The ref is used directly as a filename, so a ref containing a path
+    // separator would write outside refDir. The export is trusted, but a
+    // trusted input that becomes a path deserves the check anyway.
+    if (!/^[A-Za-z0-9_-]+$/.test(sprite.ref)) {
+      throw new Error(`sprite ref ${JSON.stringify(sprite.ref)} is not filename-safe`);
+    }
+    const body = JSON.stringify(renderPayload(sprite));
+    refBytes += body.length;
+    writeFileSync(join(refDir, `${sprite.ref}.json`), body);
+  }
+
   console.log(`wrote public/sprites/${filename} (${(raw.length / 1024).toFixed(1)} KB), ` +
+    `${sprites.length} per-sprite files in public/sprites/ref/ ` +
+    `(${(refBytes / sprites.length / 1024).toFixed(1)} KB avg), ` +
     `${DATA_URL_MODULE.replace(ROOT + '/', '')}, ${REFS_MODULE.replace(ROOT + '/', '')}`);
 }

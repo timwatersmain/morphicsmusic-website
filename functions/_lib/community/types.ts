@@ -90,6 +90,12 @@ export interface FanProfileRow {
    * access control.
    */
   hidden_from_wall: number;
+  /**
+   * NULL for a live profile. A unix timestamp means the fan deleted it and
+   * it is inside the restore window (migration 0012). Every read in repo.ts
+   * except isHandleTaken filters these rows out.
+   */
+  deleted_at?: number | null;
 }
 
 export interface AvatarCatalogueRow {

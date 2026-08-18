@@ -186,3 +186,45 @@ You don't need to touch any of these — they're live.
   (NAT'd, multi-tab, or sharing IPs). App-layer 429s are now the primary
   defense; if a backstop is desired, recreate the rule with action set
   to **Managed Challenge** rather than Block.
+
+## 2026-08-18 — Profile deletion: password + 30-day recovery
+
+Deleting a community profile changed from an irreversible drop to a
+password-gated, three-step, recoverable operation. Two things to know
+operationally.
+
+**Deletion now requires the account password.** `POST /api/community/delete`
+verifies it server-side (`functions/api/community/delete.ts`) on top of the
+existing typed-handle confirmation. A live session cookie is no longer
+sufficient — an unattended laptop or a stolen cookie cannot destroy a
+profile. Consequence worth knowing before a support ticket arrives: an
+account that has **never set a password** (magic-link only) cannot delete its
+profile and gets `password_not_set` with a pointer to `/account`. That is
+deliberate; the alternative was a weaker fallback path that would have made
+the password check decorative.
+
+**Deletion is a soft delete with a 30-day window** (migration 0012, column
+`fan_profiles.deleted_at`). The profile disappears from every fan-facing
+surface immediately — wall, public profile links, engagement earning, their
+own profile page — but the row survives, and the fan restores it themselves
+from `/community/me` via `POST /api/community/restore`. There is no support
+step: **do not** hand-edit D1 to recover a profile, and do not reach for D1
+Time Travel, which restores the WHOLE database and would roll back every
+other fan's changes. Point them at their own profile page instead.
+
+The window is `DELETE_GRACE_DAYS` in `functions/_lib/community/repo.ts` — the
+single source of truth every user-facing date is computed from. The handle
+stays reserved for its owner for the whole window (`isHandleTaken`, which
+deliberately counts deleted rows, unlike every other read in that file).
+
+**Purging is not automatic.** Pages Functions have no cron. A lapsed profile
+is purged opportunistically when its owner next loads `/api/community/me`,
+which is the case that matters since it frees their email and handle. For
+fans who never return, run the backstop sweep periodically:
+
+    npm run d1:purge-deleted          # production — real and irreversible
+    npm run d1:purge-deleted:local    # local D1
+
+It only ever touches rows that are both soft-deleted and past their deadline,
+and is safe to run twice. If you change `DELETE_GRACE_DAYS`, mirror it in
+`tools/d1/purge-deleted-profiles.sql` — a test asserts the two agree.

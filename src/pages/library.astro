@@ -15,6 +15,15 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       </button>
     </header>
 
+    <!-- Shared profile strip — same row, same order, on every
+         account-facing page. See community/me.astro for why. -->
+    <nav aria-label="Profile sections" class="flex flex-wrap gap-2 mb-12">
+      <a href="/community/me" data-astro-reload class="font-mono text-[10px] text-white/40 hover:text-secondary uppercase tracking-widest border border-white/10 hover:border-secondary/30 px-4 py-2 rounded-full">Profile</a>
+      <span aria-current="page" class="font-mono text-[10px] uppercase tracking-widest border border-primary bg-primary/10 text-primary px-4 py-2 rounded-full">Orders &amp; receipts</span>
+      <a href="/account" data-astro-reload class="font-mono text-[10px] text-white/40 hover:text-secondary uppercase tracking-widest border border-white/10 hover:border-secondary/30 px-4 py-2 rounded-full">Sign-in details</a>
+      <a href="/community" data-astro-reload class="font-mono text-[10px] text-white/40 hover:text-secondary uppercase tracking-widest border border-white/10 hover:border-secondary/30 px-4 py-2 rounded-full">Fan wall</a>
+    </nav>
+
     <div id="lib-loading" class="font-mono text-[11px] text-white/40">Loading your library…</div>
     <div id="lib-empty" class="hidden p-8 border border-white/10 rounded-[var(--radius-lg)] text-center">
       <p class="font-mono text-[11px] text-white/40 leading-relaxed">
@@ -25,26 +34,13 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   </div>
 
   <script>
+    import { libraryHtml, hasAnything } from '../scripts/library-view';
+
     const loading = document.getElementById('lib-loading')!;
     const empty = document.getElementById('lib-empty')!;
     const content = document.getElementById('lib-content')!;
     const emailEl = document.getElementById('lib-email')!;
     const logoutBtn = document.getElementById('logout-btn')!;
-
-    const esc = (s: any) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
-    const safeImg = (s: any) => {
-      const v = String(s ?? '');
-      return /^(https?:|\/)/.test(v) ? v : '';
-    };
-
-    function fmtSize(b: number) {
-      if (b > 1e9) return (b / 1e9).toFixed(2) + ' GB';
-      if (b > 1e6) return (b / 1e6).toFixed(1) + ' MB';
-      return Math.ceil(b / 1024) + ' KB';
-    }
-    function fmtDate(unix: number) {
-      return new Date(unix * 1000).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
-    }
 
     fetch('/api/library', { credentials: 'include' })
       .then(async r => {
@@ -60,71 +56,14 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         loading.classList.add('hidden');
         emailEl.textContent = String(data.email || '');
 
-        if (!data.releases.length && !(data.purchases && data.purchases.length)) {
+        if (!hasAnything(data)) {
           empty.classList.remove('hidden');
           return;
         }
         content.classList.remove('hidden');
-
-        // Music releases section
-        if (data.releases.length) {
-          const releasesHtml = data.releases.map((r: any) => `
-            <section class="border border-white/5 p-6">
-              <div class="flex items-center gap-4 mb-4">
-                <img src="${esc(safeImg(r.artwork))}" alt="" class="w-16 h-16 object-cover bg-white/5" />
-                <div class="flex-1">
-                  <div class="font-mono text-[10px] text-secondary uppercase tracking-widest">${esc(r.type)}</div>
-                  <h2 class="font-headline text-2xl text-primary uppercase tracking-tight">${esc(r.title)}</h2>
-                </div>
-              </div>
-              ${r.files.length === 0
-                ? `<p class="font-mono text-[11px] text-white/30">Files coming soon — check back shortly.</p>`
-                : `<ul class="divide-y divide-white/5 border-y border-white/5">
-                    ${r.files.map((f: any) => `
-                      <li class="flex items-center gap-4 py-3">
-                        <span class="font-mono text-[10px] text-white/30 uppercase">${esc(f.ext)}</span>
-                        <span class="flex-1 font-mono text-[11px] text-white/80 truncate">${esc(f.filename)}</span>
-                        <span class="font-mono text-[10px] text-white/40">${esc(fmtSize(f.size))}</span>
-                        <a href="/api/download?key=${encodeURIComponent(f.key)}"
-                           class="px-3 py-2 border border-primary/20 hover:border-primary/60 hover:bg-primary/5 font-mono text-[10px] tracking-widest uppercase text-primary rounded-full">
-                          Download
-                        </a>
-                      </li>
-                    `).join('')}
-                  </ul>`
-              }
-            </section>
-          `).join('');
-          content.innerHTML += `
-            <div>
-              <div class="flex items-baseline gap-3 mb-4">
-                <span class="font-mono text-xs text-secondary uppercase">Music · permanent access</span>
-                <div class="h-[1px] flex-1 bg-outline-variant/30"></div>
-              </div>
-              <div class="space-y-4">${releasesHtml}</div>
-            </div>`;
-        }
-
-        // Order history
-        if (data.purchases && data.purchases.length) {
-          content.innerHTML += `
-            <div>
-              <div class="flex items-baseline gap-3 mb-4">
-                <span class="font-mono text-xs text-secondary uppercase">Order history</span>
-                <div class="h-[1px] flex-1 bg-outline-variant/30"></div>
-              </div>
-              <ol class="divide-y divide-white/5 border-y border-white/5">
-                ${data.purchases.slice().reverse().map((p: any) => `
-                  <li class="flex items-center gap-4 py-3">
-                    <span class="font-mono text-[10px] text-white/40 w-24">${esc(fmtDate(p.purchased_at))}</span>
-                    <span class="flex-1 font-mono text-[11px] text-white/70">
-                      ${esc((p.music_release_slugs || []).map((s: string) => s.toUpperCase().replace(/-/g,' ')).join(', ') || '(merch)')}
-                    </span>
-                    <span class="font-mono text-[11px] text-secondary tabular-nums">$${esc((p.amount_total / 100).toFixed(2))}</span>
-                  </li>`).join('')}
-              </ol>
-            </div>`;
-        }
+        // Music, then digital products, then the receipts. Shared with
+        // /community/me so the two can never describe ownership differently.
+        content.innerHTML = libraryHtml(data, { withOrderHistory: true });
       })
       .catch(e => {
         loading.classList.add('hidden');

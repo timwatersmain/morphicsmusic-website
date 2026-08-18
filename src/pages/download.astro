@@ -13,10 +13,23 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     <div id="dl-error" class="hidden font-mono text-sm text-red-400"></div>
     <div id="dl-content" class="hidden space-y-12"></div>
 
-    <p class="mt-16 font-mono text-[10px] text-white/30 leading-relaxed">
-      Bookmark this page or save the email — link is good for 7 days and 5 downloads total.
-      Need a fresh link? Email <a href="mailto:morphicsmusic@gmail.com" class="underline hover:text-secondary">morphicsmusic@gmail.com</a>.
-    </p>
+    <!-- The 7-day / 5-use figures below describe THIS LINK, not what the
+         customer owns. An emailed link is a bearer credential — anyone
+         holding it can use it — so it stays short-lived on purpose. The
+         purchase itself never expires and has no download cap, which is
+         what the panel above the fold says first. -->
+    <div class="mt-16 p-6 border border-secondary/30 bg-secondary/5">
+      <p class="font-mono text-[11px] text-white/70 leading-relaxed">
+        Everything you buy is yours for life, with unlimited downloads.
+        <a href="/library" data-astro-reload class="text-secondary underline">Sign in to your library</a>
+        any time to re-download it — no link, no expiry, no limit.
+      </p>
+      <p class="mt-3 font-mono text-[10px] text-white/30 leading-relaxed">
+        This emailed link is just the shortcut: for security it works for 7 days and 5 downloads.
+        When it lapses, your library still has everything. Questions?
+        <a href="mailto:morphicsmusic@gmail.com" class="underline hover:text-secondary">morphicsmusic@gmail.com</a>.
+      </p>
+    </div>
   </div>
 
   <script>
@@ -62,8 +75,9 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           content.innerHTML = `
             <div class="flex flex-wrap gap-x-8 gap-y-2 pb-6 border-b border-white/10 font-mono text-[10px] text-white/40 uppercase tracking-widest">
               <div>Email: <span class="text-primary normal-case tracking-normal">${esc(data.email)}</span></div>
-              <div>Expires: <span class="text-primary normal-case tracking-normal">${esc(expiresAt)}</span></div>
-              <div>Uses left: <span class="text-primary">${esc(usesLeft)} / ${esc(data.max_uses)}</span></div>
+              <div>Link expires: <span class="text-primary normal-case tracking-normal">${esc(expiresAt)}</span></div>
+              <div>Link uses left: <span class="text-primary">${esc(usesLeft)} / ${esc(data.max_uses)}</span></div>
+              <div>Ownership: <span class="text-primary normal-case tracking-normal">Lifetime · unlimited</span></div>
             </div>
           ` + data.releases.map((r: any) => `
             <section>

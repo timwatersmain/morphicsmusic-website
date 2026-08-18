@@ -33,7 +33,18 @@ export const STAGE_LABELS: Record<CreatureStage, string> = {
   adult: 'Emergent',
 };
 
+// Owner decision, 18 Aug 2026: TICKET SALES are the behaviour XP should push
+// hardest on — specifically tickets bought through morphicsmusic.com. That is
+// why PER_TICKET below is the largest single award in the system by a wide
+// margin, and why it is verified-only: it can be granted solely by a payment
+// webhook writing an xp_events row, never by anything a fan can self-report.
+//
+// NOTE: nothing emits PER_TICKET yet. The site has no ticket-selling path at
+// all — the weight and the ledger are in place so that wiring one up is the
+// only remaining work, rather than a redesign.
 export const EP_WEIGHTS = {
+  // The headline award. One ticket is worth more than eight releases.
+  PER_TICKET: 400,
   // Purchases are the strongest signal a fan is real and invested.
   PER_PURCHASE: 45,
   // Tenure cannot be rushed or bought — a slow, steady trickle instead.
@@ -57,6 +68,17 @@ export const STAGE_THRESHOLDS: Record<Exclude<CreatureStage, 'egg'>, number> = {
 export interface EpInputs {
   /** Count of distinct owned releases/digital slugs — see me.ts's `owned`. */
   purchaseCount: number;
+  /**
+   * Live total from the xp_events ledger (migration 0013): every discrete,
+   * durable grant — admin corrections, and every future earn type including
+   * ticket purchases. Already denominated in XP, so it is added at 1:1 and
+   * never re-weighted here.
+   *
+   * Optional so that older callers and pure unit tests keep working; absent
+   * means "this fan has no ledger events", which is the correct reading for
+   * every fan before 0013 ran.
+   */
+  ledgerXp?: number;
   /** Days since fan_since. Negative or non-finite is treated as 0. */
   tenureDays: number;
   /**
@@ -68,7 +90,19 @@ export interface EpInputs {
 }
 
 /**
- * Pure EP total from the three signals. Never negative.
+ * Pure EP total. Never negative.
+ *
+ * A deliberate HYBRID of derived and evented XP, not an oversight:
+ *
+ *   derived  — purchases, tenure, engagement. Recomputed every read, which is
+ *              what makes refunds and chargebacks reverse themselves the
+ *              moment the Stripe webhook prunes a purchase, with no
+ *              compensating ledger entry to remember to write.
+ *   evented  — ledgerXp, the sum of xp_events. Durable, idempotent, voidable,
+ *              and the ONLY kind that survives this recompute — which is
+ *              exactly the bug that made the ledger necessary (an admin grant
+ *              written straight to fan_profiles.ep was erased on the fan's
+ *              next page load).
  *
  * Worked example: one purchase (45) plus a month of tenure (30 * 0.2 = 6)
  * is 51 EP — just past the 50-EP grub threshold, so a fan who buys a
@@ -81,11 +115,16 @@ export function computeEp(inputs: EpInputs): number {
   const purchases = Math.max(0, Number(inputs.purchaseCount) || 0);
   const tenureDays = Math.max(0, Number(inputs.tenureDays) || 0);
   const engagement = Math.max(0, Number(inputs.engagementActions) || 0);
+  // Never negative in aggregate, but a NEGATIVE ledger total is legitimate —
+  // that is what an admin correction looks like — so it is clamped only
+  // after being added, not on its own.
+  const ledger = Number(inputs.ledgerXp) || 0;
   const raw =
     purchases * EP_WEIGHTS.PER_PURCHASE +
     tenureDays * EP_WEIGHTS.PER_TENURE_DAY +
-    engagement * EP_WEIGHTS.PER_ENGAGEMENT_ACTION;
-  return Math.floor(raw);
+    engagement * EP_WEIGHTS.PER_ENGAGEMENT_ACTION +
+    ledger;
+  return Math.max(0, Math.floor(raw));
 }
 
 /** Which stage a given EP total qualifies for, taken in isolation (no history). */

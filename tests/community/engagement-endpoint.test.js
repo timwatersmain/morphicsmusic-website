@@ -27,6 +27,11 @@ const MIGRATION5 = readFileSync(join(root, 'migrations/0005_avatar_tiers.sql'), 
 const MIGRATION6 = readFileSync(join(root, 'migrations/0006_creatures.sql'), 'utf8');
 const MIGRATION7 = readFileSync(join(root, 'migrations/0007_sprites.sql'), 'utf8');
 const MIGRATION11 = readFileSync(join(root, 'migrations/0011_profile_bio_privacy.sql'), 'utf8');
+const MIGRATION12 = readFileSync(join(root, 'migrations/0012_profile_soft_delete.sql'), 'utf8');
+const MIGRATION14 = readFileSync(join(root, 'migrations/0014_xp_events.sql'), 'utf8');
+// GET /api/community/me reads discord_links to fold Discord EP into the
+// same computeEp call — without this the endpoint 500s on a missing table.
+const MIGRATION13 = readFileSync(join(root, 'migrations/0013_discord_links.sql'), 'utf8');
 const MIGRATION8 = readFileSync(join(root, 'migrations/0008_sprite_override.sql'), 'utf8');
 const MIGRATION9 = readFileSync(join(root, 'migrations/0009_native_colourway.sql'), 'utf8');
 const MIGRATION10 = readFileSync(join(root, 'migrations/0010_engagement_ep.sql'), 'utf8');
@@ -59,6 +64,9 @@ beforeEach(async () => {
   raw.exec(MIGRATION8);
   raw.exec(MIGRATION9);
   raw.exec(MIGRATION10);
+  raw.exec(MIGRATION12);
+  raw.exec(MIGRATION13);
+  raw.exec(MIGRATION14);
   db = makeD1Shim(raw);
   kv = makeKvStub();
   env = { AUTH_SECRET, DOWNLOADS: kv, GATES: db };

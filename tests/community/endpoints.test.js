@@ -18,7 +18,7 @@ import { dirname, join } from 'node:path';
 
 import { makeD1Shim } from './helpers/d1-shim.js';
 import { signSession, SESSION_COOKIE } from '../../functions/_lib/auth';
-import { ensureProfile, grantUnlocks, HANDLE_CHANGE_COOLDOWN_DAYS } from '../../functions/_lib/community/repo';
+import { ensureProfile, grantUnlocks, updateProfile, HANDLE_CHANGE_COOLDOWN_DAYS } from '../../functions/_lib/community/repo';
 import { NATIVE_COLOURWAY } from '../../functions/_lib/community/sprites';
 
 import { onRequestGet as meGet } from '../../functions/api/community/me';
@@ -26,6 +26,13 @@ import { onRequestPost as updatePost } from '../../functions/api/community/updat
 import { onRequestGet as profileGet } from '../../functions/api/community/profile';
 import { onRequestGet as directoryGet } from '../../functions/api/community/directory';
 import { onRequestPost as deletePost } from '../../functions/api/community/delete';
+import { onRequestPost as restorePost } from '../../functions/api/community/restore';
+import {
+  getDeletedProfileByEmail, getProfileByEmail, isHandleTaken, DELETE_GRACE_DAYS,
+} from '../../functions/_lib/community/repo';
+
+import { getOrCreateCustomerRecord, saveCustomerRecord } from '../../functions/_lib/customer';
+import { hashPassword } from '../../functions/_lib/password';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const MIGRATION = readFileSync(join(root, 'migrations/0002_fan_profiles.sql'), 'utf8');
@@ -38,8 +45,15 @@ const MIGRATION8 = readFileSync(join(root, 'migrations/0008_sprite_override.sql'
 const MIGRATION9 = readFileSync(join(root, 'migrations/0009_native_colourway.sql'), 'utf8');
 const MIGRATION10 = readFileSync(join(root, 'migrations/0010_engagement_ep.sql'), 'utf8');
 const MIGRATION11 = readFileSync(join(root, 'migrations/0011_profile_bio_privacy.sql'), 'utf8');
+const MIGRATION12 = readFileSync(join(root, 'migrations/0012_profile_soft_delete.sql'), 'utf8');
+const MIGRATION14 = readFileSync(join(root, 'migrations/0014_xp_events.sql'), 'utf8');
+// GET /api/community/me reads discord_links to fold Discord EP into the
+// same computeEp call — without this the endpoint 500s on a missing table.
+const MIGRATION13 = readFileSync(join(root, 'migrations/0013_discord_links.sql'), 'utf8');
 
 const AUTH_SECRET = 'test-only-secret-not-real';
+const PASSWORD_PEPPER = 'test-only-pepper-not-real';
+const FAN_PASSWORD = 'correct-horse-battery';
 const FAN_EMAIL = 'endpoint-fan@example.com';
 
 // A rule that can never be satisfied by a freshly created fan (tenure_days
@@ -81,11 +95,25 @@ beforeEach(() => {
   raw.exec(MIGRATION9);
   raw.exec(MIGRATION10);
   raw.exec(MIGRATION11);
+  raw.exec(MIGRATION12);
+  raw.exec(MIGRATION13);
+  raw.exec(MIGRATION14);
   seedCatalogue(raw);
   db = makeD1Shim(raw);
   kv = makeKvStub();
-  env = { AUTH_SECRET, DOWNLOADS: kv, GATES: db };
+  env = { AUTH_SECRET, PASSWORD_PEPPER, DOWNLOADS: kv, GATES: db };
 });
+
+// /api/community/delete verifies the account password, so a customer record
+// with a real hash has to exist for the happy path. Written through the same
+// helpers the app uses rather than hand-rolled JSON, so a change to the
+// record shape breaks this loudly instead of silently passing.
+async function seedPassword(email, plaintext = FAN_PASSWORD) {
+  const record = await getOrCreateCustomerRecord(env, email);
+  record.password = await hashPassword(env, plaintext);
+  await saveCustomerRecord(env, record);
+  return record;
+}
 
 async function cookieFor(email, ver = 0) {
   const value = await signSession(AUTH_SECRET, email, ver);
@@ -1210,6 +1238,122 @@ describe('POST /api/community/update — fan wall visibility', () => {
   });
 });
 
+describe('handle reservation during a delete grace window', () => {
+  it('a handle held by a soft-deleted profile cannot be claimed by someone else', async () => {
+    const gone = await ensureProfile(db, { email: 'gone@b.com', fanSince: 100, displayName: 'Ana' });
+    await ensureProfile(db, { email: FAN_EMAIL, fanSince: 100, displayName: 'Someone' });
+    raw.prepare('UPDATE fan_profiles SET deleted_at = ? WHERE id = ?')
+      .run(Math.floor(Date.now() / 1000), gone.id);
+
+    // The profile is invisible, but its handle is still spoken for — this
+    // must be a clean 409, not a unique-index explosion on the write.
+    const res = await updatePost({
+      request: req('https://morphicsmusic.com/api/community/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Cookie: await cookieFor(FAN_EMAIL) },
+        body: JSON.stringify({ handle: gone.handle }),
+      }),
+      env,
+    });
+    expect(res.status).toBe(409);
+    expect((await res.json()).error).toBe('handle_taken');
+  });
+});
+
+describe('POST /api/community/restore', () => {
+  async function restore(body, cookie) {
+    return restorePost({
+      request: req('https://morphicsmusic.com/api/community/restore', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(cookie ? { Cookie: cookie } : {}) },
+        body: JSON.stringify(body || {}),
+      }),
+      env,
+    });
+  }
+  async function softDelete(profile) {
+    await seedPassword(FAN_EMAIL);
+    const res = await deletePost({
+      request: req('https://morphicsmusic.com/api/community/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Cookie: await cookieFor(FAN_EMAIL) },
+        body: JSON.stringify({ confirm_handle: profile.handle, password: FAN_PASSWORD }),
+      }),
+      env,
+    });
+    expect(res.status).toBe(200);
+  }
+
+  it('refuses a signed-out caller', async () => {
+    expect((await restore({}, null)).status).toBe(401);
+  });
+
+  it('brings a deleted profile back, with its bio and rank intact', async () => {
+    const profile = await ensureProfile(db, {
+      email: FAN_EMAIL, fanSince: 100, displayName: 'Endpoint Fan',
+    });
+    await updateProfile(db, profile.id, { bio: 'worth getting back' });
+    await softDelete(profile);
+
+    const res = await restore({}, await cookieFor(FAN_EMAIL));
+    expect(res.status).toBe(200);
+    expect((await res.json()).restored).toBe(true);
+
+    const back = await getProfileByEmail(db, FAN_EMAIL);
+    expect(back.id).toBe(profile.id);
+    expect(back.handle).toBe(profile.handle);
+    expect(back.bio).toBe('worth getting back');
+  });
+
+  it('needs no password — restoring is not destructive', async () => {
+    const profile = await ensureProfile(db, {
+      email: FAN_EMAIL, fanSince: 100, displayName: 'Endpoint Fan',
+    });
+    await softDelete(profile);
+    const res = await restore({}, await cookieFor(FAN_EMAIL));
+    expect(res.status).toBe(200);
+  });
+
+  it('reports success when nothing is pending, without saying which case it was', async () => {
+    await ensureProfile(db, { email: FAN_EMAIL, fanSince: 100, displayName: 'Endpoint Fan' });
+    const res = await restore({}, await cookieFor(FAN_EMAIL));
+    expect(res.status).toBe(200);
+    expect((await res.json()).nothing_pending).toBe(true);
+  });
+
+  it('discarding IS destructive, so it takes the password — a wrong one changes nothing', async () => {
+    const profile = await ensureProfile(db, {
+      email: FAN_EMAIL, fanSince: 100, displayName: 'Endpoint Fan',
+    });
+    await softDelete(profile);
+
+    const bad = await restore({ discard: true, password: 'wrong' }, await cookieFor(FAN_EMAIL));
+    expect(bad.status).toBe(403);
+    expect((await getDeletedProfileByEmail(db, FAN_EMAIL)).id).toBe(profile.id);
+
+    const good = await restore({ discard: true, password: FAN_PASSWORD }, await cookieFor(FAN_EMAIL));
+    expect(good.status).toBe(200);
+    expect((await good.json()).discarded).toBe(true);
+    expect(raw.prepare('SELECT COUNT(*) c FROM fan_profiles WHERE id = ?').get(profile.id).c).toBe(0);
+    expect(await isHandleTaken(db, profile.handle)).toBe(false);
+  });
+
+  it('refuses to resurrect a profile whose window already lapsed, and purges it instead', async () => {
+    const profile = await ensureProfile(db, {
+      email: FAN_EMAIL, fanSince: 100, displayName: 'Endpoint Fan',
+    });
+    await softDelete(profile);
+    // Backdate past the deadline — the sweep has not run, but the promise
+    // made to the fan was the DATE, not the sweep's schedule.
+    const longAgo = Math.floor(Date.now() / 1000) - (DELETE_GRACE_DAYS + 1) * 24 * 60 * 60;
+    raw.prepare('UPDATE fan_profiles SET deleted_at = ? WHERE id = ?').run(longAgo, profile.id);
+
+    const res = await restore({}, await cookieFor(FAN_EMAIL));
+    expect(res.status).toBe(410);
+    expect(raw.prepare('SELECT COUNT(*) c FROM fan_profiles WHERE id = ?').get(profile.id).c).toBe(0);
+  });
+});
+
 describe('POST /api/community/delete', () => {
   async function del(body, cookie) {
     return deletePost({
@@ -1223,7 +1367,7 @@ describe('POST /api/community/delete', () => {
   }
 
   it('refuses a signed-out caller', async () => {
-    const res = await del({ confirm_handle: 'anyone' }, null);
+    const res = await del({ confirm_handle: 'anyone', password: FAN_PASSWORD }, null);
     expect(res.status).toBe(401);
   });
 
@@ -1231,13 +1375,14 @@ describe('POST /api/community/delete', () => {
     const profile = await ensureProfile(db, {
       email: FAN_EMAIL, fanSince: Math.floor(Date.now() / 1000), displayName: 'Endpoint Fan',
     });
-    const res = await del({ confirm_handle: 'not-my-handle' }, await cookieFor(FAN_EMAIL));
+    await seedPassword(FAN_EMAIL);
+    const res = await del({ confirm_handle: 'not-my-handle', password: FAN_PASSWORD }, await cookieFor(FAN_EMAIL));
     expect(res.status).toBe(400);
     expect((await res.json()).error).toBe('confirm_mismatch');
     expect(raw.prepare('SELECT COUNT(*) c FROM fan_profiles WHERE id = ?').get(profile.id).c).toBe(1);
   });
 
-  it('deletes the caller\'s own profile and unlock ledger on an exact match', async () => {
+  it('soft-deletes the caller\'s own profile — hidden everywhere, row kept for restore', async () => {
     const profile = await ensureProfile(db, {
       email: FAN_EMAIL, fanSince: Math.floor(Date.now() / 1000), displayName: 'Endpoint Fan',
     });
@@ -1245,10 +1390,17 @@ describe('POST /api/community/delete', () => {
       { avatarId: 'release:perception', source: 'own_release', sourceRef: 'perception' },
     ]);
 
-    const res = await del({ confirm_handle: profile.handle }, await cookieFor(FAN_EMAIL));
+    await seedPassword(FAN_EMAIL);
+    const res = await del({ confirm_handle: profile.handle, password: FAN_PASSWORD }, await cookieFor(FAN_EMAIL));
     expect(res.status).toBe(200);
-    expect(raw.prepare('SELECT COUNT(*) c FROM fan_profiles WHERE id = ?').get(profile.id).c).toBe(0);
-    expect(raw.prepare('SELECT COUNT(*) c FROM fan_avatar_unlocks').get().c).toBe(0);
+    const body = await res.json();
+    expect(body.restore_until).toBe(body.deleted_at + DELETE_GRACE_DAYS * 24 * 60 * 60);
+
+    // Gone from every fan-facing read...
+    expect(await getProfileByEmail(db, FAN_EMAIL)).toBeNull();
+    // ...but recoverable, ledger and all, until the window lapses.
+    expect((await getDeletedProfileByEmail(db, FAN_EMAIL)).id).toBe(profile.id);
+    expect(raw.prepare('SELECT COUNT(*) c FROM fan_avatar_unlocks').get().c).toBe(1);
   });
 
   it('can only ever delete the caller, never a handle named in the body', async () => {
@@ -1260,19 +1412,52 @@ describe('POST /api/community/delete', () => {
     });
     // The attacker types the VICTIM's handle: that is a mismatch against the
     // attacker's own handle, so nothing is deleted anywhere.
-    const res = await del({ confirm_handle: victim.handle }, await cookieFor(FAN_EMAIL));
+    await seedPassword(FAN_EMAIL);
+    const res = await del({ confirm_handle: victim.handle, password: FAN_PASSWORD }, await cookieFor(FAN_EMAIL));
     expect(res.status).toBe(400);
     expect(raw.prepare('SELECT COUNT(*) c FROM fan_profiles WHERE id = ?').get(victim.id).c).toBe(1);
   });
 
-  it('is idempotent — deleting twice reports success, not an error', async () => {
+  it('is idempotent — deleting twice reports success, not an error (the second finds nothing live)', async () => {
     const profile = await ensureProfile(db, {
       email: FAN_EMAIL, fanSince: Math.floor(Date.now() / 1000), displayName: 'Endpoint Fan',
     });
+    await seedPassword(FAN_EMAIL);
     const cookie = await cookieFor(FAN_EMAIL);
-    await del({ confirm_handle: profile.handle }, cookie);
-    const again = await del({ confirm_handle: profile.handle }, cookie);
+    await del({ confirm_handle: profile.handle, password: FAN_PASSWORD }, cookie);
+    const again = await del({ confirm_handle: profile.handle, password: FAN_PASSWORD }, cookie);
     expect(again.status).toBe(200);
     expect((await again.json()).already_deleted).toBe(true);
+  });
+
+  it('refuses a wrong password even with the handle typed correctly', async () => {
+    const profile = await ensureProfile(db, {
+      email: FAN_EMAIL, fanSince: Math.floor(Date.now() / 1000), displayName: 'Endpoint Fan',
+    });
+    await seedPassword(FAN_EMAIL);
+    const res = await del({ confirm_handle: profile.handle, password: 'not-the-password' }, await cookieFor(FAN_EMAIL));
+    expect(res.status).toBe(403);
+    expect((await res.json()).error).toBe('bad_password');
+    expect(raw.prepare('SELECT COUNT(*) c FROM fan_profiles WHERE id = ?').get(profile.id).c).toBe(1);
+  });
+
+  it('refuses a missing password — a live session cookie alone is not enough', async () => {
+    const profile = await ensureProfile(db, {
+      email: FAN_EMAIL, fanSince: Math.floor(Date.now() / 1000), displayName: 'Endpoint Fan',
+    });
+    await seedPassword(FAN_EMAIL);
+    const res = await del({ confirm_handle: profile.handle }, await cookieFor(FAN_EMAIL));
+    expect(res.status).toBe(403);
+    expect(raw.prepare('SELECT COUNT(*) c FROM fan_profiles WHERE id = ?').get(profile.id).c).toBe(1);
+  });
+
+  it('an account with no password set cannot delete, and is told to set one', async () => {
+    const profile = await ensureProfile(db, {
+      email: FAN_EMAIL, fanSince: Math.floor(Date.now() / 1000), displayName: 'Endpoint Fan',
+    });
+    const res = await del({ confirm_handle: profile.handle, password: 'anything' }, await cookieFor(FAN_EMAIL));
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe('password_not_set');
+    expect(raw.prepare('SELECT COUNT(*) c FROM fan_profiles WHERE id = ?').get(profile.id).c).toBe(1);
   });
 });

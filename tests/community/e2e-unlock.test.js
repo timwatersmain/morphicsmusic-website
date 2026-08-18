@@ -19,6 +19,8 @@ const UP3 = readFileSync(join(root, 'migrations/0003_handle_locked.sql'), 'utf8'
 const UP4 = readFileSync(join(root, 'migrations/0004_handle_cooldown.sql'), 'utf8');
 const UP6 = readFileSync(join(root, 'migrations/0006_creatures.sql'), 'utf8');
 const UP7 = readFileSync(join(root, 'migrations/0007_sprites.sql'), 'utf8');
+const UP12 = readFileSync(join(root, 'migrations/0012_profile_soft_delete.sql'), 'utf8');
+const UP14 = readFileSync(join(root, 'migrations/0014_xp_events.sql'), 'utf8');
 
 const CATALOG = {
   releases: [
@@ -36,6 +38,8 @@ beforeEach(() => {
   raw.exec(UP4);
   raw.exec(UP6);
   raw.exec(UP7);
+  raw.exec(UP12);
+  raw.exec(UP14);
   for (const a of buildReleaseAvatars(CATALOG)) {
     raw.prepare(`INSERT INTO avatar_catalogue
       (id,kind,release_slug,name,art_path,unlock_rule,hint,sort_order)

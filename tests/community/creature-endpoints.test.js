@@ -32,6 +32,11 @@ const MIGRATION8 = readFileSync(join(root, 'migrations/0008_sprite_override.sql'
 const MIGRATION9 = readFileSync(join(root, 'migrations/0009_native_colourway.sql'), 'utf8');
 const MIGRATION10 = readFileSync(join(root, 'migrations/0010_engagement_ep.sql'), 'utf8');
 const MIGRATION11 = readFileSync(join(root, 'migrations/0011_profile_bio_privacy.sql'), 'utf8');
+const MIGRATION12 = readFileSync(join(root, 'migrations/0012_profile_soft_delete.sql'), 'utf8');
+const MIGRATION14 = readFileSync(join(root, 'migrations/0014_xp_events.sql'), 'utf8');
+// GET /api/community/me reads discord_links to fold Discord EP into the
+// same computeEp call — without this the endpoint 500s on a missing table.
+const MIGRATION13 = readFileSync(join(root, 'migrations/0013_discord_links.sql'), 'utf8');
 
 const AUTH_SECRET = 'test-only-secret-not-real';
 const ADMIN_EMAIL = 'admin@morphicsmusic.com';
@@ -62,6 +67,9 @@ beforeEach(() => {
   raw.exec(MIGRATION9);
   raw.exec(MIGRATION10);
   raw.exec(MIGRATION11);
+  raw.exec(MIGRATION12);
+  raw.exec(MIGRATION13);
+  raw.exec(MIGRATION14);
   db = makeD1Shim(raw);
   kv = makeKvStub();
   env = { AUTH_SECRET, DOWNLOADS: kv, GATES: db };
@@ -197,6 +205,64 @@ describe('admin creature endpoints', () => {
       env,
     });
     expect(res.status).toBe(404);
+  });
+
+  // THE regression test. Before the xp_events ledger, grant-ep wrote straight
+  // to fan_profiles.ep and computeEp() overwrote it on the fan's very next
+  // profile load — leaving them stage-advanced with none of the XP that
+  // justified it. The old test asserted the write landed and stopped there,
+  // which is exactly why this was invisible. Loading /me afterwards is the
+  // whole point of this test; do not remove that step.
+  it('an admin grant SURVIVES the fan opening their own profile', async () => {
+    const thirtyDaysAgo = Math.floor(Date.now() / 1000) - 30 * 24 * 60 * 60;
+    await ensureProfile(db, { email: FAN_EMAIL, fanSince: thirtyDaysAgo, displayName: 'Fan' });
+    const adminCookie = await cookieFor(ADMIN_EMAIL);
+    env.ADMIN_EMAILS = ADMIN_EMAIL;
+
+    await grantEpPost({
+      request: req('https://morphicsmusic.com/api/admin/grant-ep', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', Cookie: adminCookie },
+        body: JSON.stringify({ email: FAN_EMAIL, amount: 1000 }),
+      }),
+      env,
+    });
+
+    const res = await meGet({
+      request: req('https://morphicsmusic.com/api/community/me', {
+        headers: { Cookie: await cookieFor(FAN_EMAIL) },
+      }),
+      env,
+    });
+    const body = await res.json();
+
+    // Tenure alone would be ~6 XP. The grant must still be in there.
+    expect(body.profile.creature.ep).toBeGreaterThanOrEqual(1000);
+    const row = await db.prepare('SELECT ep FROM fan_profiles WHERE email = ?').bind(FAN_EMAIL).first();
+    expect(row.ep).toBeGreaterThanOrEqual(1000);
+  });
+
+  it('a repeated identical grant awards once, not twice', async () => {
+    await ensureProfile(db, { email: FAN_EMAIL, fanSince: 100, displayName: 'Fan' });
+    const adminCookie = await cookieFor(ADMIN_EMAIL);
+    env.ADMIN_EMAILS = ADMIN_EMAIL;
+
+    const send = () => grantEpPost({
+      request: req('https://morphicsmusic.com/api/admin/grant-ep', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', Cookie: adminCookie },
+        body: JSON.stringify({ email: FAN_EMAIL, amount: 500 }),
+      }),
+      env,
+    });
+
+    const first = await send();
+    const second = await send();
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(200);
+    expect((await second.json()).duplicate).toBe(true);
+
+    const events = await db.prepare('SELECT COUNT(*) AS c FROM xp_events WHERE action_type = ?')
+      .bind('admin_grant').first();
+    expect(events.c).toBe(1);
   });
 
   it('an admin can grant EP and it can push a fan past egg', async () => {

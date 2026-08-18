@@ -14,7 +14,7 @@ import { corsHandler, preflight } from '../../_lib/cors';
 import { rateLimit, rateLimitedJson, clientIp } from '../../_lib/ratelimit';
 import { requireFan, unauthorized, type CommunityEnv } from '../../_lib/community/session';
 import {
-  getProfileByEmail, getProfileByHandle, getUnlockedAvatarIds, getAvatarById, updateProfile,
+  getProfileByEmail, isHandleTaken, getUnlockedAvatarIds, getAvatarById, updateProfile,
   canChangeHandle, nextHandleChangeAt, setCreatureColourway,
 } from '../../_lib/community/repo';
 import { isValidDisplayName, isBlockedName, slugifyHandle } from '../../_lib/community/handle';
@@ -95,12 +95,19 @@ export const onRequestPost: PagesFunction<CommunityEnv> = corsHandler<CommunityE
           }, 429);
         }
 
-        const holder = await getProfileByHandle(env.GATES, wanted);
+        // isHandleTaken, NOT getProfileByHandle: the latter hides profiles
+        // inside their delete grace window, so it would report a RESERVED
+        // handle as free — and the fan would sail past this check straight
+        // into a unique-index violation on the write. "Unavailable" has to
+        // mean the same thing here as it does to the index.
+        //
         // A fan who typed a specific handle must be told it's unavailable,
         // not silently handed a suffixed alternative — silent suffixing is
         // only correct for the *derived* default at profile creation, where
         // the fan never chose the string themselves.
-        if (holder && holder.id !== profile.id) return json({ error: 'handle_taken' }, 409);
+        if (wanted !== profile.handle && await isHandleTaken(env.GATES, wanted)) {
+          return json({ error: 'handle_taken' }, 409);
+        }
 
         fields.handle = wanted;
       }

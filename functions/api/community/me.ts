@@ -7,11 +7,13 @@ import { rateLimit, rateLimitedJson, clientIp } from '../../_lib/ratelimit';
 import { requireFan, unauthorized, type CommunityEnv } from '../../_lib/community/session';
 import {
   ensureProfile, getCatalogue, getUnlockedAvatarIds, grantUnlocks,
+  getDeletedProfileByEmail, purgeFanProfile, isGraceExpired, purgeDueAt, sumLedgerXp,
   getRarity, setCollectionCount, toPublicProfile, canChangeHandle, nextHandleChangeAt,
-  saveCreatureProgress, ensureSpriteAssignment,
+  saveCreatureProgress, ensureSpriteAssignment, getDiscordLinkByFan,
 } from '../../_lib/community/repo';
 import { evaluateUnlocks } from '../../_lib/community/unlocks';
 import { evaluateCreature } from '../../_lib/community/creature';
+import { epInputsFor, ownedSlugsFromRecord } from '../../_lib/community/ep-inputs';
 import { requireAdmin } from '../../_lib/admin';
 
 interface CustomerRecord {
@@ -50,13 +52,36 @@ export const onRequestGet: PagesFunction<CommunityEnv> = corsHandler<CommunityEn
     let record: CustomerRecord = {};
     try { if (raw) record = JSON.parse(raw); } catch { /* treat as empty */ }
 
-    const owned = new Set<string>();
-    for (const p of record.purchases || []) {
-      for (const s of p.music_release_slugs || []) owned.add(s);
-      for (const d of p.digital_slugs || []) owned.add(d);
-    }
+    const owned = ownedSlugsFromRecord(record);
 
     const nowSec = Math.floor(Date.now() / 1000);
+
+    // Soft-delete gate (migration 0012). A fan sitting inside their restore
+    // window must NOT be handed a shiny new profile — that would silently
+    // strand the old one (the unique email index would reject the insert
+    // anyway) and quietly throw away the bio and engagement EP they can
+    // still get back. Instead the page is told to render the restore panel.
+    //
+    // A window that has already lapsed is purged right here rather than
+    // waiting for the bulk sweep: this is the moment it matters, because the
+    // fan is standing in front of us wanting their email and handle freed so
+    // a fresh profile can be created below.
+    const pendingDelete = await getDeletedProfileByEmail(env.GATES, email);
+    if (pendingDelete) {
+      if (isGraceExpired(pendingDelete.deleted_at ?? null, nowSec)) {
+        await purgeFanProfile(env.GATES, pendingDelete.id);
+      } else {
+        return new Response(JSON.stringify({
+          deleted: {
+            handle: pendingDelete.handle,
+            display_name: pendingDelete.display_name,
+            deleted_at: pendingDelete.deleted_at,
+            restore_until: purgeDueAt(pendingDelete.deleted_at as number),
+          },
+        }), { headers: { 'Content-Type': 'application/json' } });
+      }
+    }
+
     const profile = await ensureProfile(env.GATES, {
       email,
       // A fan with no purchases (e.g. arrived via a download gate) still gets
@@ -109,17 +134,17 @@ export const onRequestGet: PagesFunction<CommunityEnv> = corsHandler<CommunityEn
     // engine above. Sprite refs/colourway are NOT re-derived here — they
     // were fixed at creation (or by ensureSpriteAssignment above); only
     // stage/ep ever change on a read.
-    const tenureDays = Math.max(0, (nowSec - profile.fan_since) / 86400);
+    // Site engagement EP (clicks + active time + listening, accrued by POST
+    // /api/community/engagement) plus Discord EP (accrued by POST
+    // /api/discord/award) — both server-side, never client-supplied. The
+    // sum and the tenure arithmetic live in ep-inputs.ts so this and the
+    // Discord award path cannot rank the same fan differently.
+    const discordLink = await getDiscordLinkByFan(env.GATES, profile.id);
+    const discordEp = discordLink?.discord_ep || 0;
+    const discordLinked = !!discordLink;
     const creatureUpdate = await evaluateCreature(
       profile,
-      {
-        purchaseCount: owned.size,
-        tenureDays,
-        // Lifetime engagement EP (clicks + active time + listening) —
-        // accrued server-side by POST /api/community/engagement, never
-        // client-supplied here. See functions/_lib/community/engagement.ts.
-        engagementActions: profile.engagement_ep || 0,
-      },
+      epInputsFor(profile, owned.size, nowSec, discordEp, await sumLedgerXp(env.GATES, profile.id)),
     );
     // hatchedAt is permanent once set, never touched again — carry the
     // existing value forward except on the exact visit that just crossed it.
@@ -168,6 +193,12 @@ export const onRequestGet: PagesFunction<CommunityEnv> = corsHandler<CommunityEn
           hatched_at: hatchedAt,
         }, equipped),
         is_self: true,
+        // Self-view only: whether this fan has a Discord account linked.
+        // Answered here rather than by a dedicated endpoint because /me is
+        // already fetched on every community page, and the free plan's
+        // subrequest budget is not worth spending to re-ask a question this
+        // response can carry. The id itself is deliberately NOT exposed.
+        discord_linked: discordLinked,
         // Self-view only augmentation (not part of toPublicProfile's public
         // allow-list) so the settings UI can tell the fan when they'll next
         // be able to change their handle, without exposing the raw

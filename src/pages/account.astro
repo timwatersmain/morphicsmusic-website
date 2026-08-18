@@ -30,6 +30,15 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         </p>
       </header>
 
+      <!-- Shared profile strip — same row, same order, on every
+           account-facing page. See community/me.astro for why. -->
+      <nav aria-label="Profile sections" class="flex flex-wrap gap-2 mb-12">
+        <a href="/community/me" data-astro-reload class="font-mono text-[10px] text-white/40 hover:text-secondary uppercase tracking-widest border border-white/10 hover:border-secondary/30 px-4 py-2 rounded-full">Profile</a>
+        <a href="/library" data-astro-reload class="font-mono text-[10px] text-white/40 hover:text-secondary uppercase tracking-widest border border-white/10 hover:border-secondary/30 px-4 py-2 rounded-full">Orders &amp; receipts</a>
+        <span aria-current="page" class="font-mono text-[10px] uppercase tracking-widest border border-primary bg-primary/10 text-primary px-4 py-2 rounded-full">Sign-in details</span>
+        <a href="/community" data-astro-reload class="font-mono text-[10px] text-white/40 hover:text-secondary uppercase tracking-widest border border-white/10 hover:border-secondary/30 px-4 py-2 rounded-full">Fan wall</a>
+      </nav>
+
       <!-- Verification is informational only right now — it never gates
            sign-in, downloads, or anything else. See functions/api/auth/verify-email.ts. -->
       <div id="acct-verify-panel" class="hidden mb-10 p-6 border border-white/10">
@@ -180,6 +189,50 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         <div id="up-error" role="alert" aria-live="assertive" class="hidden mt-6 p-6 border border-red-500/30 bg-red-500/5 font-mono text-[11px] text-red-300"></div>
         <div id="up-success" role="status" class="hidden mt-6 p-6 border border-secondary/30 bg-secondary/5 font-mono text-[11px] text-white/70 leading-relaxed"></div>
       </div>
+
+      <!-- Discord link. The code is issued by the bot (/link in Discord) and
+           redeemed here — see functions/api/community/link-discord.ts for why
+           the handshake runs in this direction. -->
+      <div id="acct-discord-panel" class="hidden mt-10 p-6 border border-white/10">
+        <p class="font-mono text-[11px] text-white/50 mb-6 leading-relaxed">
+          <span id="acct-discord-blurb"></span>
+        </p>
+
+        <form id="acct-discord-form" class="hidden space-y-4" novalidate>
+          <div>
+            <label for="acct-discord-code" class="block font-mono text-[11px] tracking-widest uppercase text-white/40 mb-2">
+              Link code
+            </label>
+            <input
+              type="text"
+              id="acct-discord-code"
+              name="code"
+              autocomplete="off"
+              spellcheck="false"
+              maxlength="16"
+              placeholder="ABCD2345"
+              class="w-full px-4 py-3 bg-transparent border border-white/20 font-mono text-[13px] tracking-[0.2em] uppercase text-white/90 focus:border-secondary focus:outline-none"
+            />
+          </div>
+          <button
+            type="submit"
+            id="acct-discord-btn"
+            class="px-6 py-3 bg-primary text-on-primary font-mono text-[11px] tracking-widest uppercase hover:bg-secondary hover:text-on-secondary transition-colors disabled:opacity-30"
+          >
+            Link Discord
+          </button>
+        </form>
+
+        <button
+          type="button"
+          id="acct-discord-unlink-btn"
+          class="hidden px-6 py-3 border border-white/20 font-mono text-[11px] tracking-widest uppercase text-white/60 hover:border-red-500/40 hover:text-red-300 transition-colors disabled:opacity-30"
+        >
+          Unlink
+        </button>
+
+        <p id="acct-discord-msg" role="status" class="hidden mt-4 font-mono text-[11px] leading-relaxed"></p>
+      </div>
     </div>
   </div>
 
@@ -255,6 +308,10 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       } else {
         setupPanel.classList.remove('hidden');
       }
+
+      // Fire-and-forget: the Discord panel reveals itself when /me answers,
+      // and must never hold up the password/verification panels above it.
+      loadDiscordState();
 
       verifyPanel.classList.remove('hidden');
       if (emailVerified) {
@@ -381,6 +438,102 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       successBox: document.getElementById('up-success')!,
       includeCurrentPassword: true,
       successMessage: (username) => `Saved — sign in with "${username}" or your email, plus your new password. You've been signed out everywhere else.`,
+    });
+
+    /* --- Discord link ------------------------------------------------ */
+
+    const discordPanel = document.getElementById('acct-discord-panel')!;
+    const discordBlurb = document.getElementById('acct-discord-blurb')!;
+    const discordForm = document.getElementById('acct-discord-form') as HTMLFormElement;
+    const discordCode = document.getElementById('acct-discord-code') as HTMLInputElement;
+    const discordBtn = document.getElementById('acct-discord-btn') as HTMLButtonElement;
+    const discordUnlink = document.getElementById('acct-discord-unlink-btn') as HTMLButtonElement;
+    const discordMsg = document.getElementById('acct-discord-msg')!;
+
+    function discordSay(text: string, ok: boolean) {
+      discordMsg.textContent = text;
+      discordMsg.className = ok
+        ? 'mt-4 font-mono text-[11px] leading-relaxed text-white/60'
+        : 'mt-4 font-mono text-[11px] leading-relaxed text-red-300';
+    }
+
+    // Which half of the panel to show. Driven by GET /api/community/me's
+    // discord_linked flag rather than a separate request — /me is already
+    // fetched by every community page and adding a second endpoint just to
+    // ask "am I linked?" would cost a subrequest on the free plan for a
+    // fact /me already knows.
+    function renderDiscord(linked: boolean) {
+      discordPanel.classList.remove('hidden');
+      discordBlurb.textContent = linked
+        ? 'Your Discord account is linked. What you do in the server feeds the same creature this profile shows.'
+        : 'Run /link in the Morphics Discord to get a code, then paste it here. Once linked, what you do in the server feeds the same creature this profile shows.';
+      discordForm.classList.toggle('hidden', linked);
+      discordUnlink.classList.toggle('hidden', !linked);
+    }
+
+    async function loadDiscordState() {
+      try {
+        const r = await fetch('/api/community/me', { credentials: 'include' });
+        if (!r.ok) return;              // no fan profile yet — leave hidden
+        const data = await r.json();
+        renderDiscord(!!data?.profile?.discord_linked);
+      } catch { /* panel stays hidden; nothing here is load-bearing */ }
+    }
+
+    discordForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      discordMsg.classList.remove('hidden');
+      discordBtn.disabled = true;
+      discordBtn.textContent = 'Linking…';
+      try {
+        const r = await fetch('/api/community/link-discord', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code: discordCode.value }),
+        });
+        const data = await r.json().catch(() => ({}));
+        if (r.ok) {
+          discordSay('Linked. Your rank in Discord now follows this profile.', true);
+          discordCode.value = '';
+          renderDiscord(true);
+        } else if (data.error === 'already_linked') {
+          discordSay('This profile already has a Discord account linked.', false);
+        } else if (data.error === 'discord_account_already_linked') {
+          discordSay('That Discord account is linked to a different profile.', false);
+        } else if (r.status === 429) {
+          discordSay('Too many attempts. Try again in a few minutes.', false);
+        } else {
+          // Covers unknown AND expired codes — the API deliberately does not
+          // distinguish them, so neither does this.
+          discordSay('That code is not valid, or it expired. Run /link again for a fresh one.', false);
+        }
+      } catch {
+        discordSay('Could not reach the server. Try again in a moment.', false);
+      } finally {
+        discordBtn.disabled = false;
+        discordBtn.textContent = 'Link Discord';
+      }
+    });
+
+    discordUnlink.addEventListener('click', async () => {
+      discordMsg.classList.remove('hidden');
+      discordUnlink.disabled = true;
+      try {
+        const r = await fetch('/api/community/link-discord', {
+          method: 'DELETE', credentials: 'include',
+        });
+        if (r.ok) {
+          discordSay('Unlinked. EP earned in Discord no longer counts, but your creature keeps the stage it reached.', true);
+          renderDiscord(false);
+        } else {
+          discordSay('Could not unlink just now. Try again in a moment.', false);
+        }
+      } catch {
+        discordSay('Could not reach the server. Try again in a moment.', false);
+      } finally {
+        discordUnlink.disabled = false;
+      }
     });
   </script>
 </BaseLayout>

@@ -159,3 +159,33 @@ describe('stageXp — 0..100 within the current stage band', () => {
     expect(further).toBeLessThanOrEqual(100);
   });
 });
+
+describe('computeEp — the ledger half of the hybrid', () => {
+  const base = { purchaseCount: 0, tenureDays: 0, engagementActions: 0 };
+
+  it('adds ledger XP at 1:1 — it is already denominated in XP', () => {
+    expect(computeEp({ ...base, ledgerXp: 400 })).toBe(400);
+  });
+
+  it('an absent ledger reads as zero, so pre-0014 fans are unaffected', () => {
+    expect(computeEp(base)).toBe(0);
+    expect(computeEp({ ...base, purchaseCount: 1 })).toBe(EP_WEIGHTS.PER_PURCHASE);
+  });
+
+  it('stacks with the derived signals rather than replacing them', () => {
+    const derived = computeEp({ ...base, purchaseCount: 2, tenureDays: 30 });
+    expect(computeEp({ ...base, purchaseCount: 2, tenureDays: 30, ledgerXp: 100 }))
+      .toBe(derived + 100);
+  });
+
+  it('a negative ledger total corrects downward but can never push EP below zero', () => {
+    expect(computeEp({ ...base, purchaseCount: 1, ledgerXp: -20 }))
+      .toBe(EP_WEIGHTS.PER_PURCHASE - 20);
+    // An over-correction floors at 0 instead of going negative.
+    expect(computeEp({ ...base, purchaseCount: 1, ledgerXp: -9999 })).toBe(0);
+  });
+
+  it('one ticket outweighs eight releases — the owner\'s stated priority, encoded', () => {
+    expect(EP_WEIGHTS.PER_TICKET).toBeGreaterThan(EP_WEIGHTS.PER_PURCHASE * 8);
+  });
+});

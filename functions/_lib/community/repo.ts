@@ -18,6 +18,30 @@ const now = () => Math.floor(Date.now() / 1000);
 export const HANDLE_CHANGE_COOLDOWN_DAYS = 30;
 const HANDLE_CHANGE_COOLDOWN_SECONDS = HANDLE_CHANGE_COOLDOWN_DAYS * 24 * 60 * 60;
 
+// Deleting a profile is a soft delete (migration 0012): the row is hidden
+// from every surface at once but survives for this long, so an accidental
+// deletion is a support-free, self-serve undo rather than an unrecoverable
+// loss of a bio and months of engagement EP.
+//
+// EVERY read in this file except isHandleTaken filters `deleted_at IS NULL`.
+// That is the invariant the whole feature rests on: a soft-deleted profile
+// must be indistinguishable from a hard-deleted one everywhere a fan (or
+// anyone else) can see, or "deleted" is a lie. isHandleTaken is the single
+// deliberate exception — see its doc comment.
+export const DELETE_GRACE_DAYS = 30;
+const DELETE_GRACE_SECONDS = DELETE_GRACE_DAYS * 24 * 60 * 60;
+
+/** When a profile soft-deleted at `deletedAt` becomes eligible for hard deletion. */
+export function purgeDueAt(deletedAt: number): number {
+  return deletedAt + DELETE_GRACE_SECONDS;
+}
+
+/** Has the grace window run out? Exclusive of the boundary second — a fan restoring at the exact tick still wins. */
+export function isGraceExpired(deletedAt: number | null, now: number): boolean {
+  if (deletedAt === null || deletedAt === undefined) return false;
+  return now > purgeDueAt(deletedAt);
+}
+
 /**
  * Whether the fan may change their handle right now. `handleChangedAt` null
  * means "never changed" — always permitted. `now` is injected (unix
@@ -37,15 +61,56 @@ export function nextHandleChangeAt(handleChangedAt: number): number {
 export async function getProfileByHandle(
   db: D1Database, handle: string,
 ): Promise<FanProfileRow | null> {
-  return db.prepare('SELECT * FROM fan_profiles WHERE handle = ?')
+  return db.prepare('SELECT * FROM fan_profiles WHERE handle = ? AND deleted_at IS NULL')
     .bind(handle).first<FanProfileRow>();
 }
 
 export async function getProfileByEmail(
   db: D1Database, email: string,
 ): Promise<FanProfileRow | null> {
-  return db.prepare('SELECT * FROM fan_profiles WHERE email = ?')
+  return db.prepare('SELECT * FROM fan_profiles WHERE email = ? AND deleted_at IS NULL')
     .bind(email.toLowerCase().trim()).first<FanProfileRow>();
+}
+
+/**
+ * By primary key — the lookup the Discord award path needs, since a
+ * discord_links row identifies its fan by id and nothing else. Excludes
+ * soft-deleted profiles like every other getter here, so a fan who deleted
+ * their account stops earning even if the link row outlives them.
+ */
+export async function getProfileById(
+  db: D1Database, id: number,
+): Promise<FanProfileRow | null> {
+  return db.prepare('SELECT * FROM fan_profiles WHERE id = ? AND deleted_at IS NULL')
+    .bind(id).first<FanProfileRow>();
+}
+
+/**
+ * The soft-deleted profile for this email, if one is pending purge. The ONLY
+ * read that returns a deleted row, and it exists for exactly one caller:
+ * /api/community/me, which has to tell a returning fan "your profile is
+ * deleted, restore it or discard it" rather than silently building them a
+ * new one on top of the old row (which the unique email index would reject
+ * anyway).
+ */
+export async function getDeletedProfileByEmail(
+  db: D1Database, email: string,
+): Promise<FanProfileRow | null> {
+  return db.prepare('SELECT * FROM fan_profiles WHERE email = ? AND deleted_at IS NOT NULL')
+    .bind(email.toLowerCase().trim()).first<FanProfileRow>();
+}
+
+/**
+ * Handle availability, counting soft-deleted profiles as TAKEN. This is the
+ * one read here that does not filter them out, and the asymmetry is the
+ * point: a handle stays reserved for its owner's whole restore window. If it
+ * did not, a fan could restore into a unique-index violation, or — worse —
+ * an old link could quietly resolve to whoever grabbed the name in between.
+ */
+export async function isHandleTaken(db: D1Database, handle: string): Promise<boolean> {
+  const row = await db.prepare('SELECT 1 AS x FROM fan_profiles WHERE handle = ?')
+    .bind(handle).first<{ x: number }>();
+  return !!row;
 }
 
 /**
@@ -77,7 +142,9 @@ export async function ensureProfile(
   // collapses underscores to hyphens, so two DISTINCT usernames like
   // "foo_bar" and "foo-bar" slugify to the same root "foo-bar" — the second
   // account to arrive must get a suffixed handle instead of colliding.
-  const handle = await nextAvailableHandle(name, async h => !!(await getProfileByHandle(db, h)));
+  // isHandleTaken, NOT getProfileByHandle: a handle held by a profile inside
+  // its restore window is unavailable, even though that profile is invisible.
+  const handle = await nextAvailableHandle(name, h => isHandleTaken(db, h));
   const t = now();
 
   // Sprite refs (one per stage) and colourway are fixed HERE, at creation —
@@ -169,12 +236,21 @@ export async function revokeUnlock(db: D1Database, fanId: number, avatarId: stri
 
 /** avatarId -> fraction of all fans holding it (0..1). Empty when no fans. */
 export async function getRarity(db: D1Database): Promise<Record<string, number>> {
-  const total = await db.prepare('SELECT COUNT(*) AS c FROM fan_profiles')
+  const total = await db.prepare('SELECT COUNT(*) AS c FROM fan_profiles WHERE deleted_at IS NULL')
     .first<{ c: number }>();
   const fans = total?.c || 0;
   if (!fans) return {};
+  // The JOIN is what keeps this consistent with the denominator above.
+  // softDeleteFanProfile deliberately KEEPS the unlock ledger (so a restore
+  // hands back a full shelf), so counting fan_avatar_unlocks on its own
+  // would count holders who are not live fans — and a fraction with a
+  // denominator that excludes them and a numerator that doesn't can exceed 1.
   const { results } = await db.prepare(
-    'SELECT avatar_id, COUNT(*) AS c FROM fan_avatar_unlocks GROUP BY avatar_id',
+    `SELECT u.avatar_id AS avatar_id, COUNT(*) AS c
+       FROM fan_avatar_unlocks u
+       JOIN fan_profiles fp ON fp.id = u.fan_id
+      WHERE fp.deleted_at IS NULL
+      GROUP BY u.avatar_id`,
   ).all<{ avatar_id: string; c: number }>();
   const out: Record<string, number> = {};
   for (const r of results || []) out[r.avatar_id] = r.c / fans;
@@ -194,14 +270,17 @@ export async function getDirectory(
   const limit = Math.min(Math.max(opts.limit | 0, 1), 100);
   const offset = Math.max(opts.offset | 0, 0);
   // hidden_from_wall = 0 filters out fans who opted out of the wall
-  // (migration 0011). WHERE, not a post-filter in the caller: filtering after
+  // (migration 0011); deleted_at IS NULL drops profiles inside their delete
+  // grace window (migration 0012) — a fan who asked to be deleted must not
+  // still be standing on the wall while they think about it. WHERE, not a
+  // post-filter in the caller: filtering after
   // the LIMIT would silently shrink pages to fewer than `limit` rows and make
   // has_more lie about whether another page exists.
   const { results } = await db.prepare(
     `SELECT fp.*, COUNT(u.avatar_id) AS unlock_count
        FROM fan_profiles fp
        LEFT JOIN fan_avatar_unlocks u ON u.fan_id = fp.id
-       WHERE fp.hidden_from_wall = 0
+       WHERE fp.hidden_from_wall = 0 AND fp.deleted_at IS NULL
        GROUP BY fp.id
        ORDER BY unlock_count DESC, fp.fan_since ASC
        LIMIT ? OFFSET ?`,
@@ -305,11 +384,135 @@ export async function updateProfile(
  * a fan who deletes their profile keeps everything they paid for. Signing up
  * again rebuilds a fresh profile from that same record — see ensureProfile.
  */
-export async function deleteFanProfile(db: D1Database, fanId: number): Promise<void> {
+// ── XP ledger (migration 0013) ──────────────────────────────────────────
+//
+// The durable half of the hybrid XP model. See the migration header for why
+// purchases and tenure stay derived while discrete grants live here.
+
+export interface XpEventInput {
+  fanId: number;
+  actionType: string;
+  xpAmount: number;
+  /** Idempotency key. The same key twice is a no-op, never a double award. */
+  eventKey: string;
+  sourceRef?: string | null;
+  metadata?: Record<string, unknown> | null;
+}
+
+/**
+ * Append one XP event. Returns true if it was newly recorded, false if the
+ * event_key had already been used — which is a SUCCESS, not an error: it
+ * means a retried webhook or a double-clicked button correctly did nothing.
+ *
+ * The pre-check races with a concurrent insert of the same key, and that is
+ * fine: the unique index is what actually guarantees single-award, and
+ * INSERT OR IGNORE makes the loser of the race a no-op instead of a 500.
+ * The pre-check only decides which boolean we report.
+ */
+export async function recordXpEvent(db: D1Database, input: XpEventInput): Promise<boolean> {
+  const existing = await db.prepare('SELECT 1 AS x FROM xp_events WHERE event_key = ?')
+    .bind(input.eventKey).first<{ x: number }>();
+  if (existing) return false;
+
+  await db.prepare(
+    `INSERT OR IGNORE INTO xp_events
+       (fan_id, action_type, xp_amount, event_key, source_ref, metadata, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+  ).bind(
+    input.fanId,
+    input.actionType,
+    Math.trunc(input.xpAmount),
+    input.eventKey,
+    input.sourceRef ?? null,
+    input.metadata ? JSON.stringify(input.metadata) : null,
+    now(),
+  ).run();
+  return true;
+}
+
+/** Live (non-voided) ledger total for one fan. 0 when they have no events. */
+export async function sumLedgerXp(db: D1Database, fanId: number): Promise<number> {
+  const row = await db.prepare(
+    'SELECT COALESCE(SUM(xp_amount), 0) AS total FROM xp_events WHERE fan_id = ? AND voided_at IS NULL',
+  ).bind(fanId).first<{ total: number }>();
+  return row?.total || 0;
+}
+
+/**
+ * Reverse a grant without destroying the record of it. The row stops
+ * counting toward the fan's total but stays readable, which is the whole
+ * reason this is a ledger rather than a counter — "why did my XP drop"
+ * has to have an answer.
+ */
+export async function voidXpEvent(db: D1Database, eventId: number, reason: string): Promise<void> {
+  await db.prepare(
+    'UPDATE xp_events SET voided_at = ?, voided_reason = ? WHERE id = ? AND voided_at IS NULL',
+  ).bind(now(), reason, eventId).run();
+}
+
+/** One fan's ledger, newest first — the admin user-inspector view. */
+export async function getXpEvents(db: D1Database, fanId: number, limit = 100): Promise<any[]> {
+  const { results } = await db.prepare(
+    'SELECT * FROM xp_events WHERE fan_id = ? ORDER BY created_at DESC, id DESC LIMIT ?',
+  ).bind(fanId, Math.min(Math.max(limit | 0, 1), 500)).all();
+  return results || [];
+}
+
+/**
+ * Soft delete: hide the profile everywhere, keep the row restorable until
+ * the grace window lapses. This is what POST /api/community/delete calls —
+ * the fan-facing "delete my profile" never destroys anything on the spot.
+ *
+ * The unlock ledger is deliberately left ALONE. Unlocks are re-derived from
+ * ownership on every profile read anyway (see evaluateUnlocks in me.ts), so
+ * deleting them would buy nothing and would make a restore hand back a
+ * profile with an empty shelf until the next read repopulated it.
+ */
+export async function softDeleteFanProfile(db: D1Database, fanId: number, at: number = now()): Promise<void> {
+  await db.prepare('UPDATE fan_profiles SET deleted_at = ?, updated_at = ? WHERE id = ?')
+    .bind(at, now(), fanId).run();
+}
+
+/** Undo a soft delete. Everything on the row — bio, engagement EP, handle, creature — comes back untouched. */
+export async function restoreFanProfile(db: D1Database, fanId: number): Promise<void> {
+  await db.prepare('UPDATE fan_profiles SET deleted_at = NULL, updated_at = ? WHERE id = ?')
+    .bind(now(), fanId).run();
+}
+
+/**
+ * The real, irreversible delete. Reached two ways, never directly by a
+ * "delete my profile" click: the grace window ran out, or the fan explicitly
+ * discarded a profile that was already soft-deleted.
+ */
+export async function purgeFanProfile(db: D1Database, fanId: number): Promise<void> {
   await db.batch([
     db.prepare('DELETE FROM fan_avatar_unlocks WHERE fan_id = ?').bind(fanId),
+    // xp_events and discord_links both CASCADE, but only where foreign keys
+    // are enforced — deleting explicitly means neither can outlive its fan on
+    // a connection where that pragma is off. An orphaned discord_links row is
+    // the worse of the two: discord_user_id is UNIQUE, so a stale row would
+    // permanently block that person from ever linking a new profile.
+    db.prepare('DELETE FROM xp_events WHERE fan_id = ?').bind(fanId),
+    db.prepare('DELETE FROM discord_links WHERE fan_id = ?').bind(fanId),
     db.prepare('DELETE FROM fan_profiles WHERE id = ?').bind(fanId),
   ]);
+}
+
+/**
+ * Sweep every profile whose grace window has lapsed. Pages Functions have no
+ * cron, so this is not self-firing: /api/community/me purges opportunistically
+ * when the owner returns (the case that actually matters, since it frees their
+ * email and handle), and this bulk version backs it up for fans who never come
+ * back — run it from `npm run d1:purge-deleted`. Returns how many were purged.
+ */
+export async function purgeExpiredProfiles(db: D1Database, now: number): Promise<number> {
+  const cutoff = now - DELETE_GRACE_SECONDS;
+  const { results } = await db.prepare(
+    'SELECT id FROM fan_profiles WHERE deleted_at IS NOT NULL AND deleted_at < ?',
+  ).bind(cutoff).all<{ id: number }>();
+  const ids = (results || []).map(r => r.id);
+  for (const id of ids) await purgeFanProfile(db, id);
+  return ids.length;
 }
 
 export async function setCollectionCount(db: D1Database, fanId: number, count: number): Promise<void> {
@@ -482,4 +685,103 @@ export function toPublicProfile(
       next_stage_ep: nextStageThreshold(stage),
     },
   };
+}
+
+/* ---------------------------------------------------------------------
+ * Discord links (migration 0013)
+ *
+ * The link handshake is one-directional by necessity: the bot can reach
+ * Cloudflare, Cloudflare cannot reach the bot's home container. So the bot
+ * registers a code here, and the fan redeems it from their own session.
+ * ------------------------------------------------------------------- */
+
+export interface DiscordLinkRow {
+  fan_id: number;
+  discord_user_id: string;
+  linked_at: number;
+  discord_ep: number;
+}
+
+export async function getDiscordLinkByFan(db: D1Database, fanId: number) {
+  return db.prepare('SELECT * FROM discord_links WHERE fan_id = ?')
+    .bind(fanId).first<DiscordLinkRow>();
+}
+
+export async function getDiscordLinkByUser(db: D1Database, discordUserId: string) {
+  return db.prepare('SELECT * FROM discord_links WHERE discord_user_id = ?')
+    .bind(discordUserId).first<DiscordLinkRow>();
+}
+
+export async function saveDiscordLinkCode(
+  db: D1Database, code: string, discordUserId: string, createdAt: number, expiresAt: number,
+): Promise<void> {
+  // One pending code per Discord account: re-running /link replaces the
+  // previous code rather than leaving several live at once, so a code read
+  // over someone's shoulder stops working the moment the owner re-runs it.
+  await db.prepare('DELETE FROM discord_link_codes WHERE discord_user_id = ?')
+    .bind(discordUserId).run();
+  await db.prepare(
+    'INSERT INTO discord_link_codes (code, discord_user_id, created_at, expires_at) VALUES (?, ?, ?, ?)',
+  ).bind(code, discordUserId, createdAt, expiresAt).run();
+}
+
+/**
+ * Look up a code and delete it in the same call — a code is single-use, and
+ * leaving deletion to the caller would make "used" depend on the caller
+ * remembering. Returns null for unknown OR expired codes; the caller cannot
+ * tell which, on purpose, since distinguishing them tells an attacker
+ * whether a guessed code ever existed.
+ */
+export async function consumeDiscordLinkCode(
+  db: D1Database, code: string, nowSec: number,
+): Promise<string | null> {
+  const row = await db.prepare('SELECT discord_user_id, expires_at FROM discord_link_codes WHERE code = ?')
+    .bind(code).first<{ discord_user_id: string; expires_at: number }>();
+  if (!row) return null;
+  await db.prepare('DELETE FROM discord_link_codes WHERE code = ?').bind(code).run();
+  if (row.expires_at < nowSec) return null;
+  return row.discord_user_id;
+}
+
+/** Housekeeping — expired codes are dead weight, swept opportunistically. */
+export async function purgeExpiredDiscordLinkCodes(db: D1Database, nowSec: number): Promise<void> {
+  await db.prepare('DELETE FROM discord_link_codes WHERE expires_at < ?').bind(nowSec).run();
+}
+
+export async function createDiscordLink(
+  db: D1Database, fanId: number, discordUserId: string, nowSec: number,
+): Promise<void> {
+  await db.prepare(
+    'INSERT INTO discord_links (fan_id, discord_user_id, linked_at, discord_ep) VALUES (?, ?, ?, 0)',
+  ).bind(fanId, discordUserId, nowSec).run();
+}
+
+export async function deleteDiscordLink(db: D1Database, fanId: number): Promise<void> {
+  await db.prepare('DELETE FROM discord_links WHERE fan_id = ?').bind(fanId).run();
+}
+
+/**
+ * Add `amount` to a linked fan's Discord EP and return the new total, or
+ * null if that Discord account is not linked to anyone.
+ *
+ * The UPDATE reads and writes in a single statement (`discord_ep = discord_ep + ?`)
+ * rather than reading, adding in JS and writing back: two awards landing at
+ * once — a message and a reaction in the same second — would otherwise both
+ * read the same old value and one increment would vanish. D1 has no
+ * interactive transactions, so an atomic statement is the mechanism
+ * available here, and it is sufficient because addition commutes.
+ */
+export async function addDiscordEp(
+  db: D1Database, discordUserId: string, amount: number,
+): Promise<number | null> {
+  await db.prepare(
+    'UPDATE discord_links SET discord_ep = MAX(0, discord_ep + ?) WHERE discord_user_id = ?',
+  ).bind(amount, discordUserId).run();
+  // "Was there a row?" is answered by the read-back, not by the UPDATE's
+  // meta.changes: an unlinked account updates nothing and reads back
+  // nothing, which is the same null either way, and this does not depend on
+  // driver-specific result metadata.
+  const row = await db.prepare('SELECT discord_ep FROM discord_links WHERE discord_user_id = ?')
+    .bind(discordUserId).first<{ discord_ep: number }>();
+  return row?.discord_ep ?? null;
 }
