@@ -18,12 +18,19 @@ export type CreatureStage = 'egg' | 'grub' | 'pupa' | 'adult';
 // Ordered low to high — every place that needs "is X past Y" walks this.
 const STAGE_ORDER: CreatureStage[] = ['egg', 'grub', 'pupa', 'adult'];
 
-/** Fan-facing wording for each stored stage key. Never used as a lookup key itself. */
+/** Fan-facing wording for each stored stage key. Never used as a lookup key itself.
+ *  Egg -> Larva -> Chrysalis -> Emergent: the ladder reads as one metamorphosis
+ *  rather than four unrelated words, and "Emergent" names an arrival instead of
+ *  an age. The stored keys stay egg/grub/pupa/adult on purpose — they match the
+ *  vendored sprite export and the stage CHECK constraint on fan_profiles, so
+ *  renaming them would mean a table rebuild and a re-export of the art for a
+ *  change that is purely wording. This is exactly the split the type comment
+ *  above describes. */
 export const STAGE_LABELS: Record<CreatureStage, string> = {
   egg: 'Egg',
-  grub: 'Grub',
-  pupa: 'Pupa',
-  adult: 'Adult',
+  grub: 'Larva',
+  pupa: 'Chrysalis',
+  adult: 'Emergent',
 };
 
 export const EP_WEIGHTS = {

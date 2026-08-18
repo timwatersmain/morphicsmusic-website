@@ -7,8 +7,8 @@ describe('computeStageProgress', () => {
     const p = computeStageProgress({ ep: STAGE_THRESHOLDS.grub, stage: 'grub', next_stage_ep: STAGE_THRESHOLDS.pupa });
     expect(p.pct).toBe(0);
     expect(p.isFinal).toBe(false);
-    expect(p.stageLabel).toBe('Grub');
-    expect(p.nextLabel).toBe('Pupa');
+    expect(p.stageLabel).toBe('Larva');
+    expect(p.nextLabel).toBe('Chrysalis');
     expect(p.epInStage).toBe(0);
     expect(p.epForStage).toBe(STAGE_THRESHOLDS.pupa - STAGE_THRESHOLDS.grub);
   });
@@ -60,7 +60,7 @@ describe('rankLadder', () => {
   it('egg with nothing passed yet: current is loud, the rest are ahead', () => {
     const ladder = rankLadder('egg');
     expect(ladder.map(s => s.status)).toEqual(['current', 'ahead', 'ahead', 'ahead']);
-    expect(ladder.map(s => s.label)).toEqual(['Egg', 'Grub', 'Pupa', 'Adult']);
+    expect(ladder.map(s => s.label)).toEqual(['Egg', 'Larva', 'Chrysalis', 'Emergent']);
   });
 
   it('mid-ladder: earlier stages passed, one current, later ones ahead', () => {
@@ -79,6 +79,6 @@ describe('rankLadder', () => {
   });
 
   it('reuses the same STAGE_LABELS the fan wall imports, so the two can never drift', () => {
-    expect(STAGE_LABELS).toEqual({ egg: 'Egg', grub: 'Grub', pupa: 'Pupa', adult: 'Adult' });
+    expect(STAGE_LABELS).toEqual({ egg: 'Egg', grub: 'Larva', pupa: 'Chrysalis', adult: 'Emergent' });
   });
 });

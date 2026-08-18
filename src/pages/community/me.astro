@@ -73,7 +73,8 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
           <span id="me-fan-since"></span>
         </p>
 
-        <!-- Current rank: the whole egg->grub->pupa->adult ladder plus the
+        <!-- Current rank: the whole Egg -> Larva -> Chrysalis -> Emergent
+             ladder (stored as egg/grub/pupa/adult — see STAGE_LABELS) plus the
              XP bar for progress within the current stage. Both driven by
              src/scripts/community/xp-progress.ts (pure functions, unit
              tested) — this block only turns that output into markup. -->
@@ -92,14 +93,14 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
               <span id="me-xp-stage-label" class="font-mono text-[11px] text-primary uppercase tracking-widest"></span>
               <span id="me-xp-numbers" class="font-mono text-[10px] text-white/40 uppercase tracking-widest"></span>
             </div>
-            <div class="h-3 w-full bg-surface-container-low border border-white/10">
+            <div class="h-3 w-full bg-surface-container-low border border-white/10 rounded-full overflow-hidden">
               <div
                 id="me-xp-fill"
                 role="progressbar"
                 aria-valuemin="0"
                 aria-valuemax="100"
                 aria-labelledby="me-xp-stage-label"
-                class="h-full bg-secondary"
+                class="h-full bg-secondary rounded-full"
                 style="width:0%"
               ></div>
             </div>
@@ -181,7 +182,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
     import { initCreatureCanvases, initCreatureCanvasesLazy, loadSprites } from '../../scripts/sprites/renderer.js';
     import { COLORWAYS } from '../../scripts/sprites/vendor/colorways.js';
     import { NATIVE_COLOURWAY } from '../../scripts/sprites/native-palette.js';
-    import { computeStageProgress, rankLadder, type RankStatus } from '../../scripts/community/xp-progress';
+    import { computeStageProgress, rankLadder, STAGE_LABELS, type RankStatus } from '../../scripts/community/xp-progress';
 
     // Wrapped for astro:page-load — see music.astro's doc comment. This page
     // fetches the signed-in fan's own data fresh on every arrival (and is
@@ -266,7 +267,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
       rankLadderEl.innerHTML = steps.map(step => `
         <li>
           <span
-            class="inline-flex items-center px-3 py-1.5 border font-mono text-[10px] uppercase tracking-widest transition-all ${LADDER_STATUS_CLASSES[step.status]}"
+            class="inline-flex items-center px-3 py-1.5 rounded-full border font-mono text-[10px] uppercase tracking-widest transition-all ${LADDER_STATUS_CLASSES[step.status]}"
             ${step.status === 'current' ? 'aria-current="step"' : ''}
           >${esc(step.label)}<span class="sr-only">${esc(LADDER_STATUS_HINT[step.status])}</span></span>
         </li>
@@ -381,11 +382,13 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
     // Admin sprite-override picker. Server-gated independently (see
     // /api/community/update's override_sprite handling) — hiding this
     // section for a non-admin is a UX nicety, not the security boundary.
+    // Headings come from STAGE_LABELS, not hand-typed words, so the admin
+    // picker can never drift from the ladder the fan sees.
     const SPRITE_STAGE_GROUPS = [
-      { stage: 'egg', heading: 'Egg' },
-      { stage: 'grub', heading: 'Grub' },
-      { stage: 'pupa', heading: 'Pupa' },
-      { stage: 'adult', heading: 'Adult' },
+      { stage: 'egg', heading: STAGE_LABELS.egg },
+      { stage: 'grub', heading: STAGE_LABELS.grub },
+      { stage: 'pupa', heading: STAGE_LABELS.pupa },
+      { stage: 'adult', heading: STAGE_LABELS.adult },
     ];
     const SPRITE_TILE_SIZE = 44;
     let currentOverride: string | null = null;
