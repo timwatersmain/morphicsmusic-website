@@ -26,7 +26,7 @@ export function creatureAvatarHtml(creature, sizePx) {
     // backfill run — see repo.ts's ensureSpriteAssignment) — an empty disc
     // rather than nothing, so layout never jumps once it does load.
     return `<div class="relative inline-block">` +
-      `<div class="rounded-full overflow-hidden border-2 ${border} bg-surface-container-high" ` +
+      `<div class="rounded-full overflow-hidden border-2 ${border} bg-surface-container-lowest" ` +
       `style="width:${sizePx}px;height:${sizePx}px"></div></div>`;
   }
 
@@ -48,7 +48,7 @@ export function creatureAvatarHtml(creature, sizePx) {
   // centred in a 40px frame) — grid place-items:center handles that
   // centring without any extra math.
   return `<div class="relative inline-block">` +
-    `<div class="rounded-full overflow-hidden border-2 ${border} grid place-items-center bg-surface-container-high" ` +
+    `<div class="rounded-full overflow-hidden border-2 ${border} grid place-items-center bg-surface-container-lowest" ` +
     `style="width:${sizePx}px;height:${sizePx}px">` +
     `<canvas data-creature="${spec}" data-scale="${scale}" width="${artPx}" height="${artPx}" ` +
     `style="width:${artPx}px;height:${artPx}px;image-rendering:pixelated" aria-hidden="true"></canvas>` +
@@ -76,7 +76,7 @@ export function creatureAvatarHtml(creature, sizePx) {
 export function spriteTileHtml(ref, sizePx, selected) {
   const spec = esc(JSON.stringify({ ref }));
   const ring = selected ? 'border-secondary ring-2 ring-secondary/60' : 'border-white/10';
-  return `<div class="rounded-full overflow-hidden border-2 ${ring} grid place-items-center bg-surface-container-high" ` +
+  return `<div class="rounded-full overflow-hidden border-2 ${ring} grid place-items-center bg-surface-container-lowest" ` +
     `style="width:${sizePx}px;height:${sizePx}px">` +
     `<canvas data-creature="${spec}" data-scale="1" width="32" height="32" ` +
     `style="width:${sizePx}px;height:${sizePx}px;image-rendering:pixelated" aria-hidden="true"></canvas>` +
