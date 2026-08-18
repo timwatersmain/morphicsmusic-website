@@ -169,3 +169,42 @@ export async function consumeLoginToken(
   await env.DOWNLOADS.delete(`login:${token}`);
   try { return JSON.parse(raw); } catch { return null; }
 }
+
+// ── Email-verification tokens ───────────────────────────────────────────
+// Deliberately a SEPARATE KV prefix and type from login tokens above. A
+// verification link only ever proves the clicker controls the mailbox for
+// an address that's already on the account — it must never be exchangeable
+// for a session, so it is never routed through signSession/consumeLoginToken.
+// 24h TTL (vs. the 15-minute login token) because "check your email to
+// confirm" is something people reasonably do the next day, not this minute.
+const VERIFY_EMAIL_TTL_HOURS = 24;
+
+export interface VerifyEmailGrant {
+  email: string;
+  created_at: number;
+}
+
+export async function issueVerifyEmailToken(env: { DOWNLOADS: KVNamespace }, email: string): Promise<string> {
+  const bytes = new Uint8Array(24);
+  crypto.getRandomValues(bytes);
+  const token = b64url(bytes);
+  const grant: VerifyEmailGrant = {
+    email: email.toLowerCase().trim(),
+    created_at: Math.floor(Date.now() / 1000),
+  };
+  await env.DOWNLOADS.put(`verifyemail:${token}`, JSON.stringify(grant), {
+    expirationTtl: VERIFY_EMAIL_TTL_HOURS * 3600,
+  });
+  return token;
+}
+
+export async function consumeVerifyEmailToken(
+  env: { DOWNLOADS: KVNamespace },
+  token: string,
+): Promise<VerifyEmailGrant | null> {
+  const raw = await env.DOWNLOADS.get(`verifyemail:${token}`);
+  if (!raw) return null;
+  // One-shot — delete on consume, same replay defense as login tokens.
+  await env.DOWNLOADS.delete(`verifyemail:${token}`);
+  try { return JSON.parse(raw); } catch { return null; }
+}

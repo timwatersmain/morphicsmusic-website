@@ -20,6 +20,7 @@ import { rateLimit, clientIp } from '../../_lib/ratelimit';
 import { verifyTurnstile } from '../../_lib/turnstile';
 import { hashPassword } from '../../_lib/password';
 import { isBlockedName } from '../../_lib/community/handle';
+import { sendVerificationEmail } from '../../_lib/send-verify-email';
 import {
   getCustomerRecord,
   getCustomerByUsername,
@@ -195,6 +196,10 @@ export const onRequestPost: PagesFunction<Env> = corsHandler<Env>(async ({ reque
   await saveCustomerRecord(env, record);
   await saveUsernameIndex(env, usernameLower, email);
   waitUntil(sendCreatedEmail(env, email));
+  // Alongside the welcome mail, not instead of it — verification records a
+  // fact about the address, it doesn't gate this signup in any way.
+  const origin = env.PUBLIC_SITE_URL || new URL(request.url).origin;
+  waitUntil(sendVerificationEmail(env, origin, email));
 
   return genericOk();
 });

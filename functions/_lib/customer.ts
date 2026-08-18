@@ -33,6 +33,12 @@ export interface CustomerRecord {
   username_lower?: string;
   password?: string; // the self-describing hash string from _lib/password.ts
   password_updated_at?: number;
+  // Set once, by functions/api/auth/verify-email.ts, when the customer
+  // clicks a verification link. Absent/undefined means unverified — every
+  // record that predates this field (i.e. every customer as of launch) is
+  // unverified, which is intentional: verification records a fact, it does
+  // not gate anything today.
+  email_verified_at?: number;
 }
 
 export interface CustomerEnv {

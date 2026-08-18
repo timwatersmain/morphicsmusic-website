@@ -38,8 +38,15 @@ export const onRequestGet: PagesFunction<Env> = corsHandler<Env>(async ({ reques
   const record = await getCustomerRecord(env, email);
   const hasPassword = !!(record && record.password);
   const username = (record && hasPassword && record.username) || null;
+  const emailVerified = !!(record && record.email_verified_at);
 
-  return new Response(JSON.stringify({ email, has_password: hasPassword, username }), {
+  return new Response(JSON.stringify({
+    email,
+    has_password: hasPassword,
+    username,
+    email_verified: emailVerified,
+    email_verified_at: (record && record.email_verified_at) || null,
+  }), {
     headers: { 'Content-Type': 'application/json' },
   });
 });
