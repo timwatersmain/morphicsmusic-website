@@ -3,9 +3,6 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 ---
 
 <BaseLayout title="MY COMMUNITY" currentPage="/community">
-  <!-- pb-24 (96px) clears the fixed player bar (72px tall + 1px border), which
-       otherwise overlaps the last row of the avatar catalogue grid once a
-       preview is playing. See src/components/PlayerBar.astro .pb-inner height. -->
   <div class="max-w-4xl mx-auto pb-24">
     <header class="mb-12 flex flex-wrap items-end justify-between gap-4">
       <div>
@@ -39,17 +36,10 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
     </div>
 
     <div id="me-content" class="hidden space-y-12">
-      <div id="me-unlocked-banner" class="hidden p-6 border border-secondary/40 bg-secondary/5">
-        <p class="font-mono text-[10px] text-secondary uppercase tracking-widest mb-3">Just unlocked</p>
-        <ul id="me-unlocked-list" class="flex flex-wrap gap-6"></ul>
-      </div>
-
       <section class="border border-white/5 p-6">
         <div class="flex items-center gap-6 mb-6">
           <!-- The creature (pixel-sprite) render is this fan's primary
-               avatar, replacing the glyph medallion — see creature-avatar.js.
-               The tier-ladder avatar picker further down the page is a
-               separate collectible system and is untouched by this. -->
+               avatar, replacing the glyph medallion — see creature-avatar.js. -->
           <div id="me-creature"></div>
           <div class="flex-1">
             <label class="block font-mono text-[10px] text-white/40 uppercase tracking-widest mb-2">Display name</label>
@@ -124,13 +114,10 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
            to show; left hidden entirely on a 401 since /library itself
            already owns the signed-out UX. -->
       <div id="me-library" class="hidden"></div>
-
-      <div id="me-catalogue" class="space-y-10"></div>
     </div>
   </div>
 
   <script>
-    import { avatarHtml } from '../../scripts/avatar.js';
     import { creatureAvatarHtml, spriteTileHtml } from '../../scripts/sprites/creature-avatar.js';
     import { initCreatureCanvases, initCreatureCanvasesLazy, loadSprites } from '../../scripts/sprites/renderer.js';
     import { COLORWAYS } from '../../scripts/sprites/vendor/colorways.js';
@@ -142,8 +129,6 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
     const errorMsg = document.getElementById('me-error-msg')!;
     const content = document.getElementById('me-content')!;
     const handleEl = document.getElementById('me-handle')!;
-    const unlockedBanner = document.getElementById('me-unlocked-banner')!;
-    const unlockedList = document.getElementById('me-unlocked-list')!;
     const creatureEl = document.getElementById('me-creature')!;
     const colourwaysEl = document.getElementById('me-colourways')!;
     const colourwayStatus = document.getElementById('me-colourway-status')!;
@@ -159,7 +144,6 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
     const handleStatus = document.getElementById('me-handle-status')!;
     const fanSinceEl = document.getElementById('me-fan-since')!;
     const countEl = document.getElementById('me-count')!;
-    const catalogueEl = document.getElementById('me-catalogue')!;
     const libraryEl = document.getElementById('me-library')!;
 
     const esc = (s: any) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
@@ -178,36 +162,6 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
     function fmtDate(unix: number) {
       return new Date(unix * 1000).toLocaleDateString(undefined, { year: 'numeric', month: 'long' });
     }
-
-    // 84px — the picker's showcase size, big enough to tell colourways apart
-    // in a 6-wide grid. The single large hero slot up top now shows the
-    // creature (see CREATURE_SIZE below), not a tier avatar — equipping one
-    // still highlights it in this grid.
-    const TILE_SIZE = 84;
-
-    // This is the reward moment the whole feature exists for: `newly_unlocked`
-    // is a list of avatar ids granted THIS load (computed server-side in
-    // /api/community/me against the shelf as it stood before granting), so it
-    // is only ever non-empty for the one visit where the unlock happened.
-    function renderNewlyUnlocked(ids: string[] | undefined, avatars: any[]) {
-      const won = (ids || [])
-        .map(id => avatars.find(a => a.id === id))
-        .filter(Boolean);
-      if (!won.length) {
-        unlockedBanner.classList.add('hidden');
-        unlockedList.innerHTML = '';
-        return;
-      }
-      unlockedBanner.classList.remove('hidden');
-      unlockedList.innerHTML = won.map(a => `
-        <li class="text-center">
-          ${avatarHtml(a, TILE_SIZE)}
-          <p class="font-mono text-[10px] text-primary uppercase tracking-widest mt-2">${esc(a.name)}</p>
-        </li>
-      `).join('');
-    }
-
-    let currentEquippedId: string | null = null;
 
     // 96px — an exact 3x multiple of the sprite's 32px grid, so the render
     // fills the frame edge to edge (see creature-avatar.js's scale choice).
@@ -379,83 +333,6 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 
     spriteClearBtn.addEventListener('click', () => setOverride(null));
 
-    // Tier 1 is always available (the "six options" every fan gets on day
-    // one); tier 2 unlocks by finishing account setup; tiers 3-4 are granted
-    // by hand, never earned by a task, which is why their catalogue hint
-    // copy (set server-side, tools/d1/seed-avatar-tiers.sql) reads as an
-    // award ("A gift, for the loyal") rather than an instruction — nothing
-    // is more deflating than a goal with no path, and there IS no path here.
-    const TIER_GROUPS: Array<{ tier: number | null; heading: string }> = [
-      { tier: 1, heading: 'Tier 1' },
-      { tier: 2, heading: 'Tier 2' },
-      { tier: 3, heading: 'Tier 3' },
-      { tier: 4, heading: 'Tier 4' },
-      // Pre-existing release/special avatars (earned by owning a record)
-      // sit on their own axis — see migrations/0005_avatar_tiers.sql — and
-      // keep their own group at the end so they don't vanish from the picker.
-      { tier: null, heading: 'Releases' },
-    ];
-
-    function avatarTile(a: any) {
-      return `
-        <li class="text-center">
-          <button
-            type="button"
-            data-avatar-id="${esc(a.id)}"
-            data-unlocked="${a.unlocked ? '1' : '0'}"
-            class="avatar-pick inline-block ${a.unlocked ? 'cursor-pointer' : 'cursor-default'} ${a.id === currentEquippedId ? 'drop-shadow-[0_0_8px_#00F0FF]' : ''}"
-          >
-            ${avatarHtml(a, TILE_SIZE, { locked: !a.unlocked, rarity: a.rarity })}
-          </button>
-          <p class="font-mono text-[9px] text-white/40 uppercase tracking-widest mt-2 leading-tight">
-            ${a.unlocked ? esc(a.name) : esc(a.hint || 'Locked')}
-          </p>
-        </li>
-      `;
-    }
-
-    function renderCatalogue(avatars: any[]) {
-      const byTier = new Map<number | null, any[]>();
-      for (const a of avatars) {
-        const key = typeof a.tier === 'number' ? a.tier : null;
-        if (!byTier.has(key)) byTier.set(key, []);
-        byTier.get(key)!.push(a);
-      }
-
-      catalogueEl.innerHTML = TIER_GROUPS
-        .map(({ tier, heading }) => ({ tier, heading, items: byTier.get(tier) || [] }))
-        .filter(g => g.items.length)
-        .map(({ heading, items }) => `
-          <div>
-            <div class="flex items-baseline gap-3 mb-4">
-              <span class="font-mono text-xs text-secondary uppercase">${esc(heading)}</span>
-              <div class="h-[1px] flex-1 bg-outline-variant/30"></div>
-            </div>
-            <ul class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-6">
-              ${items.map(avatarTile).join('')}
-            </ul>
-          </div>
-        `).join('');
-
-      catalogueEl.querySelectorAll<HTMLButtonElement>('.avatar-pick').forEach(btn => {
-        btn.addEventListener('click', () => {
-          if (btn.dataset.unlocked !== '1') return;
-          equip(btn.dataset.avatarId!);
-        });
-      });
-    }
-
-    function equip(avatarId: string) {
-      fetch('/api/community/update', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ equipped_avatar_id: avatarId }),
-      })
-        .then(r => { if (!r.ok) throw new Error('save failed'); return load(); })
-        .catch(() => { nameStatus.textContent = 'Could not equip that avatar.'; });
-    }
-
     // Rendering approach copied from src/pages/library.astro (the section
     // markup, download-link construction, and esc()/safeImg() usage are all
     // taken verbatim) — this is an additional surface onto the same
@@ -541,8 +418,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
           loading.classList.add('hidden');
           content.classList.remove('hidden');
 
-          const { profile, avatars, newly_unlocked } = data;
-          currentEquippedId = profile.avatar ? profile.avatar.id : null;
+          const { profile } = data;
           handleEl.textContent = profile.handle ? '@' + profile.handle : '';
           nameInput.value = profile.display_name || '';
           handleInput.value = profile.handle || '';
@@ -560,8 +436,6 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
           renderCreature(profile.creature);
           renderColourwayPicker(profile.creature);
           renderSpritePicker(profile);
-          renderCatalogue(avatars);
-          renderNewlyUnlocked(newly_unlocked, avatars);
           loadLibrary();
         })
         .catch(e => {
