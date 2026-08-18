@@ -3,10 +3,19 @@
 // nav row reads as one cohesive bar; this file just renders the drawer.
 ---
 
+<!-- transition:persist: same reasoning as ParticleBackground/PlayerBar — the
+     drawer's own script (cart.js's DOM wiring below) only ever runs once
+     per session under the client router, so the elements it bound
+     (closeBtn, backdrop, itemsEl...) must stay the SAME nodes forever or
+     those listeners go dead on the very first navigation. The trigger
+     button lives in TopNav (re-rendered per page) and talks to this drawer
+     only through the document-level 'cart:open' custom event, so it never
+     needs a direct reference to survive. -->
 <div
   id="cart-drawer"
   class="cart-drawer"
   aria-hidden="true"
+  transition:persist
 >
   <div id="cart-backdrop" class="cart-backdrop"></div>
   <aside class="cart-panel" id="cart-panel">

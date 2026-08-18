@@ -1,4 +1,11 @@
-<div class="fixed inset-0 z-0 pointer-events-none">
+<!-- transition:persist: identical markup/script on every page, so keeping the
+     same canvas + 2d context alive across a navigation is strictly better
+     than tearing it down and re-running the script — which the client
+     router wouldn't even do a second time (bundled scripts execute once
+     per session), leaving a fresh, unpainted canvas behind. Persisting
+     sidesteps that entirely: the rAF loop, particle state and the
+     window/document listeners below never notice a swap happened. -->
+<div class="fixed inset-0 z-0 pointer-events-none" transition:persist>
   <div class="absolute inset-0 neural-bg"></div>
   <canvas id="particle-canvas" class="absolute inset-0 w-full h-full opacity-40"></canvas>
 </div>

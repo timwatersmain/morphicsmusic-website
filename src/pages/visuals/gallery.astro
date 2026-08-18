@@ -74,6 +74,20 @@ const categories = ['all', 'album-art', 'photography'];
 </BaseLayout>
 
 <script>
+  // Whole body wrapped for astro:page-load — see music.astro's doc comment
+  // for why a bundled script needs this under the client router (it only
+  // executes once per session otherwise, so a second visit to this page
+  // would render everything unwired).
+  //
+  // The one listener here that's bound to `document` rather than to this
+  // page's own (freshly-rendered-every-visit) elements is the keydown
+  // handler below — that one DOES need explicit removal-before-add, or
+  // repeat visits pile up one more stale handler each time (each closing
+  // over a `lightbox` reference from an earlier, now-detached DOM).
+  let keydownHandler: ((e: KeyboardEvent) => void) | null = null;
+
+  document.addEventListener('astro:page-load', () => {
+    if (keydownHandler) document.removeEventListener('keydown', keydownHandler);
   // Filter
   const filterBtns = document.querySelectorAll('.gallery-filter-btn');
   const gridItems = document.querySelectorAll('.gallery-dense-item');
@@ -145,11 +159,13 @@ const categories = ['all', 'album-art', 'photography'];
     if ((e.target as HTMLElement).classList.contains('art-lightbox-backdrop')) closeLightbox();
   });
 
-  document.addEventListener('keydown', (e) => {
+  keydownHandler = (e: KeyboardEvent) => {
     if (!lightbox?.classList.contains('active')) return;
     if (e.key === 'Escape') closeLightbox();
     if (e.key === 'ArrowRight') { lbIndex = (lbIndex + 1) % visibleItems.length; updateLightbox(); }
     if (e.key === 'ArrowLeft') { lbIndex = (lbIndex - 1 + visibleItems.length) % visibleItems.length; updateLightbox(); }
+  };
+  document.addEventListener('keydown', keydownHandler);
   });
 </script>
 

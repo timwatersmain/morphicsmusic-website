@@ -23,7 +23,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
       <p class="font-mono text-[11px] text-white/40 leading-relaxed mb-4">
         Sign in to see your collection and pick your avatar.
       </p>
-      <a href={`/login?redirect=${encodeURIComponent('/community/me')}`} class="inline-block px-6 py-3 bg-primary text-on-primary font-mono text-[11px] tracking-widest uppercase hover:bg-secondary hover:text-on-secondary transition-colors">
+      <a href={`/login?redirect=${encodeURIComponent('/community/me')}`} data-astro-reload class="inline-block px-6 py-3 bg-primary text-on-primary font-mono text-[11px] tracking-widest uppercase hover:bg-secondary hover:text-on-secondary transition-colors">
         Sign in
       </a>
     </div>
@@ -183,6 +183,11 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
     import { NATIVE_COLOURWAY } from '../../scripts/sprites/native-palette.js';
     import { computeStageProgress, rankLadder, type RankStatus } from '../../scripts/community/xp-progress';
 
+    // Wrapped for astro:page-load — see music.astro's doc comment. This page
+    // fetches the signed-in fan's own data fresh on every arrival (and is
+    // reachable from many places — nav, TopNav's account link, the sprite
+    // picker save flow), so it must re-run every time, not just once.
+    document.addEventListener('astro:page-load', () => {
     const loading = document.getElementById('me-loading')!;
     const signin = document.getElementById('me-signin')!;
     const errorBox = document.getElementById('me-error')!;
@@ -693,5 +698,6 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
     });
 
     load();
+    }); // end astro:page-load
   </script>
 </BaseLayout>

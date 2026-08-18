@@ -4,6 +4,11 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 // Same public/secret Turnstile split as login.astro — see that file for the
 // full rationale.
 const TURNSTILE_SITE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || '';
+
+// EXEMPTED FROM THE CLIENT ROUTER, along with /login and /account (see the
+// note on login.astro). Every internal link that reaches any of the three
+// carries data-astro-reload so navigating here is always a real page load —
+// see BaseLayout.astro's ClientRouter comment for the site-wide picture.
 ---
 
 <BaseLayout title="SIGN UP" currentPage="">
@@ -100,7 +105,7 @@ const TURNSTILE_SITE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || '';
     <div id="error" role="alert" aria-live="assertive" class="hidden mt-8 p-6 border border-red-500/30 bg-red-500/5 font-mono text-[11px] text-red-300"></div>
 
     <p class="mt-8 font-mono text-[10px] text-white/30 leading-relaxed">
-      Already have an account? <a href="/login" class="text-white/60 hover:text-white underline">Sign in</a>
+      Already have an account? <a href="/login" data-astro-reload class="text-white/60 hover:text-white underline">Sign in</a>
     </p>
   </div>
 

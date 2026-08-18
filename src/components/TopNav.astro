@@ -88,7 +88,12 @@ const navItems = [
     <!-- href/label default to a neutral "Account" state, not "Sign in" — we
          cannot assert signed-out until the server definitively confirms it
          (see the script below and src/scripts/auth-state.js). -->
-    <a id="account-link" href="/login" class="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-white/40 hover:text-secondary transition-colors">
+    <!-- data-astro-reload matches the neutral default (href="/login") this
+         starts at server-render time; the script below flips it off once a
+         signed-in state points this at /community/me instead. See
+         login.astro's doc comment for why /login is exempted from the
+         client router. -->
+    <a id="account-link" href="/login" data-astro-reload class="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-white/40 hover:text-secondary transition-colors">
       <span class="material-symbols-outlined text-base">person</span>
       <span id="account-link-label">Account</span>
     </a>
@@ -98,83 +103,110 @@ const navItems = [
 <script>
   import { decideAuthStateFromFetch } from '../scripts/auth-state.js';
 
-  // Cart trigger wiring — kept out of inline onclick= so script-src can
-  // drop 'unsafe-inline'. Both the mobile and desktop buttons carry the
-  // [data-cart-open] hook and dispatch the same custom event the drawer
-  // already listens for.
-  document.querySelectorAll<HTMLButtonElement>('[data-cart-open]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.dispatchEvent(new CustomEvent('cart:open'));
+  // TopNav is NOT transition:persist — currentPage differs per route, so the
+  // client router must re-render it from fresh markup on every navigation.
+  // Bundled scripts only execute once per session under the router, though,
+  // so everything that used to run at the top level of this module (cart
+  // wiring, the emblem swap, the auth-state paint) is wrapped in setup() and
+  // re-run on astro:page-load, which fires for the first real load AND every
+  // swap after. No cleanup is needed on the way out: every listener here is
+  // bound to elements INSIDE this fresh markup, so the old ones are simply
+  // discarded with the DOM they were attached to — nothing survives to leak.
+  function setup() {
+    // Cart trigger wiring — kept out of inline onclick= so script-src can
+    // drop 'unsafe-inline'. Both the mobile and desktop buttons carry the
+    // [data-cart-open] hook and dispatch the same custom event the drawer
+    // (transition:persist, so its own listener is only ever bound once)
+    // already listens for.
+    document.querySelectorAll<HTMLButtonElement>('[data-cart-open]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.dispatchEvent(new CustomEvent('cart:open'));
+      });
     });
-  });
 
-  // Pull the animated emblem in only once everything else has landed, so its
-  // ~1MB never competes with content for bandwidth. Decoded off-document first
-  // so the swap cannot flash.
-  const emblem = document.getElementById('nav-emblem') as HTMLImageElement | null;
-  if (emblem && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    const start = () => {
-      const anim = emblem.dataset.anim;
-      if (!anim) return;
-      const pre = new Image();
-      pre.onload = () => { emblem.src = anim; };
-      pre.src = anim;
-    };
-    if (document.readyState === 'complete') start();
-    else window.addEventListener('load', start, { once: true });
-  }
-
-  const CACHE_KEY = 'morphics_auth_cache_v1';
-  const accountLink = document.getElementById('account-link') as HTMLAnchorElement | null;
-  const accountLabel = document.getElementById('account-link-label');
-
-  function paint(state: 'signed-in' | 'signed-out' | 'unknown', email: string | null) {
-    // Lets other site-wide scripts react to auth state without each running
-    // its own /api/auth/me round trip — see src/scripts/engagement-tracker.js,
-    // which relies on this (plus the localStorage cache below) as its ONLY
-    // signal, so a signed-out visitor never causes it to call any endpoint.
-    document.dispatchEvent(new CustomEvent('morphics:auth-state', { detail: { state, email } }));
-    if (!accountLink || !accountLabel) return;
-    if (state === 'signed-in') {
-      accountLink.href = '/community/me';
-      accountLabel.textContent = 'Your profile';
-    } else if (state === 'signed-out') {
-      accountLink.href = '/login';
-      accountLabel.textContent = 'Sign in';
-    } else {
-      // Neutral: we don't know yet (or the check failed). Never assert
-      // "Sign in" here — a valid 30-day session could still be sitting in
-      // the browser. /login itself will sort out signed-in vs signed-out
-      // on click, so pointing there is a safe, recoverable default.
-      accountLink.href = '/login';
-      accountLabel.textContent = 'Account';
+    // Pull the animated emblem in only once everything else has landed, so its
+    // ~1MB never competes with content for bandwidth. Decoded off-document first
+    // so the swap cannot flash.
+    const emblem = document.getElementById('nav-emblem') as HTMLImageElement | null;
+    if (emblem && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      const start = () => {
+        const anim = emblem.dataset.anim;
+        if (!anim) return;
+        const pre = new Image();
+        pre.onload = () => { emblem.src = anim; };
+        pre.src = anim;
+      };
+      // document.readyState is already 'complete' on every post-first-load
+      // swap (the document itself never reloads), so this branch is what
+      // actually fires from the second navigation onward; the 'load'
+      // listener only matters for the very first page.
+      if (document.readyState === 'complete') start();
+      else window.addEventListener('load', start, { once: true });
     }
-  }
 
-  // Paint from the last known state on frame 1 so there is no "Sign in"
-  // flash while the network round-trip to /api/auth/me is in flight.
-  // localStorage can throw in Safari private mode — never let that break
-  // the nav.
-  try {
-    const cached = localStorage.getItem(CACHE_KEY);
-    if (cached) {
-      const parsed = JSON.parse(cached);
-      if (parsed && (parsed.state === 'signed-in' || parsed.state === 'signed-out')) {
-        paint(parsed.state, parsed.email ?? null);
+    const CACHE_KEY = 'morphics_auth_cache_v1';
+    const accountLink = document.getElementById('account-link') as HTMLAnchorElement | null;
+    const accountLabel = document.getElementById('account-link-label');
+
+    function paint(state: 'signed-in' | 'signed-out' | 'unknown', email: string | null) {
+      // Lets other site-wide scripts react to auth state without each running
+      // its own /api/auth/me round trip — see src/scripts/engagement-tracker.js,
+      // which relies on this (plus the localStorage cache below) as its ONLY
+      // signal, so a signed-out visitor never causes it to call any endpoint.
+      document.dispatchEvent(new CustomEvent('morphics:auth-state', { detail: { state, email } }));
+      if (!accountLink || !accountLabel) return;
+      if (state === 'signed-in') {
+        accountLink.href = '/community/me';
+        accountLabel.textContent = 'Your profile';
+        // /community/me is fully client-router aware — let it soft-navigate.
+        accountLink.removeAttribute('data-astro-reload');
+      } else if (state === 'signed-out') {
+        accountLink.href = '/login';
+        accountLabel.textContent = 'Sign in';
+        // /login is exempted from the client router (session-form-heavy,
+        // third-party Turnstile script — see the note on login.astro's own
+        // links), so force a real navigation into it.
+        accountLink.setAttribute('data-astro-reload', '');
+      } else {
+        // Neutral: we don't know yet (or the check failed). Never assert
+        // "Sign in" here — a valid 30-day session could still be sitting in
+        // the browser. /login itself will sort out signed-in vs signed-out
+        // on click, so pointing there is a safe, recoverable default.
+        accountLink.href = '/login';
+        accountLabel.textContent = 'Account';
+        accountLink.setAttribute('data-astro-reload', '');
       }
     }
-  } catch {}
 
-  decideAuthStateFromFetch(fetch('/api/auth/me', { credentials: 'include' })).then(({ state, email }) => {
-    paint(state, email);
-    // Only a definitive answer is worth caching — caching 'unknown' would
-    // let a stale rate-limit/error response poison the next page load's
-    // first frame.
-    if (state === 'signed-in' || state === 'signed-out') {
-      try {
-        localStorage.setItem(CACHE_KEY, JSON.stringify({ state, email }));
-      } catch {}
-    }
-  });
+    // Paint from the last known state on frame 1 so there is no "Sign in"
+    // flash while the network round-trip to /api/auth/me is in flight.
+    // localStorage can throw in Safari private mode — never let that break
+    // the nav.
+    try {
+      const cached = localStorage.getItem(CACHE_KEY);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed && (parsed.state === 'signed-in' || parsed.state === 'signed-out')) {
+          paint(parsed.state, parsed.email ?? null);
+        }
+      }
+    } catch {}
+
+    decideAuthStateFromFetch(fetch('/api/auth/me', { credentials: 'include' })).then(({ state, email }) => {
+      paint(state, email);
+      // Only a definitive answer is worth caching — caching 'unknown' would
+      // let a stale rate-limit/error response poison the next page load's
+      // first frame.
+      if (state === 'signed-in' || state === 'signed-out') {
+        try {
+          localStorage.setItem(CACHE_KEY, JSON.stringify({ state, email }));
+        } catch {}
+      }
+    });
+  }
+
+  // astro:page-load fires for the very first load too (not just swaps), so
+  // this single listener covers every case — no separate direct call needed.
+  document.addEventListener('astro:page-load', setup);
 </script>
 

@@ -292,38 +292,67 @@ function safely(fn, h1) {
 export function initTitleMorph() {
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
 
-  // Record this page's title for whichever page comes next. pagehide covers
-  // link clicks, back/forward and the ENTER zoom's scripted navigation alike.
-  window.addEventListener('pagehide', () => {
+  // Record this page's title for whichever page comes next.
+  //
+  // pagehide covers a REAL navigation (link clicks that leave the client
+  // router — e.g. the ENTER zoom, which sets window.location.href directly —
+  // back/forward across a hard reload, closing the tab). It never fires for
+  // an in-app swap, because the document never unloads for one.
+  //
+  // astro:before-swap is the equivalent moment for that case: it fires while
+  // the OUTGOING page's DOM (this <h1>) is still on screen, right before the
+  // incoming page's content replaces it. Both listeners are bound once, here,
+  // at module scope — this function itself only runs once per session (see
+  // the astro:page-load wiring below for why that's fine): document-level
+  // listeners aren't torn down by a swap, so one binding covers every
+  // navigation for the life of the tab.
+  const recordOutgoing = () => {
     const t = titleText(titleEl());
     if (t) sessionStorage.setItem(KEY, t);
     else sessionStorage.removeItem(KEY);
-  });
-
-  if (reduce.matches) {
-    document.documentElement.classList.remove('title-morphing');
-    return;
-  }
-
-  const from = sessionStorage.getItem(KEY);
-  sessionStorage.removeItem(KEY);
-
-  // Fonts must be settled first: rasterising against a fallback face would
-  // sample the wrong letterforms and the morph would land off the real title.
-  //
-  // But that wait is BOUNDED, because the <h1> is hidden until the morph runs
-  // and document.fonts.ready can take well over a second — measured at ~1.5s in
-  // WebKit — which is a second of blank page title. If the fonts are not ready
-  // in time we skip the morph and just show the title: a missing flourish is a
-  // fine trade for never showing an empty heading.
-  let started = false;
-  const go = (morph) => {
-    if (started) return;
-    started = true;
-    if (morph) safely(() => runTitleMorph(from));
-    else finish(titleEl(), null);
   };
-  const ready = document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve();
-  ready.then(() => go(true), () => go(true));
-  setTimeout(() => go(false), 450);
+  window.addEventListener('pagehide', recordOutgoing);
+  document.addEventListener('astro:before-swap', recordOutgoing);
+
+  // The part that actually reveals/morphs THIS page's title has to run again
+  // on every arrival, not just the first — astro:page-load fires for both.
+  // finished is reset here (not just inside morphWord) so a page that takes
+  // the "skip the morph" branch (go(false), when fonts aren't ready in time)
+  // still calls finish() on a fresh navigation instead of being silently
+  // no-op'd by the previous page's already-true flag, which would leave the
+  // <h1> hidden forever.
+  const run = () => {
+    finished = false;
+
+    if (reduce.matches) {
+      document.documentElement.classList.remove('title-morphing');
+      return;
+    }
+
+    const from = sessionStorage.getItem(KEY);
+    sessionStorage.removeItem(KEY);
+
+    // Fonts must be settled first: rasterising against a fallback face would
+    // sample the wrong letterforms and the morph would land off the real title.
+    //
+    // But that wait is BOUNDED, because the <h1> is hidden until the morph runs
+    // and document.fonts.ready can take well over a second — measured at ~1.5s in
+    // WebKit — which is a second of blank page title. If the fonts are not ready
+    // in time we skip the morph and just show the title: a missing flourish is a
+    // fine trade for never showing an empty heading.
+    let started = false;
+    const go = (morph) => {
+      if (started) return;
+      started = true;
+      if (morph) safely(() => runTitleMorph(from));
+      else finish(titleEl(), null);
+    };
+    const ready = document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve();
+    ready.then(() => go(true), () => go(true));
+    setTimeout(() => go(false), 450);
+  };
+
+  // astro:page-load fires for the first real load too, so this one listener
+  // is the entire wiring — no separate immediate call needed.
+  document.addEventListener('astro:page-load', run);
 }

@@ -309,10 +309,15 @@ const typeIcons: Record<string, string> = {
 </style>
 
 <script>
-  document.querySelectorAll('[data-hover-play]').forEach(video => {
-    const card = video.closest('a');
-    if (!card) return;
-    card.addEventListener('mouseenter', () => { (video as HTMLVideoElement).play().catch(() => {}); });
-    card.addEventListener('mouseleave', () => { (video as HTMLVideoElement).pause(); (video as HTMLVideoElement).currentTime = 0; });
+  // Bundled scripts execute once per session under the client router, so
+  // this has to re-run on every arrival (fresh cards each time) rather than
+  // only the first — astro:page-load covers the first load too.
+  document.addEventListener('astro:page-load', () => {
+    document.querySelectorAll('[data-hover-play]').forEach(video => {
+      const card = video.closest('a');
+      if (!card) return;
+      card.addEventListener('mouseenter', () => { (video as HTMLVideoElement).play().catch(() => {}); });
+      card.addEventListener('mouseleave', () => { (video as HTMLVideoElement).pause(); (video as HTMLVideoElement).currentTime = 0; });
+    });
   });
 </script>

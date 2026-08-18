@@ -12,6 +12,16 @@ function fmt(ms) {
   return `${m}m ${sec}s`;
 }
 
+// Every wire() call registers a setInterval; previously these ran forever
+// (the module's top-level `document.querySelectorAll(...).forEach(wire)`
+// only ever ran once, on a real page load, so the timers just died with the
+// page). Under the client router the calling page re-invokes
+// initReleaseCountdowns() on every arrival (see music.astro /
+// store/music/[slug].astro), so without tracking + clearing the previous
+// batch each call would pile up one more live setInterval per visit —
+// ticking against detached elements from every earlier visit, forever.
+let activeTimers = [];
+
 function wire(el) {
   const date = el.dataset.releaseDate || '';
   const label = el.querySelector('.countdown-label');
@@ -24,12 +34,28 @@ function wire(el) {
       el.style.display = 'none';
       if (btn) { btn.disabled = false; btn.textContent = btn.dataset.liveLabel || 'Add to cart'; }
       clearInterval(timer);
+      activeTimers = activeTimers.filter((t) => t !== timer);
       return;
     }
     if (label) label.textContent = `Releases in ${fmt(liveAt - Date.now())}`;
   }
   const timer = setInterval(tick, 1000);
+  activeTimers.push(timer);
   tick();
 }
 
-document.querySelectorAll('.release-countdown').forEach(wire);
+// Stops every countdown timer this module currently has running. Call
+// before re-initialising (belt and braces) and on the way out of a page
+// that has countdowns, so navigating away never leaves one ticking.
+export function disposeReleaseCountdowns() {
+  activeTimers.forEach(clearInterval);
+  activeTimers = [];
+}
+
+// Safe to call repeatedly — disposes any previous batch first, then wires
+// whatever .release-countdown elements exist in the current DOM (a fresh
+// set on every navigation under the client router).
+export function initReleaseCountdowns(root = document) {
+  disposeReleaseCountdowns();
+  root.querySelectorAll('.release-countdown').forEach(wire);
+}

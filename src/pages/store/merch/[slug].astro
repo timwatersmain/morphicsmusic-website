@@ -85,6 +85,10 @@ const fmtPrice = (lo: number, hi: number) =>
 
   <script>
     import '../../../scripts/cart.js';
+
+    // Wrapped for astro:page-load — same dynamic-route reasoning as
+    // store/digital/[slug].astro.
+    document.addEventListener('astro:page-load', () => {
     const variants = JSON.parse(document.getElementById('variants-data')!.textContent || '[]');
     const item = JSON.parse(document.getElementById('item-data')!.textContent || '{}');
     const form = document.getElementById('variant-form') as HTMLFormElement;
@@ -128,5 +132,6 @@ const fmtPrice = (lo: number, hi: number) =>
         btn.classList.remove('bg-secondary', 'text-on-secondary');
       }, 2000);
     });
+    }); // end astro:page-load
   </script>
 </BaseLayout>

@@ -1,4 +1,5 @@
 ---
+import { ClientRouter } from 'astro:transitions';
 import TopNav from '../components/TopNav.astro';
 import ParticleBackground from '../components/ParticleBackground.astro';
 import Cart from '../components/Cart.astro';
@@ -34,6 +35,21 @@ const { title, currentPage = '' } = Astro.props;
        unpreloaded first request would delay that block window even further —
        preload it here the same as the other self-hosted faces. -->
   <link rel="preload" href="/fonts/MorphianTrial-Regular.woff2" as="font" type="font/woff2" crossorigin />
+  <!-- Swaps the page in place instead of a full reload, so PlayerBar's
+       <audio> (transition:persist, below) survives navigation instead of
+       being torn down mid-track. Astro auto-disables the CSS transition
+       animation itself for prefers-reduced-motion — nothing extra needed
+       here for that. Every page script that assumed "runs once per real
+       load" has been individually audited and re-wired onto astro:page-load
+       / astro:before-swap (see preview-player.js, title-morph.js,
+       ScrambleGrid.astro, TopNav.astro and each page's own script) rather
+       than left to the old top-level-execution-once assumption, which the
+       client router breaks silently (a script that already ran is never
+       re-run just because its markup reappears). /login, /signup, /account
+       and /library are exempted (data-astro-reload on the links that reach
+       them) — see the note on TopNav's account link and login/signup's
+       cross-links for why. -->
+  <ClientRouter />
   <!-- is:global is REQUIRED, not stylistic. Astro scopes a plain <style> to the
        component it appears in, and every .material-symbols-outlined lives in
        TopNav / Cart / PlayerBar, never in this file — so a scoped rule matches
@@ -82,11 +98,16 @@ const { title, currentPage = '' } = Astro.props;
        hidden from the very first paint without waiting for any script. */
     html:not(.fonts-ready) .material-symbols-outlined { color: transparent; }
   </style>
-  <script is:inline>
+  <script is:inline data-astro-rerun>
     // Before first paint: if the previous page left a title behind, this page's
     // <h1> must start hidden so the word never flashes into place before the
     // particles have assembled it. title-morph.js clears the class when the
     // morph lands — or immediately, if it decides not to run.
+    // data-astro-rerun: under the client router this must run again on every
+    // swap (a fresh <h1> arrives each time), not just on the first real load
+    // — is:inline scripts are otherwise only executed once, same as bundled
+    // ones. See title-morph.js's own doc comment for the matching change on
+    // the "record what's leaving" side.
     (function () {
       try {
         if (!sessionStorage.getItem('morphics:title-from')) return;

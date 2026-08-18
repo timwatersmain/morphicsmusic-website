@@ -6,6 +6,28 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 // is verified server-side in functions/api/auth/login.ts. If unset, the
 // widget falls back to a no-op so the site still works in local dev.
 const TURNSTILE_SITE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || '';
+
+// EXEMPTED FROM THE CLIENT ROUTER (see BaseLayout.astro's ClientRouter for
+// the site-wide picture), along with /signup and /account. Reasons, together
+// rather than worth separating per page:
+//   - All three load a third-party script (Turnstile, on this page and
+//     /signup) with a plain <script src> tag that isn't part of Astro's own
+//     bundle. The client router's script-execution rules ("bundled module
+//     scripts run once, everything else is whatever the diff happens to do")
+//     are documented for Astro's own scripts, not for a third party's
+//     widget-render lifecycle across a soft-swapped DOM — not worth staking
+//     working payment/auth-adjacent UI on an unverified assumption there.
+//   - The signed-in-vs-form panel toggle, the redirect-target logic and the
+//     magic-link fallback all assume "this page's own fetch() to
+//     /api/auth/me settles once, on this exact load" — reachable, but not
+//     free, to make navigation-safe, and these pages are low-traffic
+//     (visited deliberately, not part of casual browsing) so the payoff for
+//     doing so is small next to the risk of a subtle miss in a security-
+//     adjacent flow.
+// Net effect: navigating to any of the three interrupts playback if a
+// preview was running (a real page load tears down the persisted
+// <audio>) — an accepted, minor, explainable exception; every internal link
+// that reaches one of them carries data-astro-reload to force it.
 ---
 
 <BaseLayout title="SIGN IN" currentPage="">
@@ -23,12 +45,14 @@ const TURNSTILE_SITE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || '';
       </header>
       <a
         href="/library"
+        data-astro-reload
         class="block text-center w-full py-4 bg-primary text-on-primary font-mono text-[11px] tracking-widest uppercase hover:bg-secondary hover:text-on-secondary transition-colors"
       >
         Go to library
       </a>
       <a
         href="/account"
+        data-astro-reload
         class="block text-center w-full mt-4 py-3 font-mono text-[10px] tracking-widest uppercase text-white/40 hover:text-white/70 transition-colors"
       >
         Manage sign-in details
@@ -111,7 +135,7 @@ const TURNSTILE_SITE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || '';
     </p>
 
     <p class="mt-4 font-mono text-[10px] text-white/30 leading-relaxed">
-      New here? <a href="/signup" class="text-white/60 hover:text-white underline">Create an account</a>
+      New here? <a href="/signup" data-astro-reload class="text-white/60 hover:text-white underline">Create an account</a>
     </p>
 
     <!-- Secondary path: the original magic-link flow, demoted but preserved

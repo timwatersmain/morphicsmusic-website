@@ -124,9 +124,30 @@
 <script>
   import { ScrambleGridEngine } from '../scripts/spelling/grid-engine.js';
 
-  const canvas = document.getElementById('scramble-grid');
-  const hiCanvas = document.getElementById('scramble-grid-hi');
-  if (canvas) {
+  // Only the landing page mounts this, but a bundled script only ever
+  // executes once per session under the client router — so leaving the grid
+  // wired the old top-level-execution-once way would mean: navigate away and
+  // back to "/" once, and the second visit's canvases sit there blank (no
+  // engine attached, since the setup code never runs again). Worse, without
+  // an explicit teardown on the way out, the engine's own rAF loop plus the
+  // IntersectionObserver/ResizeObserver keep running against a canvas that's
+  // no longer in the document — one leaked loop per visit to "/", forever,
+  // is exactly the "cooks a laptop" failure mode this whole change is
+  // supposed to avoid.
+  //
+  // So: setup()/teardown() are explicit, teardown tears down everything
+  // setup() created (mirroring the old pagehide handler, which only ran on a
+  // REAL unload), and both are wired to the client router's lifecycle
+  // instead of running once at module load. pagehide is kept alongside
+  // astro:before-swap because this page can still be reached by a hard
+  // navigation (e.g. opening it directly), and both events cover their own
+  // navigation type — see title-morph.js's identical reasoning.
+  let cleanup = null;
+
+  function setup() {
+    const canvas = document.getElementById('scramble-grid');
+    const hiCanvas = document.getElementById('scramble-grid-hi');
+    if (!canvas) return;
     // Everything that depends on the viewport breakpoint lives here, as a
     // function of `small`, so it can be re-applied when the breakpoint changes
     // rather than being frozen at load. Rotating a phone into landscape crosses
@@ -311,34 +332,56 @@
       });
     }
 
+    let io = null;
     if (reducedMQ.matches) {
       // One static, already-resolved frame: no rAF loop, no cell scheduling.
       engine.renderResolvedOnce();
     } else {
       // Only run while the canvas is actually on screen.
-      const io = new IntersectionObserver((entries) => {
+      io = new IntersectionObserver((entries) => {
         for (const e of entries) {
           if (e.isIntersecting) engine.start();
           else engine.stop();
         }
       }, { threshold: 0.01 });
       io.observe(canvas);
-
-      window.addEventListener('pagehide', () => {
-        io.disconnect();
-        if (ro) ro.disconnect();
-        engine.destroy();
-        if (trigger) {
-          trigger.removeEventListener('mouseenter', enter);
-          trigger.removeEventListener('mouseleave', leave);
-          trigger.removeEventListener('focus', enter);
-          trigger.removeEventListener('blur', leave);
-        }
-      });
     }
 
     // Kept for browsers without ResizeObserver; where it exists, the observer
     // above has already handled the resize and engine.size() is a no-op.
-    if (!ro) window.addEventListener('resize', () => engine.size());
+    const legacyResize = () => engine.size();
+    if (!ro) window.addEventListener('resize', legacyResize);
+
+    // Tears down everything this setup() call created. Runs on a real unload
+    // (pagehide) and on a client-router swap away from this page
+    // (astro:before-swap) — see the module doc comment up top for why both
+    // are needed. Previously this cleanup only existed on the reduced-motion
+    // "else" branch's pagehide listener, which also meant `ro`
+    // (ResizeObserver) was never disconnected at all when reduced-motion WAS
+    // active — a latent leak that a real page unload made moot but a
+    // same-tab navigation would not have.
+    return () => {
+      if (io) io.disconnect();
+      if (ro) ro.disconnect();
+      engine.destroy();
+      window.removeEventListener('resize', measure);
+      window.removeEventListener('resize', legacyResize);
+      if (smallMQ.removeEventListener) smallMQ.removeEventListener('change', applyProfile);
+      else if (smallMQ.removeListener) smallMQ.removeListener(applyProfile);
+      if (trigger) {
+        trigger.removeEventListener('mouseenter', enter);
+        trigger.removeEventListener('mouseleave', leave);
+        trigger.removeEventListener('focus', enter);
+        trigger.removeEventListener('blur', leave);
+      }
+    };
   }
+
+  function teardown() {
+    if (cleanup) { cleanup(); cleanup = null; }
+  }
+
+  document.addEventListener('astro:page-load', () => { cleanup = setup() || null; });
+  window.addEventListener('pagehide', teardown);
+  document.addEventListener('astro:before-swap', teardown);
 </script>

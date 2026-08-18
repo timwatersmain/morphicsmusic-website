@@ -5,7 +5,13 @@
 // time). Hidden until the first track is played, then stays put.
 ---
 
-<div id="player-bar" class="player-bar is-hidden" aria-hidden="true">
+<!-- transition:persist is the whole point of this change: the bar (and the
+     <audio> element preview-player.js creates and holds in module state)
+     must survive navigation so a preview keeps playing as fans move around
+     the site. preview-player.js's wireBar() binds its listeners directly to
+     these elements exactly once; persisting them is what keeps those
+     bindings — and playback — alive across every swap. -->
+<div id="player-bar" class="player-bar is-hidden" aria-hidden="true" transition:persist>
   <div class="pb-inner">
     <div class="pb-meta">
       <a id="pb-art-link" class="pb-art-link" aria-label="Go to release">

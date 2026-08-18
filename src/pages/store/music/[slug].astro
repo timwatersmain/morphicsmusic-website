@@ -198,55 +198,79 @@ function fmtDuration(seconds: number | null) {
     import '../../../scripts/cart.js';
     import '../../../scripts/preview-player.js';
     import { goLiveUtcMs, isReleased } from '../../../../functions/_lib/release-gate.mjs';
-    const release = JSON.parse(document.getElementById('release-data')!.textContent || '{}');
-    const form = document.getElementById('release-form') as HTMLFormElement;
 
-    const submitBtn = form.querySelector('button[type="submit"]') as HTMLButtonElement;
-    const originalLabel = submitBtn.textContent;
+    // This is a dynamic route ([slug].astro): every release shares the same
+    // compiled script, so a bundled-script-runs-once client router would
+    // otherwise leave the SECOND release page you visit completely
+    // unwired (no countdown, no working "add to cart" form) — the script
+    // already ran once, for the first slug. astro:page-load fires again for
+    // every navigation (including the first), so wrapping the whole setup in
+    // it re-reads the fresh #release-data / #release-form each time instead
+    // of relying on top-level execution. timer is tracked at module scope
+    // (this outer scope only runs once, same reasoning as
+    // ScrambleGrid.astro) so astro:before-swap can always clear whatever the
+    // MOST RECENT navigation started, even though the countdown values
+    // themselves are re-read fresh on every page-load.
+    let timer: ReturnType<typeof setInterval> | null = null;
 
-    const cdEl = document.getElementById('release-countdown');
-    const liveAt = goLiveUtcMs(release.release_date || '');
-    if (cdEl && Number.isFinite(liveAt)) {
-      const tick = () => {
-        if (isReleased(release.release_date)) {
-          cdEl.style.display = 'none';
-          if (submitBtn) submitBtn.disabled = false;
-          clearInterval(timer);
-          return;
-        }
-        const s = Math.max(0, Math.floor((liveAt - Date.now()) / 1000));
-        const d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600), m = Math.floor((s % 3600) / 60);
-        cdEl.textContent = `Releases in ${d}d ${h}h ${m}m`;
-      };
-      var timer = setInterval(tick, 1000);
-      tick();
-    }
+    document.addEventListener('astro:page-load', () => {
+      if (timer) { clearInterval(timer); timer = null; }
 
-    form.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const fd = new FormData(form);
-      const dollars = parseFloat(String(fd.get('price') || '0'));
-      const cents = Math.round(dollars * 100);
-      if (cents < release.min_cents) return;
+      const release = JSON.parse(document.getElementById('release-data')!.textContent || '{}');
+      const form = document.getElementById('release-form') as HTMLFormElement;
 
-      (window as any).morphicsCart.add({
-        type: 'music',
-        sku: `music:${release.slug}`,
-        title: release.title,
-        subtitle: `${release.type.toUpperCase()} · ${release.track_count} track${release.track_count === 1 ? '' : 's'} · digital`,
-        image: release.image,
-        unit_amount: cents,
-        qty: 1,
-        metadata: { release_slug: release.slug },
+      const submitBtn = form.querySelector('button[type="submit"]') as HTMLButtonElement;
+      const originalLabel = submitBtn.textContent;
+
+      const cdEl = document.getElementById('release-countdown');
+      const liveAt = goLiveUtcMs(release.release_date || '');
+      if (cdEl && Number.isFinite(liveAt)) {
+        const tick = () => {
+          if (isReleased(release.release_date)) {
+            cdEl.style.display = 'none';
+            if (submitBtn) submitBtn.disabled = false;
+            if (timer) { clearInterval(timer); timer = null; }
+            return;
+          }
+          const s = Math.max(0, Math.floor((liveAt - Date.now()) / 1000));
+          const d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600), m = Math.floor((s % 3600) / 60);
+          cdEl.textContent = `Releases in ${d}d ${h}h ${m}m`;
+        };
+        timer = setInterval(tick, 1000);
+        tick();
+      }
+
+      form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const fd = new FormData(form);
+        const dollars = parseFloat(String(fd.get('price') || '0'));
+        const cents = Math.round(dollars * 100);
+        if (cents < release.min_cents) return;
+
+        (window as any).morphicsCart.add({
+          type: 'music',
+          sku: `music:${release.slug}`,
+          title: release.title,
+          subtitle: `${release.type.toUpperCase()} · ${release.track_count} track${release.track_count === 1 ? '' : 's'} · digital`,
+          image: release.image,
+          unit_amount: cents,
+          qty: 1,
+          metadata: { release_slug: release.slug },
+        });
+
+        // Confirm to the user without hijacking focus to the drawer.
+        submitBtn.textContent = '✓ Added — view cart';
+        submitBtn.classList.add('bg-secondary', 'text-on-secondary');
+        setTimeout(() => {
+          submitBtn.textContent = originalLabel;
+          submitBtn.classList.remove('bg-secondary', 'text-on-secondary');
+        }, 2000);
       });
+    });
 
-      // Confirm to the user without hijacking focus to the drawer.
-      submitBtn.textContent = '✓ Added — view cart';
-      submitBtn.classList.add('bg-secondary', 'text-on-secondary');
-      setTimeout(() => {
-        submitBtn.textContent = originalLabel;
-        submitBtn.classList.remove('bg-secondary', 'text-on-secondary');
-      }, 2000);
+    // Stop the countdown tick before this page's markup is swapped away.
+    document.addEventListener('astro:before-swap', () => {
+      if (timer) { clearInterval(timer); timer = null; }
     });
   </script>
 </BaseLayout>

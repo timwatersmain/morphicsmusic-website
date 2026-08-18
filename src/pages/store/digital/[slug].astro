@@ -125,6 +125,13 @@ const price = item.price_cents % 100 === 0
 
   <script>
     import '../../../scripts/cart.js';
+
+    // Wrapped for astro:page-load: this is a dynamic route ([slug].astro),
+    // so the same compiled script serves every digital item — without this,
+    // browsing from one item to another via the client router would leave
+    // the second page's "add to cart" button unwired (see music.astro's
+    // doc comment for the general reasoning).
+    document.addEventListener('astro:page-load', () => {
     const item = JSON.parse(document.getElementById('item-data')!.textContent || '{}');
     const btn = document.getElementById('add-btn') as HTMLButtonElement;
 
@@ -148,5 +155,6 @@ const price = item.price_cents % 100 === 0
         btn.classList.remove('bg-secondary', 'text-on-secondary');
       }, 2000);
     });
+    }); // end astro:page-load
   </script>
 </BaseLayout>

@@ -172,6 +172,27 @@ const featuredVisuals = visualsData.filter(v => v.featured);
 </BaseLayout>
 
 <script>
+  // Whole body wrapped for astro:page-load (see music.astro's doc comment —
+  // a bundled script only executes once per session under the client
+  // router, so a second visit would otherwise render this page completely
+  // unwired). The keydown listener near the bottom is the one thing that
+  // needs explicit removal-before-add rather than just re-running: it's
+  // bound to `document`, which survives a swap, so re-adding it on every
+  // visit without removing the old one would pile up stale handlers
+  // referencing detached elements from earlier visits.
+  let keydownHandler: ((e: KeyboardEvent) => void) | null = null;
+  // Hoisted to module scope (rather than declared fresh inside the
+  // astro:page-load callback below) so the astro:before-swap teardown at
+  // the bottom of this file — which is bound once, outside that callback —
+  // can always reach whichever timer/rAF handle is currently live.
+  let autoSwitchTimer: ReturnType<typeof setTimeout> | null = null;
+  let progressRaf: number | null = null;
+
+  document.addEventListener('astro:page-load', () => {
+  if (keydownHandler) document.removeEventListener('keydown', keydownHandler);
+  if (autoSwitchTimer) { clearTimeout(autoSwitchTimer); autoSwitchTimer = null; }
+  if (progressRaf) { cancelAnimationFrame(progressRaf); progressRaf = null; }
+
   // ═══ VIDEO SWITCHER / PREVIEWER ═══
   const previewPlayer = document.getElementById('preview-player') as HTMLVideoElement | null;
   const fullscreenPlayer = document.getElementById('fullscreen-player') as HTMLVideoElement | null;
@@ -185,8 +206,6 @@ const featuredVisuals = visualsData.filter(v => v.featured);
 
   const PREVIEW_DURATION = 8; // seconds per preview
   let activeVideoIndex = 0;
-  let autoSwitchTimer: ReturnType<typeof setTimeout> | null = null;
-  let progressRaf: number | null = null;
 
   // Build video list from button data attributes
   const videoList = Array.from(switchBtns).map(btn => ({
@@ -327,7 +346,7 @@ const featuredVisuals = visualsData.filter(v => v.featured);
   });
 
   // Global keyboard
-  document.addEventListener('keydown', (e) => {
+  keydownHandler = (e: KeyboardEvent) => {
     if (videoFsModal?.classList.contains('active')) {
       if (e.key === 'Escape') closeFullscreenVideo();
       return;
@@ -337,6 +356,17 @@ const featuredVisuals = visualsData.filter(v => v.featured);
       if (e.key === 'ArrowRight') { lbIndex = (lbIndex + 1) % artItems.length; updateLightbox(); }
       if (e.key === 'ArrowLeft') { lbIndex = (lbIndex - 1 + artItems.length) % artItems.length; updateLightbox(); }
     }
+  };
+  document.addEventListener('keydown', keydownHandler);
+  }); // end astro:page-load
+
+  // Stop the auto-advance timer/rAF before this page's markup is swapped
+  // away. Bound once, at module scope (outside the astro:page-load
+  // callback), so it always reaches the module-level autoSwitchTimer /
+  // progressRaf handles regardless of which navigation started them.
+  document.addEventListener('astro:before-swap', () => {
+    if (autoSwitchTimer) { clearTimeout(autoSwitchTimer); autoSwitchTimer = null; }
+    if (progressRaf) { cancelAnimationFrame(progressRaf); progressRaf = null; }
   });
 </script>
 

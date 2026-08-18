@@ -244,57 +244,76 @@ const discogFilters = [
   </div>
 
   <script>
-    import '../scripts/release-countdown.js';
+    import { initReleaseCountdowns, disposeReleaseCountdowns } from '../scripts/release-countdown.js';
     import '../scripts/cart.js';
     import '../scripts/preview-player.js';
 
-    // Discography type filter (Singles / EPs / Albums).
-    const ACTIVE = ['border-primary', 'bg-primary', 'text-on-primary'];
-    const INACTIVE = ['border-primary/20', 'text-primary', 'hover:border-secondary', 'hover:text-secondary'];
-    const filterBtns = Array.from(document.querySelectorAll<HTMLButtonElement>('.discog-filter'));
-    const cards = Array.from(document.querySelectorAll<HTMLElement>('.discog-card'));
+    // This whole body used to run once at module top level, which was fine
+    // for a real page load but silently stops happening on the second visit
+    // to /music under the client router (bundled scripts execute once per
+    // session — see ScrambleGrid.astro's doc comment for the long version).
+    // astro:page-load fires for the first load too, so this listener is the
+    // entire wiring: no separate immediate call needed. The filter buttons,
+    // "add to cart" buttons and countdowns are all freshly rendered markup
+    // each time, so nothing here needs its own removeEventListener — the old
+    // elements (and their listeners) are simply discarded with the DOM.
+    document.addEventListener('astro:page-load', () => {
+      initReleaseCountdowns();
 
-    function applyFilter(value: string) {
-      cards.forEach(card => {
-        const show = value === 'all' || card.dataset.type === value;
-        card.style.display = show ? '' : 'none';
-      });
-      filterBtns.forEach(btn => {
-        const on = btn.dataset.filter === value;
-        btn.setAttribute('aria-pressed', String(on));
-        btn.classList.remove(...ACTIVE, ...INACTIVE);
-        btn.classList.add(...(on ? ACTIVE : INACTIVE));
-      });
-    }
+      // Discography type filter (Singles / EPs / Albums).
+      const ACTIVE = ['border-primary', 'bg-primary', 'text-on-primary'];
+      const INACTIVE = ['border-primary/20', 'text-primary', 'hover:border-secondary', 'hover:text-secondary'];
+      const filterBtns = Array.from(document.querySelectorAll<HTMLButtonElement>('.discog-filter'));
+      const cards = Array.from(document.querySelectorAll<HTMLElement>('.discog-card'));
 
-    filterBtns.forEach(btn => btn.addEventListener('click', () => applyFilter(btn.dataset.filter || 'all')));
-    applyFilter('all');
-
-    document.querySelectorAll<HTMLButtonElement>('.release-add-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        if (btn.disabled) return;
-        const minCents = parseInt(btn.dataset.minCents || '0', 10);
-        const trackCount = parseInt(btn.dataset.trackCount || '0', 10);
-        const type = btn.dataset.type || '';
-        (window as any).morphicsCart.add({
-          type: 'music',
-          sku: `music:${btn.dataset.slug}`,
-          title: btn.dataset.title,
-          subtitle: `${type.toUpperCase()} · ${trackCount} track${trackCount === 1 ? '' : 's'} · digital`,
-          image: btn.dataset.image,
-          unit_amount: minCents,
-          qty: 1,
-          metadata: { release_slug: btn.dataset.slug },
+      function applyFilter(value: string) {
+        cards.forEach(card => {
+          const show = value === 'all' || card.dataset.type === value;
+          card.style.display = show ? '' : 'none';
         });
-        const orig = btn.textContent;
-        btn.textContent = '✓ Added';
-        btn.classList.add('bg-secondary', 'text-on-secondary');
-        setTimeout(() => {
-          btn.textContent = orig;
-          btn.classList.remove('bg-secondary', 'text-on-secondary');
-        }, 1600);
+        filterBtns.forEach(btn => {
+          const on = btn.dataset.filter === value;
+          btn.setAttribute('aria-pressed', String(on));
+          btn.classList.remove(...ACTIVE, ...INACTIVE);
+          btn.classList.add(...(on ? ACTIVE : INACTIVE));
+        });
+      }
+
+      filterBtns.forEach(btn => btn.addEventListener('click', () => applyFilter(btn.dataset.filter || 'all')));
+      applyFilter('all');
+
+      document.querySelectorAll<HTMLButtonElement>('.release-add-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          if (btn.disabled) return;
+          const minCents = parseInt(btn.dataset.minCents || '0', 10);
+          const trackCount = parseInt(btn.dataset.trackCount || '0', 10);
+          const type = btn.dataset.type || '';
+          (window as any).morphicsCart.add({
+            type: 'music',
+            sku: `music:${btn.dataset.slug}`,
+            title: btn.dataset.title,
+            subtitle: `${type.toUpperCase()} · ${trackCount} track${trackCount === 1 ? '' : 's'} · digital`,
+            image: btn.dataset.image,
+            unit_amount: minCents,
+            qty: 1,
+            metadata: { release_slug: btn.dataset.slug },
+          });
+          const orig = btn.textContent;
+          btn.textContent = '✓ Added';
+          btn.classList.add('bg-secondary', 'text-on-secondary');
+          setTimeout(() => {
+            btn.textContent = orig;
+            btn.classList.remove('bg-secondary', 'text-on-secondary');
+          }, 1600);
+        });
       });
     });
+
+    // Stop every countdown tick before this page's markup is swapped away —
+    // see release-countdown.js's doc comment on why leaving this to the next
+    // initReleaseCountdowns() call (which also disposes first) isn't enough:
+    // that next call may never come if the visitor never returns to /music.
+    document.addEventListener('astro:before-swap', disposeReleaseCountdowns);
   </script>
 
 </BaseLayout>
