@@ -14,9 +14,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # Version comes from .nvmrc so CI, local and package.json's
+      # `engines` cannot drift apart. It must be 24, not 22: the D1 test
+      # shim imports node:sqlite, which Node 22 only exposes behind
+      # --experimental-sqlite. Pinning 20 here is what made the first run
+      # of this gate fail — package.json already requires >=22.12.0.
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version-file: .nvmrc
           cache: npm
       # `npm ci` not `npm install`: it installs exactly the lockfile, so CI
       # can never pass against a dependency tree that no one else has.
