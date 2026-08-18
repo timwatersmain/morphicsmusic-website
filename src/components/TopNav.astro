@@ -73,7 +73,7 @@ const navItems = [
 
   <!-- Desktop right cluster: Cart + Sign in. Hidden on mobile because
        the mobile cart sits inline in the nav row above. -->
-  <div class="hidden md:flex items-center gap-6 flex-shrink-0">
+  <div class="hidden md:flex items-center gap-6 flex-shrink-0 md:ml-10">
     <button
       id="cart-button"
       type="button"
@@ -157,7 +157,7 @@ const navItems = [
       if (!accountLink || !accountLabel) return;
       if (state === 'signed-in') {
         accountLink.href = '/community/me';
-        accountLabel.textContent = 'Your profile';
+        accountLabel.textContent = 'Profile';
         // /community/me is fully client-router aware — let it soft-navigate.
         accountLink.removeAttribute('data-astro-reload');
       } else if (state === 'signed-out') {
