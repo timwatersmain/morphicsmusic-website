@@ -158,5 +158,10 @@ const { title, currentPage = '' } = Astro.props;
     import { initTitleMorph } from '../scripts/title-morph.js';
     initTitleMorph();
   </script>
+  <!-- Its own module too, same isolation reasoning as title-morph above.
+       Signed-out visitors cost nothing here — see the module doc comment. -->
+  <script>
+    import '../scripts/engagement-tracker.js';
+  </script>
 </body>
 </html>

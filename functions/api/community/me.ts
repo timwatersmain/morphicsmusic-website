@@ -112,7 +112,14 @@ export const onRequestGet: PagesFunction<CommunityEnv> = corsHandler<CommunityEn
     const tenureDays = Math.max(0, (nowSec - profile.fan_since) / 86400);
     const creatureUpdate = await evaluateCreature(
       profile,
-      { purchaseCount: owned.size, tenureDays, engagementActions: 0 },
+      {
+        purchaseCount: owned.size,
+        tenureDays,
+        // Lifetime engagement EP (clicks + active time + listening) —
+        // accrued server-side by POST /api/community/engagement, never
+        // client-supplied here. See functions/_lib/community/engagement.ts.
+        engagementActions: profile.engagement_ep || 0,
+      },
     );
     // hatchedAt is permanent once set, never touched again — carry the
     // existing value forward except on the exact visit that just crossed it.

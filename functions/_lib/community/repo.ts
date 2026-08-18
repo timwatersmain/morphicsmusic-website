@@ -7,6 +7,7 @@ import type {
 } from './types';
 import { nextStageThreshold, stageXp, type CreatureStage } from './ep';
 import { assignSpriteRefs } from './sprites';
+import type { EngagementState, ListenFlags } from './engagement';
 
 const now = () => Math.floor(Date.now() / 1000);
 
@@ -295,6 +296,61 @@ export async function saveCreatureProgress(
   await db.prepare(
     'UPDATE fan_profiles SET ep = ?, stage = ?, hatched_at = ?, updated_at = ? WHERE id = ?',
   ).bind(update.ep, update.stage, update.hatchedAt, now(), fanId).run();
+}
+
+/**
+ * Read the engagement bookkeeping columns (migration 0010) as the pure
+ * EngagementState shape engagement.ts's applyEngagementReport works with —
+ * keeps the JSON parse (and its defensive fallback) in one place rather than
+ * repeating it at every caller. A malformed engagement_listened_today value
+ * (should never happen — it is only ever written by saveEngagementState
+ * below) is treated as an empty day rather than throwing, since losing a
+ * day's listen-dedup bookkeeping is harmless and far better than a 500.
+ */
+export async function getEngagementState(db: D1Database, fanId: number): Promise<EngagementState> {
+  const row = await db.prepare(
+    `SELECT engagement_day, engagement_clicks_today, engagement_active_seconds_today,
+            engagement_listen_xp_today, engagement_listened_today, engagement_last_seq, engagement_ep
+       FROM fan_profiles WHERE id = ?`,
+  ).bind(fanId).first<{
+    engagement_day: string | null;
+    engagement_clicks_today: number;
+    engagement_active_seconds_today: number;
+    engagement_listen_xp_today: number;
+    engagement_listened_today: string;
+    engagement_last_seq: number;
+    engagement_ep: number;
+  }>();
+  let listened: Record<string, ListenFlags> = {};
+  try {
+    if (row?.engagement_listened_today) {
+      const parsed = JSON.parse(row.engagement_listened_today);
+      if (parsed && typeof parsed === 'object') listened = parsed;
+    }
+  } catch { /* treat as empty — see doc comment above */ }
+  return {
+    day: row?.engagement_day ?? null,
+    clicksToday: row?.engagement_clicks_today || 0,
+    activeSecondsToday: row?.engagement_active_seconds_today || 0,
+    listenXpToday: row?.engagement_listen_xp_today || 0,
+    listened,
+    lastSeq: row?.engagement_last_seq || 0,
+    lifetimeEp: row?.engagement_ep || 0,
+  };
+}
+
+/** Persist a new EngagementState — the only place engagement_* columns are ever written. */
+export async function saveEngagementState(db: D1Database, fanId: number, state: EngagementState): Promise<void> {
+  await db.prepare(
+    `UPDATE fan_profiles
+       SET engagement_day = ?, engagement_clicks_today = ?, engagement_active_seconds_today = ?,
+           engagement_listen_xp_today = ?, engagement_listened_today = ?, engagement_last_seq = ?,
+           engagement_ep = ?, updated_at = ?
+       WHERE id = ?`,
+  ).bind(
+    state.day, state.clicksToday, state.activeSecondsToday, state.listenXpToday,
+    JSON.stringify(state.listened), state.lastSeq, state.lifetimeEp, now(), fanId,
+  ).run();
 }
 
 /**

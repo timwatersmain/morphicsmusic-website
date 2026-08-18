@@ -129,6 +129,11 @@ const navItems = [
   const accountLabel = document.getElementById('account-link-label');
 
   function paint(state: 'signed-in' | 'signed-out' | 'unknown', email: string | null) {
+    // Lets other site-wide scripts react to auth state without each running
+    // its own /api/auth/me round trip — see src/scripts/engagement-tracker.js,
+    // which relies on this (plus the localStorage cache below) as its ONLY
+    // signal, so a signed-out visitor never causes it to call any endpoint.
+    document.dispatchEvent(new CustomEvent('morphics:auth-state', { detail: { state, email } }));
     if (!accountLink || !accountLabel) return;
     if (state === 'signed-in') {
       accountLink.href = '/community/me';

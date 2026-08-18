@@ -21,6 +21,8 @@ const UP8 = readFileSync(join(root, 'migrations/0008_sprite_override.sql'), 'utf
 const DOWN8 = readFileSync(join(root, 'migrations/down/0008_sprite_override.down.sql'), 'utf8');
 const UP9 = readFileSync(join(root, 'migrations/0009_native_colourway.sql'), 'utf8');
 const DOWN9 = readFileSync(join(root, 'migrations/down/0009_native_colourway.down.sql'), 'utf8');
+const UP10 = readFileSync(join(root, 'migrations/0010_engagement_ep.sql'), 'utf8');
+const DOWN10 = readFileSync(join(root, 'migrations/down/0010_engagement_ep.down.sql'), 'utf8');
 const TABLES = ['fan_profiles', 'avatar_catalogue', 'fan_avatar_unlocks'];
 
 const STUB = `CREATE TABLE IF NOT EXISTS d1_migrations (
@@ -551,6 +553,64 @@ describe('migration 0009', () => {
     db.exec(DOWN9);
     expect(db.prepare("SELECT name FROM d1_migrations WHERE name = '0009_native_colourway.sql'").all()).toHaveLength(0);
     expect(() => { db.exec(STUB9); db.exec(UP9); }).not.toThrow();
+  });
+});
+
+const STUB10 = `INSERT INTO d1_migrations (name, applied_at) VALUES ('0010_engagement_ep.sql','now');`;
+
+function makeDb10() {
+  const db = makeDb9();
+  db.exec(STUB10);
+  db.exec(UP10);
+  return db;
+}
+
+describe('migration 0010', () => {
+  it('adds the engagement columns with sane defaults', () => {
+    const db = makeDb10();
+    addFan(db, 'a@b.com', 'ana');
+    const row = db.prepare("SELECT * FROM fan_profiles WHERE handle = 'ana'").get();
+    expect(row.engagement_day).toBeNull();
+    expect(row.engagement_clicks_today).toBe(0);
+    expect(row.engagement_active_seconds_today).toBe(0);
+    expect(row.engagement_listen_xp_today).toBe(0);
+    expect(row.engagement_listened_today).toBe('{}');
+    expect(row.engagement_last_seq).toBe(0);
+    expect(row.engagement_ep).toBe(0);
+  });
+
+  it('preserves an existing native colourway and override_sprite value across the rebuild', () => {
+    const db = makeDb10();
+    addFan(db, 'a@b.com', 'ana');
+    db.prepare("UPDATE fan_profiles SET colourway = 'native', override_sprite = 'A147' WHERE handle = 'ana'").run();
+    const before = db.prepare("SELECT colourway, override_sprite FROM fan_profiles WHERE handle = 'ana'").get();
+    expect(before.colourway).toBe('native');
+    expect(before.override_sprite).toBe('A147');
+  });
+
+  it('lets application code write the engagement columns freely (no CHECK on them)', () => {
+    const db = makeDb10();
+    addFan(db, 'a@b.com', 'ana');
+    expect(() => db.prepare(
+      `UPDATE fan_profiles SET engagement_day = '2026-08-17', engagement_clicks_today = 25,
+         engagement_ep = 85 WHERE handle = 'ana'`,
+    ).run()).not.toThrow();
+  });
+
+  it('is reversible — drops the seven engagement columns', () => {
+    const db = makeDb10();
+    db.exec(DOWN10);
+    const cols = db.prepare('PRAGMA table_info(fan_profiles)').all().map(c => c.name);
+    expect(cols).not.toContain('engagement_day');
+    expect(cols).not.toContain('engagement_ep');
+    expect(cols).not.toContain('engagement_listened_today');
+  });
+
+  it('down clears bookkeeping so up can re-run', () => {
+    const db = makeDb10();
+    db.exec(DOWN10);
+    expect(db.prepare("SELECT name FROM d1_migrations WHERE name = '0010_engagement_ep.sql'").all()).toHaveLength(0);
+    expect(() => { db.exec(STUB10); db.exec(UP10); }).not.toThrow();
   });
 });
 

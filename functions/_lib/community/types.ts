@@ -60,6 +60,21 @@ export interface FanProfileRow {
    * confirms the ref is real.
    */
   override_sprite: string | null;
+  /**
+   * Engagement EP bookkeeping (migration 0010) — see
+   * functions/_lib/community/engagement.ts for what each field means and
+   * repo.ts's getEngagementState/saveEngagementState for the read/write
+   * pair. Only ever written by POST /api/community/engagement.
+   */
+  engagement_day: string | null;
+  engagement_clicks_today: number;
+  engagement_active_seconds_today: number;
+  engagement_listen_xp_today: number;
+  /** JSON-encoded Record<string, { played: boolean; completed: boolean }>. */
+  engagement_listened_today: string;
+  engagement_last_seq: number;
+  /** Lifetime engagement EP — fed into ep.ts's computeEp as `engagementActions`. */
+  engagement_ep: number;
 }
 
 export interface AvatarCatalogueRow {

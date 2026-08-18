@@ -156,6 +156,16 @@ function updateTimes() {
   const cur = $('pb-cur'), dur = $('pb-dur');
   if (cur) cur.textContent = fmt(audio ? audio.currentTime : 0);
   if (dur) dur.textContent = fmt(audio ? audio.duration : 0);
+  // Observability hook only — dispatched on every call site this already
+  // had (timeupdate/loadedmetadata/durationchange), never changes playback.
+  // Listened to by engagement-tracker.js to derive genuine listen progress
+  // (see functions/_lib/community/engagement.ts) without that script
+  // needing access to the module-private `audio`/`currentKey` state here.
+  if (currentKey) {
+    document.dispatchEvent(new CustomEvent('morphics:preview-progress', {
+      detail: { key: currentKey, currentTime: audio ? audio.currentTime : 0, duration: audio ? audio.duration : 0 },
+    }));
+  }
 }
 
 /* ---------- waveform ---------- */
@@ -262,6 +272,10 @@ function toggle(key, btn, meta) {
   if (currentBtn && currentBtn !== btn) setIcon(currentBtn, 'play_arrow');
   currentKey = key;
   currentBtn = btn;
+  // Observability hook only, same reasoning as updateTimes' dispatch above —
+  // fires once per genuine new-track start (this branch only runs when the
+  // key actually changed), never on a plain pause/resume toggle.
+  document.dispatchEvent(new CustomEvent('morphics:preview-start', { detail: { key } }));
   currentPeaks = peakCache.get(key) || null;
   setMeta(meta);
   showBar();
