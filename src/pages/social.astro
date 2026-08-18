@@ -63,7 +63,7 @@ const typeIcons: Record<string, string> = {
           href={platform.url}
           class="group relative flex flex-col items-center gap-3 transition-all duration-[400ms] hover:scale-110"
         >
-          <div class="w-16 h-16 border border-outline-variant/30 flex items-center justify-center bg-surface-container-low rounded-lg hover:border-primary/60 hover:bg-primary/5 transition-all duration-[400ms] shadow-[0_0_40px_rgba(0,219,233,0.06)]">
+          <div class="w-16 h-16 border border-outline-variant/30 flex items-center justify-center bg-surface-container-low rounded-[var(--radius-lg)] hover:border-primary/60 hover:bg-primary/5 transition-all duration-[400ms] shadow-[0_0_40px_rgba(0,219,233,0.06)]">
             <span class="material-symbols-outlined text-2xl text-primary/60 group-hover:text-primary transition-colors">{platform.icon}</span>
           </div>
           <span class="font-mono text-[9px] tracking-widest text-white/30 group-hover:text-primary transition-colors">{platform.name}</span>
@@ -245,6 +245,11 @@ const typeIcons: Record<string, string> = {
     border: 1px solid rgba(255,255,255,0.05);
     background: var(--surface-container-low);
     transition: all 0.4s;
+    /* Rounded on the same role scale as every other card surface
+       (--radius-lg, see global.css). overflow:hidden is what actually clips
+       the media inside to the corner, so the radius has to live on the card
+       itself, not on the image. */
+    border-radius: var(--radius-lg);
     overflow: hidden;
     display: flex;
     flex-direction: column;
@@ -257,6 +262,10 @@ const typeIcons: Record<string, string> = {
   .signal-card > .relative {
     flex: 1 1 auto;
     min-height: 0;
+    /* Safari drops the parent's overflow clip for an iframe/video inside a
+       composited layer, so the media wrapper carries the top corners too. */
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    overflow: hidden;
   }
   .signal-card > .relative > video,
   .signal-card > .relative > img {
@@ -264,6 +273,9 @@ const typeIcons: Record<string, string> = {
     height: 100%;
     aspect-ratio: auto !important;
     object-fit: cover;
+    /* The global img/video rule rounds all four corners; inside a card the
+       bottom two would float above a square caption block. The card clips. */
+    border-radius: 0;
   }
   .signal-card > .p-4,
   .signal-card > .p-5 {
@@ -282,6 +294,12 @@ const typeIcons: Record<string, string> = {
     border-color: rgba(var(--primary-rgb, 0, 204, 168), 0.3);
   }
 
+  .tiktok-frame,
+  .tiktok-frame > .relative {
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    overflow: hidden;
+  }
+
   .signal-card--text {
     border-left: 2px solid rgba(var(--primary-rgb, 0, 204, 168), 0.2);
   }
@@ -298,6 +316,7 @@ const typeIcons: Record<string, string> = {
     gap: 0.75rem;
     padding: 3rem 1rem;
     border: 1px dashed rgba(255,255,255,0.06);
+    border-radius: var(--radius-lg);
     min-height: 200px;
   }
 

@@ -19,7 +19,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 
     <div id="me-loading" class="font-mono text-[11px] text-white/40">Loading your profile…</div>
 
-    <div id="me-signin" class="hidden p-8 border border-white/10 text-center">
+    <div id="me-signin" class="hidden p-8 border border-white/10 rounded-[var(--radius-lg)] text-center">
       <p class="font-mono text-[11px] text-white/40 leading-relaxed mb-4">
         Sign in to see your collection and pick your avatar.
       </p>
@@ -28,7 +28,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
       </a>
     </div>
 
-    <div id="me-error" class="hidden p-8 border border-white/10 text-center">
+    <div id="me-error" class="hidden p-8 border border-white/10 rounded-[var(--radius-lg)] text-center">
       <p id="me-error-msg" class="font-mono text-[11px] text-white/40 leading-relaxed"></p>
     </div>
 
@@ -554,7 +554,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
                 <span class="font-mono text-xs text-secondary uppercase">Your library</span>
                 <div class="h-[1px] flex-1 bg-outline-variant/30"></div>
               </div>
-              <div class="p-8 border border-white/10 text-center">
+              <div class="p-8 border border-white/10 rounded-[var(--radius-lg)] text-center">
                 <p class="font-mono text-[11px] text-white/40 leading-relaxed">
                   Nothing here yet. Browse the <a href="/store" class="text-secondary underline">store</a> — your library populates the moment you buy something.
                 </p>

@@ -378,6 +378,10 @@ const featuredVisuals = visualsData.filter(v => v.featured);
     gap: 0;
     border: 1px solid var(--outline-variant);
     background: var(--surface-container-low);
+    /* Same card radius as every other surface (global.css --radius-lg). The
+       panel is the thing that rounds; overflow:hidden clips the video, the
+       hover overlay and the switcher sidebar to those corners. */
+    border-radius: var(--radius-lg);
     overflow: hidden;
   }
 
@@ -388,6 +392,9 @@ const featuredVisuals = visualsData.filter(v => v.featured);
   }
   .video-showcase-player video {
     display: block;
+    /* The global video rule rounds all four corners; inside the panel that
+       floats the video's corners above a square frame. The panel clips. */
+    border-radius: 0;
   }
 
   .video-showcase-overlay {
