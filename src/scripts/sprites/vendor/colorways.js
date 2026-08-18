@@ -8,7 +8,7 @@
 export const COLORWAYS = [
   { id: 'crimson', name: 'CRIMSON', p: ['#3d0f14', '#b32334', '#f08a92', '#ffe36a'] },
   { id: 'ember',   name: 'EMBER',   p: ['#42190a', '#c8541a', '#f5a35a', '#ffe08a'] },
-  { id: 'amber',   name: 'AMBER',   p: ['#3f2c07', '#c48a12', '#f5d472', '#fff4b0'] },
+  { id: 'amber',   name: 'AMBER',   p: ['#4a3300', '#ffc400', '#ffe97a', '#fffbd6'] },
   { id: 'citron',  name: 'CITRON',  p: ['#33380a', '#a8bc1e', '#e4ef86', '#fffbc0'] },
   { id: 'leaf',    name: 'LEAF',    p: ['#123312', '#37a83c', '#9ce89e', '#f2ff9c'] },
   { id: 'jade',    name: 'JADE',    p: ['#0d3327', '#1ea877', '#8ce8c4', '#e8fff0'] },
