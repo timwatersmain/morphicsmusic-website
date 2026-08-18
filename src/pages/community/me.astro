@@ -140,7 +140,6 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
     const handleSave = document.getElementById('me-handle-save') as HTMLButtonElement;
     const handleStatus = document.getElementById('me-handle-status')!;
     const fanSinceEl = document.getElementById('me-fan-since')!;
-    const countEl = document.getElementById('me-count')!;
     const libraryEl = document.getElementById('me-library')!;
 
     const esc = (s: any) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
@@ -429,7 +428,6 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
               : '';
           }
           fanSinceEl.textContent = 'Morphics since ' + fmtDate(profile.fan_since);
-          countEl.textContent = String(profile.collection_count);
           renderCreature(profile.creature);
           renderColourwayPicker(profile.creature);
           renderSpritePicker(profile);
