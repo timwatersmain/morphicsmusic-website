@@ -112,6 +112,36 @@
   --radius-full: 9999px; /* pills: buttons, badges */
 }
 
+/* Bare-name aliases for the @theme tokens.
+   Tailwind v4's @theme emits its variables as --color-* / --radius-*, but the
+   page-level <style> blocks were written against Material-style bare names
+   (var(--primary), var(--outline-variant), var(--surface-container-low)).
+   Those resolved to nothing, and an unresolved var in a shorthand invalidates
+   the WHOLE declaration — `border: 1px solid var(--outline-variant)` dropped
+   the border entirely rather than falling back to a default colour. That is
+   why the visuals showcase had no frame and no surface: the only thing painting
+   inside it was the video, so its own square corners were all you could see,
+   and rounding the (invisible) panel changed nothing on screen.
+   --radius-* worked all along only because that name happens to match.
+   Aliasing here fixes all ~27 references at once instead of rewriting each
+   call site to a --color-* name.
+   --primary-rgb is deliberately NOT defined: the handful of
+   rgba(var(--primary-rgb, 0, 204, 168), …) hover accents already carry a
+   fallback that is what ships today, and defining it would change those
+   colours as a side effect of a layout fix. */
+:root {
+  --primary: var(--color-primary);
+  --secondary: var(--color-secondary);
+  --background: var(--color-background);
+  --on-surface: var(--color-on-surface);
+  --on-surface-variant: var(--color-on-surface-variant);
+  --outline: var(--color-outline);
+  --outline-variant: var(--color-outline-variant);
+  --surface-container: var(--color-surface-container);
+  --surface-container-low: var(--color-surface-container-low);
+  --surface-container-high: var(--color-surface-container-high);
+}
+
 /* Cross-document view transitions.
    Deliberately NOT Astro's <ClientRouter />: that swaps the site to
    client-side routing, which would re-run (or fail to re-run) the cart,
