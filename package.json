@@ -47,6 +47,8 @@
     "d1:rollback:native-colourway": "npx --yes wrangler d1 execute GATES --config tools/d1/wrangler.toml --remote --file=migrations/down/0009_native_colourway.down.sql",
     "d1:rollback:engagement-ep:local": "npx --yes wrangler d1 execute GATES --config tools/d1/wrangler.toml --local --file=migrations/down/0010_engagement_ep.down.sql",
     "d1:rollback:engagement-ep": "npx --yes wrangler d1 execute GATES --config tools/d1/wrangler.toml --remote --file=migrations/down/0010_engagement_ep.down.sql",
+    "d1:rollback:profile-bio:local": "npx --yes wrangler d1 execute GATES --config tools/d1/wrangler.toml --local --file=migrations/down/0011_profile_bio_privacy.down.sql",
+    "d1:rollback:profile-bio": "npx --yes wrangler d1 execute GATES --config tools/d1/wrangler.toml --remote --file=migrations/down/0011_profile_bio_privacy.down.sql",
     "build:sprites": "node scripts/build-sprite-assets.mjs",
     "rebuild:fans": "node scripts/rebuild-fan-projection.mjs"
   },

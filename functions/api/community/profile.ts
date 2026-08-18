@@ -1,15 +1,22 @@
 // GET /api/community/profile?handle=<handle>
 // Another fan's profile. Fans-only: signed-out callers get 401, never data.
 //
-// What is exposed here is exactly the spec's visible surface — display name,
-// avatar, fan-since, rank, collection. Never email, prices, purchase dates or
-// order history.
+// What is exposed here is exactly the visible surface of a profile — display
+// name, avatar, fan-since, rank and the fan's own bio. Never email, prices,
+// purchase dates or order history.
+//
+// The avatar COLLECTION used to ship here as `shelf`. It no longer does: a
+// profile is a person, not a trophy case, and the shelf was the whole page
+// for a visitor. Nothing about the underlying unlock ledger changed — the
+// rows, the grants and the rarity maths are all still there, they are simply
+// not what somebody else's profile is about. The rank ladder (see ep.ts's
+// STAGE_LABELS) is what a visitor reads for standing now.
 
 import { corsHandler, preflight } from '../../_lib/cors';
 import { rateLimit, rateLimitedJson, clientIp } from '../../_lib/ratelimit';
 import { requireFan, unauthorized, type CommunityEnv } from '../../_lib/community/session';
 import {
-  getProfileByHandle, getUnlockedAvatarIds, getCatalogue, getRarity, toPublicProfile,
+  getProfileByHandle, getProfileByEmail, getCatalogue, toPublicProfile,
 } from '../../_lib/community/repo';
 
 export const onRequestOptions: PagesFunction<CommunityEnv> = async ({ request }) => preflight(request);
@@ -19,7 +26,8 @@ export const onRequestGet: PagesFunction<CommunityEnv> = corsHandler<CommunityEn
     const rl = await rateLimit(env, 'community_profile', 'ip', clientIp(request), 120, 60);
     if (!rl.ok) return rateLimitedJson(rl);
 
-    if (!(await requireFan(request, env))) return unauthorized();
+    const email = await requireFan(request, env);
+    if (!email) return unauthorized();
 
     const handle = (new URL(request.url).searchParams.get('handle') || '').toLowerCase();
     if (!/^[a-z0-9-]{1,32}$/.test(handle)) {
@@ -35,27 +43,23 @@ export const onRequestGet: PagesFunction<CommunityEnv> = corsHandler<CommunityEn
       });
     }
 
+    // Still read for the EQUIPPED avatar only — one row out of the catalogue,
+    // not the fan's unlock ledger. Dropping the shelf also dropped two
+    // subrequests per call (getUnlockedAvatarIds and the whole-table rarity
+    // scan), which is real budget back on a page that is one D1 read away
+    // from Cloudflare's Free-tier subrequest cap.
     const catalogue = await getCatalogue(env.GATES);
-    const unlocked = new Set(await getUnlockedAvatarIds(env.GATES, profile.id));
-    const rarity = await getRarity(env.GATES);
     const equipped = catalogue.find(a => a.id === profile.equipped_avatar_id) || null;
 
-    // Only what this fan HAS. A visitor does not get to see somebody else's
-    // locked list — that is the owner's to-do list, not a public fact.
-    const shelf = catalogue
-      .filter(a => unlocked.has(a.id))
-      .map(a => ({
-        id: a.id, name: a.name, art_path: a.art_path,
-        kind: a.kind, release_slug: a.release_slug, rarity: rarity[a.id] ?? 0,
-        // Same tier-ladder shape as toPublicProfile's avatar — see
-        // PublicAvatar — so avatar.js renders shelf tiles identically to
-        // the equipped avatar and the fan-wall/directory entries.
-        style: a.style, colourway: a.colourway, artwork_key: a.artwork_key, tier: a.tier,
-      }));
+    // `is_self` lets the page offer "edit your profile" to the one visitor
+    // who can act on it, without a second round trip to /api/community/me.
+    const viewer = await getProfileByEmail(env.GATES, email);
 
     return new Response(JSON.stringify({
-      profile: { ...toPublicProfile(profile, equipped), is_self: false },
-      shelf,
+      profile: {
+        ...toPublicProfile(profile, equipped),
+        is_self: !!viewer && viewer.id === profile.id,
+      },
     }), { headers: { 'Content-Type': 'application/json' } });
   },
 );

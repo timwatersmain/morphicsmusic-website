@@ -7,6 +7,7 @@ import {
   ensureProfile, grantUnlocks, getProfileByHandle, getUnlockedAvatarIds,
   getRarity, getDirectory, toPublicProfile, updateProfile,
   canChangeHandle, nextHandleChangeAt, HANDLE_CHANGE_COOLDOWN_DAYS,
+  deleteFanProfile,
 } from '../../functions/_lib/community/repo';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -15,6 +16,10 @@ const UP3 = readFileSync(join(root, 'migrations/0003_handle_locked.sql'), 'utf8'
 const UP4 = readFileSync(join(root, 'migrations/0004_handle_cooldown.sql'), 'utf8');
 const UP6 = readFileSync(join(root, 'migrations/0006_creatures.sql'), 'utf8');
 const UP7 = readFileSync(join(root, 'migrations/0007_sprites.sql'), 'utf8');
+const UP8 = readFileSync(join(root, 'migrations/0008_sprite_override.sql'), 'utf8');
+const UP9 = readFileSync(join(root, 'migrations/0009_native_colourway.sql'), 'utf8');
+const UP10 = readFileSync(join(root, 'migrations/0010_engagement_ep.sql'), 'utf8');
+const UP11 = readFileSync(join(root, 'migrations/0011_profile_bio_privacy.sql'), 'utf8');
 
 import { makeD1Shim } from './helpers/d1-shim.js';
 
@@ -27,6 +32,10 @@ beforeEach(() => {
   raw.exec(UP4);
   raw.exec(UP6);
   raw.exec(UP7);
+  raw.exec(UP8);
+  raw.exec(UP9);
+  raw.exec(UP10);
+  raw.exec(UP11);
   raw.exec(`INSERT INTO avatar_catalogue (id,kind,release_slug,name,art_path,unlock_rule,hint,sort_order)
     VALUES ('release:perception','release','perception','PERCEPTION','/a.webp',
             '{"type":"own_release","slug":"perception"}','Own PERCEPTION',0)`);
@@ -373,5 +382,82 @@ describe('updateProfile handle race recovery', () => {
     // must never have been resolved by silently overwriting the other row.
     const fanA = raw.prepare('SELECT handle FROM fan_profiles WHERE email = ?').get('a@b.com');
     expect(fanA.handle).toBe('ana');
+  });
+});
+
+describe('bio and fan-wall visibility (migration 0011)', () => {
+  it('round-trips a bio through updateProfile and out via toPublicProfile', async () => {
+    const p = await ensureProfile(db, { email: 'a@b.com', fanSince: 100, displayName: 'Ana' });
+    await updateProfile(db, p.id, { bio: 'Modular and field recordings.' });
+    const row = await getProfileByHandle(db, 'ana');
+    expect(row.bio).toBe('Modular and field recordings.');
+    expect(toPublicProfile(row, null).bio).toBe('Modular and field recordings.');
+  });
+
+  it('treats null as "clear the bio", not as "leave it alone"', async () => {
+    const p = await ensureProfile(db, { email: 'a@b.com', fanSince: 100, displayName: 'Ana' });
+    await updateProfile(db, p.id, { bio: 'something' });
+    await updateProfile(db, p.id, { bio: null });
+    expect((await getProfileByHandle(db, 'ana')).bio).toBeNull();
+  });
+
+  it('leaves the bio untouched when the field is absent from the update', async () => {
+    const p = await ensureProfile(db, { email: 'a@b.com', fanSince: 100, displayName: 'Ana' });
+    await updateProfile(db, p.id, { bio: 'keep me' });
+    await updateProfile(db, p.id, { displayName: 'Ana Vex' });
+    expect((await getProfileByHandle(db, 'ana')).bio).toBe('keep me');
+  });
+
+  it('reports a null bio for a fan who never wrote one', async () => {
+    await ensureProfile(db, { email: 'a@b.com', fanSince: 100, displayName: 'Ana' });
+    expect(toPublicProfile(await getProfileByHandle(db, 'ana'), null).bio).toBeNull();
+  });
+
+  it('drops an unlisted fan from the directory but keeps their profile reachable', async () => {
+    const a = await ensureProfile(db, { email: 'a@b.com', fanSince: 100, displayName: 'Ana' });
+    await ensureProfile(db, { email: 'b@b.com', fanSince: 200, displayName: 'Bo' });
+    expect((await getDirectory(db, { limit: 10, offset: 0 })).map(r => r.handle)).toEqual(['ana', 'bo']);
+
+    await updateProfile(db, a.id, { hiddenFromWall: true });
+    expect((await getDirectory(db, { limit: 10, offset: 0 })).map(r => r.handle)).toEqual(['bo']);
+    // Unlisted, not deleted and not private: the direct lookup the profile
+    // page uses still finds them.
+    expect(await getProfileByHandle(db, 'ana')).toBeTruthy();
+  });
+
+  it('puts a fan back on the wall when they re-list', async () => {
+    const a = await ensureProfile(db, { email: 'a@b.com', fanSince: 100, displayName: 'Ana' });
+    await updateProfile(db, a.id, { hiddenFromWall: true });
+    await updateProfile(db, a.id, { hiddenFromWall: false });
+    expect((await getDirectory(db, { limit: 10, offset: 0 })).map(r => r.handle)).toEqual(['ana']);
+  });
+});
+
+describe('deleteFanProfile', () => {
+  it('removes the profile and its unlock ledger together', async () => {
+    const p = await ensureProfile(db, { email: 'a@b.com', fanSince: 100, displayName: 'Ana' });
+    await grantUnlocks(db, p.id, [
+      { avatarId: 'release:perception', source: 'own_release', sourceRef: 'perception' },
+    ]);
+    expect(await getUnlockedAvatarIds(db, p.id)).toEqual(['release:perception']);
+
+    await deleteFanProfile(db, p.id);
+
+    expect(await getProfileByHandle(db, 'ana')).toBeNull();
+    expect(raw.prepare('SELECT COUNT(*) c FROM fan_avatar_unlocks').get().c).toBe(0);
+  });
+
+  it('leaves every other fan alone', async () => {
+    const a = await ensureProfile(db, { email: 'a@b.com', fanSince: 100, displayName: 'Ana' });
+    await ensureProfile(db, { email: 'b@b.com', fanSince: 200, displayName: 'Bo' });
+    await deleteFanProfile(db, a.id);
+    expect(await getProfileByHandle(db, 'bo')).toBeTruthy();
+  });
+
+  it('frees the handle, so the fan can sign up again and reclaim it', async () => {
+    const a = await ensureProfile(db, { email: 'a@b.com', fanSince: 100, displayName: 'Ana' });
+    await deleteFanProfile(db, a.id);
+    const again = await ensureProfile(db, { email: 'a@b.com', fanSince: 999, displayName: 'Ana' });
+    expect(again.handle).toBe('ana');
   });
 });

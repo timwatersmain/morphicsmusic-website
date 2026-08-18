@@ -75,6 +75,21 @@ export interface FanProfileRow {
   engagement_last_seq: number;
   /** Lifetime engagement EP — fed into ep.ts's computeEp as `engagementActions`. */
   engagement_ep: number;
+  /**
+   * Fan-written bio (migration 0011), or NULL if they never wrote one.
+   * Sanitised and length-checked on the way in by
+   * functions/_lib/community/bio.ts — never trusted raw, and never rendered
+   * as HTML by any client (both surfaces set textContent, not innerHTML).
+   */
+  bio: string | null;
+  /**
+   * 0 = listed on the fan wall (the default for every existing row), 1 =
+   * unlisted. "Unlisted", not "private": getDirectory skips these fans, but a
+   * direct link to /community/u/<handle> still resolves for signed-in fans.
+   * The copy on /community/me says exactly that, so nobody mistakes it for
+   * access control.
+   */
+  hidden_from_wall: number;
 }
 
 export interface AvatarCatalogueRow {
@@ -198,6 +213,13 @@ export interface PublicProfile {
   fan_since: number;
   rank_points: number;
   collection_count: number;
+  /**
+   * NULL when the fan has not written one. Present on every public surface
+   * (profile page, fan wall) because a bio is the point of a profile — unlike
+   * `email` or `handle_changed_at`, which toPublicProfile's allow-list exists
+   * to keep out.
+   */
+  bio: string | null;
   avatar: PublicAvatar | null;
   creature: PublicCreature;
 }

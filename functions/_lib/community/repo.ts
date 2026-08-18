@@ -193,10 +193,15 @@ export async function getDirectory(
 ): Promise<FanProfileRow[]> {
   const limit = Math.min(Math.max(opts.limit | 0, 1), 100);
   const offset = Math.max(opts.offset | 0, 0);
+  // hidden_from_wall = 0 filters out fans who opted out of the wall
+  // (migration 0011). WHERE, not a post-filter in the caller: filtering after
+  // the LIMIT would silently shrink pages to fewer than `limit` rows and make
+  // has_more lie about whether another page exists.
   const { results } = await db.prepare(
     `SELECT fp.*, COUNT(u.avatar_id) AS unlock_count
        FROM fan_profiles fp
        LEFT JOIN fan_avatar_unlocks u ON u.fan_id = fp.id
+       WHERE fp.hidden_from_wall = 0
        GROUP BY fp.id
        ORDER BY unlock_count DESC, fp.fan_since ASC
        LIMIT ? OFFSET ?`,
@@ -205,13 +210,24 @@ export async function getDirectory(
 }
 
 function buildProfileSets(
-  fields: { displayName?: string; equippedAvatarId?: string | null; overrideSprite?: string | null },
+  fields: {
+    displayName?: string; equippedAvatarId?: string | null; overrideSprite?: string | null;
+    bio?: string | null; hiddenFromWall?: boolean;
+  },
   handle: string | undefined,
   t: number,
 ): { sets: string[]; args: unknown[] } {
   const sets: string[] = [];
   const args: unknown[] = [];
   if (fields.displayName !== undefined) { sets.push('display_name = ?'); args.push(fields.displayName); }
+  // Already sanitised and length-checked by update.ts via bio.ts — this
+  // function trusts its caller, same as every other field here. null is a
+  // real value (the fan cleared their bio), never "leave unchanged": that
+  // distinction is carried by undefined.
+  if (fields.bio !== undefined) { sets.push('bio = ?'); args.push(fields.bio); }
+  if (fields.hiddenFromWall !== undefined) {
+    sets.push('hidden_from_wall = ?'); args.push(fields.hiddenFromWall ? 1 : 0);
+  }
   if (fields.equippedAvatarId !== undefined) { sets.push('equipped_avatar_id = ?'); args.push(fields.equippedAvatarId); }
   // Gated to admin callers and ref-validated by update.ts before this is
   // ever reached — this function trusts its caller, same as every other
@@ -243,7 +259,7 @@ export async function updateProfile(
   fanId: number,
   fields: {
     displayName?: string; equippedAvatarId?: string | null; handle?: string;
-    overrideSprite?: string | null;
+    overrideSprite?: string | null; bio?: string | null; hiddenFromWall?: boolean;
   },
 ): Promise<void> {
   const t = now();
@@ -274,6 +290,26 @@ export async function updateProfile(
       await runProfileUpdate(db, fanId, buildProfileSets(fields, undefined, t), t);
     }
   }
+}
+
+/**
+ * Delete a fan's profile and everything hanging off it. Ordered
+ * children-then-parent and wrapped in a batch so a half-deleted fan (unlocks
+ * gone, profile still standing, or vice versa) is not a reachable state —
+ * fan_avatar_unlocks has a FK to fan_profiles, but D1 does not guarantee
+ * PRAGMA foreign_keys is on for every connection, so the child delete is
+ * explicit rather than left to ON DELETE CASCADE.
+ *
+ * The KV customer record (purchases, download entitlements) is deliberately
+ * NOT touched: it belongs to the ACCOUNT, not to the community profile, and
+ * a fan who deletes their profile keeps everything they paid for. Signing up
+ * again rebuilds a fresh profile from that same record — see ensureProfile.
+ */
+export async function deleteFanProfile(db: D1Database, fanId: number): Promise<void> {
+  await db.batch([
+    db.prepare('DELETE FROM fan_avatar_unlocks WHERE fan_id = ?').bind(fanId),
+    db.prepare('DELETE FROM fan_profiles WHERE id = ?').bind(fanId),
+  ]);
 }
 
 export async function setCollectionCount(db: D1Database, fanId: number, count: number): Promise<void> {
@@ -423,6 +459,7 @@ export function toPublicProfile(
     fan_since: row.fan_since,
     rank_points: row.rank_points,
     collection_count: row.collection_count,
+    bio: row.bio || null,
     avatar: avatar ? {
       id: avatar.id,
       name: avatar.name,

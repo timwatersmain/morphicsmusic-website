@@ -25,6 +25,7 @@ import { onRequestGet as meGet } from '../../functions/api/community/me';
 import { onRequestPost as updatePost } from '../../functions/api/community/update';
 import { onRequestGet as profileGet } from '../../functions/api/community/profile';
 import { onRequestGet as directoryGet } from '../../functions/api/community/directory';
+import { onRequestPost as deletePost } from '../../functions/api/community/delete';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const MIGRATION = readFileSync(join(root, 'migrations/0002_fan_profiles.sql'), 'utf8');
@@ -35,6 +36,8 @@ const MIGRATION6 = readFileSync(join(root, 'migrations/0006_creatures.sql'), 'ut
 const MIGRATION7 = readFileSync(join(root, 'migrations/0007_sprites.sql'), 'utf8');
 const MIGRATION8 = readFileSync(join(root, 'migrations/0008_sprite_override.sql'), 'utf8');
 const MIGRATION9 = readFileSync(join(root, 'migrations/0009_native_colourway.sql'), 'utf8');
+const MIGRATION10 = readFileSync(join(root, 'migrations/0010_engagement_ep.sql'), 'utf8');
+const MIGRATION11 = readFileSync(join(root, 'migrations/0011_profile_bio_privacy.sql'), 'utf8');
 
 const AUTH_SECRET = 'test-only-secret-not-real';
 const FAN_EMAIL = 'endpoint-fan@example.com';
@@ -76,6 +79,8 @@ beforeEach(() => {
   raw.exec(MIGRATION7);
   raw.exec(MIGRATION8);
   raw.exec(MIGRATION9);
+  raw.exec(MIGRATION10);
+  raw.exec(MIGRATION11);
   seedCatalogue(raw);
   db = makeD1Shim(raw);
   kv = makeKvStub();
@@ -1080,5 +1085,194 @@ describe('POST /api/community/update — handle changes (30-day cooldown, not a 
     // untouched by a community handle change.
     const record = JSON.parse(await kv.get(`customer:${FAN_EMAIL}`));
     expect(record.username).toBe('original_username');
+  });
+});
+
+describe('POST /api/community/update — bio', () => {
+  async function seedFan(name = 'Endpoint Fan') {
+    return ensureProfile(db, {
+      email: FAN_EMAIL, fanSince: Math.floor(Date.now() / 1000), displayName: name,
+    });
+  }
+
+  async function postUpdate(body, cookie) {
+    return updatePost({
+      request: req('https://morphicsmusic.com/api/community/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Cookie: cookie },
+        body: JSON.stringify(body),
+      }),
+      env,
+    });
+  }
+
+  it('stores a sanitised bio and serves it back on the public profile', async () => {
+    const profile = await seedFan();
+    const cookie = await cookieFor(FAN_EMAIL);
+
+    const res = await postUpdate({ bio: '  Modular and field recordings.  ' }, cookie);
+    expect(res.status).toBe(200);
+    expect(raw.prepare('SELECT bio FROM fan_profiles WHERE id = ?').get(profile.id).bio)
+      .toBe('Modular and field recordings.');
+
+    const view = await profileGet({
+      request: req(`https://morphicsmusic.com/api/community/profile?handle=${profile.handle}`, {
+        headers: { Cookie: cookie },
+      }),
+      env,
+    });
+    const body = await view.json();
+    expect(body.profile.bio).toBe('Modular and field recordings.');
+    // The collection shelf is gone from this endpoint entirely — a profile is
+    // a person, not a trophy case.
+    expect(body.shelf).toBeUndefined();
+    // The email guarantee still holds with the new field in the response.
+    expect(hasEmailKey(body)).toBe(false);
+  });
+
+  it('rejects an over-length bio without writing anything', async () => {
+    const profile = await seedFan();
+    const cookie = await cookieFor(FAN_EMAIL);
+    await postUpdate({ bio: 'keeper' }, cookie);
+
+    const res = await postUpdate({ bio: 'x'.repeat(5000) }, cookie);
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe('bio_too_long');
+    expect(raw.prepare('SELECT bio FROM fan_profiles WHERE id = ?').get(profile.id).bio)
+      .toBe('keeper');
+  });
+
+  it('clears the bio when sent an empty string', async () => {
+    const profile = await seedFan();
+    const cookie = await cookieFor(FAN_EMAIL);
+    await postUpdate({ bio: 'something' }, cookie);
+
+    const res = await postUpdate({ bio: '' }, cookie);
+    expect(res.status).toBe(200);
+    expect(raw.prepare('SELECT bio FROM fan_profiles WHERE id = ?').get(profile.id).bio).toBeNull();
+  });
+});
+
+describe('POST /api/community/update — fan wall visibility', () => {
+  it('unlists the fan from the directory and re-lists them', async () => {
+    const profile = await ensureProfile(db, {
+      email: FAN_EMAIL, fanSince: Math.floor(Date.now() / 1000), displayName: 'Endpoint Fan',
+    });
+    const cookie = await cookieFor(FAN_EMAIL);
+    const listed = async () => {
+      const res = await directoryGet({
+        request: req('https://morphicsmusic.com/api/community/directory', { headers: { Cookie: cookie } }),
+        env,
+      });
+      return (await res.json()).fans.map(f => f.handle);
+    };
+
+    expect(await listed()).toContain(profile.handle);
+
+    const off = await updatePost({
+      request: req('https://morphicsmusic.com/api/community/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Cookie: cookie },
+        body: JSON.stringify({ hidden_from_wall: true }),
+      }),
+      env,
+    });
+    expect(off.status).toBe(200);
+    expect(await listed()).not.toContain(profile.handle);
+
+    // Unlisted, not private: the direct profile fetch still resolves.
+    const direct = await profileGet({
+      request: req(`https://morphicsmusic.com/api/community/profile?handle=${profile.handle}`, {
+        headers: { Cookie: cookie },
+      }),
+      env,
+    });
+    expect(direct.status).toBe(200);
+  });
+
+  it('refuses a non-boolean rather than coercing it', async () => {
+    const profile = await ensureProfile(db, {
+      email: FAN_EMAIL, fanSince: Math.floor(Date.now() / 1000), displayName: 'Endpoint Fan',
+    });
+    const cookie = await cookieFor(FAN_EMAIL);
+    const res = await updatePost({
+      request: req('https://morphicsmusic.com/api/community/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Cookie: cookie },
+        body: JSON.stringify({ hidden_from_wall: 'false' }),
+      }),
+      env,
+    });
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe('invalid_visibility');
+    expect(raw.prepare('SELECT hidden_from_wall FROM fan_profiles WHERE id = ?').get(profile.id)
+      .hidden_from_wall).toBe(0);
+  });
+});
+
+describe('POST /api/community/delete', () => {
+  async function del(body, cookie) {
+    return deletePost({
+      request: req('https://morphicsmusic.com/api/community/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(cookie ? { Cookie: cookie } : {}) },
+        body: JSON.stringify(body),
+      }),
+      env,
+    });
+  }
+
+  it('refuses a signed-out caller', async () => {
+    const res = await del({ confirm_handle: 'anyone' }, null);
+    expect(res.status).toBe(401);
+  });
+
+  it('refuses when the typed handle does not match, leaving the profile intact', async () => {
+    const profile = await ensureProfile(db, {
+      email: FAN_EMAIL, fanSince: Math.floor(Date.now() / 1000), displayName: 'Endpoint Fan',
+    });
+    const res = await del({ confirm_handle: 'not-my-handle' }, await cookieFor(FAN_EMAIL));
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe('confirm_mismatch');
+    expect(raw.prepare('SELECT COUNT(*) c FROM fan_profiles WHERE id = ?').get(profile.id).c).toBe(1);
+  });
+
+  it('deletes the caller\'s own profile and unlock ledger on an exact match', async () => {
+    const profile = await ensureProfile(db, {
+      email: FAN_EMAIL, fanSince: Math.floor(Date.now() / 1000), displayName: 'Endpoint Fan',
+    });
+    await grantUnlocks(db, profile.id, [
+      { avatarId: 'release:perception', source: 'own_release', sourceRef: 'perception' },
+    ]);
+
+    const res = await del({ confirm_handle: profile.handle }, await cookieFor(FAN_EMAIL));
+    expect(res.status).toBe(200);
+    expect(raw.prepare('SELECT COUNT(*) c FROM fan_profiles WHERE id = ?').get(profile.id).c).toBe(0);
+    expect(raw.prepare('SELECT COUNT(*) c FROM fan_avatar_unlocks').get().c).toBe(0);
+  });
+
+  it('can only ever delete the caller, never a handle named in the body', async () => {
+    const victim = await ensureProfile(db, {
+      email: 'someone-else@example.com', fanSince: 100, displayName: 'Victim',
+    });
+    await ensureProfile(db, {
+      email: FAN_EMAIL, fanSince: Math.floor(Date.now() / 1000), displayName: 'Attacker',
+    });
+    // The attacker types the VICTIM's handle: that is a mismatch against the
+    // attacker's own handle, so nothing is deleted anywhere.
+    const res = await del({ confirm_handle: victim.handle }, await cookieFor(FAN_EMAIL));
+    expect(res.status).toBe(400);
+    expect(raw.prepare('SELECT COUNT(*) c FROM fan_profiles WHERE id = ?').get(victim.id).c).toBe(1);
+  });
+
+  it('is idempotent — deleting twice reports success, not an error', async () => {
+    const profile = await ensureProfile(db, {
+      email: FAN_EMAIL, fanSince: Math.floor(Date.now() / 1000), displayName: 'Endpoint Fan',
+    });
+    const cookie = await cookieFor(FAN_EMAIL);
+    await del({ confirm_handle: profile.handle }, cookie);
+    const again = await del({ confirm_handle: profile.handle }, cookie);
+    expect(again.status).toBe(200);
+    expect((await again.json()).already_deleted).toBe(true);
   });
 });

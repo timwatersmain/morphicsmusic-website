@@ -1,4 +1,5 @@
-// POST /api/community/update  { display_name?, handle?, equipped_avatar_id? }
+// POST /api/community/update  { display_name?, handle?, equipped_avatar_id?,
+//                                bio?, hidden_from_wall? }
 // Fan-owned fields only. A fan may equip only an avatar they have unlocked.
 //
 // The handle defaults to the account username at profile creation (see
@@ -17,6 +18,7 @@ import {
   canChangeHandle, nextHandleChangeAt, setCreatureColourway,
 } from '../../_lib/community/repo';
 import { isValidDisplayName, isBlockedName, slugifyHandle } from '../../_lib/community/handle';
+import { sanitizeBio, isValidBio, MAX_BIO_LENGTH } from '../../_lib/community/bio';
 import { requireAdmin } from '../../_lib/admin';
 import { isValidColourway, isValidSpriteRef } from '../../_lib/community/sprites';
 
@@ -32,7 +34,7 @@ export const onRequestPost: PagesFunction<CommunityEnv> = corsHandler<CommunityE
 
     let body: {
       display_name?: string; handle?: string; equipped_avatar_id?: string; colourway?: string;
-      override_sprite?: string | null;
+      override_sprite?: string | null; bio?: string | null; hidden_from_wall?: boolean;
     };
     try { body = await request.json(); } catch { return json({ error: 'invalid json' }, 400); }
 
@@ -48,7 +50,7 @@ export const onRequestPost: PagesFunction<CommunityEnv> = corsHandler<CommunityE
 
     const fields: {
       displayName?: string; equippedAvatarId?: string | null; handle?: string;
-      overrideSprite?: string | null;
+      overrideSprite?: string | null; bio?: string | null; hiddenFromWall?: boolean;
     } = {};
 
     if (body.display_name !== undefined) {
@@ -56,6 +58,25 @@ export const onRequestPost: PagesFunction<CommunityEnv> = corsHandler<CommunityE
       if (!isValidDisplayName(name)) return json({ error: 'invalid_name' }, 400);
       if (!isAdmin && isBlockedName(name)) return json({ error: 'blocked_name' }, 400);
       fields.displayName = name;
+    }
+
+    if (body.bio !== undefined) {
+      // sanitizeBio normalises rather than rejects (whitespace, control and
+      // bidi characters), and returns null for an empty bio — clearing a bio
+      // is an edit, not an error. Length is the ONLY rejection, and it is
+      // measured after sanitising so invisible characters can't be used to
+      // smuggle a longer bio past the check.
+      const bio = sanitizeBio(body.bio);
+      if (!isValidBio(bio)) return json({ error: 'bio_too_long', max: MAX_BIO_LENGTH }, 400);
+      fields.bio = bio;
+    }
+
+    if (body.hidden_from_wall !== undefined) {
+      // Strictly boolean — a truthy string like "false" must not silently
+      // unlist somebody, so anything that isn't a real boolean is a 400
+      // rather than a coercion.
+      if (typeof body.hidden_from_wall !== 'boolean') return json({ error: 'invalid_visibility' }, 400);
+      fields.hiddenFromWall = body.hidden_from_wall;
     }
 
     if (body.handle !== undefined) {

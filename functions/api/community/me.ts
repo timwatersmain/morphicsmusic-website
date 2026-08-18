@@ -189,6 +189,12 @@ export const onRequestGet: PagesFunction<CommunityEnv> = corsHandler<CommunityEn
         // selection without re-deriving it.
         is_admin: isAdmin,
         override_sprite: profile.override_sprite,
+        // Self-view only, same pattern as can_change_handle: `bio` is already
+        // public (see toPublicProfile), but the wall-visibility switch is a
+        // setting, not a fact about the fan, and nobody else's copy of it is
+        // any of their business. Sent as a boolean rather than the raw 0/1
+        // column so the toggle binds to it directly.
+        hidden_from_wall: !!profile.hidden_from_wall,
       },
       avatars,
       newly_unlocked: grants.filter(g => !heldBefore.has(g.avatarId)).map(g => g.avatarId),

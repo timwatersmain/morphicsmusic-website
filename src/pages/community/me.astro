@@ -109,6 +109,30 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
         </div>
       </section>
 
+      <!-- Bio: the fan writes this, it shows on their public profile. Its
+           length cap and sanitising live server-side in
+           functions/_lib/community/bio.ts; the counter here mirrors that
+           constant rather than hard-coding a second copy of it. -->
+      <section class="border border-white/5 p-6">
+        <div class="flex items-baseline gap-3 mb-4">
+          <span class="font-mono text-xs text-secondary uppercase">Bio</span>
+          <div class="h-[1px] flex-1 bg-outline-variant/30"></div>
+          <span id="me-bio-count" class="font-mono text-[10px] text-white/30"></span>
+        </div>
+        <textarea
+          id="me-bio-input"
+          rows="4"
+          class="w-full px-4 py-3 bg-surface-container-low border border-white/10 focus:border-secondary outline-none font-body text-sm text-white/80 rounded-[var(--radius)] resize-y"
+          placeholder="Tell the wall who you are."
+        ></textarea>
+        <div class="flex items-center gap-3 mt-3">
+          <button id="me-bio-save" class="px-4 py-3 border border-primary/20 hover:border-primary/60 hover:bg-primary/5 font-mono text-[10px] tracking-widest uppercase text-primary rounded-full">
+            Save bio
+          </button>
+          <p id="me-bio-status" class="font-mono text-[10px] text-white/30 h-4"></p>
+        </div>
+      </section>
+
       <!-- Colourway picker: the one part of the creature a fan actually
            chooses (species/sprite refs are fixed at signup). -->
       <section class="border border-white/5 p-6">
@@ -138,6 +162,74 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
         </p>
         <p id="me-sprite-status" class="font-mono text-[10px] text-white/30 mb-4 h-4"></p>
         <div id="me-sprite-groups" class="space-y-8"></div>
+      </section>
+
+      <!-- Settings: the controls that are about the ACCOUNT-facing side of a
+           profile rather than about the creature. Visibility and sign-out are
+           reversible and sit together; deletion is separated below them by its
+           own border and copy, so it can never be the button you hit while
+           aiming for something else. -->
+      <section class="border border-white/5 p-6">
+        <div class="flex items-baseline gap-3 mb-4">
+          <span class="font-mono text-xs text-secondary uppercase">Settings</span>
+          <div class="h-[1px] flex-1 bg-outline-variant/30"></div>
+        </div>
+
+        <div class="flex flex-wrap items-start justify-between gap-4">
+          <div class="max-w-md">
+            <p class="font-mono text-[11px] text-white/60 uppercase tracking-widest">Show me on the fan wall</p>
+            <p class="font-mono text-[10px] text-white/30 mt-2 leading-relaxed">
+              Off means unlisted, not private: you stop appearing in the directory, but anyone signed in who has your link can still open your profile.
+            </p>
+          </div>
+          <button
+            id="me-wall-toggle"
+            type="button"
+            role="switch"
+            aria-checked="false"
+            class="shrink-0 w-14 h-8 rounded-full border border-white/15 bg-surface-container-low relative transition-colors"
+          >
+            <span id="me-wall-knob" class="absolute top-1 left-1 w-5 h-5 rounded-full bg-white/40 transition-all"></span>
+          </button>
+        </div>
+        <p id="me-wall-status" class="font-mono text-[10px] text-white/30 mt-3 h-4"></p>
+
+        <div class="mt-6 pt-6 border-t border-white/5">
+          <button id="me-signout" class="px-4 py-3 border border-white/15 hover:border-secondary/40 hover:text-secondary font-mono text-[10px] tracking-widest uppercase text-white/60 rounded-full transition-colors">
+            Sign out
+          </button>
+        </div>
+
+        <div class="mt-6 pt-6 border-t border-error/20">
+          <p class="font-mono text-[11px] text-error uppercase tracking-widest">Delete profile</p>
+          <p class="font-mono text-[10px] text-white/30 mt-2 leading-relaxed max-w-md">
+            Deletes your handle, bio, rank, EP and creature for good. Your account and everything you've bought stay exactly as they are — signing in again starts you a brand new profile from scratch.
+          </p>
+          <button id="me-delete-start" class="mt-4 px-4 py-3 border border-error/40 hover:bg-error/10 font-mono text-[10px] tracking-widest uppercase text-error rounded-full transition-colors">
+            Delete my profile
+          </button>
+
+          <!-- Typed confirmation, not a second button: the fan has to
+               reproduce their own handle, which no mis-click can do. -->
+          <div id="me-delete-confirm" class="hidden mt-4 p-4 border border-error/30 rounded-[var(--radius-lg)]">
+            <label for="me-delete-input" id="me-delete-prompt" class="block font-mono text-[10px] text-white/50 leading-relaxed mb-3"></label>
+            <div class="flex flex-wrap gap-2">
+              <input
+                id="me-delete-input"
+                type="text"
+                autocomplete="off"
+                class="flex-1 min-w-[12rem] px-4 py-3 bg-surface-container-low border border-white/10 focus:border-error outline-none font-mono text-sm text-white/80 rounded-[var(--radius)]"
+              >
+              <button id="me-delete-cancel" class="px-4 py-3 border border-white/15 hover:border-white/40 font-mono text-[10px] tracking-widest uppercase text-white/50 rounded-full">
+                Cancel
+              </button>
+              <button id="me-delete-go" disabled class="px-4 py-3 border border-error/40 enabled:hover:bg-error/10 disabled:opacity-30 disabled:cursor-not-allowed font-mono text-[10px] tracking-widest uppercase text-error rounded-full transition-colors">
+                Delete for good
+              </button>
+            </div>
+            <p id="me-delete-status" class="font-mono text-[10px] text-white/30 mt-3 h-4"></p>
+          </div>
+        </div>
       </section>
 
       <!-- Free-song token picker. Shown only while /api/library reports a
@@ -183,6 +275,9 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
     import { COLORWAYS } from '../../scripts/sprites/vendor/colorways.js';
     import { NATIVE_COLOURWAY } from '../../scripts/sprites/native-palette.js';
     import { computeStageProgress, rankLadder, STAGE_LABELS, type RankStatus } from '../../scripts/community/xp-progress';
+    // The cap is the SERVER's constant, imported rather than re-typed — a
+    // counter that disagrees with the write path is worse than no counter.
+    import { MAX_BIO_LENGTH } from '../../../functions/_lib/community/bio';
 
     // Wrapped for astro:page-load — see music.astro's doc comment. This page
     // fetches the signed-in fan's own data fresh on every arrival (and is
@@ -221,6 +316,21 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
     const xpNumbersEl = document.getElementById('me-xp-numbers')!;
     const xpFillEl = document.getElementById('me-xp-fill')!;
     const xpNextEl = document.getElementById('me-xp-next')!;
+    const bioInput = document.getElementById('me-bio-input') as HTMLTextAreaElement;
+    const bioSave = document.getElementById('me-bio-save') as HTMLButtonElement;
+    const bioStatus = document.getElementById('me-bio-status')!;
+    const bioCount = document.getElementById('me-bio-count')!;
+    const wallToggle = document.getElementById('me-wall-toggle') as HTMLButtonElement;
+    const wallKnob = document.getElementById('me-wall-knob')!;
+    const wallStatus = document.getElementById('me-wall-status')!;
+    const signoutBtn = document.getElementById('me-signout') as HTMLButtonElement;
+    const deleteStart = document.getElementById('me-delete-start') as HTMLButtonElement;
+    const deleteBox = document.getElementById('me-delete-confirm')!;
+    const deletePrompt = document.getElementById('me-delete-prompt')!;
+    const deleteInput = document.getElementById('me-delete-input') as HTMLInputElement;
+    const deleteCancel = document.getElementById('me-delete-cancel') as HTMLButtonElement;
+    const deleteGo = document.getElementById('me-delete-go') as HTMLButtonElement;
+    const deleteStatus = document.getElementById('me-delete-status')!;
 
     const esc = (s: any) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
     // Copied verbatim from src/pages/library.astro so the two surfaces
@@ -633,6 +743,10 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
               : '';
           }
           fanSinceEl.textContent = 'Morphics since ' + fmtDate(profile.fan_since);
+          bioInput.value = profile.bio || '';
+          updateBioCount();
+          myHandle = profile.handle || '';
+          setWallToggle(!profile.hidden_from_wall);
           renderCreature(profile.creature);
           renderRankLadder(profile.creature.stage);
           renderXpBar(profile.creature);
@@ -646,6 +760,140 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
           errorMsg.textContent = 'Could not load your profile: ' + e.message;
         });
     }
+
+    // ---- Bio -------------------------------------------------------------
+    // Counts code points, matching isValidBio's [...bio].length, so an emoji
+    // costs the fan the same one character here as it does server-side.
+    function bioLength(): number {
+      return [...bioInput.value].length;
+    }
+
+    function updateBioCount() {
+      const used = bioLength();
+      bioCount.textContent = used + ' / ' + MAX_BIO_LENGTH;
+      // Over-length is shown, never silently truncated — trimming somebody's
+      // sentence out from under them as they type is worse than refusing the
+      // save with the count already red.
+      bioCount.classList.toggle('text-error', used > MAX_BIO_LENGTH);
+      bioCount.classList.toggle('text-white/30', used <= MAX_BIO_LENGTH);
+      bioSave.disabled = used > MAX_BIO_LENGTH;
+    }
+
+    bioInput.addEventListener('input', updateBioCount);
+
+    bioSave.addEventListener('click', () => {
+      if (bioLength() > MAX_BIO_LENGTH) return;
+      bioSave.disabled = true;
+      bioStatus.textContent = 'Saving…';
+      fetch('/api/community/update', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        // The raw textarea value: sanitizeBio on the server is the one place
+        // that decides what a bio becomes, so the client never pre-trims and
+        // the two can never disagree about what was stored.
+        body: JSON.stringify({ bio: bioInput.value }),
+      })
+        .then(async r => {
+          if (!r.ok) {
+            const body = await r.json().catch(() => ({}));
+            throw new Error(body.error === 'bio_too_long'
+              ? `Too long — keep it under ${body.max || MAX_BIO_LENGTH} characters.`
+              : (body.error || 'save failed'));
+          }
+          bioStatus.textContent = bioInput.value.trim() ? 'Saved.' : 'Bio cleared.';
+        })
+        .catch(e => { bioStatus.textContent = 'Could not save: ' + e.message; })
+        .finally(() => { bioSave.disabled = false; });
+    });
+
+    // ---- Fan wall visibility ---------------------------------------------
+    let onWall = true;
+    let myHandle = '';
+
+    function setWallToggle(on: boolean) {
+      onWall = on;
+      wallToggle.setAttribute('aria-checked', String(on));
+      wallToggle.classList.toggle('bg-primary/20', on);
+      wallToggle.classList.toggle('border-primary/40', on);
+      wallKnob.classList.toggle('left-1', !on);
+      wallKnob.classList.toggle('left-8', on);
+      wallKnob.classList.toggle('bg-primary', on);
+      wallKnob.classList.toggle('bg-white/40', !on);
+    }
+
+    wallToggle.addEventListener('click', () => {
+      const next = !onWall;
+      // Optimistic, then reverted on failure: a switch that does not move
+      // until a round trip completes reads as broken.
+      setWallToggle(next);
+      wallStatus.textContent = 'Saving…';
+      fetch('/api/community/update', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hidden_from_wall: !next }),
+      })
+        .then(async r => {
+          if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || 'save failed');
+          wallStatus.textContent = next ? 'Listed on the fan wall.' : 'Unlisted — direct links still work.';
+        })
+        .catch(e => {
+          setWallToggle(!next);
+          wallStatus.textContent = 'Could not save: ' + e.message;
+        });
+    });
+
+    // ---- Sign out ---------------------------------------------------------
+    signoutBtn.addEventListener('click', () => {
+      signoutBtn.disabled = true;
+      fetch('/api/auth/logout', { method: 'POST', credentials: 'include' })
+        // Hard navigation, not the client router: the session cookie is gone,
+        // so every cached view on this page is now somebody else's data. A
+        // full load is the only way to be sure none of it survives.
+        .finally(() => { location.href = '/'; });
+    });
+
+    // ---- Delete profile ---------------------------------------------------
+    deleteStart.addEventListener('click', () => {
+      deleteBox.classList.remove('hidden');
+      deleteStart.classList.add('hidden');
+      deletePrompt.textContent = `Type your handle (${myHandle}) to confirm. This cannot be undone.`;
+      deleteInput.value = '';
+      deleteGo.disabled = true;
+      deleteInput.focus();
+    });
+
+    deleteCancel.addEventListener('click', () => {
+      deleteBox.classList.add('hidden');
+      deleteStart.classList.remove('hidden');
+      deleteStatus.textContent = '';
+    });
+
+    deleteInput.addEventListener('input', () => {
+      deleteGo.disabled = deleteInput.value.trim().toLowerCase() !== myHandle;
+    });
+
+    deleteGo.addEventListener('click', () => {
+      deleteGo.disabled = true;
+      deleteStatus.textContent = 'Deleting…';
+      fetch('/api/community/delete', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirm_handle: deleteInput.value.trim().toLowerCase() }),
+      })
+        .then(async r => {
+          if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || 'delete failed');
+          // Same reasoning as sign-out: this page is now rendering a profile
+          // that no longer exists, so leave rather than re-render it.
+          location.href = '/community';
+        })
+        .catch(e => {
+          deleteStatus.textContent = 'Could not delete: ' + e.message;
+          deleteGo.disabled = false;
+        });
+    });
 
     nameSave.addEventListener('click', () => {
       const name = nameInput.value.trim();

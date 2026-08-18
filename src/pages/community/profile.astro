@@ -29,24 +29,50 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
         <div>
           <span class="font-mono text-xs text-secondary uppercase tracking-widest" id="prof-since"></span>
           <h1 id="prof-name" class="font-headline font-bold text-4xl md:text-6xl text-primary uppercase tracking-tighter leading-none mt-2"></h1>
-          <p id="prof-count" class="font-mono text-[11px] text-white/50 mt-2"></p>
+          <p id="prof-handle" class="font-mono text-[11px] text-white/50 mt-2"></p>
         </div>
       </header>
 
-      <div>
+      <!-- Rank: one chip for the stage this fan has reached plus their EP.
+           The full four-step ladder stays on /community/me — on somebody
+           else's profile the interesting fact is where they ARE, not how far
+           they have left to go. -->
+      <div class="mb-10">
         <div class="flex items-baseline gap-3 mb-4">
-          <span class="font-mono text-xs text-secondary uppercase">Collection</span>
+          <span class="font-mono text-xs text-secondary uppercase tracking-widest">Rank</span>
           <div class="h-[1px] flex-1 bg-outline-variant/30"></div>
         </div>
-        <ul id="prof-shelf" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-6"></ul>
-        <p id="prof-shelf-empty" class="hidden font-mono text-[11px] text-white/30">No avatars collected yet.</p>
+        <div class="flex flex-wrap items-center gap-3">
+          <span id="prof-rank" class="inline-flex items-center px-3 py-1.5 rounded-full border border-primary/40 bg-primary/10 text-primary font-mono text-[10px] uppercase tracking-widest"></span>
+          <span id="prof-ep" class="font-mono text-[10px] text-white/40 uppercase tracking-widest"></span>
+        </div>
+      </div>
+
+      <div>
+        <div class="flex items-baseline gap-3 mb-4">
+          <span class="font-mono text-xs text-secondary uppercase tracking-widest">About</span>
+          <div class="h-[1px] flex-1 bg-outline-variant/30"></div>
+        </div>
+        <!-- whitespace-pre-line: the bio is stored with its newlines (see
+             bio.ts, which caps consecutive ones at two) and set via
+             textContent, never innerHTML — so a fan's line breaks survive
+             without any markup ever coming from fan input. -->
+        <p id="prof-bio" class="font-body text-sm text-white/70 leading-relaxed whitespace-pre-line max-w-2xl"></p>
+        <p id="prof-bio-empty" class="hidden font-mono text-[11px] text-white/30">This fan hasn't written a bio yet.</p>
+        <a
+          id="prof-edit"
+          href="/community/me"
+          class="hidden inline-block mt-8 px-6 py-3 rounded-full border border-primary/20 hover:border-primary/60 hover:bg-primary/5 font-mono text-[10px] tracking-widest uppercase text-primary transition-colors"
+        >
+          Edit your profile
+        </a>
       </div>
     </div>
   </div>
 
   <script>
-    import { avatarHtml } from '../../scripts/avatar.js';
     import { creatureAvatarHtml } from '../../scripts/sprites/creature-avatar.js';
+    import { STAGE_LABELS } from '../../scripts/community/xp-progress';
     import { initCreatureCanvases } from '../../scripts/sprites/renderer.js';
 
     // Wrapped for astro:page-load — see music.astro's doc comment. This is
@@ -65,11 +91,12 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
     const avatarEl = document.getElementById('prof-avatar')!;
     const nameEl = document.getElementById('prof-name')!;
     const sinceEl = document.getElementById('prof-since')!;
-    const countEl = document.getElementById('prof-count')!;
-    const shelfEl = document.getElementById('prof-shelf')!;
-    const shelfEmpty = document.getElementById('prof-shelf-empty')!;
-
-    const esc = (s: any) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
+    const handleEl = document.getElementById('prof-handle')!;
+    const rankEl = document.getElementById('prof-rank')!;
+    const epEl = document.getElementById('prof-ep')!;
+    const bioEl = document.getElementById('prof-bio')!;
+    const bioEmpty = document.getElementById('prof-bio-empty')!;
+    const editLink = document.getElementById('prof-edit')!;
 
     function fmtDate(unix: number) {
       return new Date(unix * 1000).toLocaleDateString(undefined, { year: 'numeric', month: 'long' });
@@ -104,26 +131,31 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
           loading.classList.add('hidden');
           content.classList.remove('hidden');
 
-          const { profile, shelf } = data;
+          const { profile } = data;
           nameEl.textContent = profile.display_name || profile.handle;
           sinceEl.textContent = 'Morphics since ' + fmtDate(profile.fan_since);
-          countEl.textContent = `${profile.collection_count} collected`;
+          handleEl.textContent = '@' + profile.handle;
+
+          const stage = (profile.creature && profile.creature.stage) || 'egg';
+          rankEl.textContent = (STAGE_LABELS as Record<string, string>)[stage] || STAGE_LABELS.egg;
+          epEl.textContent = ((profile.creature && profile.creature.ep) || 0) + ' EP';
+
+          // textContent, never innerHTML: the bio is fan-written text and the
+          // only escaping that can never be got wrong is the one the DOM does
+          // for you.
+          if (profile.bio) {
+            bioEl.textContent = profile.bio;
+          } else {
+            bioEl.classList.add('hidden');
+            bioEmpty.classList.remove('hidden');
+          }
+
+          if (profile.is_self) editLink.classList.remove('hidden');
           // The creature (pixel-sprite) render replaces the glyph medallion
           // as this fan's primary avatar — see creature-avatar.js. 96px is
           // an exact 3x multiple of the sprite's 32px grid.
           avatarEl.innerHTML = creatureAvatarHtml(profile.creature, 96);
           initCreatureCanvases(avatarEl);
-
-          if (!shelf.length) {
-            shelfEmpty.classList.remove('hidden');
-          } else {
-            shelfEl.innerHTML = shelf.map((a: any) => `
-              <li class="text-center">
-                ${avatarHtml(a, 84, { rarity: a.rarity })}
-                <p class="font-mono text-[9px] text-white/40 uppercase tracking-widest mt-2 leading-tight">${esc(a.name)}</p>
-              </li>
-            `).join('');
-          }
         })
         .catch(e => showError('Could not load this profile: ' + e.message));
     }

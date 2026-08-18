@@ -23,6 +23,8 @@ const UP9 = readFileSync(join(root, 'migrations/0009_native_colourway.sql'), 'ut
 const DOWN9 = readFileSync(join(root, 'migrations/down/0009_native_colourway.down.sql'), 'utf8');
 const UP10 = readFileSync(join(root, 'migrations/0010_engagement_ep.sql'), 'utf8');
 const DOWN10 = readFileSync(join(root, 'migrations/down/0010_engagement_ep.down.sql'), 'utf8');
+const UP11 = readFileSync(join(root, 'migrations/0011_profile_bio_privacy.sql'), 'utf8');
+const DOWN11 = readFileSync(join(root, 'migrations/down/0011_profile_bio_privacy.down.sql'), 'utf8');
 const TABLES = ['fan_profiles', 'avatar_catalogue', 'fan_avatar_unlocks'];
 
 const STUB = `CREATE TABLE IF NOT EXISTS d1_migrations (
@@ -685,5 +687,70 @@ describe('avatar unlocks', () => {
     grant(fanId, 'release:perception');
     db.prepare('DELETE FROM avatar_catalogue WHERE id = ?').run('release:perception');
     expect(db.prepare('SELECT COUNT(*) c FROM fan_avatar_unlocks').get().c).toBe(0);
+  });
+});
+
+const STUB11 = `INSERT INTO d1_migrations (name, applied_at) VALUES ('0011_profile_bio_privacy.sql','now');`;
+
+function makeDb11() {
+  const db = makeDb10();
+  db.exec(STUB11);
+  db.exec(UP11);
+  return db;
+}
+
+describe('migration 0011', () => {
+  it('adds bio (NULL by default) and hidden_from_wall (listed by default)', () => {
+    const db = makeDb11();
+    addFan(db, 'a@b.com', 'ana');
+    const row = db.prepare("SELECT * FROM fan_profiles WHERE handle = 'ana'").get();
+    expect(row.bio).toBeNull();
+    // Every pre-existing fan must stay ON the wall — an opt-out that
+    // defaulted to opted-out would silently empty the directory.
+    expect(row.hidden_from_wall).toBe(0);
+  });
+
+  it('preserves existing rows, including their engagement and creature state', () => {
+    const db = makeDb10();
+    addFan(db, 'a@b.com', 'ana');
+    db.prepare(`UPDATE fan_profiles SET colourway = 'native', override_sprite = 'A147',
+      ep = 240, stage = 'pupa', engagement_ep = 85 WHERE handle = 'ana'`).run();
+    db.exec(STUB11);
+    db.exec(UP11);
+    const row = db.prepare("SELECT * FROM fan_profiles WHERE handle = 'ana'").get();
+    expect(row.colourway).toBe('native');
+    expect(row.override_sprite).toBe('A147');
+    expect(row.ep).toBe(240);
+    expect(row.stage).toBe('pupa');
+    expect(row.engagement_ep).toBe(85);
+  });
+
+  it('stores a bio with newlines and an unlisted flag', () => {
+    const db = makeDb11();
+    addFan(db, 'a@b.com', 'ana');
+    db.prepare("UPDATE fan_profiles SET bio = ?, hidden_from_wall = 1 WHERE handle = 'ana'")
+      .run('line one\nline two');
+    const row = db.prepare("SELECT bio, hidden_from_wall FROM fan_profiles WHERE handle = 'ana'").get();
+    expect(row.bio).toBe('line one\nline two');
+    expect(row.hidden_from_wall).toBe(1);
+  });
+
+  it('is reversible — drops both columns and leaves the rest of the row intact', () => {
+    const db = makeDb11();
+    addFan(db, 'a@b.com', 'ana');
+    db.prepare("UPDATE fan_profiles SET bio = 'hello', ep = 240 WHERE handle = 'ana'").run();
+    db.exec(DOWN11);
+    const cols = db.prepare('PRAGMA table_info(fan_profiles)').all().map(c => c.name);
+    expect(cols).not.toContain('bio');
+    expect(cols).not.toContain('hidden_from_wall');
+    expect(db.prepare("SELECT ep FROM fan_profiles WHERE handle = 'ana'").get().ep).toBe(240);
+  });
+
+  it('down clears bookkeeping so up can re-run', () => {
+    const db = makeDb11();
+    db.exec(DOWN11);
+    expect(db.prepare("SELECT name FROM d1_migrations WHERE name = '0011_profile_bio_privacy.sql'").all())
+      .toHaveLength(0);
+    expect(() => { db.exec(STUB11); db.exec(UP11); }).not.toThrow();
   });
 });
