@@ -11,7 +11,13 @@
 
 import catalog from '../data/music-catalog.json';
 import previewsData from '../data/previews.json';
-import { buildQueue, nextInQueue, createForwardProgressTracker } from './preview-queue.js';
+import {
+  buildQueue,
+  nextInQueue,
+  previousInQueue,
+  resolvePrevious,
+  createForwardProgressTracker,
+} from './preview-queue.js';
 
 let audio = null;
 let currentKey = null;
@@ -303,6 +309,7 @@ function startKey(key, btn, meta) {
   if (currentBtn && currentBtn !== btn) setIcon(currentBtn, 'play_arrow');
   currentKey = key;
   currentBtn = btn;
+  updateSkipButtons();
   forwardTracker.reset();
   // Observability hook only, same reasoning as updateTimes' dispatch above —
   // fires once per genuine new-track start (this function only runs when
@@ -337,6 +344,9 @@ function toggle(key, btn, meta) {
 // Advance to the next track in catalogue order (see preview-queue.js).
 // Unplayable tracks/releases were already excluded when the queue was
 // built, so "next" here is always either a playable entry or the end.
+// Used both by autoplay chaining (gated on a genuine listen, see the `ended`
+// handler above) and the bar's Next button (ungated — a deliberate press is
+// its own intent, no listen requirement).
 function playNext() {
   const next = nextInQueue(getQueue(), currentKey);
   if (!next) return; // end of the catalogue — stop, never loop back to the start
@@ -345,6 +355,37 @@ function playNext() {
   // gracefully: leave the bar showing the next track, paused, rather than
   // throwing or silently doing nothing visible.
   startKey(next.key, null, next).catch(() => bothIcons('play_arrow'));
+}
+
+// Previous button: the standard media-player convention (see resolvePrevious
+// in preview-queue.js) — early into a track, step back a track; once you're
+// meaningfully into it, restart it instead. Either way this is a deliberate
+// press, so it re-arms the autoplay chain exactly like Next does.
+function playPrev() {
+  const a = ensureAudio();
+  const resolved = resolvePrevious(getQueue(), currentKey, a.currentTime || 0);
+  if (resolved.action === 'restart') {
+    a.currentTime = 0;
+    autoplayEnabled = true; // deliberate press — same re-arm as a track change
+    drawWave();
+    updateTimes();
+    if (a.paused) a.play().catch(() => {});
+    return;
+  }
+  startKey(resolved.entry.key, null, resolved.entry).catch(() => bothIcons('play_arrow'));
+}
+
+// Disable Next/Previous at the ends of the queue rather than letting them
+// silently no-op — a dead control that looks alive is worse than one that
+// looks unavailable. Re-evaluated on every startKey() (i.e. every track
+// change), not on a timer, since eligibility only ever depends on where the
+// current key sits in the queue.
+function updateSkipButtons() {
+  const queue = getQueue();
+  const prevBtn = $('pb-prev');
+  const nextBtn = $('pb-next');
+  if (prevBtn) prevBtn.disabled = !previousInQueue(queue, currentKey);
+  if (nextBtn) nextBtn.disabled = !nextInQueue(queue, currentKey);
 }
 
 /* ---------- wiring ---------- */
@@ -359,6 +400,19 @@ function wireBar() {
       else { autoplayEnabled = false; audio.pause(); } // manual pause stops the autoplay chain
     });
   }
+
+  const prevBtn = $('pb-prev');
+  if (prevBtn && !prevBtn.__wired) {
+    prevBtn.__wired = true;
+    prevBtn.addEventListener('click', () => { if (!currentKey) return; playPrev(); });
+  }
+
+  const nextBtn = $('pb-next');
+  if (nextBtn && !nextBtn.__wired) {
+    nextBtn.__wired = true;
+    nextBtn.addEventListener('click', () => { if (!currentKey) return; playNext(); });
+  }
+  updateSkipButtons(); // initial state: both disabled until a track is playing
 
   const cartBtn = $('pb-cart');
   if (cartBtn && !cartBtn.__wired) {

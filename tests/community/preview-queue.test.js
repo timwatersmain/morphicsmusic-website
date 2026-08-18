@@ -2,6 +2,9 @@ import { describe, it, expect } from 'vitest';
 import {
   buildQueue,
   nextInQueue,
+  previousInQueue,
+  resolvePrevious,
+  PREVIOUS_RESTART_THRESHOLD_SECONDS,
   createForwardProgressTracker,
   LISTEN_COMPLETION_FRACTION,
 } from '../../src/scripts/preview-queue.js';
@@ -137,6 +140,65 @@ describe('nextInQueue', () => {
   it('returns null for a key that is not queued at all', () => {
     const q = buildQueue(catalog, previewsData);
     expect(nextInQueue(q, 'not-a-real-key')).toBeNull();
+  });
+});
+
+describe('previousInQueue', () => {
+  it('returns the previous track within the same release', () => {
+    const q = buildQueue(catalog, previewsData);
+    const prev = previousInQueue(q, 'previews/later-ep/2.mp3');
+    expect(prev.key).toBe('previews/later-ep/1.mp3');
+  });
+
+  it('moves to the last track of the previous release chronologically once a release starts', () => {
+    const q = buildQueue(catalog, previewsData);
+    const prev = previousInQueue(q, 'previews/later-ep/1.mp3');
+    expect(prev).toMatchObject({ slug: 'partial-ep', trackNum: 1 });
+  });
+
+  it('returns null at the start of the catalogue', () => {
+    const q = buildQueue(catalog, previewsData);
+    const first = q[0];
+    expect(previousInQueue(q, first.key)).toBeNull();
+  });
+
+  it('returns null for a key that is not queued at all', () => {
+    const q = buildQueue(catalog, previewsData);
+    expect(previousInQueue(q, 'not-a-real-key')).toBeNull();
+  });
+});
+
+describe('resolvePrevious — the "restart vs step back" convention', () => {
+  it('steps back to the previous track when just barely into the current one', () => {
+    const q = buildQueue(catalog, previewsData);
+    const result = resolvePrevious(q, 'previews/later-ep/2.mp3', 0);
+    expect(result).toEqual({ action: 'previous', entry: expect.objectContaining({ key: 'previews/later-ep/1.mp3' }) });
+  });
+
+  it('steps back at exactly the threshold (not yet past it)', () => {
+    const q = buildQueue(catalog, previewsData);
+    const result = resolvePrevious(q, 'previews/later-ep/2.mp3', PREVIOUS_RESTART_THRESHOLD_SECONDS);
+    expect(result.action).toBe('previous');
+  });
+
+  it('restarts the current track once just past the threshold', () => {
+    const q = buildQueue(catalog, previewsData);
+    const result = resolvePrevious(q, 'previews/later-ep/2.mp3', PREVIOUS_RESTART_THRESHOLD_SECONDS + 0.01);
+    expect(result).toEqual({ action: 'restart' });
+  });
+
+  it('restarts (never throws/stalls) at the very start of the catalogue past the threshold', () => {
+    const q = buildQueue(catalog, previewsData);
+    const first = q[0];
+    const result = resolvePrevious(q, first.key, 10);
+    expect(result).toEqual({ action: 'restart' });
+  });
+
+  it('restarts at the very start of the catalogue even within the threshold, since there is nowhere earlier to go', () => {
+    const q = buildQueue(catalog, previewsData);
+    const first = q[0];
+    const result = resolvePrevious(q, first.key, 0);
+    expect(result).toEqual({ action: 'restart' });
   });
 });
 

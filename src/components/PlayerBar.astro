@@ -17,8 +17,16 @@
       </div>
     </div>
 
+    <button id="pb-prev" class="pb-skip" type="button" aria-label="Previous track" disabled>
+      <span class="material-symbols-outlined">skip_previous</span>
+    </button>
+
     <button id="pb-toggle" class="pb-toggle" type="button" aria-label="Play / pause">
       <span class="material-symbols-outlined">play_arrow</span>
+    </button>
+
+    <button id="pb-next" class="pb-skip" type="button" aria-label="Next track" disabled>
+      <span class="material-symbols-outlined">skip_next</span>
     </button>
 
     <span id="pb-cur" class="pb-time">0:00</span>
@@ -145,6 +153,27 @@
   .pb-toggle .material-symbols-outlined { font-size: 28px; line-height: 1; }
   .pb-toggle.is-loading .material-symbols-outlined { animation: pb-spin 900ms linear infinite; }
   @keyframes pb-spin { to { transform: rotate(360deg); } }
+
+  .pb-skip {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.55);
+    border: none;
+    cursor: pointer;
+    transition: color 160ms ease;
+  }
+  .pb-skip:hover:not(:disabled) { color: #7dffb3; }
+  .pb-skip .material-symbols-outlined { font-size: 22px; }
+  .pb-skip:disabled {
+    color: rgba(255, 255, 255, 0.18);
+    cursor: default;
+  }
+  .pb-skip:focus-visible { outline: 1px solid rgba(125, 255, 179, 0.5); outline-offset: 2px; }
 
   .pb-time {
     font-family: "Geist Mono", monospace;

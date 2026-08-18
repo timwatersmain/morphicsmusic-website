@@ -68,6 +68,37 @@ export function nextInQueue(queue, currentKey) {
   return queue[idx + 1] || null;
 }
 
+/** The entry before `currentKey` in `queue`, or null at the start (or if the key isn't queued). */
+export function previousInQueue(queue, currentKey) {
+  const idx = (queue || []).findIndex((e) => e.key === currentKey);
+  if (idx <= 0) return null; // not found, or already the first entry
+  return queue[idx - 1];
+}
+
+// A deliberate press of "previous" is expected to follow the same muscle
+// memory every music player uses: early into a track it means "go back a
+// track"; once you're meaningfully into it, it means "start this one over."
+// 3 seconds is the conventional threshold (Spotify/Apple Music/etc.) and
+// deliberately not tied to LISTEN_COMPLETION_FRACTION below, which gates a
+// different thing (genuine-listen XP), not skip-back intent.
+export const PREVIOUS_RESTART_THRESHOLD_SECONDS = 3;
+
+/**
+ * Decide what a "previous" press should do, given how far into the current
+ * track playback is. Pure so the threshold/boundary rule is pinned without a
+ * browser or an <audio> element.
+ * Returns either { action: 'restart' } (rewind the current track to zero) or
+ * { action: 'previous', entry } (jump to the earlier queue entry). Also
+ * resolves to 'restart' when there is no earlier entry — restarting the
+ * first track is the only useful thing "previous" can do there.
+ */
+export function resolvePrevious(queue, currentKey, currentTimeSeconds) {
+  if ((currentTimeSeconds || 0) > PREVIOUS_RESTART_THRESHOLD_SECONDS) return { action: 'restart' };
+  const entry = previousInQueue(queue, currentKey);
+  if (!entry) return { action: 'restart' };
+  return { action: 'previous', entry };
+}
+
 // ── "Actually heard it" progress tracking ──────────────────────────────────
 // Same standard the engagement-XP work uses for a genuine listen (see
 // functions/_lib/community/engagement.ts's LISTEN_COMPLETION_FRACTION /
