@@ -48,10 +48,23 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
     return Response.redirect(`${origin}/account?verify_expired=1`, 302);
   }
 
-  // Full read-modify-write: only email_verified_at changes. Idempotent if a
-  // link is somehow re-delivered before this response lands — re-stamping
-  // the same field is harmless.
+  // Full read-modify-write: only email_verified_at (+ the one-time free-song
+  // token grant below) changes. Idempotent if a link is somehow re-delivered
+  // before this response lands — re-stamping the same field is harmless.
   record.email_verified_at = Math.floor(Date.now() / 1000);
+
+  // Grant the free-song token exactly once per customer, ever. Gated on
+  // free_token_granted_at rather than on "was this the first verification" —
+  // a customer who re-verifies (fresh link, same account) must not
+  // accumulate a second token, and this guard is what prevents that. A
+  // customer who was already verified before this feature shipped has
+  // email_verified_at set from an earlier release and won't pass through
+  // this handler again on their own, so they are not retroactively granted
+  // one — only verifications that actually consume a token from here on are.
+  if (!record.free_token_granted_at) {
+    record.free_token_granted_at = record.email_verified_at;
+  }
+
   await saveCustomerRecord(env, record);
 
   return Response.redirect(`${origin}/account?verified=1`, 302);

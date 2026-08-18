@@ -39,6 +39,17 @@ export interface CustomerRecord {
   // unverified, which is intentional: verification records a fact, it does
   // not gate anything today.
   email_verified_at?: number;
+  // Free-song token: granted once, by functions/api/auth/verify-email.ts, the
+  // first time a customer's verify-email token is consumed. `granted_at`
+  // being set means "this customer has ever been granted a token" — it is
+  // NOT re-granted on subsequent verifications, so it also doubles as the
+  // dedupe guard against accumulating tokens from repeat verifies.
+  // `spent_key` is the exact R2 master key (never a release slug, never a
+  // wildcard) the fan chose to redeem it against, set once by
+  // functions/api/free-token.ts and permanent from then on.
+  free_token_granted_at?: number;
+  free_token_spent_key?: string;
+  free_token_spent_at?: number;
 }
 
 export interface CustomerEnv {

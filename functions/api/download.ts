@@ -17,6 +17,10 @@ import { rateLimit, rateLimitedText, clientIp } from '../_lib/ratelimit';
 
 interface CustomerRecord {
   purchases?: Array<{ music_release_slugs?: string[]; digital_slugs?: string[] }>;
+  // Free-song token bookkeeping (functions/_lib/customer.ts is the source of
+  // truth for the shape). Only spent_key is read here, and only as an
+  // additive, exact-file-key entitlement — see the check below.
+  free_token_spent_key?: string;
 }
 
 interface DownloadGrant {
@@ -128,7 +132,17 @@ export const onRequestGet: PagesFunction<Env> = corsHandler<Env>(async ({ reques
       }
       for (const p of (rec.purchases || [])) for (const s of (p.music_release_slugs || [])) owned.add(s);
     }
-    if (!owned.has(parsed.slug)) return new Response('not in your library', { status: 403 });
+    // Additive second way to be entitled, layered on top of the ownership
+    // check above (which is untouched): a fan who spent their free-song
+    // token on THIS EXACT file key may download it, same as a purchase.
+    // This is never a release-level grant — parsed.slug alone is not
+    // enough, the R2 key itself must match what they redeemed, and it only
+    // ever applies to music masters (digital products aren't in scope for
+    // the free-song token).
+    const freeSongMatch = !digital && rec.free_token_spent_key === key;
+    if (!owned.has(parsed.slug) && !freeSongMatch) {
+      return new Response('not in your library', { status: 403 });
+    }
     const obj = await env.MASTERS.get(key);
     if (!obj) return new Response('file not found', { status: 404 });
     const ext = (parsed.filename.split('.').pop() || '').toLowerCase();

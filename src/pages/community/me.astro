@@ -139,6 +139,21 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
         <div id="me-sprite-groups" class="space-y-8"></div>
       </section>
 
+      <!-- Free-song token picker. Shown only while /api/library reports a
+           granted-but-unspent token (see loadLibrary below). Choosing is
+           permanent, so it always routes through the confirm dialog below
+           rather than spending on click. -->
+      <section id="me-free-token" class="hidden mb-10">
+        <div class="flex items-baseline gap-3 mb-4">
+          <span class="font-mono text-xs text-secondary uppercase">Free song token</span>
+          <div class="h-[1px] flex-1 bg-outline-variant/30"></div>
+        </div>
+        <p class="font-mono text-[11px] text-white/40 leading-relaxed mb-4">
+          Thanks for verifying your email — pick any one track below and it's yours to download, free, forever. You can only choose once, so choose carefully.
+        </p>
+        <ul id="me-free-token-list" class="divide-y divide-white/5 border-y border-white/5"></ul>
+      </section>
+
       <!-- Populated from /api/library — the same endpoint /library uses — so
            a fan's purchases are reachable from their profile without a
            second API. Hidden until we know there's something (or nothing)
@@ -147,6 +162,19 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
       <div id="me-library" class="hidden"></div>
     </div>
   </div>
+
+  <!-- One-time-choice confirm dialog for the free-song token. A native
+       <dialog> keeps this out of the DOM's tab order until opened and needs
+       no extra dependency. -->
+  <dialog id="me-free-token-confirm" class="bg-surface border border-white/10 p-6 max-w-sm w-[90vw] rounded-lg backdrop:bg-black/70">
+    <p class="font-mono text-[11px] text-white/70 leading-relaxed mb-1">You're about to spend your one free-song token on:</p>
+    <p id="me-free-token-confirm-title" class="font-headline text-xl text-primary uppercase tracking-tight mb-4"></p>
+    <p class="font-mono text-[10px] text-white/40 leading-relaxed mb-6">This cannot be changed afterward — you get exactly one free track, ever.</p>
+    <div class="flex gap-3 justify-end">
+      <button type="button" id="me-free-token-cancel" class="font-mono text-[10px] uppercase tracking-widest px-4 py-2 border border-white/10 hover:border-white/30 rounded-full">Cancel</button>
+      <button type="button" id="me-free-token-confirm-btn" class="font-mono text-[10px] uppercase tracking-widest px-4 py-2 bg-primary text-on-primary hover:bg-secondary hover:text-on-secondary rounded-full">Confirm choice</button>
+    </div>
+  </dialog>
 
   <script>
     import { creatureAvatarHtml, spriteTileHtml } from '../../scripts/sprites/creature-avatar.js';
@@ -176,6 +204,12 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
     const handleStatus = document.getElementById('me-handle-status')!;
     const fanSinceEl = document.getElementById('me-fan-since')!;
     const libraryEl = document.getElementById('me-library')!;
+    const freeTokenSection = document.getElementById('me-free-token')!;
+    const freeTokenList = document.getElementById('me-free-token-list')!;
+    const freeTokenDialog = document.getElementById('me-free-token-confirm') as HTMLDialogElement;
+    const freeTokenConfirmTitle = document.getElementById('me-free-token-confirm-title')!;
+    const freeTokenCancelBtn = document.getElementById('me-free-token-cancel') as HTMLButtonElement;
+    const freeTokenConfirmBtn = document.getElementById('me-free-token-confirm-btn') as HTMLButtonElement;
     const rankLadderEl = document.getElementById('me-rank-ladder')!;
     const xpStageLabelEl = document.getElementById('me-xp-stage-label')!;
     const xpNumbersEl = document.getElementById('me-xp-numbers')!;
@@ -431,6 +465,70 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
     // markup, download-link construction, and esc()/safeImg() usage are all
     // taken verbatim) — this is an additional surface onto the same
     // /api/library data, not a rebuild of it. /library itself is untouched.
+    // Free-song token picker. `pendingChoice` holds the track awaiting
+    // confirmation in the dialog — nothing is spent until the fan clicks
+    // "Confirm choice", since accidentally spending the one-time token on
+    // the wrong track is exactly the mistake this dialog exists to prevent.
+    let pendingChoice: { key: string; title: string } | null = null;
+
+    function renderFreeTokenPicker(choices: any[]) {
+      if (!choices.length) {
+        freeTokenSection.classList.add('hidden');
+        return;
+      }
+      freeTokenSection.classList.remove('hidden');
+      freeTokenList.innerHTML = choices.map((c: any) => `
+        <li class="flex items-center gap-4 py-3">
+          <img src="${esc(safeImg(c.artwork))}" alt="" loading="lazy" class="w-10 h-10 object-cover bg-white/5" />
+          <span class="flex-1 font-mono text-[11px] text-white/80 truncate">${esc(c.title)} — ${esc(c.filename)}</span>
+          <button type="button" data-key="${esc(c.key)}" data-title="${esc(c.title)}"
+            class="free-token-pick px-3 py-2 border border-primary/20 hover:border-primary/60 hover:bg-primary/5 font-mono text-[10px] tracking-widest uppercase text-primary rounded-full">
+            Choose this one
+          </button>
+        </li>
+      `).join('');
+      freeTokenList.querySelectorAll<HTMLButtonElement>('.free-token-pick').forEach(btn => {
+        btn.addEventListener('click', () => {
+          pendingChoice = { key: btn.dataset.key!, title: btn.dataset.title! };
+          freeTokenConfirmTitle.textContent = pendingChoice.title;
+          freeTokenDialog.showModal();
+        });
+      });
+    }
+
+    freeTokenCancelBtn.addEventListener('click', () => {
+      pendingChoice = null;
+      freeTokenDialog.close();
+    });
+
+    freeTokenConfirmBtn.addEventListener('click', () => {
+      if (!pendingChoice) return;
+      const choice = pendingChoice;
+      freeTokenConfirmBtn.disabled = true;
+      fetch('/api/free-token', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: choice.key }),
+      })
+        .then(async r => {
+          if (!r.ok) {
+            const body = await r.json().catch(() => ({}));
+            throw new Error(body.error || 'could not spend token');
+          }
+          freeTokenDialog.close();
+          pendingChoice = null;
+          loadLibrary();
+        })
+        .catch(e => {
+          // Leave the dialog open with the error visible in the title area
+          // rather than silently failing — a fan mid-spend needs to know
+          // whether it worked before they walk away.
+          freeTokenConfirmTitle.textContent = choice.title + ' — failed: ' + e.message;
+        })
+        .finally(() => { freeTokenConfirmBtn.disabled = false; });
+    });
+
     function loadLibrary() {
       fetch('/api/library', { credentials: 'include' })
         .then(async r => {
@@ -443,6 +541,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
         })
         .then((data: any) => {
           if (!data) return;
+          renderFreeTokenPicker(data.free_song_choices || []);
           if (!data.releases.length) {
             libraryEl.classList.remove('hidden');
             libraryEl.innerHTML = `
