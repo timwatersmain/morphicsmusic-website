@@ -13,7 +13,7 @@ const navItems = [
 ];
 ---
 
-<header id="site-header" class="fixed top-0 w-full z-50 bg-[#0A0A0A]/85 backdrop-blur-2xl grid grid-cols-[auto_1fr_auto] items-center gap-3 px-4 md:px-8 py-3 md:py-6">
+<header id="site-header" class="fixed top-0 w-full z-50 bg-[#0A0A0A]/85 backdrop-blur-2xl grid grid-cols-[auto_1fr] items-center gap-6 px-4 md:px-8 py-3 md:py-6">
   <a href="/" class="flex-shrink-0 hover:scale-105 transition-all duration-[400ms]">
     <!-- The animated emblem is 956KB: 300 lossy frames at 30fps, and that size
          is inherent to the animation — re-encoding it smaller, with lossy alpha
@@ -69,35 +69,33 @@ const navItems = [
       <span class="font-headline uppercase tracking-[0.2em] text-[8px] mt-1 leading-none">Cart</span>
       <span class="cart-badge hidden absolute -top-1 -right-2 min-w-[16px] h-[16px] px-1 bg-secondary text-on-secondary text-[9px] font-mono font-bold rounded-full items-center justify-center">0</span>
     </button>
-  </nav>
-
-  <!-- Desktop right cluster: Cart + Sign in. Hidden on mobile because
-       the mobile cart sits inline in the nav row above. -->
-  <div class="hidden md:flex items-center gap-6 flex-shrink-0 md:ml-10">
+    <!-- Cart and account are part of the SAME row as the nav links, not a
+         separate right-hand cluster — that split is what made the gaps
+         uneven and left Cart sitting hard against COMMUNITY. Same classes
+         as the mapped items above so all seven read as one chain. -->
     <button
       id="cart-button"
       type="button"
       data-cart-open
       aria-label="Open cart"
-      class="relative flex flex-row items-center gap-2 text-primary/50 hover:text-primary hover:scale-105 transition-all duration-[400ms]"
+      class="hidden md:flex relative flex-row items-center md:gap-2 text-primary/50 hover:text-primary hover:md:scale-105 transition-all duration-[400ms]"
     >
       <span class="material-symbols-outlined text-base leading-none">shopping_bag</span>
       <span class="font-headline uppercase tracking-[0.2em] text-[0.75rem] leading-none">Cart</span>
       <span id="cart-badge" class="cart-badge hidden absolute -top-1 -right-2 min-w-[16px] h-[16px] px-1 bg-secondary text-on-secondary text-[9px] font-mono font-bold rounded-full items-center justify-center">0</span>
     </button>
     <!-- href/label default to a neutral "Account" state, not "Sign in" — we
-         cannot assert signed-out until the server definitively confirms it
-         (see the script below and src/scripts/auth-state.js). -->
-    <!-- data-astro-reload matches the neutral default (href="/login") this
-         starts at server-render time; the script below flips it off once a
-         signed-in state points this at /community/me instead. See
-         login.astro's doc comment for why /login is exempted from the
-         client router. -->
-    <a id="account-link" href="/login" data-astro-reload class="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-white/40 hover:text-secondary transition-colors">
-      <span class="material-symbols-outlined text-base">person</span>
-      <span id="account-link-label">Account</span>
+         cannot assert signed-out until the server definitively confirms it.
+         data-astro-reload matches that neutral /login default; the script
+         below flips it off once a signed-in state points this at
+         /community/me instead. -->
+    <a id="account-link" href="/login" data-astro-reload
+       class="hidden md:flex flex-row items-center md:gap-2 text-primary/50 hover:text-primary hover:md:scale-105 transition-all duration-[400ms]">
+      <span class="material-symbols-outlined text-base leading-none">person</span>
+      <span id="account-link-label" class="font-headline uppercase tracking-[0.2em] text-[0.75rem] leading-none">Account</span>
     </a>
-  </div>
+  </nav>
+
 </header>
 
 <script>
