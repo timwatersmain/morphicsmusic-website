@@ -9,11 +9,32 @@
 // replaced with true amplitude peaks (cached per key). The waveform doubles as
 // a click/drag seek bar.
 
+import catalog from '../data/music-catalog.json';
+import previewsData from '../data/previews.json';
+import { buildQueue, nextInQueue, createForwardProgressTracker } from './preview-queue.js';
+
 let audio = null;
 let currentKey = null;
 let currentBtn = null;
 let currentCart = null; // cart payload for the release the playing track belongs to
 let rafId = null;
+
+// ---------- autoplay queue ----------
+// Catalogue-order queue (see preview-queue.js) so "next" is consistent no
+// matter which page playback started from. Built once, lazily, since it's
+// pure data derived from the two JSON imports above.
+let queueCache = null;
+function getQueue() {
+  if (!queueCache) queueCache = buildQueue(catalog, previewsData);
+  return queueCache;
+}
+
+// Only a genuinely-heard track (see forwardTracker below) is allowed to
+// chain into the next one. A user pressing pause or close sets this false,
+// which must stop the chain dead — it never resurrects a session the
+// listener ended. Re-armed on every fresh, user-or-chain-initiated start.
+let autoplayEnabled = true;
+const forwardTracker = createForwardProgressTracker();
 
 const RES = 480; // waveform resolution (peaks per track)
 const peakCache = new Map(); // key -> Float32Array[RES] of normalized peaks
@@ -55,14 +76,23 @@ function ensureAudio() {
   audio.preload = 'none';
   audio.volume = volLevel;
   audio.muted = volMuted;
-  audio.addEventListener('ended', () => { bothIcons('play_arrow'); stopRaf(); drawWave(); });
+  audio.addEventListener('ended', () => {
+    bothIcons('play_arrow');
+    stopRaf();
+    drawWave();
+    // Same "actually heard it" standard the engagement-XP work uses (see
+    // functions/_lib/community/engagement.ts + preview-queue.js's doc
+    // comment) — a scrub-to-the-end still fires `ended` but never
+    // accumulated genuine forward progress, so it can't trigger a chain.
+    if (autoplayEnabled && forwardTracker.isGenuineComplete()) playNext();
+  });
   audio.addEventListener('pause', () => { if (audio.ended) return; bothIcons('play_arrow'); stopRaf(); drawWave(); });
   audio.addEventListener('play', () => { bothIcons('pause'); startRaf(); });
   audio.addEventListener('playing', () => { bothIcons('pause'); startRaf(); });
   audio.addEventListener('waiting', () => { bothIcons('progress_activity'); });
   audio.addEventListener('loadedmetadata', () => { updateTimes(); drawWave(); });
   audio.addEventListener('durationchange', () => { updateTimes(); drawWave(); });
-  audio.addEventListener('timeupdate', updateTimes);
+  audio.addEventListener('timeupdate', () => { updateTimes(); forwardTracker.update(audio.currentTime, audio.duration); });
   audio.addEventListener('error', () => { bothIcons('play_arrow'); stopRaf(); });
   return audio;
 }
@@ -263,28 +293,58 @@ function stopRaf() { if (rafId) { cancelAnimationFrame(rafId); rafId = null; } }
 
 /* ---------- transport ---------- */
 
-function toggle(key, btn, meta) {
-  const a = ensureAudio();
-  if (currentKey === key) {
-    if (a.paused) a.play().catch(() => {}); else a.pause();
-    return;
-  }
+// Shared body for "start playing this key from zero", used by both a manual
+// toggle() on a new key and an autoplay advance to the next queue entry.
+// `btn` is the DOM play/pause toggle that triggered this, or null when the
+// start came from the queue (no originating button on the current page).
+// Returns the underlying <audio>.play() promise so callers can react to a
+// browser autoplay block without this function throwing.
+function startKey(key, btn, meta) {
   if (currentBtn && currentBtn !== btn) setIcon(currentBtn, 'play_arrow');
   currentKey = key;
   currentBtn = btn;
+  forwardTracker.reset();
   // Observability hook only, same reasoning as updateTimes' dispatch above —
-  // fires once per genuine new-track start (this branch only runs when the
-  // key actually changed), never on a plain pause/resume toggle.
+  // fires once per genuine new-track start (this function only runs when
+  // the key actually changed), never on a plain pause/resume toggle. Firing
+  // it here means a queue-driven advance sends the exact same signal a
+  // manual play does, so the engagement-XP hooks award it identically.
   document.dispatchEvent(new CustomEvent('morphics:preview-start', { detail: { key } }));
   currentPeaks = peakCache.get(key) || null;
   setMeta(meta);
   showBar();
+  const a = ensureAudio();
   a.src = `/api/preview?key=${encodeURIComponent(key)}`;
   bothIcons('progress_activity');
   updateTimes();
   drawWave();
   loadRealPeaks(key);
-  a.play().catch(() => bothIcons('play_arrow'));
+  // A fresh start (manual or chained) always re-arms the chain; only an
+  // explicit pause/close should cancel it.
+  autoplayEnabled = true;
+  return a.play();
+}
+
+function toggle(key, btn, meta) {
+  const a = ensureAudio();
+  if (currentKey === key) {
+    if (a.paused) { autoplayEnabled = true; a.play().catch(() => {}); } else { autoplayEnabled = false; a.pause(); }
+    return;
+  }
+  startKey(key, btn, meta).catch(() => bothIcons('play_arrow'));
+}
+
+// Advance to the next track in catalogue order (see preview-queue.js).
+// Unplayable tracks/releases were already excluded when the queue was
+// built, so "next" here is always either a playable entry or the end.
+function playNext() {
+  const next = nextInQueue(getQueue(), currentKey);
+  if (!next) return; // end of the catalogue — stop, never loop back to the start
+  // Browsers (Safari/iOS strictest of all) can reject play() even when it's
+  // chained off a completed, user-initiated playback — handle that
+  // gracefully: leave the bar showing the next track, paused, rather than
+  // throwing or silently doing nothing visible.
+  startKey(next.key, null, next).catch(() => bothIcons('play_arrow'));
 }
 
 /* ---------- wiring ---------- */
@@ -295,7 +355,8 @@ function wireBar() {
     toggleBtn.__wired = true;
     toggleBtn.addEventListener('click', () => {
       if (!audio || !currentKey) return;
-      if (audio.paused) audio.play().catch(() => {}); else audio.pause();
+      if (audio.paused) { autoplayEnabled = true; audio.play().catch(() => {}); }
+      else { autoplayEnabled = false; audio.pause(); } // manual pause stops the autoplay chain
     });
   }
 
@@ -331,6 +392,7 @@ function wireBar() {
   if (closeBtn && !closeBtn.__wired) {
     closeBtn.__wired = true;
     closeBtn.addEventListener('click', () => {
+      autoplayEnabled = false; // closing ends the listening session — never resurrect it
       if (audio) { audio.pause(); audio.currentTime = 0; }
       setIcon(currentBtn, 'play_arrow');
       hideBar();
