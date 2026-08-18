@@ -27,6 +27,22 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         </p>
       </header>
 
+      <!-- Verification is informational only right now — it never gates
+           sign-in, downloads, or anything else. See functions/api/auth/verify-email.ts. -->
+      <div id="acct-verify-panel" class="hidden mb-10 p-6 border border-white/10">
+        <p class="font-mono text-[11px] text-white/50">
+          Email verification: <span id="acct-verify-status" class="text-white/80"></span>
+        </p>
+        <button
+          type="button"
+          id="acct-verify-resend-btn"
+          class="hidden mt-4 px-6 py-3 bg-primary text-on-primary font-mono text-[11px] tracking-widest uppercase hover:bg-secondary hover:text-on-secondary transition-colors disabled:opacity-30"
+        >
+          Resend verification email
+        </button>
+        <p id="acct-verify-msg" role="status" class="hidden mt-4 font-mono text-[11px] text-white/50 leading-relaxed"></p>
+      </div>
+
       <!-- No password set yet: first-time setup. -->
       <div id="acct-setup-panel" class="hidden">
         <p class="font-mono text-[11px] text-white/50 mb-6 leading-relaxed">
@@ -180,9 +196,20 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     const setupPanel = document.getElementById('acct-setup-panel')!;
     const updatePanel = document.getElementById('acct-update-panel')!;
     const currentUsernameEl = document.getElementById('acct-current-username')!;
+    const verifyPanel = document.getElementById('acct-verify-panel')!;
+    const verifyStatus = document.getElementById('acct-verify-status')!;
+    const verifyBtn = document.getElementById('acct-verify-resend-btn') as HTMLButtonElement;
+    const verifyMsg = document.getElementById('acct-verify-msg')!;
 
     const redirectTarget = '/account';
     signinLink.href = '/login?redirect=' + encodeURIComponent(redirectTarget);
+
+    // Query params set by GET /api/auth/verify-email's redirect (see that
+    // file) — read once on load, not re-checked after the resend button is
+    // used, matching how a one-time redirect flag should behave.
+    const acctParams = new URLSearchParams(window.location.search);
+    const justVerified = acctParams.get('verified') === '1';
+    const verifyLinkExpired = acctParams.get('verify_expired') === '1';
 
     // Which panel to show is a matter of "does a password already exist",
     // not something /api/auth/me tells us — that endpoint only confirms the
@@ -194,14 +221,14 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     // the setup form's extra "current password" step missing on THIS
     // attempt, and the server rejects it (401) rather than silently
     // succeeding, so there is no security gap, just an extra round trip.
-    async function loadAccountState(): Promise<{ hasPassword: boolean; username: string | null }> {
+    async function loadAccountState(): Promise<{ hasPassword: boolean; username: string | null; emailVerified: boolean }> {
       try {
         const r = await fetch('/api/auth/status', { credentials: 'include' });
-        if (!r.ok) return { hasPassword: false, username: null };
+        if (!r.ok) return { hasPassword: false, username: null, emailVerified: false };
         const data = await r.json();
-        return { hasPassword: !!data.has_password, username: data.username || null };
+        return { hasPassword: !!data.has_password, username: data.username || null, emailVerified: !!data.email_verified };
       } catch {
-        return { hasPassword: false, username: null };
+        return { hasPassword: false, username: null, emailVerified: false };
       }
     }
 
@@ -217,13 +244,55 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       emailEl.textContent = email;
       content.classList.remove('hidden');
 
-      const { hasPassword, username } = await loadAccountState();
+      const { hasPassword, username, emailVerified } = await loadAccountState();
       if (hasPassword) {
         currentUsernameEl.textContent = username ? '@' + username : email;
         updatePanel.classList.remove('hidden');
         (document.getElementById('up-username') as HTMLInputElement).value = username || '';
       } else {
         setupPanel.classList.remove('hidden');
+      }
+
+      verifyPanel.classList.remove('hidden');
+      if (emailVerified) {
+        verifyStatus.textContent = 'Verified';
+        verifyBtn.classList.add('hidden');
+        if (justVerified) {
+          verifyMsg.textContent = 'Your email is now verified.';
+          verifyMsg.classList.remove('hidden');
+        }
+      } else {
+        verifyStatus.textContent = 'Not verified';
+        verifyBtn.classList.remove('hidden');
+        if (verifyLinkExpired) {
+          verifyMsg.textContent = 'That verification link expired or was already used — send a fresh one below.';
+          verifyMsg.classList.remove('hidden');
+        }
+      }
+    });
+
+    verifyBtn.addEventListener('click', async () => {
+      verifyBtn.disabled = true;
+      verifyBtn.textContent = 'Sending…';
+      verifyMsg.classList.add('hidden');
+      try {
+        const r = await fetch('/api/auth/resend-verification', { method: 'POST', credentials: 'include' });
+        const data = await r.json().catch(() => ({}));
+        if (r.ok) {
+          verifyMsg.textContent = data.already_verified
+            ? 'Already verified.'
+            : 'Verification email sent — check your inbox.';
+        } else if (r.status === 429) {
+          verifyMsg.textContent = 'Please wait a bit before requesting another link.';
+        } else {
+          verifyMsg.textContent = 'Something went wrong — try again shortly.';
+        }
+      } catch {
+        verifyMsg.textContent = 'Something went wrong — try again shortly.';
+      } finally {
+        verifyMsg.classList.remove('hidden');
+        verifyBtn.disabled = false;
+        verifyBtn.textContent = 'Resend verification email';
       }
     });
 

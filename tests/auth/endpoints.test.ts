@@ -552,7 +552,7 @@ describe('GET /api/auth/status', () => {
     const res = await statusReq(cookie);
     expect(res.status).toBe(200);
     const data = await res.json();
-    expect(data).toEqual({ email, has_password: false, username: null });
+    expect(data).toEqual({ email, has_password: false, username: null, email_verified: false, email_verified_at: null });
   });
 
   it('reports has_password: true and the username once one is set', async () => {
@@ -564,6 +564,6 @@ describe('GET /api/auth/status', () => {
     const res = await statusReq(cookie);
     expect(res.status).toBe(200);
     const data = await res.json();
-    expect(data).toEqual({ email: 'statusfan@example.com', has_password: true, username: 'statusfan' });
+    expect(data).toEqual({ email: 'statusfan@example.com', has_password: true, username: 'statusfan', email_verified: false, email_verified_at: null });
   });
 });
