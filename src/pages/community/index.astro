@@ -56,6 +56,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
   <script>
     import { creatureAvatarHtml } from '../../scripts/sprites/creature-avatar.js';
     import { initCreatureCanvases } from '../../scripts/sprites/renderer.js';
+    import { STAGE_LABELS } from '../../scripts/community/xp-progress';
 
     const loading = document.getElementById('dir-loading')!;
     const signin = document.getElementById('dir-signin')!;
@@ -69,9 +70,11 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
     const esc = (s: any) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
 
 
-    const STAGE_LABELS = { egg: 'Egg', grub: 'Grub', pupa: 'Pupa', adult: 'Adult' };
-    function stageLabel(stage) {
-      return STAGE_LABELS[stage] || STAGE_LABELS.egg;
+    // STAGE_LABELS now comes from src/scripts/community/xp-progress.ts, which
+    // itself imports it from the EP module — one source of stage names
+    // shared with /community/me's rank section, so the two can't drift.
+    function stageLabel(stage: string) {
+      return (STAGE_LABELS as Record<string, string>)[stage] || STAGE_LABELS.egg;
     }
     function fmtDate(unix: number) {
       return new Date(unix * 1000).toLocaleDateString(undefined, { year: 'numeric', month: 'long' });

@@ -72,6 +72,40 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
         <p class="font-mono text-[11px] text-white/40">
           <span id="me-fan-since"></span>
         </p>
+
+        <!-- Current rank: the whole egg->grub->pupa->adult ladder plus the
+             XP bar for progress within the current stage. Both driven by
+             src/scripts/community/xp-progress.ts (pure functions, unit
+             tested) — this block only turns that output into markup. -->
+        <div class="mt-8 pt-6 border-t border-white/5">
+          <div class="flex items-baseline gap-3 mb-4">
+            <span class="font-mono text-xs text-secondary uppercase tracking-widest">Current rank</span>
+            <div class="h-[1px] flex-1 bg-outline-variant/30"></div>
+          </div>
+
+          <!-- The whole ladder, always all four stages, so stages ahead stay
+               visible — that visibility is the point (see brief). -->
+          <ol id="me-rank-ladder" aria-label="Evolution stages" class="flex flex-wrap gap-2 mb-6"></ol>
+
+          <div>
+            <div class="flex items-baseline justify-between gap-3 mb-2">
+              <span id="me-xp-stage-label" class="font-mono text-[11px] text-primary uppercase tracking-widest"></span>
+              <span id="me-xp-numbers" class="font-mono text-[10px] text-white/40 uppercase tracking-widest"></span>
+            </div>
+            <div class="h-3 w-full bg-surface-container-low border border-white/10">
+              <div
+                id="me-xp-fill"
+                role="progressbar"
+                aria-valuemin="0"
+                aria-valuemax="100"
+                aria-labelledby="me-xp-stage-label"
+                class="h-full bg-secondary"
+                style="width:0%"
+              ></div>
+            </div>
+            <p id="me-xp-next" class="font-mono text-[10px] text-white/40 mt-2"></p>
+          </div>
+        </div>
       </section>
 
       <!-- Colourway picker: the one part of the creature a fan actually
@@ -119,6 +153,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
     import { initCreatureCanvases, initCreatureCanvasesLazy, loadSprites } from '../../scripts/sprites/renderer.js';
     import { COLORWAYS } from '../../scripts/sprites/vendor/colorways.js';
     import { NATIVE_COLOURWAY } from '../../scripts/sprites/native-palette.js';
+    import { computeStageProgress, rankLadder, type RankStatus } from '../../scripts/community/xp-progress';
 
     const loading = document.getElementById('me-loading')!;
     const signin = document.getElementById('me-signin')!;
@@ -141,6 +176,11 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
     const handleStatus = document.getElementById('me-handle-status')!;
     const fanSinceEl = document.getElementById('me-fan-since')!;
     const libraryEl = document.getElementById('me-library')!;
+    const rankLadderEl = document.getElementById('me-rank-ladder')!;
+    const xpStageLabelEl = document.getElementById('me-xp-stage-label')!;
+    const xpNumbersEl = document.getElementById('me-xp-numbers')!;
+    const xpFillEl = document.getElementById('me-xp-fill')!;
+    const xpNextEl = document.getElementById('me-xp-next')!;
 
     const esc = (s: any) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
     // Copied verbatim from src/pages/library.astro so the two surfaces
@@ -166,6 +206,64 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
     function renderCreature(creature: any) {
       creatureEl.innerHTML = creatureAvatarHtml(creature, CREATURE_SIZE);
       initCreatureCanvases(creatureEl);
+    }
+
+    // Same visual treatment already used for the selected colourway swatch
+    // (border-primary + scale-110), reused here so "current" reads as
+    // unmistakably the loudest state — see colourway-pick above.
+    const LADDER_STATUS_CLASSES: Record<RankStatus, string> = {
+      passed: 'border-secondary/40 bg-secondary/5 text-secondary',
+      current: 'border-primary bg-primary/10 text-primary scale-110 font-bold',
+      ahead: 'border-white/10 text-white/30',
+    };
+    const LADDER_STATUS_HINT: Record<RankStatus, string> = {
+      passed: ' — reached',
+      current: ' — current stage',
+      ahead: ' — not yet reached',
+    };
+
+    function renderRankLadder(stage: string) {
+      const steps = rankLadder(stage as any);
+      rankLadderEl.innerHTML = steps.map(step => `
+        <li>
+          <span
+            class="inline-flex items-center px-3 py-1.5 border font-mono text-[10px] uppercase tracking-widest transition-all ${LADDER_STATUS_CLASSES[step.status]}"
+            ${step.status === 'current' ? 'aria-current="step"' : ''}
+          >${esc(step.label)}<span class="sr-only">${esc(LADDER_STATUS_HINT[step.status])}</span></span>
+        </li>
+      `).join('');
+    }
+
+    function renderXpBar(creature: any) {
+      const progress = computeStageProgress({
+        ep: creature.ep || 0,
+        stage: creature.stage,
+        next_stage_ep: creature.next_stage_ep,
+      });
+
+      xpStageLabelEl.textContent = progress.stageLabel;
+      xpFillEl.style.width = progress.pct + '%';
+      xpFillEl.setAttribute('aria-valuenow', String(Math.round(progress.pct)));
+      xpFillEl.setAttribute(
+        'aria-valuetext',
+        progress.isFinal
+          ? `${progress.epInStage} EP — max stage reached`
+          : `${progress.epInStage} of ${progress.epForStage} EP toward ${progress.nextLabel}`,
+      );
+
+      if (progress.isFinal) {
+        // Achievement state, not an empty/broken bar — the bar itself is
+        // forced full (see computeStageProgress) and the copy reads as
+        // "done", not as a truncated "X of Y" that has no Y.
+        xpNumbersEl.textContent = progress.epInStage + ' EP';
+        xpNextEl.textContent = 'Fully evolved — max stage reached.';
+      } else {
+        // Both numbers are re-based to THIS stage's own band (not raw EP
+        // against a fixed total) so they always agree with the bar's fill —
+        // see computeStageProgress's doc comment for why that matters.
+        xpNumbersEl.textContent = progress.epInStage + ' / ' + progress.epForStage + ' EP';
+        xpNextEl.textContent = (progress.epForStage! - progress.epInStage) + ' EP to ' + progress.nextLabel;
+      }
     }
 
     let currentColourway: string | null = null;
@@ -429,6 +527,8 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
           }
           fanSinceEl.textContent = 'Morphics since ' + fmtDate(profile.fan_since);
           renderCreature(profile.creature);
+          renderRankLadder(profile.creature.stage);
+          renderXpBar(profile.creature);
           renderColourwayPicker(profile.creature);
           renderSpritePicker(profile);
           loadLibrary();
