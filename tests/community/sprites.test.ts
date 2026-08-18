@@ -100,9 +100,10 @@ describe('isValidSpriteRef', () => {
     }
   });
 
-  it('accepts all 401 refs in the set', () => {
+  it('accepts every ref in the set', () => {
     const all = Object.values(SPRITE_REFS_BY_STAGE).flat();
-    expect(all.length).toBe(401);
+    // 50 eggs + 100 grubs + 50 pupae + 200 adults (A081 Ouroboros Nymph retired).
+    expect(all.length).toBe(400);
     for (const ref of all) expect(isValidSpriteRef(ref)).toBe(true);
   });
 

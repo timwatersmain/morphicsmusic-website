@@ -2,7 +2,7 @@
 // Regenerate with: node scripts/build-sprite-assets.mjs
 // Ref-only index (no grid/palette data) so sprite ASSIGNMENT can run inside
 // the Workers function bundle without fetching the 613KB sprite data asset —
-// see functions/_lib/community/sprites.ts. Counts: egg=50, grub=100, pupa=50, adult=201.
+// see functions/_lib/community/sprites.ts. Counts: egg=50, grub=100, pupa=50, adult=200.
 export const SPRITE_REFS_BY_STAGE: Record<'egg' | 'grub' | 'pupa' | 'adult', string[]> = {
   "egg": [
     "E01",
@@ -281,7 +281,6 @@ export const SPRITE_REFS_BY_STAGE: Record<'egg' | 'grub' | 'pupa' | 'adult', str
     "A076",
     "A078",
     "A080",
-    "A081",
     "A082",
     "A085",
     "A088",
