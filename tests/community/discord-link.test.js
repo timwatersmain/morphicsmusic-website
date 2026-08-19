@@ -33,6 +33,7 @@ const MIGRATIONS = [
   '0005_avatar_tiers', '0006_creatures', '0007_sprites', '0008_sprite_override',
   '0009_native_colourway', '0010_engagement_ep', '0011_profile_bio_privacy',
   '0012_profile_soft_delete', '0013_discord_links', '0014_xp_events',
+  '0015_discord_award_events',
 ].map(n => readFileSync(join(root, `migrations/${n}.sql`), 'utf8'));
 
 const AUTH_SECRET = 'test-only-secret-not-real';
@@ -102,11 +103,10 @@ async function link(discordId = DISCORD_ID, email = FAN_EMAIL) {
   return redeem(body.code, email);
 }
 
-async function award(amount, discordId = DISCORD_ID) {
-  const res = await awardPost({
-    request: botReq('/api/discord/award', { discord_user_id: discordId, amount }),
-    env,
-  });
+async function award(amount, discordId = DISCORD_ID, eventKey = undefined) {
+  const payload = { discord_user_id: discordId, amount };
+  if (eventKey) payload.event_key = eventKey;
+  const res = await awardPost({ request: botReq('/api/discord/award', payload), env });
   return { res, body: await res.json() };
 }
 
@@ -437,5 +437,61 @@ describe('POST /api/discord/status — delete grace window', () => {
     });
     expect(res.status).toBe(404);
     expect((await res.json()).error).toBe('not_linked');
+  });
+});
+
+
+describe('award idempotency (migration 0015)', () => {
+  // addDiscordEp is a RELATIVE increment, so a replayed award adds again —
+  // and since resolveStage never demotes, the resulting rank is permanent.
+  // This is what lets the bot retry an award it could not deliver.
+  it('applies an award once no matter how many times it is replayed', async () => {
+    await link();
+    const first = await award(30, DISCORD_ID, 'msg:111:abc');
+    expect(first.body.discord_ep).toBe(30);
+    expect(first.body.duplicate).toBe(false);
+
+    for (let i = 0; i < 4; i++) {
+      const replay = await award(30, DISCORD_ID, 'msg:111:abc');
+      expect(replay.res.status).toBe(200);
+      expect(replay.body.discord_ep).toBe(30);
+      expect(replay.body.duplicate).toBe(true);
+    }
+  });
+
+  it('reports 200 on a duplicate, not an error', async () => {
+    // The bot treats non-2xx as "still undelivered" and would keep the award
+    // queued forever — a retry storm becoming a failure storm.
+    await link();
+    await award(30, DISCORD_ID, 'msg:222:abc');
+    const replay = await award(30, DISCORD_ID, 'msg:222:abc');
+    expect(replay.res.status).toBe(200);
+    expect(replay.body.ok).toBe(true);
+    expect(replay.body.stage).toBeTruthy();
+  });
+
+  it('treats different keys as different awards', async () => {
+    await link();
+    await award(30, DISCORD_ID, 'msg:333:abc');
+    const second = await award(30, DISCORD_ID, 'rx:333:abc');
+    expect(second.body.discord_ep).toBe(60);
+    expect(second.body.duplicate).toBe(false);
+  });
+
+  it('still works with no event_key, for an older bot build', async () => {
+    await link();
+    await award(30);
+    const again = await award(30);
+    // No key means no dedup — which is exactly why the bot refuses to queue
+    // an award it has no key for.
+    expect(again.body.discord_ep).toBe(60);
+  });
+
+  it('a replay returns the stage the fan is actually at', async () => {
+    await link();
+    await award(60, DISCORD_ID, 'msg:444:abc');
+    const replay = await award(60, DISCORD_ID, 'msg:444:abc');
+    expect(replay.body.stage).toBe('grub');
+    expect(replay.body.discord_ep).toBe(60);
   });
 });

@@ -13,6 +13,7 @@ import { corsHandler, preflight } from '../../_lib/cors';
 import { isBot, botNotFound, clampAward, type DiscordBotEnv } from '../../_lib/community/discord';
 import {
   getDiscordLinkByUser, addDiscordEp, getProfileById, saveCreatureProgress, sumLedgerXp,
+  claimAwardEvent,
 } from '../../_lib/community/repo';
 import { evaluateCreature } from '../../_lib/community/creature';
 import { epInputsFor, ownedSlugsFromRecord } from '../../_lib/community/ep-inputs';
@@ -32,7 +33,7 @@ export const onRequestPost: PagesFunction<Env> = corsHandler<Env>(
   async ({ request, env }) => {
     if (!isBot(request, env)) return botNotFound();
 
-    let body: { discord_user_id?: string; amount?: number };
+    let body: { discord_user_id?: string; amount?: number; event_key?: string };
     try { body = await request.json(); } catch { return json({ error: 'invalid json' }, 400); }
 
     const discordUserId = String(body.discord_user_id || '').trim();
@@ -66,9 +67,29 @@ export const onRequestPost: PagesFunction<Env> = corsHandler<Env>(
     const profile = await getProfileById(env.GATES, link.fan_id);
     if (!profile) return json({ error: 'not_linked' }, 404);
 
-    const discordEp = await addDiscordEp(env.GATES, discordUserId, amount);
-    // The link vanished between the two statements — a real unlink racing
-    // this request. Nothing was written, so there is nothing to undo.
+    // Idempotency. The bot cannot tell "the site never received this" from
+    // "the site received it and the reply was lost", so it retries — and
+    // addDiscordEp is a RELATIVE increment, meaning a replay would add again
+    // and leave the fan at a permanently inflated rank (resolveStage never
+    // demotes). An event_key that has been seen before is therefore applied
+    // ZERO more times, and the current state is reported instead.
+    //
+    // Reporting 200 rather than an error on a duplicate is deliberate: the
+    // bot treats non-2xx as "still undelivered" and would keep the award
+    // queued forever, turning a retry storm into a failure storm.
+    const eventKey = String(body.event_key || '').trim().slice(0, 200);
+    const alreadyApplied = eventKey
+      ? !(await claimAwardEvent(env.GATES, eventKey, Math.floor(Date.now() / 1000)))
+      : false;
+
+    // An absent event_key keeps the pre-idempotency behaviour, so an older
+    // bot build still works — it just cannot be retried safely, which is
+    // precisely why the bot drops those rather than queueing them.
+    const discordEp = alreadyApplied
+      ? link.discord_ep
+      : await addDiscordEp(env.GATES, discordUserId, amount);
+    // The link vanished between statements — a real unlink racing this
+    // request. Nothing was written, so there is nothing to undo.
     if (discordEp === null) return json({ error: 'not_linked' }, 404);
 
     // Purchases and tenure still come from the same places /me reads them,
@@ -99,6 +120,9 @@ export const onRequestPost: PagesFunction<Env> = corsHandler<Env>(
       next_threshold: nextStageThreshold(update.stage),
       just_hatched: update.justHatched,
       handle: profile.handle,
+      // Lets the bot log a replay distinctly from a fresh award; it treats
+      // both as delivered either way.
+      duplicate: alreadyApplied,
     });
   },
 );

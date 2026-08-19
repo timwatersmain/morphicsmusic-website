@@ -785,3 +785,29 @@ export async function addDiscordEp(
     .bind(discordUserId).first<{ discord_ep: number }>();
   return row?.discord_ep ?? null;
 }
+
+/**
+ * Claim an award's event_key, returning true if THIS call claimed it.
+ *
+ * False means the award was already applied by an earlier delivery — the
+ * caller must then report current state rather than incrementing again.
+ * addDiscordEp is a relative increment, so a second application would
+ * inflate the fan's EP permanently (resolveStage never demotes).
+ *
+ * INSERT OR IGNORE ... RETURNING is the whole mechanism, and it is one
+ * statement on purpose. A SELECT-then-INSERT would let two concurrent
+ * retries both read "not applied" and both proceed. Comparing a written
+ * timestamp is no better: two retries landing in the same second would both
+ * match and both believe they claimed it. RETURNING yields a row only to the
+ * caller whose insert actually took, which is exactly the question being
+ * asked, decided by the PRIMARY KEY itself.
+ */
+export async function claimAwardEvent(
+  db: D1Database, eventKey: string, nowSec: number,
+): Promise<boolean> {
+  const row = await db.prepare(
+    'INSERT OR IGNORE INTO discord_award_events (event_key, applied_at) VALUES (?, ?) '
+    + 'RETURNING event_key',
+  ).bind(eventKey, nowSec).first<{ event_key: string }>();
+  return !!row;
+}
