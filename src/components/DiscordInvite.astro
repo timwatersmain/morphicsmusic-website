@@ -1,0 +1,64 @@
+---
+// The one place the Discord invite and its pitch live.
+//
+// Before this existed the invite appeared exactly once on the whole site — a
+// bare URL string in social.astro, one icon in a row of social icons — and
+// /account told people to "run /link in the Morphics Discord" without linking
+// to it, naming a place and giving no way to reach it.
+//
+// Single source for the URL on purpose: pasting it into four pages would mean
+// four places to update, and a stale invite fails SILENTLY. Nobody reports a
+// link that quietly doesn't work; they just don't join.
+//
+// INVITE_URL is verified permanent (max_age=0, created against #rules, 76 uses
+// at time of writing). Discord invites expire after 7 days by DEFAULT, so if
+// this is ever regenerated, create the replacement with "never expire" or the
+// site sprouts four dead links at once.
+export const INVITE_URL = 'https://discord.gg/n2yaJMbTeD';
+
+interface Props {
+  /** 'card' is a standalone block; 'inline' sits inside an existing panel. */
+  variant?: 'card' | 'inline';
+  /** Overrides the default pitch where a page needs its own framing. */
+  headline?: string;
+  class?: string;
+}
+
+const { variant = 'card', headline, class: className = '' } = Astro.props;
+
+// Leads with the payoff rather than the ask. "Join our Discord" is a request;
+// this is a reason — and it is the specific reason that is true here, since
+// the server feeds the same creature the site shows.
+const DEFAULT_HEADLINE = 'Your creature levels up in Discord too';
+const BODY =
+  'Talking, reacting and catching drops in the server all feed the same rank your profile shows here. One creature, both places.';
+---
+
+{variant === 'card' ? (
+  <aside class={`p-6 border border-white/10 rounded-[var(--radius-lg)] ${className}`}>
+    <p class="font-mono text-[11px] uppercase tracking-widest text-secondary mb-3">
+      {headline || DEFAULT_HEADLINE}
+    </p>
+    <p class="font-mono text-[11px] text-white/60 leading-relaxed mb-5">{BODY}</p>
+    <a
+      href={INVITE_URL}
+      target="_blank"
+      rel="noopener noreferrer"
+      class="inline-block px-6 py-3 bg-primary text-on-primary font-mono text-[11px] tracking-widest uppercase hover:bg-secondary hover:text-on-secondary transition-colors"
+    >
+      Join the Discord
+    </a>
+    <p class="font-mono text-[10px] text-white/40 mt-4 leading-relaxed">
+      Once you're in, run <span class="text-white/70">/link</span> and paste the code on your account page.
+    </p>
+  </aside>
+) : (
+  <a
+    href={INVITE_URL}
+    target="_blank"
+    rel="noopener noreferrer"
+    class={`inline-block px-6 py-3 bg-primary text-on-primary font-mono text-[11px] tracking-widest uppercase hover:bg-secondary hover:text-on-secondary transition-colors ${className}`}
+  >
+    Join the Discord
+  </a>
+)}

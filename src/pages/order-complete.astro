@@ -1,5 +1,6 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import DiscordInvite from '../components/DiscordInvite.astro';
 ---
 
 <BaseLayout title="THANK YOU" currentPage="">
@@ -20,6 +21,14 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           <p class="font-mono text-[11px] text-white/60 leading-relaxed">Made-to-order via Printful. Tracking will arrive in your email.</p>
         </div>
       </div>
+      <!-- A purchase is the single biggest EP award there is (ep.ts's
+           PER_PURCHASE, 45), so their creature has just moved — which makes
+           this the moment the Discord pitch is actually true, not generic. -->
+      <DiscordInvite
+        class="text-left mt-8"
+        headline="Your creature just grew — it grows in Discord too"
+      />
+
       <div id="dl-panel" class="hidden text-left border border-secondary/30 bg-secondary/5 p-6 mt-8">
         <div class="font-mono text-[10px] text-secondary uppercase tracking-widest mb-4">
           Your downloads

@@ -1,5 +1,6 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import DiscordInvite from '../../components/DiscordInvite.astro';
 ---
 
 <BaseLayout title="COMMUNITY" currentPage="/community">
@@ -16,6 +17,10 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
         Your profile
       </a>
     </header>
+
+    <!-- Above the wall on purpose: someone scrolling other fans' creatures is
+         the warmest audience on the site for "yours levels up in Discord too". -->
+    <DiscordInvite class="mb-10" />
 
     <div id="dir-loading" class="font-mono text-[11px] text-white/40">Loading the fan wall…</div>
 

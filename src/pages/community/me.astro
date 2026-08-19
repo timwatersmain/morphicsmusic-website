@@ -1,5 +1,6 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import DiscordInvite from '../../components/DiscordInvite.astro';
 ---
 
 <BaseLayout title="MY COMMUNITY" currentPage="/community">
@@ -357,6 +358,14 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
           </div>
         </div>
       </section>
+
+      <!-- After the profile, never before it: the pitch is "your creature
+           levels up in Discord too", which means nothing until they have
+           actually seen their creature. This page is also where a new fan
+           lands first, which is why the invite lives here rather than in the
+           signup flow — signup hands straight off to /login, and /login is
+           shown to everyone signing in, not just new accounts. -->
+      <DiscordInvite />
 
     </div>
   </div>

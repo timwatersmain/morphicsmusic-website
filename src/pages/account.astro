@@ -1,5 +1,6 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import DiscordInvite from '../components/DiscordInvite.astro';
 
 // EXEMPTED FROM THE CLIENT ROUTER, along with /login and /signup — see the
 // note on login.astro for the full reasoning.
@@ -197,6 +198,12 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         <p class="font-mono text-[11px] text-white/50 mb-6 leading-relaxed">
           <span id="acct-discord-blurb"></span>
         </p>
+
+        <!-- Shown only to an unlinked fan. Without this the panel names the
+             Discord and gives no way to reach it — see DiscordInvite.astro. -->
+        <div id="acct-discord-join" class="hidden mb-6">
+          <DiscordInvite variant="inline" />
+        </div>
 
         <form id="acct-discord-form" class="hidden space-y-4" novalidate>
           <div>
@@ -445,6 +452,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     const discordPanel = document.getElementById('acct-discord-panel')!;
     const discordBlurb = document.getElementById('acct-discord-blurb')!;
     const discordForm = document.getElementById('acct-discord-form') as HTMLFormElement;
+    const discordJoin = document.getElementById('acct-discord-join')!;
     const discordCode = document.getElementById('acct-discord-code') as HTMLInputElement;
     const discordBtn = document.getElementById('acct-discord-btn') as HTMLButtonElement;
     const discordUnlink = document.getElementById('acct-discord-unlink-btn') as HTMLButtonElement;
@@ -468,6 +476,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         ? 'Your Discord account is linked. What you do in the server feeds the same creature this profile shows.'
         : 'Run /link in the Morphics Discord to get a code, then paste it here. Once linked, what you do in the server feeds the same creature this profile shows.';
       discordForm.classList.toggle('hidden', linked);
+      discordJoin.classList.toggle('hidden', linked);
       discordUnlink.classList.toggle('hidden', !linked);
     }
 

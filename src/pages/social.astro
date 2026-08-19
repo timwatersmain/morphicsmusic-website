@@ -24,7 +24,9 @@ const platforms = [
   { name: 'FACEBOOK', icon: 'group', url: 'https://www.facebook.com/morphicsmusic/' },
   { name: 'TIKTOK', icon: 'slow_motion_video', url: 'https://www.tiktok.com/@skratchwax' },
   { name: 'PINTEREST', icon: 'push_pin', url: 'https://www.pinterest.com/morphicsmusic/' },
-  { name: 'DISCORD', icon: 'forum', url: 'https://discord.gg/n2yaJMbTeD' },
+  // Uses the shared constant, not a second copy of the URL — a stale invite
+  // fails silently, so there must only ever be one to update.
+  { name: 'DISCORD', icon: 'forum', url: INVITE_URL },
   { name: 'KICK', icon: 'live_tv', url: 'https://kick.com/morphicsmusic' },
 ];
 
@@ -46,6 +48,7 @@ const typeIcons: Record<string, string> = {
   track: 'graphic_eq',
   visual: 'image',
 };
+import { INVITE_URL } from '../components/DiscordInvite.astro';
 ---
 
 <BaseLayout title="SOCIAL" currentPage="/social">
