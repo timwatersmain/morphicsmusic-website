@@ -1,12 +1,75 @@
 {
-  "_shape": "Press kit. Every section renders only if it has content, so an empty field is invisible rather than an empty heading. Fill in as material exists.",
-  "bio_short": "",
-  "bio_long": "",
-  "press_photos": [],
+  "_shape": "Press kit. Every section renders only if it has content, so an empty field is invisible rather than an empty heading. bio_short/bio_long are the artist's own published bio, transcribed from 'Morphics BIO copy.pdf' — not written here.",
+  "_riders": "Tech and hospitality riders are deliberately NOT published. The 2022 rider PDF carries a third party's name and personal email on page 2, and that is not ours to put on a public page. Publish a version with those removed — or confirmed current and consented — before filling tech_rider_url / hospitality_rider_url.",
+  "bio_short": "Morphics is an experimental audiovisual project built on constant evolution — fluid, boundary-free sound that flows without shape or form.",
+  "bio_long": "Morphics is an experimental music project that embodies the essence of change. Guided by core principles of constant evolution, Morphics weaves a dynamic tapestry of sound—fluid in nature and free of boundaries. By blending diverse textures, rhythms, and tones, it ventures into the outer reaches of music, crafting an auditory experience that flows without shape or form. The essence of the project aims to celebrate the transformative power of art, the endless possibilities of creative expression, and an embrace of the ever-changing nature of existence.",
+  "press_photos": [
+    {
+      "src": "/images/press/morphics-live-logo-web.jpg",
+      "full": "/images/press/morphics-live-logo.jpg",
+      "width": 2400,
+      "height": 1348
+    },
+    {
+      "src": "/images/press/morphics-silhouette-web.jpg",
+      "full": "/images/press/morphics-silhouette.jpg",
+      "width": 1440,
+      "height": 963
+    },
+    {
+      "src": "/images/press/morphics-portrait-web.jpg",
+      "full": "/images/press/morphics-portrait.jpg",
+      "width": 1365,
+      "height": 2048
+    },
+    {
+      "src": "/images/press/morphics-live-wide-web.jpg",
+      "full": "/images/press/morphics-live-wide.jpg",
+      "width": 2048,
+      "height": 1365
+    },
+    {
+      "src": "/images/press/morphics-live-beams-web.jpg",
+      "full": "/images/press/morphics-live-beams.jpg",
+      "width": 2048,
+      "height": 1365
+    },
+    {
+      "src": "/images/press/morphics-graphic-web.jpg",
+      "full": "/images/press/morphics-graphic.jpg",
+      "width": 1080,
+      "height": 1080
+    }
+  ],
+  "photo_credit": "Live photography by dp / Inflation and Proper, as watermarked.",
   "logo": "",
   "tech_rider_url": "",
   "hospitality_rider_url": "",
   "live_videos": [],
-  "past_venues": [],
+  "past_venues": [
+    "The Assembly Room",
+    "The Crown",
+    "Mother's Grille",
+    "The Summit Music Hall",
+    "Liaison Room",
+    "Medieval Pub",
+    "The Pyramid",
+    "Harrisburg Midtown Arts Center",
+    "The 8x10",
+    "Tracy City",
+    "Camp Ramblewood",
+    "Skully's Music-Diner",
+    "Wonderfly Arena",
+    "216 Westhampton Blvd",
+    "Camp grounds",
+    "River Farm Recreation",
+    "U Street Music Hall",
+    "H0L0",
+    "Fallout Shelter",
+    "Barter",
+    "Buddha Lounge",
+    "Jaceland",
+    "Station1640"
+  ],
   "contact_note": ""
 }

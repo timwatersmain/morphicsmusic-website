@@ -28,7 +28,7 @@ const stats = past.length ? [
   { n: String(states.size), label: 'states' },
   { n: String(multiDay), label: 'festivals' },
 ] : [];
-const pressPhotos = (epk.press_photos || []) as string[];
+const pressPhotos = (epk.press_photos || []) as Array<{ src: string; full: string; width?: number; height?: number }>;
 const liveVideos = (epk.live_videos || []) as Array<{ label: string; url: string }>;
 const pastVenues = (epk.past_venues || []) as string[];
 // The EPK block is worth building but not worth showing empty — a heading
@@ -160,12 +160,28 @@ const fmtDate = (iso: string) => {
         )}
 
         {pressPhotos.length > 0 && (
-          <div class="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
-            {pressPhotos.map((src: string) => (
-              <a href={src} rel="noopener" class="block border border-white/10 hover:border-secondary/40 transition-colors">
-                <img src={src} alt="" loading="lazy" class="w-full aspect-[4/3] object-cover" />
-              </a>
-            ))}
+          <div class="mb-6">
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+              {pressPhotos.map(photo => (
+                <a
+                  href={photo.full}
+                  download
+                  rel="noopener"
+                  class="group block border border-white/10 hover:border-secondary/40 transition-colors relative"
+                  aria-label={`Download press photo, ${photo.width}×${photo.height}`}
+                >
+                  <img src={photo.src} alt="" loading="lazy" class="w-full aspect-[4/3] object-cover" />
+                  {/* The dimensions ARE the useful label here — a press desk
+                      is deciding whether it prints, not admiring a caption. */}
+                  <span class="absolute bottom-0 right-0 bg-black/70 px-2 py-1 font-mono text-[9px] text-white/60 opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity">
+                    {photo.width}×{photo.height}
+                  </span>
+                </a>
+              ))}
+            </div>
+            {epk.photo_credit && (
+              <p class="font-mono text-[10px] text-white/30 mt-3">{epk.photo_credit}</p>
+            )}
           </div>
         )}
 
@@ -180,7 +196,7 @@ const fmtDate = (iso: string) => {
 
         {pastVenues.length > 0 && (
           <p class="font-mono text-[10px] text-white/30 mt-6 leading-relaxed max-w-[62ch]">
-            Previously: {pastVenues.join(' · ')}
+            Played: {pastVenues.join(' · ')}
           </p>
         )}
       </section>
