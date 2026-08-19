@@ -11,30 +11,30 @@
 // annotations carry.
 
 export function stagePlot(accent = '#3df082') {
-  const W = 168, H = 96;                       // mm, inside the page margins
+  const W = 168, H = 124;                      // mm, inside the page margins
   const t = (x, y, s, opts = {}) =>
     `<text x="${x}" y="${y}" fill="${opts.fill || '#cfcfcf'}" font-size="${opts.size || 2.6}"
        font-family="Rubik, sans-serif" font-weight="${opts.weight || 400}"
        letter-spacing="${opts.ls || 0}" text-anchor="${opts.anchor || 'start'}">${s}</text>`;
 
   // Booth: 2200mm of table is the real-world ask for a four-deck layout.
-  const bx = 34, by = 40, bw = 100, bh = 22;
-  const deckW = 17, deckH = 15, gap = 2;
+  const bx = 30, by = 54, bw = 108, bh = 26;
+  const deckW = 18.4, deckH = 18, gap = 2.2;
   const decks = [];
   let dx = bx + 4;
   for (const label of ['CDJ', 'CDJ', 'DJM', 'CDJ', 'CDJ']) {
     const isMixer = label === 'DJM';
     decks.push(`
-      <rect x="${dx}" y="${by + 3.5}" width="${deckW}" height="${deckH}" rx="1"
+      <rect x="${dx}" y="${by + 4}" width="${deckW}" height="${deckH}" rx="1"
             fill="${isMixer ? accent : 'none'}" fill-opacity="${isMixer ? .16 : 0}"
             stroke="${isMixer ? accent : '#7d7d7d'}" stroke-width=".4"/>
-      ${t(dx + deckW / 2, by + 12.2, label, { anchor: 'middle', size: 2.9,
+      ${t(dx + deckW / 2, by + 14.5, label, { anchor: 'middle', size: 2.9,
           weight: 700, fill: isMixer ? accent : '#e8e8e8' })}`);
     dx += deckW + gap;
   }
 
   const monitor = (x, flip) => `
-    <g transform="translate(${x},${by - 20}) ${flip ? 'scale(-1,1)' : ''}">
+    <g transform="translate(${x},${by - 28}) ${flip ? 'scale(-1,1)' : ''}">
       <path d="M0 0 L9 -4 L9 10 L0 6 Z" fill="none" stroke="${accent}" stroke-width=".45"/>
       <line x1="4.5" y1="10" x2="4.5" y2="17" stroke="#6d6d6d" stroke-width=".4"/>
       <line x1="1" y1="17" x2="8" y2="17" stroke="#6d6d6d" stroke-width=".4"/>
@@ -64,8 +64,8 @@ export function stagePlot(accent = '#3df082') {
     <!-- monitors -->
     ${monitor(bx - 14, false)}
     ${monitor(bx + bw + 14, true)}
-    ${t(bx - 9.5, by - 24, 'MONITOR', { anchor: 'middle', size: 2.3, ls: .3, fill: accent })}
-    ${t(bx + bw + 9.5, by - 24, 'MONITOR', { anchor: 'middle', size: 2.3, ls: .3, fill: accent })}
+    ${t(bx - 9.5, by - 32, 'MONITOR', { anchor: 'middle', size: 2.3, ls: .3, fill: accent })}
+    ${t(bx + bw + 9.5, by - 32, 'MONITOR', { anchor: 'middle', size: 2.3, ls: .3, fill: accent })}
 
     <!-- signal path -->
     <path d="M${bx + bw / 2 + 8} ${by + bh} L${bx + bw / 2 + 8} ${by + bh + 9} L${W - 26} ${by + bh + 9}"
