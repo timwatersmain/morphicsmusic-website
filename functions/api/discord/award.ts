@@ -23,6 +23,10 @@ interface Env extends DiscordBotEnv {
   DOWNLOADS: KVNamespace;
 }
 
+// Generous next to a real key (~40 chars) but far below anything that
+// could be mistaken for payload smuggling.
+const MAX_EVENT_KEY_LENGTH = 200;
+
 export const onRequestOptions: PagesFunction<Env> = async ({ request }) => preflight(request);
 
 function json(body: unknown, status = 200): Response {
@@ -77,7 +81,16 @@ export const onRequestPost: PagesFunction<Env> = corsHandler<Env>(
     // Reporting 200 rather than an error on a duplicate is deliberate: the
     // bot treats non-2xx as "still undelivered" and would keep the award
     // queued forever, turning a retry storm into a failure storm.
-    const eventKey = String(body.event_key || '').trim().slice(0, 200);
+    const eventKey = String(body.event_key || '').trim();
+    // Reject rather than truncate. Truncating meant two keys sharing a
+    // prefix collided, and a collision reads as "already applied" — so the
+    // second award would be silently DROPPED. That is the precise failure
+    // this whole mechanism exists to remove, and it would be invisible.
+    // Real keys are (kind, message id, user id) and nowhere near this bound,
+    // so anything longer is a caller bug worth surfacing loudly.
+    if (eventKey.length > MAX_EVENT_KEY_LENGTH) {
+      return json({ error: 'event_key too long' }, 400);
+    }
     const alreadyApplied = eventKey
       ? !(await claimAwardEvent(env.GATES, eventKey, Math.floor(Date.now() / 1000)))
       : false;

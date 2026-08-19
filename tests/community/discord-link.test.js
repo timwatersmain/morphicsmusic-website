@@ -495,3 +495,22 @@ describe('award idempotency (migration 0015)', () => {
     expect(replay.body.discord_ep).toBe(60);
   });
 });
+
+
+describe('event_key bounds', () => {
+  it('rejects an over-long key instead of truncating it', async () => {
+    // Truncating would let two keys sharing a prefix collide, and a collision
+    // reads as "already applied" — silently dropping the second award.
+    await link();
+    const res = await award(30, DISCORD_ID, 'k'.repeat(500));
+    expect(res.res.status).toBe(400);
+    expect(res.body.error).toMatch(/too long/);
+  });
+
+  it('does not apply EP for a rejected key', async () => {
+    await link();
+    await award(30, DISCORD_ID, 'k'.repeat(500));
+    const good = await award(30, DISCORD_ID, 'msg:999:abc');
+    expect(good.body.discord_ep).toBe(30);
+  });
+});
