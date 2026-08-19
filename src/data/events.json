@@ -1,16 +1,298 @@
 {
-  "_shape": "Edit this file to add shows. `upcoming` and `past` use the same fields; the page sorts each by date and moves nothing between them automatically — a show you played belongs in `past`. Every field except date, venue and city is optional, and the page renders only what is present. NOTHING here is invented: entries are added by hand from real shows.",
+  "_shape": "Shows. `upcoming` and `past` share the same fields; the page sorts each by date and moves nothing between them automatically. Only `date` is required — every other field renders only if present, so a show with an unconfirmed venue simply shows without one rather than with an invented one. NOTHING here is generated: `past` was imported from 'Morphics Performance History.xlsx' (28 shows compiled from tagged fliers, Sep 2018 - Dec 2024) and is acknowledged incomplete — pre-2018 and unlogged dates are missing.",
   "_fields": {
-    "date": "ISO date, e.g. 2026-09-12",
-    "venue": "Venue name",
-    "city": "City, or 'City, Country'",
-    "title": "Optional billing, e.g. 'Morphics live A/V'",
-    "with": "Optional line-up note, e.g. 'w/ support'",
-    "ticket_url": "Optional link out to the ticket seller",
-    "photo": "Optional /images/... path",
+    "date": "ISO date, e.g. 2026-09-12. For a multi-day run, the FIRST day — it is what the list sorts on.",
+    "date_display": "Optional override for what's shown, e.g. '8–11 Aug 2019' or 'Dec 2019' when the day is unknown.",
+    "title": "Event or billing",
+    "venue": "Venue name. Omit if genuinely unconfirmed.",
+    "city": "City, or 'City, ST'",
+    "role": "Headliner, Support, Mid-bill, etc.",
+    "promoter": "Promoter or presenter",
+    "lineup": "Full bill as advertised",
+    "ticket_url": "Upcoming only — link out to the ticket seller",
     "note": "Optional one-line description",
     "sold_out": "Optional boolean"
   },
   "upcoming": [],
-  "past": []
+  "past": [
+    {
+      "date": "2024-12-28",
+      "date_display": "28 Dec 2024",
+      "title": "Jade Cicada",
+      "venue": "The Assembly Room",
+      "city": "Baltimore, MD",
+      "role": "Support",
+      "promoter": "Kouch Kollective",
+      "lineup": "Jade Cicada (visuals by Tenorless), Resonant Language, Crawdad Sniper, Optik Sound, Morphics"
+    },
+    {
+      "date": "2023-09-15",
+      "date_display": "15 Sep 2023",
+      "title": "Road to Autumn Revival (Murkury)",
+      "venue": "The Crown",
+      "city": "Baltimore, MD",
+      "role": "Support",
+      "promoter": "Head Nod Entertainment",
+      "lineup": "Murkury (90-min), Morphics, Retchs, Honeynug, Yarvest"
+    },
+    {
+      "date": "2023-05-27",
+      "date_display": "27 May 2023",
+      "title": "Depth Perception: EOS + Humandala",
+      "venue": "Mother's Grille",
+      "city": "Baltimore, MD",
+      "role": "Support",
+      "promoter": "Depth Perception",
+      "lineup": "EOS, Humandala, Morphics"
+    },
+    {
+      "date": "2023-01-21",
+      "date_display": "21 Jan 2023",
+      "title": "Uncharted Presents: Morphics",
+      "venue": "The Crown",
+      "city": "Baltimore, MD",
+      "role": "Headliner",
+      "promoter": "Uncharted / Bluberry Mgmt / Good Vibes",
+      "lineup": "Morphics, Siska, Fringe, DNNY PHNTM, HRTZ"
+    },
+    {
+      "date": "2023-01-19",
+      "date_display": "19 Jan 2023",
+      "title": "Re:Charge Thursday Electronic Series",
+      "venue": "The Summit Music Hall",
+      "city": "Columbus, OH",
+      "role": "Headliner",
+      "promoter": "Recharge Thursdays / Full{} Ent. / Alchemy Sessions",
+      "lineup": "5AM (Philly), Morphics, Squid"
+    },
+    {
+      "date": "2023-01-13",
+      "date_display": "13 Jan 2023",
+      "title": "Lysergia Art Collective: Odyssey",
+      "venue": "Liaison Room",
+      "city": "Philadelphia, PA",
+      "role": "Headliner",
+      "promoter": "Lysergia Art Collective",
+      "lineup": "Morphics, Siska, Lavier, Leonic"
+    },
+    {
+      "date": "2022-11-23",
+      "date_display": "23 Nov 2022",
+      "title": "Evolutionary Events Presents: Morphics",
+      "venue": "Medieval Pub",
+      "city": "Cleveland, OH",
+      "role": "Headliner",
+      "promoter": "Evolutionary Events",
+      "lineup": "Morphics, Harok, Subsyrup, Subdermal, Elicit Ohm"
+    },
+    {
+      "date": "2022-10-21",
+      "date_display": "21 Oct 2022",
+      "title": "Head Nod Entertainment Charity Pop-Up",
+      "venue": "The Pyramid",
+      "city": "Washington, DC",
+      "role": "2nd billed",
+      "promoter": "Head Nod Entertainment / Para Presents",
+      "lineup": "Chef Boyarbeatz, Morphics, Raychill Sound, Ramblur, Baecardi B, Gingersnap"
+    },
+    {
+      "date": "2022-10-14",
+      "date_display": "14–15 Oct 2022",
+      "title": "BOSSWAVE (3D Audio + Visual)",
+      "venue": "Harrisburg Midtown Arts Center",
+      "city": "Harrisburg, PA",
+      "role": "Takeover tier",
+      "promoter": "NXT LVL, Obskure, HMAC",
+      "lineup": "Nero, Pendulum, Modestep, Rusko, 1788-L, +50 artists (Morphics, Depth Perception takeover)"
+    },
+    {
+      "date": "2022-07-23",
+      "date_display": "23 Jul 2022",
+      "title": "Proper Presents: Sam Binga + Fixate",
+      "venue": "The 8x10",
+      "city": "Baltimore, MD",
+      "role": "Local support",
+      "promoter": "Proper / Depth Perception",
+      "lineup": "Sam Binga, Fixate, Morphics, Dhananjaya, Lawless"
+    },
+    {
+      "date": "2022-05-26",
+      "date_display": "26–29 May 2022",
+      "title": "Bigfoot Belectro (Phase Two)",
+      "venue": "Tracy City",
+      "city": "Tracy City, TN",
+      "role": "Mid-tier",
+      "promoter": "Big Chillin x Underground Sound",
+      "lineup": "Truth, Yheti, Mr. Bill, The Widdler, DMVU, Khiva, Resonant Language, +many (Morphics)"
+    },
+    {
+      "date": "2022-05-19",
+      "date_display": "19–22 May 2022",
+      "title": "Dreamscape Festival",
+      "venue": "Camp Ramblewood",
+      "city": "Darlington, MD",
+      "role": "3rd tier",
+      "promoter": "People Sources Agency",
+      "lineup": "Rusko, G Jones, Chee, Craze, Minnesota, SoDown, VCTRE, +many (Morphics)"
+    },
+    {
+      "date": "2022-04-23",
+      "date_display": "23 Apr 2022",
+      "title": "Depth Perception: Kursa + K.L.O.",
+      "venue": "The 8x10",
+      "city": "Baltimore, MD",
+      "role": "2nd billed",
+      "promoter": "Depth Perception / Sub.Mission Agency",
+      "lineup": "Kursa, K.L.O., Morphics, Sketchy Pete, Raychill Sound"
+    },
+    {
+      "date": "2022-01-22",
+      "date_display": "22 Jan 2022",
+      "title": "Depth Perception: KLL SMTH + Khiva",
+      "venue": "Skully's Music-Diner",
+      "city": "Columbus, OH",
+      "role": "Closing set",
+      "promoter": "Depth Perception / PeopleSources",
+      "lineup": "KLL SMTH, Khiva, Mt. Analogue, Morphics (closing), Kimono Dog, Metamorphose"
+    },
+    {
+      "date": "2021-09-15",
+      "date_display": "15 Sep 2021",
+      "title": "Background Noise: The Call to Arms",
+      "venue": "Wonderfly Arena",
+      "city": "Arbutus, MD",
+      "role": "Mid-bill",
+      "promoter": "Background Noise",
+      "lineup": "Chee, Ternion Sound, Murkury, Zen Selekta, Morphics, Die by the Sword, Lysn."
+    },
+    {
+      "date": "2021-08-14",
+      "date_display": "14 Aug 2021",
+      "title": "Depth Perception at The 8x10",
+      "venue": "The 8x10",
+      "city": "Baltimore, MD",
+      "role": "Top billed",
+      "promoter": "Depth Perception / PeopleSources",
+      "lineup": "Morphics, illanthropy., Anoxex, Yarvest, Agent Ming"
+    },
+    {
+      "date": "2020-11-21",
+      "date_display": "21 Nov 2020",
+      "title": "Autumn Sound Session",
+      "venue": "216 Westhampton Blvd",
+      "city": "Capitol Heights, MD",
+      "role": "Support",
+      "promoter": "Bass Boss Records",
+      "lineup": "Levitation Jones, Morphics, Sinnoda, Breaddy Bear, Dizzy!, Tact, Yurd"
+    },
+    {
+      "date": "2020-10-23",
+      "date_display": "23–25 Oct 2020",
+      "title": "Autumn Revival Festival",
+      "venue": "Camp grounds",
+      "city": "MD area",
+      "role": "Scheduled set",
+      "promoter": "Autumn Revival",
+      "lineup": "Fri 8:30-9:30PM set. Also: Keota, Murkury, Yarvest, Retchs, Sol Good, Kouch Kollective takeover"
+    },
+    {
+      "date": "2020-08-14",
+      "date_display": "14–15 Aug 2020",
+      "title": "Field Trip Festival",
+      "venue": "River Farm Recreation",
+      "city": "Jefferson, IA",
+      "role": "Upper-mid",
+      "promoter": "Mean Mug Music / PeopleSources",
+      "lineup": "Freddy Todd, BD HBT, Big City, Levitation Jones, Ludge, Morphics, Rest in Pierce, Wylin, Yojas, +many"
+    },
+    {
+      "date": "2020-01-04",
+      "date_display": "4 Jan 2020",
+      "title": "Background Noise Presents",
+      "venue": "U Street Music Hall",
+      "city": "Washington, DC",
+      "role": "Support",
+      "promoter": "Background Noise / Sub.Mission",
+      "lineup": "KLO, Reso, Mickman, special guest Dubamine, Morphics"
+    },
+    {
+      "date": "2019-12-31",
+      "date_display": "31 Dec 2019",
+      "title": "Dubday NYE",
+      "venue": "H0L0",
+      "city": "Ridgewood, NY",
+      "role": "Mid-bill",
+      "promoter": "More Signal Presents",
+      "lineup": "Brightside, BRZRK (Tsimba b2b Deez), Dice Man, Mindset, Morphics, Dubday Residents"
+    },
+    {
+      "date": "2019-12-01",
+      "date_display": "Dec 2019",
+      "title": "Just Come Presents: Morphics + Engix",
+      "venue": "Fallout Shelter",
+      "city": "Morgantown, WV",
+      "role": "Headliner",
+      "promoter": "Just Come Presents / PeopleSources",
+      "lineup": "Morphics, Engix, special guest Maroc, Loogie"
+    },
+    {
+      "date": "2019-10-18",
+      "date_display": "18 Oct 2019",
+      "title": "Khiva: A Very Deep Dark and Dangerous October",
+      "venue": "Barter",
+      "city": "Miami, FL",
+      "role": "Support",
+      "promoter": "Barter",
+      "lineup": "Khiva, Morphics, Brightwing, Create b2b Doseki, Microsounds"
+    },
+    {
+      "date": "2019-08-23",
+      "date_display": "23 Aug 2019",
+      "title": "Detox Dharma Official Launch Party",
+      "venue": "Buddha Lounge",
+      "city": "Towson, MD",
+      "role": "Mid-bill",
+      "promoter": "Detox Dharma",
+      "lineup": "Homemade Spaceship, Wreckno, Night Word, Morphics, +b2b guests"
+    },
+    {
+      "date": "2019-08-08",
+      "date_display": "8–11 Aug 2019",
+      "title": "Sound Haven Festival",
+      "venue": "Jaceland",
+      "city": "Gruetli-Laager, TN",
+      "role": "Undercard",
+      "promoter": "Sub.Mission +",
+      "lineup": "Brightside, Eazybaked, G-Space, Mystic Grizzly, The Widdler, Keota, Levitation Jones, Murkury, Wreckno, +many (Morphics)"
+    },
+    {
+      "date": "2019-03-29",
+      "date_display": "29 Mar 2019",
+      "title": "um.. + sumthin sumthin",
+      "venue": "Station1640",
+      "city": "Los Angeles, CA",
+      "role": "Mid-bill",
+      "promoter": "Flash Mob + Lost & Found",
+      "lineup": "um.., sumthin sumthin, Morphics, Angelic Root, Kloapo"
+    },
+    {
+      "date": "2018-10-18",
+      "date_display": "18 Oct 2018",
+      "title": "Sprout Music Collective: Levitation Jones",
+      "city": "Baltimore area, MD",
+      "role": "Support",
+      "promoter": "Sprout Music Collective / Post Future",
+      "lineup": "Levitation Jones, Morphics, Dexter Rutecki b2b XL"
+    },
+    {
+      "date": "2018-09-21",
+      "date_display": "21 Sep 2018",
+      "title": "Nature of the Beats: G-Space",
+      "venue": "The 8x10",
+      "city": "Baltimore, MD",
+      "role": "Support",
+      "promoter": "Nature of the Beats / PeopleSources",
+      "lineup": "G-Space, Morphics, Image Nation, Teslakat"
+    }
+  ]
 }
