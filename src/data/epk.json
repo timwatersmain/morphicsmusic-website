@@ -1,8 +1,37 @@
 {
   "_shape": "Press kit. Every section renders only if it has content, so an empty field is invisible rather than an empty heading. bio_short/bio_long are the artist's own published bio, transcribed from 'Morphics BIO copy.pdf' — not written here.",
-  "_riders": "Tech and hospitality riders are deliberately NOT published. The 2022 rider PDF carries a third party's name and personal email on page 2, and that is not ours to put on a public page. Publish a version with those removed — or confirmed current and consented — before filling tech_rider_url / hospitality_rider_url.",
+  "_riders": "Riders are generated from press-kit/rider.mjs — edit the content there, not the PDF. Management contact lives in `management` above and flows into both the rider and the one-sheet, so it can never be stale in one and current in the other (which is exactly what happened with the 2022 rider).",
+  "management": {
+    "company": "Centrifuge Management",
+    "contact": "Ben",
+    "email": "Ben@centrifugemgmt.com"
+  },
   "bio_short": "Morphics is an experimental audiovisual project built on constant evolution — fluid, boundary-free sound that flows without shape or form.",
   "bio_long": "Morphics is an experimental music project that embodies the essence of change. Guided by core principles of constant evolution, Morphics weaves a dynamic tapestry of sound—fluid in nature and free of boundaries. By blending diverse textures, rhythms, and tones, it ventures into the outer reaches of music, crafting an auditory experience that flows without shape or form. The essence of the project aims to celebrate the transformative power of art, the endless possibilities of creative expression, and an embrace of the ever-changing nature of existence.",
+  "notable_bills": [
+    "Rusko",
+    "G Jones",
+    "Nero",
+    "Pendulum",
+    "Of The Trees",
+    "Khiva",
+    "Kursa",
+    "Sam Binga",
+    "Fixate",
+    "Reso",
+    "Jade Cicada",
+    "KLL SMTH",
+    "K.L.O.",
+    "Truth",
+    "Yheti",
+    "Mr. Bill",
+    "The Widdler",
+    "Chee",
+    "Ternion Sound",
+    "Craze",
+    "Minnesota",
+    "Resonant Language"
+  ],
   "press_photos": [
     {
       "src": "/images/press/morphics-live-logo-web.jpg",

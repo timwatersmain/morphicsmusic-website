@@ -33,3 +33,6 @@ tools/d1/.wrangler/
 # second line of defense in case a repo-root copy ever shows up.
 .rebuild-fan-projection.sql
 .avatar-sync.sql
+
+# Press-kit intermediates — regenerated on every build
+press-kit/.build/

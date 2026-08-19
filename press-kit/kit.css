@@ -1,0 +1,76 @@
+/* The shared press-kit design system.
+ *
+ * Every value here comes from MOR_brandguidelines_FINAL.pdf — Rubik as the
+ * primary face, black and white as the dominant pair, purple and blue as the
+ * two secondaries. Nothing is invented: the point of this file is that the
+ * one-sheet, the rider and the website stop being three different-looking
+ * documents that happen to share a name.
+ *
+ * Both documents are print targets rendered through headless Chrome, so
+ * everything is in mm and every colour is print-exact. */
+
+@font-face {
+  font-family: 'Rubik';
+  src: url('FONT_PATH') format('woff2');
+  font-weight: 300 900;
+  font-display: block;
+}
+
+:root {
+  --black:  #000000;
+  --white:  #ffffff;
+  --purple: #6c3080;
+  --blue:   #00aeef;
+
+  /* Greys are mixed toward the brand blue rather than taken off a neutral
+     ramp — a flat grey next to #00aeef reads as dirty. */
+  --ink-dim:   #a8b4ba;
+  --ink-faint: #6d787e;
+  --rule:      #23292c;
+
+  --paper-ink:   #14181a;
+  --paper-dim:   #5b666b;
+  --paper-rule:  #d7dee1;
+  --paper-panel: #f2f5f6;
+}
+
+* { box-sizing: border-box; }
+
+/* Nothing may exceed its container. The wordmark is wide enough that sizing
+   it by height alone pushes it past the trim — this has bitten three
+   variants now, so it is capped once, here. */
+img { max-width: 100%; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Rubik', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 400;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+/* ── shared type scale ────────────────────────────────────────────────── */
+h1, h2, h3 { font-weight: 700; margin: 0; letter-spacing: -0.01em; }
+
+.label {
+  font-weight: 700;
+  font-size: 7pt;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.rule { height: 1px; border: 0; margin: 0; }
+
+/* A page is a physical page. Chrome paginates on these. */
+.page {
+  width: 210mm;
+  height: 297mm;
+  padding: 16mm 18mm;
+  position: relative;
+  page-break-after: always;
+  overflow: hidden;
+}
+.page:last-child { page-break-after: auto; }
+
+@page { size: A4; margin: 0; }
