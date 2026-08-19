@@ -14,6 +14,7 @@
 // and the CDJ spec sits underneath as the requirement for ONE of the three.
 
 import { read, esc, asset, shell, renderPdf } from './build.mjs';
+import { stagePlot } from './stage-plot.mjs';
 
 const epk = read('src/data/epk.json');
 const mgmt = epk.management || {};
@@ -29,7 +30,7 @@ const css = `
 .cover .art::after { content:''; position:absolute; inset:0;
   background:linear-gradient(180deg,rgba(0,0,0,.2),rgba(0,0,0,.7) 60%,#000); }
 .cover .body { padding:10mm 18mm 16mm; flex:1; display:flex; flex-direction:column; }
-.cover .mark { height:13mm; width:auto; }
+.cover .mark { width:96mm; height:auto; }
 .cover h1 { font-size:27pt; line-height:1.05; letter-spacing:-.028em; margin:9mm 0 0; }
 .cover h1 em { font-style:normal; color:${A}; }
 .cover .upd { font-size:8pt; color:#6f6f6f; margin-top:3mm; }
@@ -81,9 +82,9 @@ const page = (title, num, inner) => `
 
 const body = `
 <div class="page cover">
-  <div class="art"><img src="${asset('public/images/press/hero/b3-macro-4k.jpg')}" alt=""></div>
+  <div class="art"><img src="${asset('public/images/press/hero/r2-stack3.jpg')}" alt=""></div>
   <div class="body">
-    <img class="mark" src="${asset('public/images/logos/morphics-text-white.png')}" alt="Morphics">
+    <img class="mark" data-mark src="${asset('public/images/logos/morphics-text-white.png')}" alt="Morphics">
     <h1>Performance &amp;<br><em>Technical Rider</em></h1>
     <div class="upd">Updated ${UPDATED} · supersedes all previous versions</div>
     <div class="contacts">
@@ -148,10 +149,10 @@ ${page('DJ set specification', 3, `
     <thead><tr><th>Qty</th><th>Item</th><th>Notes</th></tr></thead>
     <tbody>
       <tr class="key"><td class="q">2 <span style="font-weight:400">(4 pref.)</span></td>
-        <td><b>Pioneer CDJ-2000 NEXUS</b> or better</td>
-        <td>NXS or NXS2. USB and Ethernet ports must be functional.</td></tr>
-      <tr class="key"><td class="q">1</td><td><b>Pioneer DJM-900 NEXUS</b> or better</td>
-        <td>NXS or NXS2.</td></tr>
+        <td><b>Pioneer CDJ-3000</b> preferred</td>
+        <td>CDJ-2000NXS2 accepted. USB and Ethernet ports must be functional.</td></tr>
+      <tr class="key"><td class="q">1</td><td><b>Pioneer DJM-900NXS2</b> or better</td>
+        <td>DJM-A9 or V10 equally welcome.</td></tr>
       <tr><td class="q">1</td><td>Ethernet hub</td>
         <td>Netgear ProSAFE GS105 5-port or similar, linking all CDJs.</td></tr>
       <tr><td class="q">1</td><td>Technics 1200 turntable</td><td>Where available.</td></tr>
@@ -159,7 +160,7 @@ ${page('DJ set specification', 3, `
   </table>
 
   <div class="note">
-    The CDJs and mixer must be NEXUS editions with working USB and Ethernet —
+    The CDJs and mixer must be linkable, with working USB and Ethernet —
     the set is prepared as a linked multi-deck performance. Where a venue cannot
     provide this, the <b>Ableton format needs only two line inputs</b> and is the
     simpler booking.
@@ -179,7 +180,34 @@ ${page('DJ set specification', 3, `
   it is listed, published and promoted in full. It is never shortened or restyled.</p>
 `)}
 
-${page('Logistics & hospitality', 4, `
+${page('Stage plot', 4, `
+  <p>Plan view. The booth footprint is the same for all three formats — only
+  what sits on it changes. Everything marked in green is either provided by the
+  artist or is what the house is being asked to patch.</p>
+
+  <div style="margin:6mm 0 2mm">${stagePlot('#3df082')}</div>
+
+  <h2><span class="n">04</span>Signal path by format</h2>
+  <table>
+    <thead><tr><th>Format</th><th>Source</th><th>To house</th></tr></thead>
+    <tbody>
+      <tr><td class="f">Live A/V</td><td>Artist's audio interface</td>
+        <td>2× balanced line (DI or XLR) + video feed to projector or LED</td></tr>
+      <tr><td class="f">Live — Ableton</td><td>Artist's audio interface</td>
+        <td>2× balanced line (DI or XLR)</td></tr>
+      <tr><td class="f">DJ set</td><td>DJM master out</td>
+        <td>House standard from the mixer</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    Booth width is the one thing worth confirming early: a four-deck layout needs
+    roughly <b>2200 mm</b> of stable table. Two decks fit comfortably in less —
+    say which you can host at advance and the set is prepared for it.
+  </div>
+`)}
+
+${page('Logistics & hospitality', 5, `
   <h2><span class="n">04</span>Load-in, parking &amp; access</h2>
   <ul>
     <li>Venue access at the contracted load-in time, and for 45 minutes after curfew for load-out when headlining.</li>
@@ -206,14 +234,14 @@ ${page('Logistics & hospitality', 4, `
     <li>A hot meal, before the show or at the venue. <b>Not pizza.</b></li>
     <li>Safe, on-time transport to and from the necessary locations.</li>
   </ul>
-  <p>Where a meal cannot be provided, a <b>$20</b> buyout per person applies.</p>
+  <p>Where a meal cannot be provided, a <b>$30</b> buyout per person applies.</p>
 
   <h2><span class="n">07</span>Accommodation</h2>
   <p>Where provided by the Purchaser: a double room at a three-star hotel or
   better, non-smoking, close to the venue, booked for late arrival and late
   check-out, available until the day after the performance. No B&amp;Bs. The
   Purchaser is not responsible for incidentals. Where a hotel was contracted but
-  not provided, a <b>$125</b> buyout applies at settlement.</p>
+  not provided, a <b>$175</b> buyout applies at settlement.</p>
 
   <div class="note">
     Anything here can be discussed — raise it at advance rather than on the day.

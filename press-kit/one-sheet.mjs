@@ -78,7 +78,7 @@ for (const v of variants) {
   <div class="page">
     <div class="hero">
       <img src="${asset(`public/images/press/hero/${v.hero}.jpg`)}" alt="">
-      <img class="mk" src="${mark}" alt="Morphics">
+      <img class="mk" data-mark src="${mark}" alt="Morphics">
       ${v.id === 'G4' ? '' : `<div class="tag">Experimental audiovisual<br>Baltimore, MD<br><b>morphicsmusic.com</b></div>`}
     </div>
     ${v.rule ? '<div class="arule"></div>' : ''}

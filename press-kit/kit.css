@@ -37,9 +37,12 @@
 * { box-sizing: border-box; }
 
 /* Nothing may exceed its container. The wordmark is wide enough that sizing
-   it by height alone pushes it past the trim — this has bitten three
-   variants now, so it is capped once, here. */
+   it by height alone pushes it past the trim — hence the cap.
+   IMPORTANT: size logos by WIDTH with height:auto. A clamped max-width
+   against a fixed height squashes the image rather than scaling it, which
+   is exactly what happened to the wordmark on the rider cover. */
 img { max-width: 100%; }
+img[data-mark] { height: auto; }
 
 html, body {
   margin: 0;
