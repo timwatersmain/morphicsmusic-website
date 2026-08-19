@@ -11,23 +11,6 @@ const past = [...(eventsData.past || [])].sort((a: any, b: any) => b.date.locale
 
 const hasEvents = upcoming.length > 0 || past.length > 0;
 
-// Every figure below is COMPUTED from the entries, never copied from a
-// summary written elsewhere. The source spreadsheet's own summary tab and
-// its log already disagree (it counts 6 headline slots against 5 rows
-// marked Headliner, because it also counts "Top billed"), and a stat that
-// can drift from the list printed directly beneath it is worse than no stat.
-const years = past.map((e: any) => Number(e.date.slice(0, 4))).filter(Boolean);
-const states = new Set(
-  past.map((e: any) => (e.city || '').split(',').pop()?.trim()).filter((s: any) => s && s.length === 2),
-);
-// A multi-day run is one whose display carries a range — the festivals.
-const multiDay = past.filter((e: any) => (e.date_display || '').includes('–')).length;
-const stats = past.length ? [
-  { n: String(past.length), label: 'shows' },
-  { n: `${Math.min(...years)}–${Math.max(...years)}`, label: 'years' },
-  { n: String(states.size), label: 'states' },
-  { n: String(multiDay), label: 'festivals' },
-] : [];
 const pressPhotos = (epk.press_photos || []) as Array<{ src: string; full: string; width?: number; height?: number }>;
 const liveVideos = (epk.live_videos || []) as Array<{ label: string; url: string }>;
 const pastVenues = (epk.past_venues || []) as string[];
@@ -94,17 +77,6 @@ const fmtDate = (iso: string) => {
           <span class="font-mono text-xs text-secondary uppercase tracking-widest">Selected shows</span>
           <div class="h-[1px] flex-1 bg-outline-variant/30"></div>
         </div>
-        {stats.length > 0 && (
-          <dl class="flex flex-wrap gap-x-10 gap-y-4 mb-8">
-            {stats.map(s => (
-              <div>
-                <dt class="font-mono text-[10px] text-white/30 uppercase tracking-widest">{s.label}</dt>
-                <dd class="font-headline text-2xl text-primary tabular-nums mt-1">{s.n}</dd>
-              </div>
-            ))}
-          </dl>
-        )}
-
         <ul class="divide-y divide-white/5 border-y border-white/5">
           {past.map((e: any) => (
             <li class="grid grid-cols-1 sm:grid-cols-[7rem_1fr_auto] items-baseline gap-x-6 gap-y-1 py-4">
