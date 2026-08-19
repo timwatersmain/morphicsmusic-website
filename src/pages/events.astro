@@ -1,0 +1,344 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { INTENTS, INTENT_ORDER } from '../../functions/_lib/contact';
+import eventsData from '../data/events.json';
+import epk from '../data/epk.json';
+
+// Sorted here, at build time, rather than in the browser: the list is small
+// and static, so shipping JS to reorder it would be pure overhead.
+const upcoming = [...(eventsData.upcoming || [])].sort((a: any, b: any) => a.date.localeCompare(b.date));
+const past = [...(eventsData.past || [])].sort((a: any, b: any) => b.date.localeCompare(a.date));
+
+const hasEvents = upcoming.length > 0 || past.length > 0;
+const pressPhotos = (epk.press_photos || []) as string[];
+const liveVideos = (epk.live_videos || []) as Array<{ label: string; url: string }>;
+const pastVenues = (epk.past_venues || []) as string[];
+// The EPK block is worth building but not worth showing empty — a heading
+// with nothing under it reads as neglect, which is the opposite of what a
+// press kit is for.
+const hasEpk = !!(epk.bio_short || epk.bio_long || pressPhotos.length || epk.tech_rider_url
+  || epk.hospitality_rider_url || liveVideos.length || pastVenues.length);
+
+const fmtDate = (iso: string) => {
+  const d = new Date(iso + 'T12:00:00Z');
+  return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString('en-GB', {
+    day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC',
+  });
+};
+---
+
+<BaseLayout title="EVENTS" currentPage="/events">
+  <div class="max-w-5xl mx-auto">
+
+    <header class="mb-16">
+      <span class="font-mono text-xs text-secondary uppercase tracking-widest">Live</span>
+      <h1 class="font-headline font-bold text-5xl md:text-7xl text-primary uppercase tracking-tighter leading-none mt-2">EVENTS</h1>
+      <p class="font-mono text-[11px] text-white/50 mt-4 leading-relaxed max-w-[60ch]">
+        Where Morphics has played, where it's playing next, and the one place to
+        get in touch about booking, licensing or press.
+      </p>
+      <a href="#contact" class="inline-block mt-6 px-6 py-3 rounded-full bg-primary text-on-primary font-mono text-[11px] tracking-widest uppercase hover:bg-secondary hover:text-on-secondary transition-colors">
+        Booking &amp; enquiries
+      </a>
+    </header>
+
+    {upcoming.length > 0 && (
+      <section class="mb-16">
+        <div class="flex items-baseline gap-3 mb-6">
+          <span class="font-mono text-xs text-secondary uppercase tracking-widest">Upcoming</span>
+          <div class="h-[1px] flex-1 bg-outline-variant/30"></div>
+        </div>
+        <ul class="space-y-3">
+          {upcoming.map((e: any) => (
+            <li class="border border-white/10 hover:border-secondary/30 transition-colors p-5 flex flex-wrap items-baseline gap-x-6 gap-y-2">
+              <time datetime={e.date} class="font-mono text-[11px] text-secondary tabular-nums w-28 shrink-0">{fmtDate(e.date)}</time>
+              <div class="flex-1 min-w-[14rem]">
+                <h2 class="font-headline text-2xl text-primary uppercase tracking-tight leading-none">{e.venue}</h2>
+                <p class="font-mono text-[11px] text-white/50 mt-1">
+                  {e.city}{e.with ? ` · ${e.with}` : ''}{e.title ? ` · ${e.title}` : ''}
+                </p>
+                {e.note && <p class="font-mono text-[10px] text-white/30 mt-2 leading-relaxed">{e.note}</p>}
+              </div>
+              {e.sold_out
+                ? <span class="font-mono text-[10px] uppercase tracking-widest text-white/30 border border-white/10 px-4 py-2 rounded-full">Sold out</span>
+                : e.ticket_url
+                  ? <a href={e.ticket_url} rel="noopener" class="font-mono text-[10px] uppercase tracking-widest text-primary border border-primary/20 hover:border-primary/60 hover:bg-primary/5 px-4 py-2 rounded-full transition-colors">Tickets</a>
+                  : null}
+            </li>
+          ))}
+        </ul>
+      </section>
+    )}
+
+    {past.length > 0 && (
+      <section class="mb-16">
+        <div class="flex items-baseline gap-3 mb-6">
+          <span class="font-mono text-xs text-secondary uppercase tracking-widest">Previously</span>
+          <div class="h-[1px] flex-1 bg-outline-variant/30"></div>
+        </div>
+        <ul class="divide-y divide-white/5 border-y border-white/5">
+          {past.map((e: any) => (
+            <li class="flex flex-wrap items-baseline gap-x-6 gap-y-1 py-4">
+              <time datetime={e.date} class="font-mono text-[10px] text-white/30 tabular-nums w-28 shrink-0">{fmtDate(e.date)}</time>
+              <span class="font-mono text-[12px] text-white/80 flex-1 min-w-[12rem]">{e.venue}</span>
+              <span class="font-mono text-[11px] text-white/40">{e.city}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+    )}
+
+    {!hasEvents && (
+      <section class="mb-16 p-8 border border-white/10 rounded-[var(--radius-lg)]">
+        <p class="font-mono text-[11px] text-white/50 leading-relaxed max-w-[58ch]">
+          No dates announced right now. Bookings are open — if you run a venue,
+          a night or a festival, the form below reaches me directly.
+        </p>
+        <p class="font-mono text-[10px] text-white/30 mt-4 leading-relaxed max-w-[58ch]">
+          Fans: <a href="/community" class="text-secondary underline">join the community</a> and
+          you'll hear about dates before they go anywhere else.
+        </p>
+      </section>
+    )}
+
+    {hasEpk && (
+      <section class="mb-16">
+        <div class="flex items-baseline gap-3 mb-6">
+          <span class="font-mono text-xs text-secondary uppercase tracking-widest">Press kit</span>
+          <div class="h-[1px] flex-1 bg-outline-variant/30"></div>
+          <span class="font-mono text-[10px] text-white/30 normal-case">No form, no email — take what you need</span>
+        </div>
+
+        {epk.bio_short && (
+          <p class="font-body text-white/70 leading-relaxed max-w-[62ch] mb-4">{epk.bio_short}</p>
+        )}
+        {epk.bio_long && (
+          <details class="mb-6">
+            <summary class="font-mono text-[10px] text-secondary uppercase tracking-widest cursor-pointer">Long bio</summary>
+            <p class="font-body text-white/60 leading-relaxed max-w-[62ch] mt-3 whitespace-pre-line">{epk.bio_long}</p>
+          </details>
+        )}
+
+        {pressPhotos.length > 0 && (
+          <div class="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
+            {pressPhotos.map((src: string) => (
+              <a href={src} rel="noopener" class="block border border-white/10 hover:border-secondary/40 transition-colors">
+                <img src={src} alt="" loading="lazy" class="w-full aspect-[4/3] object-cover" />
+              </a>
+            ))}
+          </div>
+        )}
+
+        <div class="flex flex-wrap gap-3">
+          {epk.tech_rider_url && <a href={epk.tech_rider_url} rel="noopener" class="font-mono text-[10px] uppercase tracking-widest text-primary border border-primary/20 hover:border-primary/60 px-4 py-2 rounded-full">Tech rider</a>}
+          {epk.hospitality_rider_url && <a href={epk.hospitality_rider_url} rel="noopener" class="font-mono text-[10px] uppercase tracking-widest text-primary border border-primary/20 hover:border-primary/60 px-4 py-2 rounded-full">Hospitality rider</a>}
+          {epk.logo && <a href={epk.logo} rel="noopener" class="font-mono text-[10px] uppercase tracking-widest text-primary border border-primary/20 hover:border-primary/60 px-4 py-2 rounded-full">Logo</a>}
+          {liveVideos.map((v: any) => (
+            <a href={v.url} rel="noopener" class="font-mono text-[10px] uppercase tracking-widest text-white/60 border border-white/10 hover:border-secondary/40 px-4 py-2 rounded-full">{v.label}</a>
+          ))}
+        </div>
+
+        {pastVenues.length > 0 && (
+          <p class="font-mono text-[10px] text-white/30 mt-6 leading-relaxed max-w-[62ch]">
+            Previously: {pastVenues.join(' · ')}
+          </p>
+        )}
+      </section>
+    )}
+
+    <!-- The portal. One route, four intents: the branching question comes
+         first and only the matching fields are revealed, because a talent
+         buyer and a fan need completely different forms and showing both to
+         everyone loses both. Field lists come from functions/_lib/contact.ts
+         so the markup and the server-side validation cannot drift. -->
+    <section id="contact" class="scroll-mt-28">
+      <div class="flex items-baseline gap-3 mb-6">
+        <span class="font-mono text-xs text-secondary uppercase tracking-widest">Get in touch</span>
+        <div class="h-[1px] flex-1 bg-outline-variant/30"></div>
+      </div>
+
+      <p class="font-mono text-[11px] text-white/50 mb-6">What brings you here?</p>
+
+      <div id="intent-picker" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-10">
+        {INTENT_ORDER.map(key => (
+          <button
+            type="button"
+            class="intent-btn text-left p-5 border border-white/10 hover:border-secondary/40 hover:bg-secondary/5 transition-colors rounded-[var(--radius-lg)]"
+            data-intent={key}
+            aria-pressed="false"
+          >
+            <span class="block font-headline text-lg text-primary uppercase tracking-tight leading-none">{INTENTS[key].label}</span>
+            <span class="block font-mono text-[10px] text-white/40 mt-2 leading-relaxed">{INTENTS[key].blurb}</span>
+          </button>
+        ))}
+      </div>
+
+      <form id="contact-form" class="hidden space-y-5" novalidate>
+        <p id="contact-intro" class="font-mono text-[11px] text-white/50 leading-relaxed"></p>
+        <div id="contact-fields" class="grid grid-cols-1 md:grid-cols-2 gap-5"></div>
+
+        <!-- Honeypot. Hidden from sight AND from assistive tech, and never
+             autofilled, so only a script fills it in. -->
+        <div class="absolute w-px h-px overflow-hidden -left-[9999px]" aria-hidden="true">
+          <label for="website">Website</label>
+          <input id="website" name="website" type="text" tabindex="-1" autocomplete="off" />
+        </div>
+
+        <div class="flex flex-wrap items-center gap-4 pt-2">
+          <button type="submit" id="contact-submit" class="px-8 py-4 rounded-full bg-primary text-on-primary font-mono text-[11px] tracking-widest uppercase hover:bg-secondary hover:text-on-secondary transition-colors disabled:opacity-30">
+            Send
+          </button>
+          <button type="button" id="contact-back" class="font-mono text-[10px] text-white/40 hover:text-secondary uppercase tracking-widest">
+            Change subject
+          </button>
+        </div>
+
+        <p id="contact-status" role="status" aria-live="polite" class="font-mono text-[11px] text-white/50 min-h-5 leading-relaxed"></p>
+      </form>
+
+      <div id="contact-done" class="hidden p-8 border border-secondary/30 bg-secondary/5 rounded-[var(--radius-lg)]">
+        <p class="font-headline text-2xl text-primary uppercase tracking-tight">Message sent</p>
+        <p id="contact-done-msg" class="font-mono text-[11px] text-white/60 mt-3 leading-relaxed"></p>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    import { INTENTS, INTENT_ORDER, type IntentKey } from '../../functions/_lib/contact';
+
+    document.addEventListener('astro:page-load', () => {
+      const picker = document.getElementById('intent-picker');
+      const form = document.getElementById('contact-form') as HTMLFormElement | null;
+      if (!picker || !form) return;
+
+      const fieldsEl = document.getElementById('contact-fields')!;
+      const introEl = document.getElementById('contact-intro')!;
+      const statusEl = document.getElementById('contact-status')!;
+      const submitBtn = document.getElementById('contact-submit') as HTMLButtonElement;
+      const backBtn = document.getElementById('contact-back')!;
+      const doneEl = document.getElementById('contact-done')!;
+      const doneMsg = document.getElementById('contact-done-msg')!;
+
+      let intent: IntentKey | null = null;
+      // Stamped when the form is revealed, not on page load: the elapsed
+      // check is about how long someone spent FILLING the form, and a
+      // visitor who reads the events list for five minutes first is not
+      // more human for it.
+      let shownAt = 0;
+
+      const esc = (s: string) => String(s ?? '').replace(/[&<>"']/g,
+        c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
+
+      function renderFields(key: IntentKey) {
+        const spec = INTENTS[key];
+        introEl.textContent = `${spec.label} — you'll hear back ${spec.replyWithin}.`;
+        fieldsEl.innerHTML = spec.fields.map(f => {
+          const id = 'f-' + f.name;
+          const wide = f.type === 'textarea' ? ' md:col-span-2' : '';
+          const control = f.type === 'textarea'
+            ? `<textarea id="${id}" name="${esc(f.name)}" rows="5" maxlength="${f.maxLength ?? 500}"
+                 class="w-full px-4 py-3 bg-surface-container-low border border-white/10 focus:border-secondary outline-none font-body text-sm text-white/80 rounded-[var(--radius)] resize-y"
+                 ${f.placeholder ? `placeholder="${esc(f.placeholder)}"` : ''}></textarea>`
+            : `<input id="${id}" name="${esc(f.name)}" type="${esc(f.type || 'text')}" maxlength="${f.maxLength ?? 500}"
+                 ${f.name === 'email' ? 'autocomplete="email"' : ''}
+                 ${f.name === 'name' ? 'autocomplete="name"' : ''}
+                 class="w-full px-4 py-3 bg-surface-container-low border border-white/10 focus:border-secondary outline-none font-mono text-sm text-primary"
+                 ${f.placeholder ? `placeholder="${esc(f.placeholder)}"` : ''} />`;
+          return `
+            <div class="${wide}">
+              <label for="${id}" class="block font-mono text-[10px] text-white/40 uppercase tracking-widest mb-2">
+                ${esc(f.label)}${f.required ? '' : ' <span class="text-white/20 normal-case tracking-normal">(optional)</span>'}
+              </label>
+              ${control}
+              <p class="field-error font-mono text-[10px] text-error mt-2 min-h-4" data-for="${esc(f.name)}"></p>
+            </div>`;
+        }).join('');
+      }
+
+      function choose(key: IntentKey) {
+        intent = key;
+        shownAt = Date.now();
+        renderFields(key);
+        picker.querySelectorAll<HTMLButtonElement>('.intent-btn').forEach(b => {
+          const on = b.dataset.intent === key;
+          b.setAttribute('aria-pressed', String(on));
+          b.classList.toggle('border-primary', on);
+          b.classList.toggle('bg-primary/10', on);
+        });
+        form!.classList.remove('hidden');
+        statusEl.textContent = '';
+        (fieldsEl.querySelector('input, textarea') as HTMLElement | null)?.focus();
+      }
+
+      picker.querySelectorAll<HTMLButtonElement>('.intent-btn').forEach(btn => {
+        btn.addEventListener('click', () => choose(btn.dataset.intent as IntentKey));
+      });
+
+      backBtn.addEventListener('click', () => {
+        form!.classList.add('hidden');
+        intent = null;
+        picker.querySelectorAll<HTMLButtonElement>('.intent-btn').forEach(b => {
+          b.setAttribute('aria-pressed', 'false');
+          b.classList.remove('border-primary', 'bg-primary/10');
+        });
+        picker.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
+
+      function clearErrors() {
+        form!.querySelectorAll<HTMLElement>('.field-error').forEach(p => { p.textContent = ''; });
+      }
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (!intent) return;
+        clearErrors();
+        submitBtn.disabled = true;
+        statusEl.textContent = 'Sending…';
+
+        const payload: Record<string, unknown> = {
+          intent,
+          website: (document.getElementById('website') as HTMLInputElement).value,
+          elapsed_seconds: Math.round((Date.now() - shownAt) / 1000),
+        };
+        for (const f of INTENTS[intent].fields) {
+          const el = form!.elements.namedItem(f.name) as HTMLInputElement | HTMLTextAreaElement | null;
+          if (el) payload[f.name] = el.value;
+        }
+
+        try {
+          const r = await fetch('/api/contact', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+          const data = await r.json().catch(() => ({}));
+
+          if (r.status === 400 && data.errors) {
+            // Errors land ON their fields, not in one lump at the bottom —
+            // a long booking form is exactly where a summary makes you hunt.
+            for (const [name, msg] of Object.entries(data.errors as Record<string, string>)) {
+              const p = form!.querySelector<HTMLElement>(`.field-error[data-for="${CSS.escape(name)}"]`);
+              if (p) p.textContent = msg;
+            }
+            statusEl.textContent = 'Some details need a look.';
+            const first = form!.querySelector<HTMLElement>('.field-error:not(:empty)');
+            first?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return;
+          }
+          if (r.status === 429) { statusEl.textContent = 'That is a lot of messages — try again in a few minutes.'; return; }
+          if (!r.ok) throw new Error(data.error || 'send failed');
+
+          form!.classList.add('hidden');
+          picker.classList.add('hidden');
+          doneEl.classList.remove('hidden');
+          doneMsg.textContent = `You'll hear back ${data.reply_within || 'shortly'}. A copy is on its way to your inbox.`;
+          doneEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } catch (err: any) {
+          statusEl.textContent = 'That did not send — check your connection and try again, or email morphicsmusic@gmail.com directly.';
+        } finally {
+          submitBtn.disabled = false;
+        }
+      });
+    });
+  </script>
+</BaseLayout>

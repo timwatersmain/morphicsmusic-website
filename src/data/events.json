@@ -1,0 +1,16 @@
+{
+  "_shape": "Edit this file to add shows. `upcoming` and `past` use the same fields; the page sorts each by date and moves nothing between them automatically — a show you played belongs in `past`. Every field except date, venue and city is optional, and the page renders only what is present. NOTHING here is invented: entries are added by hand from real shows.",
+  "_fields": {
+    "date": "ISO date, e.g. 2026-09-12",
+    "venue": "Venue name",
+    "city": "City, or 'City, Country'",
+    "title": "Optional billing, e.g. 'Morphics live A/V'",
+    "with": "Optional line-up note, e.g. 'w/ support'",
+    "ticket_url": "Optional link out to the ticket seller",
+    "photo": "Optional /images/... path",
+    "note": "Optional one-line description",
+    "sold_out": "Optional boolean"
+  },
+  "upcoming": [],
+  "past": []
+}

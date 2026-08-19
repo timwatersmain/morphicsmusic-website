@@ -10,6 +10,9 @@ const navItems = [
   // size (text-[8px]) that five items force here — mobileLabel shortens it
   // for that row only. The route and desktop label are unchanged.
   { label: 'COMMUNITY', href: '/community', icon: 'groups', mobileLabel: 'FANS' },
+  // Sixth item — see the mobileLabel note above, which now matters more:
+  // six labels share the 320px row, so this one is short by design.
+  { label: 'EVENTS',    href: '/events',    icon: 'calendar_month', mobileLabel: 'LIVE' },
 ];
 ---
 
@@ -53,7 +56,7 @@ const navItems = [
         ]}
       >
         <span class="material-symbols-outlined text-[22px] md:text-base leading-none">{item.icon}</span>
-        <span class="md:hidden font-headline uppercase tracking-[0.2em] text-[8px] mt-1 leading-none">{item.mobileLabel || item.label}</span>
+        <span class="md:hidden font-headline uppercase tracking-[0.08em] min-[360px]:tracking-[0.2em] text-[8px] mt-1 leading-none">{item.mobileLabel || item.label}</span>
         <span class="hidden md:inline font-headline uppercase tracking-[0.2em] text-[0.75rem] leading-none">{item.label}</span>
       </a>
     ))}
