@@ -196,6 +196,43 @@
     view-transition-name: site-nav;
   }
 
+  /* The title is LIFTED OUT of the page plate, and this is why:
+     title-morph.js already gives it a bespoke transition — sampled into
+     particles and travelled through a formless middle. Leaving it inside the
+     root snapshot meant the page morph's mask ran across it as well, so the
+     word was being dotted apart by one effect while being reassembled by
+     another. Two transitions on one element, fighting.
+
+     Naming it moves it onto its own layer, where it gets the plain fade it
+     had before the page morph existed and the dot mask never touches it.
+     That is the whole intent: the morph is for the parts of the page that
+     had NO transition of their own.
+
+     Note the earlier comment above about not naming the title — that
+     referred to naming it and letting it CROSSFADE, which fought the canvas
+     because the browser cannot interpolate an S into a T. The fade here is
+     doing something different: it is getting the title out of the mask's
+     way, and it is invisible in the normal case anyway, because
+     .title-morphing has already set the incoming h1 to opacity 0 before the
+     snapshot is taken.
+
+     index.astro's hero mark carries data-no-vt and is deliberately excluded
+     from title-morph, so it is excluded here too and stays in the page
+     plate where it morphs with everything else. */
+  main h1:not([data-no-vt]) {
+    view-transition-name: page-title;
+  }
+
+  ::view-transition-old(page-title) {
+    animation: vt-title-out 180ms cubic-bezier(0.4, 0, 1, 1) both;
+  }
+  ::view-transition-new(page-title) {
+    animation: vt-title-in 220ms cubic-bezier(0, 0, 0.2, 1) 80ms both;
+  }
+
+  @keyframes vt-title-out { to   { opacity: 0 } }
+  @keyframes vt-title-in  { from { opacity: 0 } }
+
   ::selection {
     background-color: #00f0ff;
     color: #006970;
