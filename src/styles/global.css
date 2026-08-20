@@ -212,13 +212,23 @@
        4. A one-pixel highlight along the top edge and a soft shadow below,
           which is what gives it thickness. A pane with no edge reads as a
           flat overlay. */
-    background-color: rgba(10, 10, 10, 0.10);
-    -webkit-backdrop-filter: blur(38px) saturate(180%) brightness(0.9);
-    backdrop-filter: blur(38px) saturate(180%) brightness(0.9);
+    /* A LIGHT tint, not a dark one, and this is the change that actually
+       makes it read as glass on this site.
+       Every previous round reduced a BLACK fill over a near-black page,
+       which cannot look more see-through no matter how far it goes: there is
+       nothing behind it but more black, so 85% and 10% land in the same
+       place. brightness() below 1 made it worse by darkening the backdrop as
+       well. Real glass over a dark room is LIGHTER than the room — it
+       catches and scatters light — so the panel now adds a little light
+       instead of subtracting it. */
+    background-color: rgba(255, 255, 255, 0.055);
+    -webkit-backdrop-filter: blur(38px) saturate(180%) brightness(1.35);
+    backdrop-filter: blur(38px) saturate(180%) brightness(1.35);
     border-bottom: 1px solid rgba(255, 255, 255, 0.07);
     box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.09),
-      0 8px 28px -12px rgba(0, 0, 0, 0.7);
+      inset 0 1px 0 rgba(255, 255, 255, 0.14),
+      inset 0 -1px 0 rgba(255, 255, 255, 0.04),
+      0 6px 22px -14px rgba(0, 0, 0, 0.5);
   }
 
   /* At a 10% fill the panel no longer separates the labels from whatever is
