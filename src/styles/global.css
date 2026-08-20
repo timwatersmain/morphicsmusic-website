@@ -212,9 +212,9 @@
        4. A one-pixel highlight along the top edge and a soft shadow below,
           which is what gives it thickness. A pane with no edge reads as a
           flat overlay. */
-    background-color: rgba(10, 10, 10, 0.52);
-    -webkit-backdrop-filter: blur(26px) saturate(165%) brightness(1.08);
-    backdrop-filter: blur(26px) saturate(165%) brightness(1.08);
+    background-color: rgba(10, 10, 10, 0.34);
+    -webkit-backdrop-filter: blur(30px) saturate(170%) brightness(1.04);
+    backdrop-filter: blur(30px) saturate(170%) brightness(1.04);
     border-bottom: 1px solid rgba(255, 255, 255, 0.07);
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.09),
