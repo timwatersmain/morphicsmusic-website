@@ -194,6 +194,73 @@
      instead of being crossfaded along with the page body. */
   #site-header {
     view-transition-name: site-nav;
+
+    /* Sandblasted glass. Four things together make it read as etched glass
+       rather than as a dark strip with a blur on it:
+
+       1. It is genuinely see-through. The fill is ~52% rather than 85%, so
+          content actually passes behind it instead of being hidden by it.
+       2. A wide blur with saturation and a little lift. Real obscured glass
+          scatters light rather than dimming it, so saturate() keeps the
+          artwork's colour alive through the panel and brightness() stops the
+          heavy blur reading as grey sludge.
+       3. Grain — the sandblasted part, and the reason this is not just
+          frosted. An SVG fractal-noise turbulence, inlined as a data URI
+          because the artifact CSP admits no external asset, at very low
+          opacity. Without it the surface is a smooth gradient and reads as
+          plastic.
+       4. A one-pixel highlight along the top edge and a soft shadow below,
+          which is what gives it thickness. A pane with no edge reads as a
+          flat overlay. */
+    background-color: rgba(10, 10, 10, 0.52);
+    -webkit-backdrop-filter: blur(26px) saturate(165%) brightness(1.08);
+    backdrop-filter: blur(26px) saturate(165%) brightness(1.08);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.09),
+      0 8px 28px -12px rgba(0, 0, 0, 0.7);
+  }
+
+  /* The grain, and the top-edge sheen, as two out-of-flow layers.
+     Absolutely positioned children of a grid container are NOT grid items, so
+     neither of these disturbs the header's [auto, 1fr] layout. */
+  #site-header::before,
+  #site-header::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  /* baseFrequency 0.9 is fine enough to read as etched grit rather than as
+     visible speckles; numOctaves 3 keeps it from tiling obviously. overlay
+     lets it bite into both the light and dark parts of whatever is behind. */
+  #site-header::before {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
+    background-size: 140px 140px;
+    mix-blend-mode: overlay;
+    opacity: 0.13;
+  }
+
+  /* A shallow sheen down from the top edge — the light a pane catches. */
+  #site-header::after {
+    background: linear-gradient(
+      to bottom,
+      rgba(255, 255, 255, 0.045) 0%,
+      rgba(255, 255, 255, 0.012) 38%,
+      transparent 72%
+    );
+  }
+
+  /* Reduced transparency is an accessibility preference, not a taste one:
+     honour it by making the panel solid rather than merely less blurred. */
+  @media (prefers-reduced-transparency: reduce) {
+    #site-header {
+      background-color: rgba(10, 10, 10, 0.96);
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+    #site-header::before { opacity: 0; }
   }
 
   ::selection {
