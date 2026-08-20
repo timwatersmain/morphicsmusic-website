@@ -27,19 +27,20 @@ interface Props {
 const { variant = 'card', headline, class: className = '' } = Astro.props;
 
 // Leads with the payoff rather than the ask. "Join our Discord" is a request;
-// this is a reason — and it is the specific reason that is true here, since
-// the server feeds the same creature the site shows.
-const DEFAULT_HEADLINE = 'Your creature levels up in Discord too';
-const BODY =
-  'Talking, reacting and catching drops in the server all feed the same rank your profile shows here. One creature, both places.';
+// this is a reason. Kept SHORT on purpose: the earlier copy explained the
+// whole cross-platform mechanic in two sentences, which made a side note read
+// like a feature announcement and took more space than the button it wraps.
+// Nobody needs the mechanic to decide whether to join — they need the reason.
+const DEFAULT_HEADLINE = 'Extra perks in Discord';
+const BODY = 'Hanging out in the server levels up the same creature.';
 ---
 
 {variant === 'card' ? (
-  <aside class={`p-6 border border-white/10 rounded-[var(--radius-lg)] ${className}`}>
-    <p class="font-mono text-[11px] uppercase tracking-widest text-secondary mb-3">
+  <aside class={`p-5 border border-white/10 rounded-[var(--radius-lg)] ${className}`}>
+    <p class="font-mono text-[10px] uppercase tracking-widest text-secondary mb-2">
       {headline || DEFAULT_HEADLINE}
     </p>
-    <p class="font-mono text-[11px] text-white/60 leading-relaxed mb-5">{BODY}</p>
+    <p class="font-mono text-[11px] text-white/60 leading-relaxed mb-4">{BODY}</p>
     <a
       href={INVITE_URL}
       target="_blank"
@@ -48,7 +49,7 @@ const BODY =
     >
       Join the Discord
     </a>
-    <p class="font-mono text-[10px] text-white/40 mt-4 leading-relaxed">
+    <p class="font-mono text-[10px] text-white/40 mt-3 leading-relaxed">
       Once you're in, run <span class="text-white/70">/link</span> and paste the code on your account page.
     </p>
   </aside>
