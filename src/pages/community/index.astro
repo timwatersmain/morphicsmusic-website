@@ -13,14 +13,16 @@ import DiscordInvite from '../../components/DiscordInvite.astro';
         <span class="font-mono text-xs text-secondary uppercase tracking-widest">Fan wall</span>
         <h1 class="font-headline font-bold text-5xl md:text-7xl text-primary uppercase tracking-tighter leading-none mt-2">COMMUNITY</h1>
       </div>
-      <a href="/community/me" class="font-mono text-[10px] text-white/40 hover:text-secondary uppercase tracking-widest border border-white/10 hover:border-secondary/30 px-4 py-2 rounded-full">
-        Your profile
-      </a>
+      <!-- Top right, beside the profile link: both are "somewhere else you can
+           go from here", so they belong in the same cluster rather than as a
+           block interrupting the page. -->
+      <div class="flex flex-wrap items-center gap-3">
+        <DiscordInvite />
+        <a href="/community/me" class="font-mono text-[10px] text-white/40 hover:text-secondary uppercase tracking-widest border border-white/10 hover:border-secondary/30 px-4 py-2 rounded-full">
+          Your profile
+        </a>
+      </div>
     </header>
-
-    <!-- Above the wall on purpose: someone scrolling other fans' creatures is
-         the warmest audience on the site for "yours levels up in Discord too". -->
-    <DiscordInvite class="mb-10" />
 
     <div id="dir-loading" class="font-mono text-[11px] text-white/40">Loading the fan wall…</div>
 

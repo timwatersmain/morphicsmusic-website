@@ -11,6 +11,10 @@ import DiscordInvite from '../../components/DiscordInvite.astro';
         <h1 class="font-headline font-bold text-5xl md:text-7xl text-primary uppercase tracking-tighter leading-none mt-2">YOUR PROFILE</h1>
         <p id="me-handle" class="font-mono text-[11px] text-white/50 mt-4"></p>
       </div>
+      <!-- Moved out of the page body and into the header: as a card below the
+           profile it was a paragraph of mechanics competing with the creature
+           itself. -->
+      <DiscordInvite />
     </header>
 
     <!-- The account side of a Morphics identity lives across three pages —
@@ -358,14 +362,6 @@ import DiscordInvite from '../../components/DiscordInvite.astro';
           </div>
         </div>
       </section>
-
-      <!-- After the profile, never before it: the pitch is "your creature
-           levels up in Discord too", which means nothing until they have
-           actually seen their creature. This page is also where a new fan
-           lands first, which is why the invite lives here rather than in the
-           signup flow — signup hands straight off to /login, and /login is
-           shown to everyone signing in, not just new accounts. -->
-      <DiscordInvite />
 
     </div>
   </div>

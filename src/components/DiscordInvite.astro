@@ -17,49 +17,27 @@
 export const INVITE_URL = 'https://discord.gg/n2yaJMbTeD';
 
 interface Props {
-  /** 'card' is a standalone block; 'inline' sits inside an existing panel. */
-  variant?: 'card' | 'inline';
-  /** Overrides the default pitch where a page needs its own framing. */
-  headline?: string;
   class?: string;
 }
 
-const { variant = 'card', headline, class: className = '' } = Astro.props;
-
-// Leads with the payoff rather than the ask. "Join our Discord" is a request;
-// this is a reason. Kept SHORT on purpose: the earlier copy explained the
-// whole cross-platform mechanic in two sentences, which made a side note read
-// like a feature announcement and took more space than the button it wraps.
-// Nobody needs the mechanic to decide whether to join — they need the reason.
-const DEFAULT_HEADLINE = 'Extra perks in Discord';
-const BODY = 'Hanging out in the server levels up the same creature.';
+const { class: className = '' } = Astro.props;
 ---
 
-{variant === 'card' ? (
-  <aside class={`p-5 border border-white/10 rounded-[var(--radius-lg)] ${className}`}>
-    <p class="font-mono text-[10px] uppercase tracking-widest text-secondary mb-2">
-      {headline || DEFAULT_HEADLINE}
-    </p>
-    <p class="font-mono text-[11px] text-white/60 leading-relaxed mb-4">{BODY}</p>
-    <a
-      href={INVITE_URL}
-      target="_blank"
-      rel="noopener noreferrer"
-      class="inline-block px-6 py-3 rounded-full bg-primary text-on-primary font-mono text-[11px] tracking-widest uppercase hover:bg-secondary hover:text-on-secondary transition-colors"
-    >
-      Join the Discord
-    </a>
-    <p class="font-mono text-[10px] text-white/40 mt-3 leading-relaxed">
-      Once you're in, run <span class="text-white/70">/link</span> and paste the code on your account page.
-    </p>
-  </aside>
-) : (
-  <a
-    href={INVITE_URL}
-    target="_blank"
-    rel="noopener noreferrer"
-    class={`inline-block px-6 py-3 rounded-full bg-primary text-on-primary font-mono text-[11px] tracking-widest uppercase hover:bg-secondary hover:text-on-secondary transition-colors ${className}`}
-  >
-    Join the Discord
-  </a>
-)}
+{/* Deliberately just a link. This block used to be a card: headline, a
+    sentence explaining that server activity feeds the same creature, and a
+    footnote about running /link. All of that is better explained IN the
+    Discord, where someone has already opted in and has the context to care —
+    on the site it was a paragraph of mechanics sitting above the content
+    people actually came for, and it took more room than the page's own
+    header.
+
+    Owner's call, 19 Aug 2026: keep the site's job to "here is the door" and
+    let the server do the explaining. */}
+<a
+  href={INVITE_URL}
+  target="_blank"
+  rel="noopener noreferrer"
+  class={`inline-block font-mono text-[10px] uppercase tracking-widest text-white/40 hover:text-secondary border border-white/10 hover:border-secondary/30 px-4 py-2 rounded-full transition-colors ${className}`}
+>
+  Join the Discord
+</a>
