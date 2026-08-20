@@ -52,7 +52,7 @@ const navItems = [
           "flex flex-col lg:flex-row items-center lg:gap-2 hover:text-primary hover:lg:scale-105 transition-all duration-[400ms]",
           currentPage === item.href
             ? "text-primary drop-shadow-[0_0_5px_#00F0FF]"
-            : "text-primary/50"
+            : "text-primary/75"
         ]}
       >
         <span class="material-symbols-outlined text-[22px] lg:text-base leading-none">{item.icon}</span>
@@ -66,7 +66,7 @@ const navItems = [
       type="button"
       data-cart-open
       aria-label="Open cart"
-      class="lg:hidden relative flex flex-col items-center text-primary/50 hover:text-primary transition-all duration-[400ms]"
+      class="lg:hidden relative flex flex-col items-center text-primary/75 hover:text-primary transition-all duration-[400ms]"
     >
       <span class="material-symbols-outlined text-[22px] leading-none">shopping_bag</span>
       <span class="font-headline uppercase tracking-[0.2em] text-[8px] mt-1 leading-none">Cart</span>
@@ -81,7 +81,7 @@ const navItems = [
       type="button"
       data-cart-open
       aria-label="Open cart"
-      class="hidden lg:flex relative flex-row items-center lg:gap-2 text-primary/50 hover:text-primary hover:lg:scale-105 transition-all duration-[400ms]"
+      class="hidden lg:flex relative flex-row items-center lg:gap-2 text-primary/75 hover:text-primary hover:lg:scale-105 transition-all duration-[400ms]"
     >
       <span class="material-symbols-outlined text-base leading-none">shopping_bag</span>
       <span class="font-headline uppercase tracking-[0.16em] xl:tracking-[0.2em] text-[clamp(0.63rem,0.85vw,0.75rem)] leading-none whitespace-nowrap">Cart</span>
@@ -93,7 +93,7 @@ const navItems = [
          below flips it off once a signed-in state points this at
          /community/me instead. -->
     <a id="account-link" href="/login" data-astro-reload
-       class="flex flex-col lg:flex-row items-center lg:gap-2 text-primary/50 hover:text-primary hover:lg:scale-105 transition-all duration-[400ms]">
+       class="flex flex-col lg:flex-row items-center lg:gap-2 text-primary/75 hover:text-primary hover:lg:scale-105 transition-all duration-[400ms]">
       <span class="material-symbols-outlined text-[22px] lg:text-base leading-none">person</span>
       <!-- Two labels, one element: the stacked row needs the 8px size the
            other mobile items use, the horizontal row needs the fluid one.
