@@ -115,7 +115,19 @@ const { title, currentPage = '' } = Astro.props;
       } catch (e) { /* private mode: just show the title */ }
     })();
   </script>
-  <script is:inline>
+  <script is:inline data-astro-rerun>
+    // data-astro-rerun is LOAD-BEARING, not tidiness. The client router swaps
+    // the document element, and `fonts-ready` is a class ON <html> — so every
+    // in-app navigation arrives with the class gone. An is:inline script runs
+    // only once without this attribute, so nothing ever put the class back:
+    // icons were transparent on every page until the visitor hit reload, which
+    // did a real document load and re-ran the script. Reproduced by diffing a
+    // direct load against the same page reached by clicking the nav.
+    //
+    // Re-running is cheap and does not re-flash: the head survives the swap, so
+    // the face is still loaded, `loaded()` is true on the first poll, and the
+    // class is restored before the swapped document paints.
+    //
     // Runs before first paint. Icons are revealed ONLY once the face is
     // confirmed usable — there is deliberately no timeout that reveals them
     // anyway. If the font never arrives, the icons stay blank forever, because
