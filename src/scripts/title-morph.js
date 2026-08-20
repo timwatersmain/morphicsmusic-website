@@ -136,12 +136,12 @@ export function morphWord(h1, fromWord, toWord, opts = {}) {
   // computes overflow-y to auto and can clip an absolutely positioned child.
   const mount = opts.mount || document.body;
 
-  if (!h1) return finish(null, null);
+  if (!h1) return finishEl(null, null);
   const to = toWord;
-  if (!to || !fromWord || fromWord === to) return finish(h1, null);
+  if (!to || !fromWord || fromWord === to) return finishEl(h1, null);
 
   const rect = h1.getBoundingClientRect();
-  if (!rect.width || !rect.height) return finish(h1, null);
+  if (!rect.width || !rect.height) return finishEl(h1, null);
 
   const style = getComputedStyle(h1);
   const dpr = Math.min(2, window.devicePixelRatio || 1);
@@ -152,7 +152,7 @@ export function morphWord(h1, fromWord, toWord, opts = {}) {
 
   const src = pointsForWord(fromWord, style, boxW, boxH, dpr);
   const dst = pointsForWord(to, style, boxW, boxH, dpr);
-  if (!src.length || !dst.length) return finish(h1, null);
+  if (!src.length || !dst.length) return finishEl(h1, null);
 
   // Both words were rasterised into the SAME canvas space, so their union box
   // is directly comparable: SOCIAL really is wider than STORE and the morph
@@ -206,7 +206,11 @@ export function morphWord(h1, fromWord, toWord, opts = {}) {
 
   const t0 = performance.now();
   let raf = 0;
-  finished = false;
+  // This morph's own completion guard. Three things race to end it — the last
+  // frame, the deadline timer, and pagehide — and exactly one may win, per
+  // morph rather than per page.
+  let done = false;
+  const settle = () => { if (done) return; done = true; finishEl(h1, canvas); };
 
   const frameFn = (now) => {
     const raw = Math.min(1, (now - t0) / ms);
@@ -232,7 +236,7 @@ export function morphWord(h1, fromWord, toWord, opts = {}) {
     if (raw < 1) {
       raf = requestAnimationFrame(frameFn);
     } else {
-      finish(h1, canvas);
+      settle();
       if (onDone) onDone();
     }
   };
@@ -243,12 +247,12 @@ export function morphWord(h1, fromWord, toWord, opts = {}) {
   // morph and — since the real <h1> is hidden until the morph lands — left the
   // title invisible until scrolling stopped. Timers keep running, so this
   // guarantees the handoff regardless of what the render loop is doing.
-  setTimeout(() => { cancelAnimationFrame(raf); finish(h1, canvas); }, ms + 500);
+  setTimeout(() => { cancelAnimationFrame(raf); settle(); }, ms + 500);
 
   // Never leave the title invisible if anything goes wrong mid-flight.
   window.addEventListener('pagehide', () => {
     cancelAnimationFrame(raf);
-    finish(h1, canvas);
+    settle();
   }, { once: true });
 }
 
@@ -265,20 +269,35 @@ function stridePixel(src, dst) {
   return n > 1800 ? 2 : n > 900 ? 3 : 4;
 }
 
-let finished = false;
-function finish(h1, canvas) {
-  if (finished) return;
-  finished = true;
+// The handoff itself, with NO once-guard: reveal the element, fade the canvas
+// out from under it, drop the canvas.
+//
+// Split out from finish() because morphWord is now run CONCURRENTLY — text-morph
+// drives up to twelve at once. A single module-level flag was correct while the
+// only caller was the one title: the first morph to land set it and every other
+// morph's cleanup silently became a no-op, so eleven canvases stayed on the page
+// forever. Each morph now guards its own completion (see `settle` below) and the
+// module flag is left to the bail paths, which really are once-per-navigation.
+function finishEl(el, canvas) {
   document.documentElement.classList.remove('title-morphing');
-  if (h1) {
-    h1.style.transition = `opacity ${HANDOFF_MS}ms linear`;
-    h1.style.opacity = '1';
+  if (el) {
+    el.style.transition = `opacity ${HANDOFF_MS}ms linear`;
+    el.style.opacity = '1';
   }
   if (canvas) {
     canvas.style.transition = `opacity ${HANDOFF_MS}ms linear`;
     canvas.style.opacity = '0';
     setTimeout(() => canvas.remove(), HANDOFF_MS + 60);
   }
+}
+
+// Bail paths only: runTitleMorph with no <h1>, safely()'s catch, and the
+// fonts-not-ready branch. One per navigation by nature, and reset in run().
+let finished = false;
+function finish(h1, canvas) {
+  if (finished) return;
+  finished = true;
+  finishEl(h1, canvas);
 }
 
 // --- wiring ----------------------------------------------------------------

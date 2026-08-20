@@ -190,62 +190,37 @@
     to { opacity: 1; }
   }
 
+  /* The same contract as the title, for the rest of the page's text: hidden
+     from the very first paint when a morph is pending, so a word never
+     flashes into place before its particles have assembled it.
+
+     The selector must match scripts/text-morph.js's SELECTOR exactly. That
+     duplication is the reason the module uses a fixed selector instead of
+     "any element with short text" — CSS cannot ask how long an element's
+     text is, and this rule has to run before any script does. */
+  html.text-morphing main h2,
+  html.text-morphing main h3,
+  html.text-morphing main .uppercase.tracking-widest,
+  html.text-morphing main [data-morph-text] {
+    opacity: 0;
+    /* Identical failsafe, identical reasoning: these elements are hidden so
+       particles can assemble them, so their visibility must never depend on
+       JavaScript finishing, or running at all. A compositor-driven animation
+       keeps its schedule even when the main thread is blocked. It reveals
+       everything after 1.2s regardless; a normal morph finishes and clears
+       the class long before. */
+    animation: title-failsafe 1ms linear 1200ms forwards;
+  }
+
   /* Chrome that is identical across pages gets its own names so it stays put
      instead of being crossfaded along with the page body. */
   #site-header {
     view-transition-name: site-nav;
   }
 
-  /* The title is LIFTED OUT of the page plate, and this is why:
-     title-morph.js already gives it a bespoke transition — sampled into
-     particles and travelled through a formless middle. Leaving it inside the
-     root snapshot meant the page morph's mask ran across it as well, so the
-     word was being dotted apart by one effect while being reassembled by
-     another. Two transitions on one element, fighting.
-
-     Naming it moves it onto its own layer, where it gets the plain fade it
-     had before the page morph existed and the dot mask never touches it.
-     That is the whole intent: the morph is for the parts of the page that
-     had NO transition of their own.
-
-     Note the earlier comment above about not naming the title — that
-     referred to naming it and letting it CROSSFADE, which fought the canvas
-     because the browser cannot interpolate an S into a T. The fade here is
-     doing something different: it is getting the title out of the mask's
-     way, and it is invisible in the normal case anyway, because
-     .title-morphing has already set the incoming h1 to opacity 0 before the
-     snapshot is taken.
-
-     index.astro's hero mark carries data-no-vt and is deliberately excluded
-     from title-morph, so it is excluded here too and stays in the page
-     plate where it morphs with everything else. */
-  main h1:not([data-no-vt]) {
-    view-transition-name: page-title;
-  }
-
-  /* NO animation on the title. Not a mask, not a fade, nothing — the same
-     treatment #site-header gets, and for the same reason: an element that
-     already knows what it is doing must not be animated a second time by
-     the page transition.
-
-     The outgoing snapshot is hidden outright rather than faded. Holding it
-     visible would double the word: title-morph.js starts drawing the SAME
-     outgoing title as particles the instant the new document runs, so a
-     static picture of it sitting on top for ~380ms would sit over its own
-     particle field. Hiding it hands the word to the canvas cleanly.
-
-     The incoming snapshot takes whatever opacity the real <h1> has, which
-     .title-morphing has already set to 0 when a morph is pending — so the
-     canvas owns the title from start to finish and the page transition
-     never touches it. */
-  ::view-transition-old(page-title),
-  ::view-transition-new(page-title) {
-    animation: none !important;
-    mix-blend-mode: normal;
-  }
-  ::view-transition-old(page-title) {
-    opacity: 0;
-  }
+  /* No view-transition-name on the title any more, and none needed: the
+     root plate is inert, so there is no page-level effect for it to be
+     lifted out of. The title is owned start to finish by title-morph.js. */
 
   ::selection {
     background-color: #00f0ff;
@@ -254,84 +229,24 @@
 
   /* --- view transition choreography ------------------------------------- */
 
-  /* The page body: it comes APART INTO A DOT FIELD and reassembles, rather
-     than crossfading. Same idea as the title morph — travel through a
-     formless middle instead of dissolving one picture into another — but
-     done in pure CSS on the browser's own snapshots, so it costs no
-     JavaScript and cannot delay or block navigation.
+  /* The page plate does NOT animate. Removed deliberately: a whole-page
+     effect (it was a dot-field mask) fought every element that already had
+     a transition of its own, and dressed content that should simply BE
+     there in motion it did not need.
 
-     The mechanism is a repeating radial-gradient MASK, one dot per cell.
-     --vt-dot is the radius of the opaque core of each dot, so animating it
-     from 72% to 0% eats the page away into a grid of shrinking points; the
-     incoming page runs it in reverse and grows back out of the same grid.
-     A registered @property is what makes that interpolable at all — an
-     unregistered custom property inside a gradient would jump between
-     keyframes rather than animate.
+     The replacement is per-kind, not per-page. Text morphs like the title
+     morphs — sampled into particles, travelled through a formless middle —
+     see scripts/text-morph.js. Other kinds of content (images, cards) get
+     their own treatment later, or none.
 
-     Timings are deliberately short. This has to read as a morph, not as a
-     wait: 300ms out, 380ms in, overlapping. The title morph (620ms) still
-     outlasts it, which keeps the title reading as the thing carried across
-     rather than as part of the page effect. */
-  @property --vt-dot {
-    syntax: '<percentage>';
-    inherits: false;
-    initial-value: 72%;
-  }
-
+     With the root plate inert the swap itself is instant, which is what
+     lets the text morph own the whole transition: the outgoing text leaves
+     with the document and the canvas draws it coming apart, exactly the way
+     the title has always worked. */
   ::view-transition-old(root),
   ::view-transition-new(root) {
-    /* One dot per 13px cell. Small enough to read as a field rather than as
-       polka dots, large enough that the mask stays cheap on a full-page
-       snapshot — this is compositor work, and the cell count is what drives
-       its cost. */
-    mask-image: radial-gradient(
-      circle at center,
-      #000 var(--vt-dot),
-      transparent calc(var(--vt-dot) + 14%)
-    );
-    mask-size: 13px 13px;
-    mask-repeat: repeat;
-    /* Chromium still wants the prefix for mask-* on these pseudo-elements. */
-    -webkit-mask-image: radial-gradient(
-      circle at center,
-      #000 var(--vt-dot),
-      transparent calc(var(--vt-dot) + 14%)
-    );
-    -webkit-mask-size: 13px 13px;
-    -webkit-mask-repeat: repeat;
+    animation: none;
   }
-
-  ::view-transition-old(root) {
-    animation: vt-scatter 300ms cubic-bezier(0.4, 0, 1, 1) both;
-  }
-  ::view-transition-new(root) {
-    animation: vt-gather 380ms cubic-bezier(0, 0, 0.2, 1) 90ms both;
-  }
-
-  /* Coming apart: dots shrink, the whole plate drifts fractionally back and
-     softens. The scale is tiny on purpose — a big zoom reads as a slide
-     transition, and this should read as the page losing cohesion. */
-  @keyframes vt-scatter {
-    from { --vt-dot: 72%; opacity: 1; transform: scale(1);      filter: blur(0); }
-    to   { --vt-dot: 0%;  opacity: 0; transform: scale(1.012);  filter: blur(3px); }
-  }
-
-  /* Reassembling: the same grid run backwards, from slightly under scale so
-     the page settles INTO place rather than arriving already there. */
-  @keyframes vt-gather {
-    from { --vt-dot: 0%;  opacity: 0; transform: scale(0.988); filter: blur(4px); }
-    to   { --vt-dot: 72%; opacity: 1; transform: scale(1);     filter: blur(0); }
-  }
-
-  /* No @supports guard needed, and that is not an oversight. On an engine
-     without @property, --vt-dot has no registered initial value, so
-     var(--vt-dot) resolves to nothing, the radial-gradient is invalid, and
-     the whole mask-image declaration is dropped. The element ends up
-     unmasked with only the opacity/transform halves of the keyframes
-     running — which is exactly the crossfade this replaced. It degrades to
-     the old behaviour by construction rather than by a second code path
-     that would need testing on an engine we cannot easily test on. */
-
 
   /* The nav never changes, so it should not animate at all. */
   ::view-transition-old(site-nav),
@@ -346,17 +261,6 @@
     ::view-transition-old(*),
     ::view-transition-new(*) {
       animation: none !important;
-    }
-    /* The mask has to come off too, not just the animation. With animation
-       disabled --vt-dot sits at its 72% initial value, which is a static
-       dot-grid stencil — the page would be stencilled rather than morphed.
-       Harmless in practice because the snapshots are on screen for a frame,
-       but "harmless because it is too quick to see" is not a thing to leave
-       in a stylesheet. */
-    ::view-transition-old(root),
-    ::view-transition-new(root) {
-      mask-image: none !important;
-      -webkit-mask-image: none !important;
     }
   }
 

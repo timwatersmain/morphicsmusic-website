@@ -4,7 +4,6 @@ import TopNav from '../components/TopNav.astro';
 import Cart from '../components/Cart.astro';
 import PlayerBar from '../components/PlayerBar.astro';
 import '../styles/global.css';
-import '../styles/page-morph.css';
 
 interface Props {
   title: string;
@@ -99,27 +98,6 @@ const { title, currentPage = '' } = Astro.props;
     html:not(.fonts-ready) .material-symbols-outlined { color: transparent; }
   </style>
   <script is:inline data-astro-rerun>
-    // Page-morph variant selection, for auditioning at /lab/page-morph.
-    // Sets data-morph on <html> from a stored choice; no attribute means the
-    // site default in global.css.
-    //
-    // data-astro-rerun for the same reason the icon-font script needs it: the
-    // client router swaps the document element, so anything written onto
-    // <html> is gone on arrival and has to be reapplied every swap. Without
-    // it the chosen variant would survive exactly one navigation.
-    //
-    // It must also run BEFORE paint, not on astro:page-load — the attribute
-    // has to be on <html> while the browser captures the outgoing snapshot,
-    // and page-load fires after that.
-    (function () {
-      try {
-        var m = localStorage.getItem('morphics:morph');
-        if (m) document.documentElement.setAttribute('data-morph', m);
-        else document.documentElement.removeAttribute('data-morph');
-      } catch (e) { /* private mode: site default */ }
-    })();
-  </script>
-  <script is:inline data-astro-rerun>
     // Before first paint: if the previous page left a title behind, this page's
     // <h1> must start hidden so the word never flashes into place before the
     // particles have assembled it. title-morph.js clears the class when the
@@ -131,10 +109,18 @@ const { title, currentPage = '' } = Astro.props;
     // the "record what's leaving" side.
     (function () {
       try {
-        if (!sessionStorage.getItem('morphics:title-from')) return;
         if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-        document.documentElement.classList.add('title-morphing');
-      } catch (e) { /* private mode: just show the title */ }
+        if (sessionStorage.getItem('morphics:title-from')) {
+          document.documentElement.classList.add('title-morphing');
+        }
+        // Same deal for the rest of the page's text — see text-morph.js. Kept
+        // in this one pre-paint script rather than a second one because both
+        // classes must land before the first paint, and two inline scripts
+        // racing for that is one more thing to get wrong.
+        if (sessionStorage.getItem('morphics:text-from')) {
+          document.documentElement.classList.add('text-morphing');
+        }
+      } catch (e) { /* private mode: just show the text */ }
     })();
   </script>
   <script is:inline data-astro-rerun>
@@ -210,6 +196,12 @@ const { title, currentPage = '' } = Astro.props;
   <script>
     import { initTitleMorph } from '../scripts/title-morph.js';
     initTitleMorph();
+  </script>
+  <!-- Its own module, same isolation reasoning as title-morph: a failure here
+       must not stop the title from being revealed, and vice versa. -->
+  <script>
+    import { initTextMorph } from '../scripts/text-morph.js';
+    initTextMorph();
   </script>
   <!-- Its own module too, same isolation reasoning as title-morph above.
        Signed-out visitors cost nothing here — see the module doc comment. -->
