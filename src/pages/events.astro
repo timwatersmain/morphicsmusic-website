@@ -17,8 +17,8 @@ const pastVenues = (epk.past_venues || []) as string[];
 // The EPK block is worth building but not worth showing empty — a heading
 // with nothing under it reads as neglect, which is the opposite of what a
 // press kit is for.
-const hasEpk = !!(epk.bio_short || epk.bio_long || pressPhotos.length || epk.tech_rider_url
-  || epk.hospitality_rider_url || liveVideos.length || pastVenues.length);
+const hasEpk = !!(epk.bio_short || epk.bio_long || pressPhotos.length || epk.one_sheet_url
+  || epk.rider_url || epk.logo || liveVideos.length || pastVenues.length);
 
 const fmtDate = (iso: string) => {
   const d = new Date(iso + 'T12:00:00Z');
@@ -158,9 +158,9 @@ const fmtDate = (iso: string) => {
         )}
 
         <div class="flex flex-wrap gap-3">
-          {epk.tech_rider_url && <a href={epk.tech_rider_url} rel="noopener" class="font-mono text-[10px] uppercase tracking-widest text-primary border border-primary/20 hover:border-primary/60 px-4 py-2 rounded-full">Tech rider</a>}
-          {epk.hospitality_rider_url && <a href={epk.hospitality_rider_url} rel="noopener" class="font-mono text-[10px] uppercase tracking-widest text-primary border border-primary/20 hover:border-primary/60 px-4 py-2 rounded-full">Hospitality rider</a>}
-          {epk.logo && <a href={epk.logo} rel="noopener" class="font-mono text-[10px] uppercase tracking-widest text-primary border border-primary/20 hover:border-primary/60 px-4 py-2 rounded-full">Logo</a>}
+          {epk.one_sheet_url && <a href={epk.one_sheet_url} download rel="noopener" class="font-mono text-[10px] uppercase tracking-widest text-primary border border-primary/20 hover:border-primary/60 px-4 py-2 rounded-full">One-sheet (PDF)</a>}
+          {epk.rider_url && <a href={epk.rider_url} download rel="noopener" class="font-mono text-[10px] uppercase tracking-widest text-primary border border-primary/20 hover:border-primary/60 px-4 py-2 rounded-full">Rider (PDF)</a>}
+          {epk.logo && <a href={epk.logo} download rel="noopener" class="font-mono text-[10px] uppercase tracking-widest text-primary border border-primary/20 hover:border-primary/60 px-4 py-2 rounded-full">Logo</a>}
           {liveVideos.map((v: any) => (
             <a href={v.url} rel="noopener" class="font-mono text-[10px] uppercase tracking-widest text-white/60 border border-white/10 hover:border-secondary/40 px-4 py-2 rounded-full">{v.label}</a>
           ))}
