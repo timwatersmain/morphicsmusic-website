@@ -190,6 +190,12 @@ const { title, currentPage = '' } = Astro.props;
     import { initTitleMorph } from '../scripts/title-morph.js';
     initTitleMorph();
   </script>
+  <!-- Its own module, same isolation reasoning as title-morph above: a
+       failure in one must not stop the other. -->
+  <script>
+    import { initPageSettle } from '../scripts/page-settle.js';
+    initPageSettle();
+  </script>
   <!-- Its own module too, same isolation reasoning as title-morph above.
        Signed-out visitors cost nothing here — see the module doc comment. -->
   <script>
