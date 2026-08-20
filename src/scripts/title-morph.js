@@ -206,7 +206,11 @@ export function morphWord(h1, fromWord, toWord, opts = {}) {
 
   const t0 = performance.now();
   let raf = 0;
-  finished = false;
+  // THIS morph's completion, guarded per-morph rather than per-module. Three
+  // things race to end it — the last frame, the deadline, and leaving the
+  // page — and exactly one may win, for this morph alone.
+  let done = false;
+  const settle = () => { if (done) return; done = true; finishEl(h1, canvas); };
 
   const frameFn = (now) => {
     const raw = Math.min(1, (now - t0) / ms);
@@ -232,7 +236,7 @@ export function morphWord(h1, fromWord, toWord, opts = {}) {
     if (raw < 1) {
       raf = requestAnimationFrame(frameFn);
     } else {
-      finish(h1, canvas);
+      settle();
       if (onDone) onDone();
     }
   };
@@ -243,13 +247,19 @@ export function morphWord(h1, fromWord, toWord, opts = {}) {
   // morph and — since the real <h1> is hidden until the morph lands — left the
   // title invisible until scrolling stopped. Timers keep running, so this
   // guarantees the handoff regardless of what the render loop is doing.
-  setTimeout(() => { cancelAnimationFrame(raf); finish(h1, canvas); }, ms + 500);
+  setTimeout(() => { cancelAnimationFrame(raf); settle(); }, ms + 500);
 
-  // Never leave the title invisible if anything goes wrong mid-flight.
-  window.addEventListener('pagehide', () => {
-    cancelAnimationFrame(raf);
-    finish(h1, canvas);
-  }, { once: true });
+  // Never leave the title invisible if anything goes wrong mid-flight, and
+  // never let a morph outlive the page it belongs to.
+  //
+  // pagehide covers a real navigation. astro:before-swap is the equivalent
+  // for an in-app one and is the important half: without it an in-flight
+  // morph kept its timer running into the NEXT page, where it had no canvas
+  // of its own left to clean up and could only interfere with the morph that
+  // had replaced it.
+  const abort = () => { cancelAnimationFrame(raf); settle(); };
+  window.addEventListener('pagehide', abort, { once: true });
+  document.addEventListener('astro:before-swap', abort, { once: true });
 }
 
 // The page bootstrap: morph the title this page inherited into the one it has.
@@ -265,20 +275,37 @@ function stridePixel(src, dst) {
   return n > 1800 ? 2 : n > 900 ? 3 : 4;
 }
 
-let finished = false;
-function finish(h1, canvas) {
-  if (finished) return;
-  finished = true;
+// The handoff, with NO shared guard: reveal the title, fade its canvas out
+// from under it, drop the canvas.
+//
+// Split out from finish() because a morph can still be in flight when the
+// NEXT navigation starts. Every completion used to run through one
+// module-level flag, so the previous page's deadline timer (ms + 500) firing
+// during the new page's morph cleared `title-morphing` — revealing the new
+// title while its particles were still drawing — and flipped the flag, which
+// made the new morph's own cleanup a no-op and left its canvas on the page
+// forever. Clicking through the nav at any speed reproduced it.
+function finishEl(el, canvas) {
   document.documentElement.classList.remove('title-morphing');
-  if (h1) {
-    h1.style.transition = `opacity ${HANDOFF_MS}ms linear`;
-    h1.style.opacity = '1';
+  if (el) {
+    el.style.transition = `opacity ${HANDOFF_MS}ms linear`;
+    el.style.opacity = '1';
   }
   if (canvas) {
     canvas.style.transition = `opacity ${HANDOFF_MS}ms linear`;
     canvas.style.opacity = '0';
     setTimeout(() => canvas.remove(), HANDOFF_MS + 60);
   }
+}
+
+// Bail paths only — no <h1>, a thrown error, or fonts not ready. One per
+// navigation by nature, and reset in run().
+let finished = false;
+function finish(h1, canvas) {
+  if (finished) return;
+  finished = true;
+  document.documentElement.classList.remove('title-morphing');
+  finishEl(h1, canvas);
 }
 
 // --- wiring ----------------------------------------------------------------
