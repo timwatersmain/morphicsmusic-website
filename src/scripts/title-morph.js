@@ -41,7 +41,7 @@ const titleText = (el) => (el?.textContent || '').trim().replace(/\s+/g, ' ');
 
 // Draw the word with the <h1>'s OWN computed font, so the particles land on the
 // real letterforms rather than an approximation of them.
-function pointsForWord(word, style, boxW, boxH, dpr, target = TARGET_POINTS) {
+function pointsForWord(word, style, boxW, boxH, dpr, opts = {}) {
   const c = document.createElement('canvas');
   c.width = Math.max(1, Math.ceil(boxW * dpr));
   c.height = Math.max(1, Math.ceil(boxH * dpr));
@@ -59,7 +59,21 @@ function pointsForWord(word, style, boxW, boxH, dpr, target = TARGET_POINTS) {
   // the pairing would then have to duplicate or drop points.
   let ink = 0;
   for (let i = 3; i < data.length; i += 4) if (data[i] > 90) ink++;
-  const stride = Math.max(1, Math.round(Math.sqrt(ink / target)));
+  // Two ways to choose the sampling stride, and the difference matters.
+  //
+  // A POINT TARGET (the title) fixes how many particles a word becomes,
+  // whatever its size. Right for one huge word rendered alone.
+  //
+  // A STRIDE IN CSS PIXELS (everything else) fixes how FINE the sampling is
+  // relative to the letterforms, and lets the count follow from how much ink
+  // there actually is. This is what small text needs: a fixed point target
+  // spread over 11px type samples it far too coarsely, and — because the
+  // particle radius is derived from the stride — draws dots wider than the
+  // strokes they are meant to describe. That is what made body text look
+  // like mush while the title looked sharp.
+  const stride = opts.strideCss
+    ? Math.max(1, Math.round(opts.strideCss * dpr))
+    : Math.max(1, Math.round(Math.sqrt(ink / (opts.target || TARGET_POINTS))));
 
   const pts = [];
   for (let y = 0; y < height; y += stride) {
@@ -154,9 +168,11 @@ export function morphWord(h1, fromWord, toWord, opts = {}) {
   // for the eighty small runs text-morph.js drives at once — eighty clouds of
   // 2600 is a quarter of a million circles per frame. Callers pass what the
   // run is worth; the default keeps the title exactly as it was.
-  const target = opts.points || TARGET_POINTS;
-  const src = pointsForWord(fromWord, style, boxW, boxH, dpr, target);
-  const dst = pointsForWord(to, style, boxW, boxH, dpr, target);
+  // strideCss wins when given: it ties fidelity to the type's own size rather
+  // than to a fixed particle count. See pointsForWord.
+  const sample = opts.strideCss ? { strideCss: opts.strideCss } : { target: opts.points || TARGET_POINTS };
+  const src = pointsForWord(fromWord, style, boxW, boxH, dpr, sample);
+  const dst = pointsForWord(to, style, boxW, boxH, dpr, sample);
   if (!src.length || !dst.length) return finishEl(h1, null);
 
   // Both words were rasterised into the SAME canvas space, so their union box
@@ -203,8 +219,14 @@ export function morphWord(h1, fromWord, toWord, opts = {}) {
   const ctx = canvas.getContext('2d');
   const colour = style.color;
   // Radius covers the gaps between sampled points so the settled word reads
-  // solid rather than dotted.
-  const R = Math.max(1.2, stridePixel(src, dst) * dpr * 0.85);
+  // solid rather than dotted — which means it must follow the STRIDE, not a
+  // constant. On a title, stridePixel's 2-4 CSS px is right. On an 11px
+  // label the same value draws 3.4px dots over 11px type, i.e. blobs larger
+  // than the strokes; deriving it from strideCss keeps the ratio identical at
+  // every size.
+  const R = opts.strideCss
+    ? Math.max(0.55, opts.strideCss * dpr * 0.85)
+    : Math.max(1.2, stridePixel(src, dst) * dpr * 0.85);
 
   const seeds = new Float32Array(a0.length);
   for (let i = 0; i < seeds.length; i++) seeds[i] = Math.random();

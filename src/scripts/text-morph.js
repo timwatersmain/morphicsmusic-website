@@ -72,12 +72,35 @@ export function runsIn(root) {
 // counts, buttons and titles all sit well under it.
 const MAX_MORPH_CHARS = 44;
 
-// Total particles across the whole page, split between the runs by their
-// rendered area. This is the number that decides whether this is a transition
-// or a stall, so it is spent deliberately rather than per-element.
-const POINT_BUDGET = 15000;
-const MIN_POINTS = 45;
-const MAX_POINTS = 900;
+// Fidelity is set by SAMPLING STRIDE, not by a particle count. A count fixed
+// per run samples big type finely and small type coarsely, and since the
+// particle radius follows the stride, small runs ended up drawn with dots
+// wider than their own strokes. Tying the stride to the type's size keeps the
+// particles the same size RELATIVE to the letterforms at 11px as at 80px,
+// which is the whole reason the title reads sharp.
+//
+// fontPx/13 lands a 40px heading near 3 and an 11px label near 0.85.
+const STRIDE_DIVISOR = 13;
+const MIN_STRIDE = 0.75;
+const MAX_STRIDE = 3;
+
+// Cost ceiling for the page, in sampled points. Fine sampling is what makes
+// small text read, and it is not free: every point is an arc drawn every
+// frame. Runs are taken largest first until this is spent; whatever is left
+// is simply shown.
+//
+// Quality over coverage, deliberately. Morphing every last caption badly
+// looks worse than morphing the text that carries the page properly and
+// letting the rest arrive — which is what a page did before any of this.
+const POINT_CEILING = 34000;
+
+// Rough cost of a run before sampling it: its area, the share of that area
+// that is typically ink, divided by the stride cell. Close enough to rank and
+// budget by, and it costs nothing — the real count is only known after
+// rasterising, which is the work being budgeted for.
+function estimatePoints(rect, stride) {
+  return (rect.width * rect.height * 0.22) / (stride * stride);
+}
 
 function reveal(el) {
   if (!el) return;
@@ -134,61 +157,92 @@ export function initTextMorph() {
 
     if (!Array.isArray(from) || !from.length) { revealAll(); return; }
 
+    // SELECT FIRST, REVEAL THE REST IMMEDIATELY, THEN WAIT.
+    //
+    // The order here is the whole difference between this reading as a morph
+    // and reading as a broken page. Everything under <main> is hidden before
+    // paint, but only a fraction of it can be morphed well; the first build
+    // kept ALL of it hidden until the font gate resolved, so a page with 145
+    // runs showed roughly 140 of them as blank space for ~450ms and then
+    // popped them in at once. That is what the effect actually looked like.
+    //
+    // Selection needs layout, which exists now, and it does not need fonts.
+    // So choose, show everything not chosen on this very frame, and let only
+    // the handful that will actually morph wait for the font gate.
+    let chosen;
+    try { chosen = select(from); } catch (err) { revealAll(); return; }
+    if (!chosen.length) { revealAll(); return; }
+
     // Bounded wait, same as the title: rasterising against a fallback face
-    // samples the wrong letterforms, but these runs are hidden until this
-    // resolves, so it can never be open-ended. Past the deadline, show them.
+    // samples the wrong letterforms. The chosen runs are hidden until this
+    // resolves, so it can never be open-ended.
     let started = false;
     const go = (morph) => {
       if (started) return;
       started = true;
       if (!morph) { revealAll(); return; }
-      try { play(from); } catch (err) { revealAll(); }
+      try { play(chosen); } catch (err) { revealAll(); }
     };
     const ready = document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve();
     ready.then(() => go(true), () => go(true));
     setTimeout(() => go(false), 450);
   };
 
-  function play(from) {
+  /**
+   * Decide what morphs, reveal everything else at once, and return the list.
+   * Measures, but never waits.
+   */
+  function select(from) {
     const runs = runsIn(document);
     document.documentElement.classList.remove('text-morphing');
 
-    // Measure once, up front. Interleaving reads with the writes below would
-    // thrash layout across dozens of elements.
+    // Measure in one pass. Interleaving reads with the reveals below would
+    // thrash layout across a hundred-odd elements.
     const measured = runs.map((r, i) => {
       const rect = r.el.getBoundingClientRect();
       const onScreen = rect.width > 0 && rect.height > 0
         && rect.top < window.innerHeight * 1.1 && rect.bottom > -rect.height;
-      return { ...r, rect, onScreen, fromText: from[i] };
+      return { ...r, rect, onScreen, order: i, fromText: from[i] };
     });
 
-    // Which runs actually morph: on screen, changed, and short enough to read
-    // as a word rather than as a paragraph.
-    const active = measured.filter((m) =>
-      m.onScreen && m.fromText && m.fromText !== m.text
-      && m.text.length <= MAX_MORPH_CHARS && m.fromText.length <= MAX_MORPH_CHARS);
+    const eligible = [];
+    for (const m of measured) {
+      const ok = m.onScreen && m.fromText && m.fromText !== m.text
+        && m.text.length <= MAX_MORPH_CHARS && m.fromText.length <= MAX_MORPH_CHARS;
+      if (ok) eligible.push(m);
+      else reveal(m.el);            // off screen, unchanged, or too long
+    }
 
-    // Everything else is simply shown — off screen, unchanged, or too long.
-    for (const m of measured) if (!active.includes(m)) reveal(m.el);
+    const ranked = eligible.map((m) => {
+      const fontPx = parseFloat(getComputedStyle(m.el).fontSize) || 14;
+      const stride = Math.max(MIN_STRIDE, Math.min(MAX_STRIDE, fontPx / STRIDE_DIVISOR));
+      return { ...m, stride, cost: estimatePoints(m.rect, stride) };
+    }).sort((a, b) => b.cost - a.cost);
 
-    // Split the particle budget by rendered area, so a heading gets a dense
-    // cloud and a caption gets a sparse one instead of every run paying the
-    // same price regardless of how much of the page it occupies.
-    const totalArea = active.reduce((n, m) => n + m.rect.width * m.rect.height, 0) || 1;
+    let spent = 0;
+    const chosen = [];
+    for (const m of ranked) {
+      if (spent + m.cost > POINT_CEILING) { reveal(m.el); continue; }
+      spent += m.cost;
+      chosen.push(m);
+    }
+    // Back to document order so the stagger resolves top-down.
+    chosen.sort((a, b) => a.order - b.order);
+    return chosen;
+  }
 
+  function play(chosen) {
     // One behaviour for the whole page, chosen per navigation. Per-element
     // modes read as a fault rather than a flourish: dozens of different
     // behaviours at once is chaos, not one page becoming another.
     const mode = TITLE_MODES[(Math.random() * TITLE_MODES.length) | 0];
 
-    active.forEach((m, i) => {
-      const share = (m.rect.width * m.rect.height) / totalArea;
-      const points = Math.max(MIN_POINTS, Math.min(MAX_POINTS, Math.round(POINT_BUDGET * share)));
+    chosen.forEach((m, i) => {
       // Staggered by document order so the page resolves top-down instead of
       // every canvas starting on the same frame.
       setTimeout(() => {
         try {
-          morphWord(m.el, m.fromText, m.text, { mode, points, onDone: () => reveal(m.el) });
+          morphWord(m.el, m.fromText, m.text, { mode, strideCss: m.stride, onDone: () => reveal(m.el) });
         } catch (err) { reveal(m.el); }
       }, Math.min(i * 14, 220));
     });
