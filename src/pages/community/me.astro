@@ -180,6 +180,27 @@ import DiscordInvite from '../../components/DiscordInvite.astro';
         </div>
       </section>
 
+      <!-- Rewards. The picker below only appears while a token is unspent,
+           so before this existed a fan who had already spent theirs — or
+           never verified — saw NOTHING about the rewards economy at all.
+           This section is always present and states what you hold and how
+           more is earned.
+
+           Every number here is interpolated from EP_WEIGHTS and
+           STAGE_THRESHOLDS rather than typed, so tuning the economy can
+           never leave the page quoting rates the engine stopped using. -->
+      <section id="me-rewards" class="border border-white/5 p-6 mb-10">
+        <div class="flex items-baseline gap-3 mb-4">
+          <span class="font-mono text-xs text-secondary uppercase tracking-widest">Rewards</span>
+          <div class="h-[1px] flex-1 bg-outline-variant/30"></div>
+        </div>
+        <p class="font-mono text-[11px] text-white/40 leading-relaxed mb-6 max-w-[62ch]">
+          What you hold, and how you earn more. Nothing here expires and nothing
+          can be taken away.
+        </p>
+        <ul id="me-rewards-list" class="space-y-px"></ul>
+      </section>
+
       <!-- Free-song token picker. Shown only while /api/library reports a
            granted-but-unspent token (see loadLibrary below). Choosing is
            permanent, so it always routes through the confirm dialog below
@@ -385,6 +406,7 @@ import DiscordInvite from '../../components/DiscordInvite.astro';
     import { COLORWAYS } from '../../scripts/sprites/vendor/colorways.js';
     import { NATIVE_COLOURWAY } from '../../scripts/sprites/native-palette.js';
     import { computeStageProgress, rankLadder, STAGE_LABELS, rankLabelFor, type RankStatus } from '../../scripts/community/xp-progress';
+    import { EP_WEIGHTS } from '../../../functions/_lib/community/ep';
     import { libraryHtml, safeImg } from '../../scripts/library-view';
     // The cap is the SERVER's constant, imported rather than re-typed — a
     // counter that disagrees with the write path is worse than no counter.
@@ -416,6 +438,7 @@ import DiscordInvite from '../../components/DiscordInvite.astro';
     const handleStatus = document.getElementById('me-handle-status')!;
     const fanSinceEl = document.getElementById('me-fan-since')!;
     const libraryEl = document.getElementById('me-library')!;
+    const rewardsList = document.getElementById('me-rewards-list')!;
     const freeTokenSection = document.getElementById('me-free-token')!;
     const freeTokenList = document.getElementById('me-free-token-list')!;
     const freeTokenDialog = document.getElementById('me-free-token-confirm') as HTMLDialogElement;
@@ -709,6 +732,89 @@ import DiscordInvite from '../../components/DiscordInvite.astro';
     // the wrong track is exactly the mistake this dialog exists to prevent.
     let pendingChoice: { key: string; title: string } | null = null;
 
+    // Both halves arrive from different endpoints (/api/community/me and
+    // /api/library) and either may land first, so each stashes what it got
+    // and re-renders. Rendering from whichever half is present means the
+    // section paints immediately rather than waiting on the slower call.
+    let rewardsProfile: any = null;
+    let rewardsLibrary: any = null;
+
+    function rewardRow(label: string, value: string, note: string, state: 'held' | 'open' | 'locked') {
+      const dot = state === 'held' ? 'bg-secondary'
+        : state === 'open' ? 'bg-primary'
+        : 'bg-white/15';
+      return `
+        <li class="flex items-start gap-4 py-4 border-b border-white/5 last:border-b-0">
+          <span class="mt-[6px] w-2 h-2 rounded-full ${dot} shrink-0" aria-hidden="true"></span>
+          <div class="min-w-0 flex-1">
+            <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+              <span class="font-mono text-[11px] text-white/80 uppercase tracking-widest">${esc(label)}</span>
+              <span class="font-mono text-[11px] text-primary">${esc(value)}</span>
+            </div>
+            <p class="font-mono text-[10px] text-white/40 leading-relaxed mt-1 max-w-[62ch]">${esc(note)}</p>
+          </div>
+        </li>`;
+    }
+
+    function renderRewards() {
+      const rows: string[] = [];
+      const lib = rewardsLibrary;
+
+      // --- Free song token -------------------------------------------------
+      // Three genuinely different states, and the wording has to distinguish
+      // them: a fan who never verified is not the same as one who spent it.
+      if (lib) {
+        const t = lib.free_token || {};
+        if (t.spent_key) {
+          const spent = (lib.releases || [])
+            .flatMap((r: any) => (r.files || []).map((f: any) => ({ ...f, title: r.title })))
+            .find((f: any) => f.key === t.spent_key);
+          rows.push(rewardRow('Free song token', 'Redeemed',
+            spent ? `Spent on ${spent.title}. It is in your collection for good.`
+                  : 'Already spent. The track it bought is in your collection for good.', 'held'));
+        } else if (t.granted) {
+          rows.push(rewardRow('Free song token', '1 available',
+            'One track of your choosing, yours to keep. Pick it below — the choice is permanent.', 'open'));
+        } else {
+          rows.push(rewardRow('Free song token', 'Not yet',
+            'Verify your email and one lands here automatically.', 'locked'));
+        }
+      }
+
+      // --- What ownership means -------------------------------------------
+      if (lib) {
+        const owned = (lib.releases || []).length + (lib.digital || []).length;
+        rows.push(rewardRow('Lifetime downloads', owned ? `${owned} in your collection` : 'Nothing yet',
+          'Anything you own can be downloaded as often as you like, forever. No expiry, no limit on how many times.', owned ? 'held' : 'locked'));
+      }
+
+      // --- Creature skins ---------------------------------------------------
+      if (rewardsProfile && Array.isArray(rewardsProfile.avatars)) {
+        const all = rewardsProfile.avatars;
+        const got = all.filter((a: any) => a.unlocked).length;
+        rows.push(rewardRow('Creature skins', `${got} of ${all.length} unlocked`,
+          'Earned by owning releases, by sticking around, and by turning up. Locked ones show their hint in the picker below.', got ? 'held' : 'locked'));
+      }
+
+      // --- XP ---------------------------------------------------------------
+      // Rates come from EP_WEIGHTS, never typed out, so tuning the economy
+      // cannot leave this paragraph lying.
+      if (rewardsProfile && rewardsProfile.creature) {
+        rows.push(rewardRow('XP', `${(rewardsProfile.creature.ep || 0).toLocaleString()} earned`,
+          `${EP_WEIGHTS.PER_PURCHASE} XP for every release you buy, ${EP_WEIGHTS.PER_TENURE_DAY} a day just for being here, plus whatever you do in the Discord. XP only ever goes up — a rank once reached is never taken back.`, 'held'));
+      }
+
+      // --- Discord ----------------------------------------------------------
+      if (rewardsProfile) {
+        const linked = !!rewardsProfile.discord_linked;
+        rows.push(rewardRow('Discord', linked ? 'Linked' : 'Not linked',
+          linked ? 'Your activity in the server feeds this same creature, and your rank there follows it.'
+                 : 'Link your account and server activity feeds this same creature. Run /link in the Discord, then paste the code on your account page.', linked ? 'held' : 'open'));
+      }
+
+      rewardsList.innerHTML = rows.join('');
+    }
+
     function renderFreeTokenPicker(choices: any[]) {
       if (!choices.length) {
         freeTokenSection.classList.add('hidden');
@@ -779,6 +885,8 @@ import DiscordInvite from '../../components/DiscordInvite.astro';
         })
         .then((data: any) => {
           if (!data) return;
+          rewardsLibrary = data;
+          renderRewards();
           renderFreeTokenPicker(data.free_song_choices || []);
           libraryEl.classList.remove('hidden');
           // Same renderer /library uses, so music, fonts/plugins and the
@@ -843,6 +951,8 @@ import DiscordInvite from '../../components/DiscordInvite.astro';
           renderCreature(profile.creature);
           renderRankLadder(profile.creature.stage);
           renderXpBar(profile.creature, profile.handle);
+          rewardsProfile = { ...profile, avatars: data.avatars };
+          renderRewards();
           renderColourwayPicker(profile.creature);
           renderSpritePicker(profile);
           loadLibrary();
