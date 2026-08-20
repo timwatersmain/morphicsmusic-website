@@ -190,26 +190,6 @@
     to { opacity: 1; }
   }
 
-  /* The same contract as the title, for every other run of text on the page:
-     hidden from its very first paint so a word never flashes into place
-     before its particles have assembled it.
-
-     A CLASS on each run rather than a selector matching a shape of markup.
-     The class is applied by text-morph.js to the INCOMING document during
-     astro:before-swap — while it is still off screen — which is both how the
-     runs are hidden pre-paint and how the effect covers all text rather than
-     the handful of shapes a stylesheet could name. */
-  main .tm-hide {
-    opacity: 0;
-    /* Identical failsafe, identical reasoning to the title's: these runs are
-       hidden so particles can assemble them, so their visibility must never
-       depend on JavaScript finishing, or running at all. A compositor-driven
-       animation keeps its schedule even when the main thread is blocked, and
-       reveals everything after 1.3s regardless. A normal morph lands and
-       removes the class long before it fires. */
-    animation: title-failsafe 1ms linear 1300ms forwards;
-  }
-
   /* Chrome that is identical across pages gets its own names so it stays put
      instead of being crossfaded along with the page body. */
   #site-header {
@@ -227,20 +207,17 @@
 
   /* --- view transition choreography ------------------------------------- */
 
-  /* The page plate does NOT animate. Removed deliberately: a whole-page
-     effect (it was a dot-field mask) fought every element that already had
-     a transition of its own, and dressed content that should simply BE
-     there in motion it did not need.
+  /* The page plate does not animate. Two attempts at a whole-page effect
+     came off and stayed off: a dot-field mask, which fought every element
+     that already had a transition of its own, and a particle morph applied
+     to all the page's text, which cannot work at body-copy size — an 11px
+     run has too few pixels to be described by particles, however finely they
+     are sampled. The title reads because it is 80px.
 
-     The replacement is per-kind, not per-page. Text morphs like the title
-     morphs — sampled into particles, travelled through a formless middle —
-     see scripts/text-morph.js. Other kinds of content (images, cards) get
-     their own treatment later, or none.
-
-     With the root plate inert the swap itself is instant, which is what
-     lets the text morph own the whole transition: the outgoing text leaves
-     with the document and the canvas draws it coming apart, exactly the way
-     the title has always worked. */
+     So the plate is inert and the swap is instant. The title still morphs;
+     it owns itself entirely (scripts/title-morph.js). Anything added here
+     later should be judged against that bar rather than applied to
+     everything on the page at once. */
   ::view-transition-old(root),
   ::view-transition-new(root) {
     animation: none;

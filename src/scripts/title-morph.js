@@ -41,7 +41,7 @@ const titleText = (el) => (el?.textContent || '').trim().replace(/\s+/g, ' ');
 
 // Draw the word with the <h1>'s OWN computed font, so the particles land on the
 // real letterforms rather than an approximation of them.
-function pointsForWord(word, style, boxW, boxH, dpr, opts = {}) {
+function pointsForWord(word, style, boxW, boxH, dpr) {
   const c = document.createElement('canvas');
   c.width = Math.max(1, Math.ceil(boxW * dpr));
   c.height = Math.max(1, Math.ceil(boxH * dpr));
@@ -59,21 +59,7 @@ function pointsForWord(word, style, boxW, boxH, dpr, opts = {}) {
   // the pairing would then have to duplicate or drop points.
   let ink = 0;
   for (let i = 3; i < data.length; i += 4) if (data[i] > 90) ink++;
-  // Two ways to choose the sampling stride, and the difference matters.
-  //
-  // A POINT TARGET (the title) fixes how many particles a word becomes,
-  // whatever its size. Right for one huge word rendered alone.
-  //
-  // A STRIDE IN CSS PIXELS (everything else) fixes how FINE the sampling is
-  // relative to the letterforms, and lets the count follow from how much ink
-  // there actually is. This is what small text needs: a fixed point target
-  // spread over 11px type samples it far too coarsely, and — because the
-  // particle radius is derived from the stride — draws dots wider than the
-  // strokes they are meant to describe. That is what made body text look
-  // like mush while the title looked sharp.
-  const stride = opts.strideCss
-    ? Math.max(1, Math.round(opts.strideCss * dpr))
-    : Math.max(1, Math.round(Math.sqrt(ink / (opts.target || TARGET_POINTS))));
+  const stride = Math.max(1, Math.round(Math.sqrt(ink / TARGET_POINTS)));
 
   const pts = [];
   for (let y = 0; y < height; y += stride) {
@@ -150,12 +136,12 @@ export function morphWord(h1, fromWord, toWord, opts = {}) {
   // computes overflow-y to auto and can clip an absolutely positioned child.
   const mount = opts.mount || document.body;
 
-  if (!h1) return finishEl(null, null);
+  if (!h1) return finish(null, null);
   const to = toWord;
-  if (!to || !fromWord || fromWord === to) return finishEl(h1, null);
+  if (!to || !fromWord || fromWord === to) return finish(h1, null);
 
   const rect = h1.getBoundingClientRect();
-  if (!rect.width || !rect.height) return finishEl(h1, null);
+  if (!rect.width || !rect.height) return finish(h1, null);
 
   const style = getComputedStyle(h1);
   const dpr = Math.min(2, window.devicePixelRatio || 1);
@@ -164,16 +150,9 @@ export function morphWord(h1, fromWord, toWord, opts = {}) {
   const boxW = Math.max(rect.width * 2.2, 400);
   const boxH = rect.height * 1.6;
 
-  // Point budget. The title's 2600 is right for one enormous word and ruinous
-  // for the eighty small runs text-morph.js drives at once — eighty clouds of
-  // 2600 is a quarter of a million circles per frame. Callers pass what the
-  // run is worth; the default keeps the title exactly as it was.
-  // strideCss wins when given: it ties fidelity to the type's own size rather
-  // than to a fixed particle count. See pointsForWord.
-  const sample = opts.strideCss ? { strideCss: opts.strideCss } : { target: opts.points || TARGET_POINTS };
-  const src = pointsForWord(fromWord, style, boxW, boxH, dpr, sample);
-  const dst = pointsForWord(to, style, boxW, boxH, dpr, sample);
-  if (!src.length || !dst.length) return finishEl(h1, null);
+  const src = pointsForWord(fromWord, style, boxW, boxH, dpr);
+  const dst = pointsForWord(to, style, boxW, boxH, dpr);
+  if (!src.length || !dst.length) return finish(h1, null);
 
   // Both words were rasterised into the SAME canvas space, so their union box
   // is directly comparable: SOCIAL really is wider than STORE and the morph
@@ -219,25 +198,15 @@ export function morphWord(h1, fromWord, toWord, opts = {}) {
   const ctx = canvas.getContext('2d');
   const colour = style.color;
   // Radius covers the gaps between sampled points so the settled word reads
-  // solid rather than dotted — which means it must follow the STRIDE, not a
-  // constant. On a title, stridePixel's 2-4 CSS px is right. On an 11px
-  // label the same value draws 3.4px dots over 11px type, i.e. blobs larger
-  // than the strokes; deriving it from strideCss keeps the ratio identical at
-  // every size.
-  const R = opts.strideCss
-    ? Math.max(0.55, opts.strideCss * dpr * 0.85)
-    : Math.max(1.2, stridePixel(src, dst) * dpr * 0.85);
+  // solid rather than dotted.
+  const R = Math.max(1.2, stridePixel(src, dst) * dpr * 0.85);
 
   const seeds = new Float32Array(a0.length);
   for (let i = 0; i < seeds.length; i++) seeds[i] = Math.random();
 
   const t0 = performance.now();
   let raf = 0;
-  // This morph's own completion guard. Three things race to end it — the last
-  // frame, the deadline timer, and pagehide — and exactly one may win, per
-  // morph rather than per page.
-  let done = false;
-  const settle = () => { if (done) return; done = true; finishEl(h1, canvas); };
+  finished = false;
 
   const frameFn = (now) => {
     const raw = Math.min(1, (now - t0) / ms);
@@ -263,7 +232,7 @@ export function morphWord(h1, fromWord, toWord, opts = {}) {
     if (raw < 1) {
       raf = requestAnimationFrame(frameFn);
     } else {
-      settle();
+      finish(h1, canvas);
       if (onDone) onDone();
     }
   };
@@ -274,12 +243,12 @@ export function morphWord(h1, fromWord, toWord, opts = {}) {
   // morph and — since the real <h1> is hidden until the morph lands — left the
   // title invisible until scrolling stopped. Timers keep running, so this
   // guarantees the handoff regardless of what the render loop is doing.
-  setTimeout(() => { cancelAnimationFrame(raf); settle(); }, ms + 500);
+  setTimeout(() => { cancelAnimationFrame(raf); finish(h1, canvas); }, ms + 500);
 
   // Never leave the title invisible if anything goes wrong mid-flight.
   window.addEventListener('pagehide', () => {
     cancelAnimationFrame(raf);
-    settle();
+    finish(h1, canvas);
   }, { once: true });
 }
 
@@ -296,35 +265,20 @@ function stridePixel(src, dst) {
   return n > 1800 ? 2 : n > 900 ? 3 : 4;
 }
 
-// The handoff itself, with NO once-guard: reveal the element, fade the canvas
-// out from under it, drop the canvas.
-//
-// Split out from finish() because morphWord is now run CONCURRENTLY — text-morph
-// drives up to twelve at once. A single module-level flag was correct while the
-// only caller was the one title: the first morph to land set it and every other
-// morph's cleanup silently became a no-op, so eleven canvases stayed on the page
-// forever. Each morph now guards its own completion (see `settle` below) and the
-// module flag is left to the bail paths, which really are once-per-navigation.
-function finishEl(el, canvas) {
+let finished = false;
+function finish(h1, canvas) {
+  if (finished) return;
+  finished = true;
   document.documentElement.classList.remove('title-morphing');
-  if (el) {
-    el.style.transition = `opacity ${HANDOFF_MS}ms linear`;
-    el.style.opacity = '1';
+  if (h1) {
+    h1.style.transition = `opacity ${HANDOFF_MS}ms linear`;
+    h1.style.opacity = '1';
   }
   if (canvas) {
     canvas.style.transition = `opacity ${HANDOFF_MS}ms linear`;
     canvas.style.opacity = '0';
     setTimeout(() => canvas.remove(), HANDOFF_MS + 60);
   }
-}
-
-// Bail paths only: runTitleMorph with no <h1>, safely()'s catch, and the
-// fonts-not-ready branch. One per navigation by nature, and reset in run().
-let finished = false;
-function finish(h1, canvas) {
-  if (finished) return;
-  finished = true;
-  finishEl(h1, canvas);
 }
 
 // --- wiring ----------------------------------------------------------------

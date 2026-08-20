@@ -113,9 +113,6 @@ const { title, currentPage = '' } = Astro.props;
         if (sessionStorage.getItem('morphics:title-from')) {
           document.documentElement.classList.add('title-morphing');
         }
-        // Body text needs nothing here: text-morph.js hides its runs
-        // individually on the incoming document during astro:before-swap,
-        // which is already before their first paint.
       } catch (e) { /* private mode: just show the text */ }
     })();
   </script>
@@ -192,12 +189,6 @@ const { title, currentPage = '' } = Astro.props;
   <script>
     import { initTitleMorph } from '../scripts/title-morph.js';
     initTitleMorph();
-  </script>
-  <!-- Its own module, same isolation reasoning as title-morph: a failure here
-       must not stop the title from being revealed, and vice versa. -->
-  <script>
-    import { initTextMorph } from '../scripts/text-morph.js';
-    initTextMorph();
   </script>
   <!-- Its own module too, same isolation reasoning as title-morph above.
        Signed-out visitors cost nothing here — see the module doc comment. -->
