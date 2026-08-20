@@ -16,8 +16,8 @@ const navItems = [
 ];
 ---
 
-<header id="site-header" class="fixed top-0 w-full z-50 bg-[#0A0A0A]/85 backdrop-blur-2xl grid grid-cols-[auto_1fr] items-center gap-6 px-4 md:px-8 py-3 md:py-6">
-  <a href="/" class="flex-shrink-0 hover:scale-105 transition-all duration-[400ms]">
+<header id="site-header" class="fixed top-0 w-full z-50 bg-[#0A0A0A]/85 backdrop-blur-2xl grid grid-cols-[auto_1fr] items-center gap-6 px-4 lg:px-8 py-3 lg:py-6">
+  <a href="/" aria-label="Morphics home" class="shrink-0 hover:scale-105 transition-all duration-[400ms]">
     <!-- The animated emblem is 956KB: 300 lossy frames at 30fps, and that size
          is inherent to the animation — re-encoding it smaller, with lossy alpha
          or with frame differencing, all came out no better than the original.
@@ -37,27 +37,27 @@ const navItems = [
       width="192"
       height="192"
       decoding="async"
-      class="h-10 w-10 md:h-12 md:w-12 object-contain"
+      class="h-10 w-10 lg:h-12 lg:w-12 shrink-0 object-contain"
     />
   </a>
 
   <!-- Centered main nav. Mobile keeps cart inline at the right end of the
        row; desktop uses a true centered layout (grid middle column) with
        cart + sign-in living in the right cluster for balance. -->
-  <nav class="flex items-center justify-around md:justify-center md:gap-14">
+  <nav class="min-w-0 flex items-center justify-around lg:justify-center lg:gap-[clamp(0.9rem,2.4vw,3.5rem)]">
     {navItems.map(item => (
       <a
         href={item.href}
         class:list={[
-          "flex flex-col md:flex-row items-center md:gap-2 hover:text-primary hover:md:scale-105 transition-all duration-[400ms]",
+          "flex flex-col lg:flex-row items-center lg:gap-2 hover:text-primary hover:lg:scale-105 transition-all duration-[400ms]",
           currentPage === item.href
             ? "text-primary drop-shadow-[0_0_5px_#00F0FF]"
             : "text-primary/50"
         ]}
       >
-        <span class="material-symbols-outlined text-[22px] md:text-base leading-none">{item.icon}</span>
-        <span class="md:hidden font-headline uppercase tracking-[0.08em] min-[360px]:tracking-[0.2em] text-[8px] mt-1 leading-none">{item.mobileLabel || item.label}</span>
-        <span class="hidden md:inline font-headline uppercase tracking-[0.2em] text-[0.75rem] leading-none">{item.label}</span>
+        <span class="material-symbols-outlined text-[22px] lg:text-base leading-none">{item.icon}</span>
+        <span class="lg:hidden font-headline uppercase tracking-[0.08em] min-[360px]:tracking-[0.2em] text-[8px] mt-1 leading-none">{item.mobileLabel || item.label}</span>
+        <span class="hidden lg:inline font-headline uppercase tracking-[0.16em] xl:tracking-[0.2em] text-[clamp(0.63rem,0.85vw,0.75rem)] leading-none whitespace-nowrap">{item.label}</span>
       </a>
     ))}
     <!-- Mobile cart (inline with nav row). Desktop variant lives in the
@@ -66,7 +66,7 @@ const navItems = [
       type="button"
       data-cart-open
       aria-label="Open cart"
-      class="md:hidden relative flex flex-col items-center text-primary/50 hover:text-primary transition-all duration-[400ms]"
+      class="lg:hidden relative flex flex-col items-center text-primary/50 hover:text-primary transition-all duration-[400ms]"
     >
       <span class="material-symbols-outlined text-[22px] leading-none">shopping_bag</span>
       <span class="font-headline uppercase tracking-[0.2em] text-[8px] mt-1 leading-none">Cart</span>
@@ -81,10 +81,10 @@ const navItems = [
       type="button"
       data-cart-open
       aria-label="Open cart"
-      class="hidden md:flex relative flex-row items-center md:gap-2 text-primary/50 hover:text-primary hover:md:scale-105 transition-all duration-[400ms]"
+      class="hidden lg:flex relative flex-row items-center lg:gap-2 text-primary/50 hover:text-primary hover:lg:scale-105 transition-all duration-[400ms]"
     >
       <span class="material-symbols-outlined text-base leading-none">shopping_bag</span>
-      <span class="font-headline uppercase tracking-[0.2em] text-[0.75rem] leading-none">Cart</span>
+      <span class="font-headline uppercase tracking-[0.16em] xl:tracking-[0.2em] text-[clamp(0.63rem,0.85vw,0.75rem)] leading-none whitespace-nowrap">Cart</span>
       <span id="cart-badge" class="cart-badge hidden absolute -top-1 -right-2 min-w-[16px] h-[16px] px-1 bg-secondary text-on-secondary text-[9px] font-mono font-bold rounded-full items-center justify-center">0</span>
     </button>
     <!-- href/label default to a neutral "Account" state, not "Sign in" — we
@@ -93,9 +93,14 @@ const navItems = [
          below flips it off once a signed-in state points this at
          /community/me instead. -->
     <a id="account-link" href="/login" data-astro-reload
-       class="hidden md:flex flex-row items-center md:gap-2 text-primary/50 hover:text-primary hover:md:scale-105 transition-all duration-[400ms]">
-      <span class="material-symbols-outlined text-base leading-none">person</span>
-      <span id="account-link-label" class="font-headline uppercase tracking-[0.2em] text-[0.75rem] leading-none">Account</span>
+       class="flex flex-col lg:flex-row items-center lg:gap-2 text-primary/50 hover:text-primary hover:lg:scale-105 transition-all duration-[400ms]">
+      <span class="material-symbols-outlined text-[22px] lg:text-base leading-none">person</span>
+      <!-- Two labels, one element: the stacked row needs the 8px size the
+           other mobile items use, the horizontal row needs the fluid one.
+           Both carry the same id target for the auth script, which writes to
+           whichever is visible via the shared parent. -->
+      <span id="account-link-label" class="lg:hidden font-headline uppercase tracking-[0.08em] min-[360px]:tracking-[0.2em] text-[8px] mt-1 leading-none">Account</span>
+      <span id="account-link-label-lg" class="hidden lg:inline font-headline uppercase tracking-[0.16em] xl:tracking-[0.2em] text-[clamp(0.63rem,0.85vw,0.75rem)] leading-none whitespace-nowrap">Account</span>
     </a>
   </nav>
 
@@ -147,7 +152,17 @@ const navItems = [
 
     const CACHE_KEY = 'morphics_auth_cache_v1';
     const accountLink = document.getElementById('account-link') as HTMLAnchorElement | null;
-    const accountLabel = document.getElementById('account-link-label');
+    // TWO label elements, one per layout — the compact row needs the 8px
+    // stacked size, the horizontal row the fluid one, and only one is ever
+    // displayed. Both must be written or the hidden one goes stale and shows
+    // the wrong word the moment the window crosses the breakpoint.
+    const accountLabels = [
+      document.getElementById('account-link-label'),
+      document.getElementById('account-link-label-lg'),
+    ].filter(Boolean) as HTMLElement[];
+    const setAccountLabel = (text: string) => {
+      for (const el of accountLabels) el.textContent = text;
+    };
 
     function paint(state: 'signed-in' | 'signed-out' | 'unknown', email: string | null) {
       // Lets other site-wide scripts react to auth state without each running
@@ -155,15 +170,15 @@ const navItems = [
       // which relies on this (plus the localStorage cache below) as its ONLY
       // signal, so a signed-out visitor never causes it to call any endpoint.
       document.dispatchEvent(new CustomEvent('morphics:auth-state', { detail: { state, email } }));
-      if (!accountLink || !accountLabel) return;
+      if (!accountLink || !accountLabels.length) return;
       if (state === 'signed-in') {
         accountLink.href = '/community/me';
-        accountLabel.textContent = 'Profile';
+        setAccountLabel('Profile');
         // /community/me is fully client-router aware — let it soft-navigate.
         accountLink.removeAttribute('data-astro-reload');
       } else if (state === 'signed-out') {
         accountLink.href = '/login';
-        accountLabel.textContent = 'Sign in';
+        setAccountLabel('Sign in');
         // /login is exempted from the client router (session-form-heavy,
         // third-party Turnstile script — see the note on login.astro's own
         // links), so force a real navigation into it.
@@ -174,7 +189,7 @@ const navItems = [
         // the browser. /login itself will sort out signed-in vs signed-out
         // on click, so pointing there is a safe, recoverable default.
         accountLink.href = '/login';
-        accountLabel.textContent = 'Account';
+        setAccountLabel('Account');
         accountLink.setAttribute('data-astro-reload', '');
       }
     }
