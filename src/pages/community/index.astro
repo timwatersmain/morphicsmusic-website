@@ -10,7 +10,10 @@ import DiscordInvite from '../../components/DiscordInvite.astro';
   <div class="max-w-4xl mx-auto pb-24">
     <header class="mb-12 flex flex-wrap items-end justify-between gap-4">
       <div>
-        <span class="font-mono text-xs text-secondary uppercase tracking-widest">Fan wall</span>
+        <!-- No eyebrow here on purpose. Every other page uses one to say where
+             you are, but this page's own heading already says COMMUNITY, and
+             the label above it would only repeat the word. It is not a "fan
+             wall" or any other named thing — it is just the community. -->
         <h1 class="font-headline font-bold text-5xl md:text-7xl text-primary uppercase tracking-tighter leading-none mt-2">COMMUNITY</h1>
       </div>
       <!-- Top right, beside the profile link: both are "somewhere else you can
@@ -24,7 +27,7 @@ import DiscordInvite from '../../components/DiscordInvite.astro';
       </div>
     </header>
 
-    <div id="dir-loading" class="font-mono text-[11px] text-white/40">Loading the fan wall…</div>
+    <div id="dir-loading" class="font-mono text-[11px] text-white/40">Loading the community…</div>
 
     <div id="dir-signin" class="hidden p-8 border border-white/10 rounded-[var(--radius-lg)] text-center">
       <p class="font-mono text-[11px] text-white/40 leading-relaxed mb-4">
@@ -148,7 +151,7 @@ import DiscordInvite from '../../components/DiscordInvite.astro';
         .catch(e => {
           loading.classList.add('hidden');
           errorBox.classList.remove('hidden');
-          errorMsg.textContent = 'Could not load the fan wall: ' + e.message;
+          errorMsg.textContent = 'Could not load the community: ' + e.message;
         });
     }
 

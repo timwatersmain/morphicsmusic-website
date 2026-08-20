@@ -26,7 +26,7 @@ import DiscordInvite from '../../components/DiscordInvite.astro';
       <span aria-current="page" class="font-mono text-[10px] uppercase tracking-widest border border-primary bg-primary/10 text-primary px-4 py-2 rounded-full">Profile</span>
       <a href="/library" data-astro-reload class="font-mono text-[10px] text-white/40 hover:text-secondary uppercase tracking-widest border border-white/10 hover:border-secondary/30 px-4 py-2 rounded-full">Orders &amp; receipts</a>
       <a href="/account" data-astro-reload class="font-mono text-[10px] text-white/40 hover:text-secondary uppercase tracking-widest border border-white/10 hover:border-secondary/30 px-4 py-2 rounded-full">Sign-in details</a>
-      <a href="/community" class="font-mono text-[10px] text-white/40 hover:text-secondary uppercase tracking-widest border border-white/10 hover:border-secondary/30 px-4 py-2 rounded-full">Fan wall</a>
+      <a href="/community" class="font-mono text-[10px] text-white/40 hover:text-secondary uppercase tracking-widest border border-white/10 hover:border-secondary/30 px-4 py-2 rounded-full">Community</a>
     </nav>
 
     <div id="me-loading" class="font-mono text-[11px] text-white/40">Loading your profile…</div>
@@ -52,7 +52,7 @@ import DiscordInvite from '../../components/DiscordInvite.astro';
     <div id="me-pending-delete" class="hidden p-8 border border-error/30 rounded-[var(--radius-lg)]">
       <p class="font-mono text-[11px] text-error uppercase tracking-widest mb-4">Profile deleted</p>
       <p class="font-mono text-[11px] text-white/60 leading-relaxed mb-3">
-        You deleted <span id="me-pending-handle" class="text-white/80"></span>. It is hidden from the fan wall and from everyone who had your link.
+        You deleted <span id="me-pending-handle" class="text-white/80"></span>. It is hidden from the community and from everyone who had your link.
       </p>
       <p class="font-mono text-[11px] text-white/60 leading-relaxed mb-6">
         Nothing is gone yet — your bio, rank, XP and creature are all still here, and you can bring them back exactly as they were until
@@ -250,7 +250,7 @@ import DiscordInvite from '../../components/DiscordInvite.astro';
           </button>
         </div>
         <p class="font-mono text-[10px] text-white/30 mb-4">
-          Browse all 401 sprites, each shown here full-grown in its own native colours. Picking one shows it everywhere your creature appears — the fan wall, this page, and public profiles — rendered at YOUR actual stage, XP and colourway. Your rank label is unaffected.
+          Browse all 401 sprites, each shown here full-grown in its own native colours. Picking one shows it everywhere your creature appears — the community, this page, and public profiles — rendered at YOUR actual stage, XP and colourway. Your rank label is unaffected.
         </p>
         <p id="me-sprite-status" class="font-mono text-[10px] text-white/30 mb-4 h-4"></p>
         <div id="me-sprite-groups" class="space-y-8"></div>
@@ -269,7 +269,7 @@ import DiscordInvite from '../../components/DiscordInvite.astro';
 
         <div class="flex flex-wrap items-start justify-between gap-4">
           <div class="max-w-md">
-            <p class="font-mono text-[11px] text-white/60 uppercase tracking-widest">Show me on the fan wall</p>
+            <p class="font-mono text-[11px] text-white/60 uppercase tracking-widest">Show me in the community</p>
             <p class="font-mono text-[10px] text-white/30 mt-2 leading-relaxed">
               Off means unlisted, not private: you stop appearing in the directory, but anyone signed in who has your link can still open your profile.
             </p>
@@ -315,7 +315,7 @@ import DiscordInvite from '../../components/DiscordInvite.astro';
             <!-- Step 1: understand the consequence. -->
             <div id="me-delete-step-1">
               <p class="font-mono text-[10px] text-white/50 leading-relaxed mb-3">
-                Your handle, bio, rank, XP, unlocks and creature disappear from the fan wall and from anyone holding your link, straight away.
+                Your handle, bio, rank, XP, unlocks and creature disappear from the community and from anyone holding your link, straight away.
               </p>
               <p class="font-mono text-[10px] text-white/50 leading-relaxed mb-3">
                 You have 30 days to change your mind: come back to this page and restore all of it exactly as it was. Your handle stays reserved for you the whole time. After 30 days it is deleted permanently and cannot be recovered.
@@ -929,7 +929,7 @@ import DiscordInvite from '../../components/DiscordInvite.astro';
       })
         .then(async r => {
           if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || 'save failed');
-          wallStatus.textContent = next ? 'Listed on the fan wall.' : 'Unlisted — direct links still work.';
+          wallStatus.textContent = next ? 'Listed in the community.' : 'Unlisted — direct links still work.';
         })
         .catch(e => {
           setWallToggle(!next);
