@@ -109,11 +109,10 @@ const { title, currentPage = '' } = Astro.props;
     // the "record what's leaving" side.
     (function () {
       try {
+        if (!sessionStorage.getItem('morphics:title-from')) return;
         if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-        if (sessionStorage.getItem('morphics:title-from')) {
-          document.documentElement.classList.add('title-morphing');
-        }
-      } catch (e) { /* private mode: just show the text */ }
+        document.documentElement.classList.add('title-morphing');
+      } catch (e) { /* private mode: just show the title */ }
     })();
   </script>
   <script is:inline data-astro-rerun>
@@ -189,12 +188,6 @@ const { title, currentPage = '' } = Astro.props;
   <script>
     import { initTitleMorph } from '../scripts/title-morph.js';
     initTitleMorph();
-  </script>
-  <!-- Its own module, same isolation reasoning as title-morph above: a
-       failure in one must not stop the other. -->
-  <script>
-    import { initPageSettle } from '../scripts/page-settle.js';
-    initPageSettle();
   </script>
   <!-- Its own module too, same isolation reasoning as title-morph above.
        Signed-out visitors cost nothing here — see the module doc comment. -->

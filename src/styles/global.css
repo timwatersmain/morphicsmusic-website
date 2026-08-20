@@ -190,39 +190,11 @@
     to { opacity: 1; }
   }
 
-  /* Page settle — see scripts/page-settle.js. Applied to the incoming
-     page's sections before it is displayed; each rises a little and fades,
-     staggered, so the page assembles rather than appearing all at once.
-
-     `both` so the element holds the from-state through its delay. That is
-     safe here only because the class is added by script: an unmarked page
-     has no animation and is simply visible, so nothing can be left hidden by
-     a script that failed to run. */
-  .settle {
-    animation: page-settle 460ms cubic-bezier(0.16, 1, 0.3, 1) both;
-  }
-
-  @keyframes page-settle {
-    from { opacity: 0; transform: translateY(16px); }
-    to   { opacity: 1; transform: none; }
-  }
-
-  /* Motion is the whole point, so honour the preference completely. The
-     module also returns early, but the rule matters for a preference changed
-     after the page was marked. */
-  @media (prefers-reduced-motion: reduce) {
-    .settle { animation: none; }
-  }
-
   /* Chrome that is identical across pages gets its own names so it stays put
      instead of being crossfaded along with the page body. */
   #site-header {
     view-transition-name: site-nav;
   }
-
-  /* No view-transition-name on the title any more, and none needed: the
-     root plate is inert, so there is no page-level effect for it to be
-     lifted out of. The title is owned start to finish by title-morph.js. */
 
   ::selection {
     background-color: #00f0ff;
@@ -231,27 +203,29 @@
 
   /* --- view transition choreography ------------------------------------- */
 
-  /* The page plate does not animate. Two attempts at a whole-page effect
-     came off and stayed off: a dot-field mask, which fought every element
-     that already had a transition of its own, and a particle morph applied
-     to all the page's text, which cannot work at body-copy size — an 11px
-     run has too few pixels to be described by particles, however finely they
-     are sampled. The title reads because it is 80px.
-
-     So the plate is inert and the swap is instant. The title still morphs;
-     it owns itself entirely (scripts/title-morph.js). Anything added here
-     later should be judged against that bar rather than applied to
-     everything on the page at once. */
-  ::view-transition-old(root),
-  ::view-transition-new(root) {
-    animation: none;
+  /* The page body: a quick crossfade, kept short so navigation still feels
+     instant. The title outlasts it, which is what makes the title read as the
+     thing being carried across rather than as part of the fade. */
+  ::view-transition-old(root) {
+    animation: vt-fade-out 180ms cubic-bezier(0.4, 0, 1, 1) both;
   }
+  ::view-transition-new(root) {
+    animation: vt-fade-in 260ms cubic-bezier(0, 0, 0.2, 1) 60ms both;
+  }
+
 
   /* The nav never changes, so it should not animate at all. */
   ::view-transition-old(site-nav),
   ::view-transition-new(site-nav) {
     animation: none;
     mix-blend-mode: normal;
+  }
+
+  @keyframes vt-fade-out {
+    to { opacity: 0; }
+  }
+  @keyframes vt-fade-in {
+    from { opacity: 0; }
   }
 
   /* Motion is the whole point here, so honour the preference completely. */
