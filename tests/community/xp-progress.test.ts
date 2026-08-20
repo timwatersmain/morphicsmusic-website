@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeStageProgress, rankLadder, STAGE_ORDER, STAGE_LABELS, MILESTONE_STEP } from '../../src/scripts/community/xp-progress';
+import { computeStageProgress, rankLadder, STAGE_ORDER, STAGE_LABELS, MILESTONE_STEP, rankLabelFor } from '../../src/scripts/community/xp-progress';
 import { STAGE_THRESHOLDS } from '../../functions/_lib/community/ep';
 
 describe('computeStageProgress', () => {
@@ -112,5 +112,42 @@ describe('rankLadder', () => {
 
   it('reuses the same STAGE_LABELS the fan wall imports, so the two can never drift', () => {
     expect(STAGE_LABELS).toEqual({ egg: 'Egg', grub: 'Larva', pupa: 'Chrysalis', adult: 'Emergent' });
+  });
+});
+
+describe('artist rank', () => {
+  it('prints Morphics for the artist handle, at any stage', () => {
+    // The artist is stored as a normal 'adult' and keeps earning normally —
+    // only the printed word differs, so every stage must map to the name.
+    for (const stage of STAGE_ORDER) {
+      expect(rankLabelFor(stage, 'morphics')).toBe('Morphics');
+    }
+  });
+
+  it('is case-insensitive on the handle', () => {
+    expect(rankLabelFor('adult', 'MORPHICS')).toBe('Morphics');
+    expect(rankLabelFor('adult', 'Morphics')).toBe('Morphics');
+  });
+
+  it('gives every other fan the ordinary ladder word', () => {
+    // Including handles that merely CONTAIN the artist's, which is the
+    // impersonation an over-eager substring check would hand out for free.
+    for (const handle of ['someone', 'morphicsmusic', 'morphics-fan', 'notmorphics', '']) {
+      expect(rankLabelFor('adult', handle)).toBe(STAGE_LABELS.adult);
+      expect(rankLabelFor('egg', handle)).toBe(STAGE_LABELS.egg);
+    }
+  });
+
+  it('falls back to the stage word when no handle is known', () => {
+    expect(rankLabelFor('pupa')).toBe(STAGE_LABELS.pupa);
+    expect(rankLabelFor('pupa', null)).toBe(STAGE_LABELS.pupa);
+  });
+
+  it('does not disturb the stage ladder itself', () => {
+    // The ladder measures progress and must stay identical for everyone —
+    // the artist's rank is a name shown INSTEAD of the current rung, not a
+    // fifth rung spliced into the path fans climb.
+    expect(rankLadder('adult').map(s => s.label))
+      .toEqual([STAGE_LABELS.egg, STAGE_LABELS.grub, STAGE_LABELS.pupa, STAGE_LABELS.adult]);
   });
 });

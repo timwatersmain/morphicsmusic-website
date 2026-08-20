@@ -14,7 +14,7 @@
 import { corsHandler, preflight } from '../../_lib/cors';
 import { isBot, botNotFound, type DiscordBotEnv } from '../../_lib/community/discord';
 import { getDiscordLinkByUser, getProfileById } from '../../_lib/community/repo';
-import { STAGE_LABELS, nextStageThreshold, type CreatureStage } from '../../_lib/community/ep';
+import { STAGE_LABELS, nextStageThreshold, rankLabelFor, type CreatureStage } from '../../_lib/community/ep';
 
 export const onRequestOptions: PagesFunction<DiscordBotEnv> = async ({ request }) => preflight(request);
 
@@ -50,7 +50,7 @@ export const onRequestPost: PagesFunction<DiscordBotEnv> = corsHandler<DiscordBo
       ok: true,
       ep: profile.ep || 0,
       stage,
-      label: STAGE_LABELS[stage],
+      label: rankLabelFor(stage, profile.handle),
       discord_ep: link.discord_ep,
       next_threshold: nextStageThreshold(stage),
       handle: profile.handle,

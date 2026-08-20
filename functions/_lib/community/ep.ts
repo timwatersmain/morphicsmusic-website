@@ -33,6 +33,39 @@ export const STAGE_LABELS: Record<CreatureStage, string> = {
   adult: 'Emergent',
 };
 
+/**
+ * The artist's own rank. Exactly one profile carries it, and it is a NAME
+ * rather than a rung: the ladder measures how far a fan has come, and the
+ * person the ladder is about is not on it.
+ *
+ * Keyed on handle, not email, for one reason — handle is the only identifier
+ * that reaches the client. Emails are deliberately never exposed (see
+ * fan_profiles' schema comment), and the fan wall and public profile pages
+ * both render the rank in the browser, so an email-keyed check could not be
+ * applied there without leaking the thing the schema goes out of its way to
+ * keep private.
+ *
+ * That makes the handle load-bearing for identity, which is safe TODAY because
+ * handles are UNIQUE and the owner holds this one. It stops being safe the
+ * moment he releases it: whoever claimed 'morphics' next would inherit the
+ * artist rank. Note that handle.ts deliberately does NOT reserve this word —
+ * reserving it only ever locked him out of his own name. So if the handle is
+ * ever changed, change it here too, in the same commit.
+ */
+export const ARTIST_HANDLE = 'morphics';
+export const ARTIST_RANK_LABEL = 'Morphics';
+
+/**
+ * What to PRINT as someone's rank. The stage ladder is untouched by this —
+ * the artist is still stored as 'adult' and still earns EP normally; only the
+ * word shown changes. Every surface that displays a rank goes through here so
+ * the artist cannot read "Morphics" on one page and "Emergent" on another.
+ */
+export function rankLabelFor(stage: CreatureStage, handle?: string | null): string {
+  if (handle && String(handle).toLowerCase() === ARTIST_HANDLE) return ARTIST_RANK_LABEL;
+  return STAGE_LABELS[stage] || STAGE_LABELS.egg;
+}
+
 // Owner decision, 18 Aug 2026: TICKET SALES are the behaviour XP should push
 // hardest on — specifically tickets bought through morphicsmusic.com. That is
 // why PER_TICKET below is the largest single award in the system by a wide

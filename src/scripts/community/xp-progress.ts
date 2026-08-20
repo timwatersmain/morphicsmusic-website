@@ -6,9 +6,9 @@
 // this file, only consulted. Importing STAGE_LABELS (rather than declaring a
 // second copy here) is also why the fan wall (src/pages/community/index.astro)
 // and this page can never drift onto two different sets of stage names.
-import { STAGE_LABELS, STAGE_THRESHOLDS, type CreatureStage } from '../../../functions/_lib/community/ep';
+import { STAGE_LABELS, STAGE_THRESHOLDS, rankLabelFor, type CreatureStage } from '../../../functions/_lib/community/ep';
 
-export { STAGE_LABELS };
+export { STAGE_LABELS, rankLabelFor };
 export type { CreatureStage };
 
 // Low to high — the ladder is always rendered in this order regardless of

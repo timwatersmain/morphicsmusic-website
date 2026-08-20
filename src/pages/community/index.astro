@@ -63,7 +63,7 @@ import DiscordInvite from '../../components/DiscordInvite.astro';
   <script>
     import { creatureAvatarHtml } from '../../scripts/sprites/creature-avatar.js';
     import { initCreatureCanvases } from '../../scripts/sprites/renderer.js';
-    import { STAGE_LABELS } from '../../scripts/community/xp-progress';
+    import { STAGE_LABELS, rankLabelFor } from '../../scripts/community/xp-progress';
 
     // Wrapped for astro:page-load — see music.astro's doc comment. This page
     // fetches fresh directory data on every arrival, so it must actually
@@ -84,8 +84,10 @@ import DiscordInvite from '../../components/DiscordInvite.astro';
     // STAGE_LABELS now comes from src/scripts/community/xp-progress.ts, which
     // itself imports it from the EP module — one source of stage names
     // shared with /community/me's rank section, so the two can't drift.
-    function stageLabel(stage: string) {
-      return (STAGE_LABELS as Record<string, string>)[stage] || STAGE_LABELS.egg;
+    // Takes the handle as well as the stage so the artist's row reads
+    // "Morphics" here exactly as it does on his profile — see rankLabelFor.
+    function stageLabel(stage: string, handle?: string) {
+      return rankLabelFor(stage as any, handle);
     }
     function fmtDate(unix: number) {
       return new Date(unix * 1000).toLocaleDateString(undefined, { year: 'numeric', month: 'long' });
@@ -110,7 +112,7 @@ import DiscordInvite from '../../components/DiscordInvite.astro';
             </a>
             <span class="font-mono text-[10px] text-white/40 uppercase tracking-widest">Morphics since ${esc(fmtDate(f.fan_since))}</span>
           </div>
-          <span class="font-mono text-[11px] text-secondary uppercase tracking-widest">${esc(stageLabel(f.creature && f.creature.stage))}</span>
+          <span class="font-mono text-[11px] text-secondary uppercase tracking-widest">${esc(stageLabel(f.creature && f.creature.stage, f.handle))}</span>
         </li>
       `).join('');
       if (append) list.innerHTML += html;

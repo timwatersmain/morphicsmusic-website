@@ -17,7 +17,7 @@ import {
 } from '../../_lib/community/repo';
 import { evaluateCreature } from '../../_lib/community/creature';
 import { epInputsFor, ownedSlugsFromRecord } from '../../_lib/community/ep-inputs';
-import { STAGE_LABELS, nextStageThreshold } from '../../_lib/community/ep';
+import { STAGE_LABELS, nextStageThreshold, rankLabelFor } from '../../_lib/community/ep';
 
 interface Env extends DiscordBotEnv {
   DOWNLOADS: KVNamespace;
@@ -128,7 +128,7 @@ export const onRequestPost: PagesFunction<Env> = corsHandler<Env>(
       ok: true,
       ep: update.ep,
       stage: update.stage,
-      label: STAGE_LABELS[update.stage],
+      label: rankLabelFor(update.stage, profile.handle),
       discord_ep: discordEp,
       next_threshold: nextStageThreshold(update.stage),
       just_hatched: update.justHatched,

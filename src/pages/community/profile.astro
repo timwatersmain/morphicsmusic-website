@@ -72,7 +72,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 
   <script>
     import { creatureAvatarHtml } from '../../scripts/sprites/creature-avatar.js';
-    import { STAGE_LABELS } from '../../scripts/community/xp-progress';
+    import { STAGE_LABELS, rankLabelFor } from '../../scripts/community/xp-progress';
     import { initCreatureCanvases } from '../../scripts/sprites/renderer.js';
 
     // Wrapped for astro:page-load — see music.astro's doc comment. This is
@@ -137,7 +137,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
           handleEl.textContent = '@' + profile.handle;
 
           const stage = (profile.creature && profile.creature.stage) || 'egg';
-          rankEl.textContent = (STAGE_LABELS as Record<string, string>)[stage] || STAGE_LABELS.egg;
+          rankEl.textContent = rankLabelFor(stage as any, profile.handle);
           epEl.textContent = ((profile.creature && profile.creature.ep) || 0) + ' EP';
 
           // textContent, never innerHTML: the bio is fan-written text and the

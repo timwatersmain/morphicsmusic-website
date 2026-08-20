@@ -384,7 +384,7 @@ import DiscordInvite from '../../components/DiscordInvite.astro';
     import { initCreatureCanvases, initCreatureCanvasesLazy, loadSprites } from '../../scripts/sprites/renderer.js';
     import { COLORWAYS } from '../../scripts/sprites/vendor/colorways.js';
     import { NATIVE_COLOURWAY } from '../../scripts/sprites/native-palette.js';
-    import { computeStageProgress, rankLadder, STAGE_LABELS, type RankStatus } from '../../scripts/community/xp-progress';
+    import { computeStageProgress, rankLadder, STAGE_LABELS, rankLabelFor, type RankStatus } from '../../scripts/community/xp-progress';
     import { libraryHtml, safeImg } from '../../scripts/library-view';
     // The cap is the SERVER's constant, imported rather than re-typed — a
     // counter that disagrees with the write path is worse than no counter.
@@ -498,14 +498,16 @@ import DiscordInvite from '../../components/DiscordInvite.astro';
       `).join('');
     }
 
-    function renderXpBar(creature: any) {
+    function renderXpBar(creature: any, handle?: string) {
       const progress = computeStageProgress({
         ep: creature.ep || 0,
         stage: creature.stage,
         next_stage_ep: creature.next_stage_ep,
       });
 
-      xpStageLabelEl.textContent = progress.stageLabel;
+      // The BAR still tracks the real stage band — the artist keeps earning
+      // and the milestone maths is unchanged. Only the printed word differs.
+      xpStageLabelEl.textContent = rankLabelFor(creature.stage, handle);
       xpTotalEl.textContent = progress.totalEp.toLocaleString();
       xpFillEl.style.width = progress.pct + '%';
       xpFillEl.setAttribute('aria-valuenow', String(Math.round(progress.pct)));
@@ -840,7 +842,7 @@ import DiscordInvite from '../../components/DiscordInvite.astro';
           setWallToggle(!profile.hidden_from_wall);
           renderCreature(profile.creature);
           renderRankLadder(profile.creature.stage);
-          renderXpBar(profile.creature);
+          renderXpBar(profile.creature, profile.handle);
           renderColourwayPicker(profile.creature);
           renderSpritePicker(profile);
           loadLibrary();
