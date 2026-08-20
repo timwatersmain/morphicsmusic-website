@@ -203,15 +203,83 @@
 
   /* --- view transition choreography ------------------------------------- */
 
-  /* The page body: a quick crossfade, kept short so navigation still feels
-     instant. The title outlasts it, which is what makes the title read as the
-     thing being carried across rather than as part of the fade. */
+  /* The page body: it comes APART INTO A DOT FIELD and reassembles, rather
+     than crossfading. Same idea as the title morph — travel through a
+     formless middle instead of dissolving one picture into another — but
+     done in pure CSS on the browser's own snapshots, so it costs no
+     JavaScript and cannot delay or block navigation.
+
+     The mechanism is a repeating radial-gradient MASK, one dot per cell.
+     --vt-dot is the radius of the opaque core of each dot, so animating it
+     from 72% to 0% eats the page away into a grid of shrinking points; the
+     incoming page runs it in reverse and grows back out of the same grid.
+     A registered @property is what makes that interpolable at all — an
+     unregistered custom property inside a gradient would jump between
+     keyframes rather than animate.
+
+     Timings are deliberately short. This has to read as a morph, not as a
+     wait: 300ms out, 380ms in, overlapping. The title morph (620ms) still
+     outlasts it, which keeps the title reading as the thing carried across
+     rather than as part of the page effect. */
+  @property --vt-dot {
+    syntax: '<percentage>';
+    inherits: false;
+    initial-value: 72%;
+  }
+
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    /* One dot per 13px cell. Small enough to read as a field rather than as
+       polka dots, large enough that the mask stays cheap on a full-page
+       snapshot — this is compositor work, and the cell count is what drives
+       its cost. */
+    mask-image: radial-gradient(
+      circle at center,
+      #000 var(--vt-dot),
+      transparent calc(var(--vt-dot) + 14%)
+    );
+    mask-size: 13px 13px;
+    mask-repeat: repeat;
+    /* Chromium still wants the prefix for mask-* on these pseudo-elements. */
+    -webkit-mask-image: radial-gradient(
+      circle at center,
+      #000 var(--vt-dot),
+      transparent calc(var(--vt-dot) + 14%)
+    );
+    -webkit-mask-size: 13px 13px;
+    -webkit-mask-repeat: repeat;
+  }
+
   ::view-transition-old(root) {
-    animation: vt-fade-out 180ms cubic-bezier(0.4, 0, 1, 1) both;
+    animation: vt-scatter 300ms cubic-bezier(0.4, 0, 1, 1) both;
   }
   ::view-transition-new(root) {
-    animation: vt-fade-in 260ms cubic-bezier(0, 0, 0.2, 1) 60ms both;
+    animation: vt-gather 380ms cubic-bezier(0, 0, 0.2, 1) 90ms both;
   }
+
+  /* Coming apart: dots shrink, the whole plate drifts fractionally back and
+     softens. The scale is tiny on purpose — a big zoom reads as a slide
+     transition, and this should read as the page losing cohesion. */
+  @keyframes vt-scatter {
+    from { --vt-dot: 72%; opacity: 1; transform: scale(1);      filter: blur(0); }
+    to   { --vt-dot: 0%;  opacity: 0; transform: scale(1.012);  filter: blur(3px); }
+  }
+
+  /* Reassembling: the same grid run backwards, from slightly under scale so
+     the page settles INTO place rather than arriving already there. */
+  @keyframes vt-gather {
+    from { --vt-dot: 0%;  opacity: 0; transform: scale(0.988); filter: blur(4px); }
+    to   { --vt-dot: 72%; opacity: 1; transform: scale(1);     filter: blur(0); }
+  }
+
+  /* No @supports guard needed, and that is not an oversight. On an engine
+     without @property, --vt-dot has no registered initial value, so
+     var(--vt-dot) resolves to nothing, the radial-gradient is invalid, and
+     the whole mask-image declaration is dropped. The element ends up
+     unmasked with only the opacity/transform halves of the keyframes
+     running — which is exactly the crossfade this replaced. It degrades to
+     the old behaviour by construction rather than by a second code path
+     that would need testing on an engine we cannot easily test on. */
 
 
   /* The nav never changes, so it should not animate at all. */
@@ -221,19 +289,23 @@
     mix-blend-mode: normal;
   }
 
-  @keyframes vt-fade-out {
-    to { opacity: 0; }
-  }
-  @keyframes vt-fade-in {
-    from { opacity: 0; }
-  }
-
   /* Motion is the whole point here, so honour the preference completely. */
   @media (prefers-reduced-motion: reduce) {
     ::view-transition-group(*),
     ::view-transition-old(*),
     ::view-transition-new(*) {
       animation: none !important;
+    }
+    /* The mask has to come off too, not just the animation. With animation
+       disabled --vt-dot sits at its 72% initial value, which is a static
+       dot-grid stencil — the page would be stencilled rather than morphed.
+       Harmless in practice because the snapshots are on screen for a frame,
+       but "harmless because it is too quick to see" is not a thing to leave
+       in a stylesheet. */
+    ::view-transition-old(root),
+    ::view-transition-new(root) {
+      mask-image: none !important;
+      -webkit-mask-image: none !important;
     }
   }
 
