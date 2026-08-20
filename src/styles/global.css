@@ -190,26 +190,24 @@
     to { opacity: 1; }
   }
 
-  /* The same contract as the title, for the rest of the page's text: hidden
-     from the very first paint when a morph is pending, so a word never
-     flashes into place before its particles have assembled it.
+  /* The same contract as the title, for every other run of text on the page:
+     hidden from its very first paint so a word never flashes into place
+     before its particles have assembled it.
 
-     The selector must match scripts/text-morph.js's SELECTOR exactly. That
-     duplication is the reason the module uses a fixed selector instead of
-     "any element with short text" — CSS cannot ask how long an element's
-     text is, and this rule has to run before any script does. */
-  html.text-morphing main h2,
-  html.text-morphing main h3,
-  html.text-morphing main .uppercase.tracking-widest,
-  html.text-morphing main [data-morph-text] {
+     A CLASS on each run rather than a selector matching a shape of markup.
+     The class is applied by text-morph.js to the INCOMING document during
+     astro:before-swap — while it is still off screen — which is both how the
+     runs are hidden pre-paint and how the effect covers all text rather than
+     the handful of shapes a stylesheet could name. */
+  main .tm-hide {
     opacity: 0;
-    /* Identical failsafe, identical reasoning: these elements are hidden so
-       particles can assemble them, so their visibility must never depend on
-       JavaScript finishing, or running at all. A compositor-driven animation
-       keeps its schedule even when the main thread is blocked. It reveals
-       everything after 1.2s regardless; a normal morph finishes and clears
-       the class long before. */
-    animation: title-failsafe 1ms linear 1200ms forwards;
+    /* Identical failsafe, identical reasoning to the title's: these runs are
+       hidden so particles can assemble them, so their visibility must never
+       depend on JavaScript finishing, or running at all. A compositor-driven
+       animation keeps its schedule even when the main thread is blocked, and
+       reveals everything after 1.3s regardless. A normal morph lands and
+       removes the class long before it fires. */
+    animation: title-failsafe 1ms linear 1300ms forwards;
   }
 
   /* Chrome that is identical across pages gets its own names so it stays put

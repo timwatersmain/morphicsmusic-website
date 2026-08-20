@@ -41,7 +41,7 @@ const titleText = (el) => (el?.textContent || '').trim().replace(/\s+/g, ' ');
 
 // Draw the word with the <h1>'s OWN computed font, so the particles land on the
 // real letterforms rather than an approximation of them.
-function pointsForWord(word, style, boxW, boxH, dpr) {
+function pointsForWord(word, style, boxW, boxH, dpr, target = TARGET_POINTS) {
   const c = document.createElement('canvas');
   c.width = Math.max(1, Math.ceil(boxW * dpr));
   c.height = Math.max(1, Math.ceil(boxH * dpr));
@@ -59,7 +59,7 @@ function pointsForWord(word, style, boxW, boxH, dpr) {
   // the pairing would then have to duplicate or drop points.
   let ink = 0;
   for (let i = 3; i < data.length; i += 4) if (data[i] > 90) ink++;
-  const stride = Math.max(1, Math.round(Math.sqrt(ink / TARGET_POINTS)));
+  const stride = Math.max(1, Math.round(Math.sqrt(ink / target)));
 
   const pts = [];
   for (let y = 0; y < height; y += stride) {
@@ -150,8 +150,13 @@ export function morphWord(h1, fromWord, toWord, opts = {}) {
   const boxW = Math.max(rect.width * 2.2, 400);
   const boxH = rect.height * 1.6;
 
-  const src = pointsForWord(fromWord, style, boxW, boxH, dpr);
-  const dst = pointsForWord(to, style, boxW, boxH, dpr);
+  // Point budget. The title's 2600 is right for one enormous word and ruinous
+  // for the eighty small runs text-morph.js drives at once — eighty clouds of
+  // 2600 is a quarter of a million circles per frame. Callers pass what the
+  // run is worth; the default keeps the title exactly as it was.
+  const target = opts.points || TARGET_POINTS;
+  const src = pointsForWord(fromWord, style, boxW, boxH, dpr, target);
+  const dst = pointsForWord(to, style, boxW, boxH, dpr, target);
   if (!src.length || !dst.length) return finishEl(h1, null);
 
   // Both words were rasterised into the SAME canvas space, so their union box

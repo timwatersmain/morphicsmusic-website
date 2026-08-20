@@ -1,116 +1,126 @@
-// Text morph: every short run of text on the page comes apart into particles
-// and reassembles as the corresponding text on the next page.
+// Text morph: EVERY run of text on the page comes apart into particles and
+// reassembles as the text standing in its place on the next page.
 //
-// This is title-morph.js's effect applied to the rest of the page. It reuses
-// morphWord() rather than reimplementing it, so both surfaces sample the same
-// letterforms with the same behaviour library and cannot drift apart.
+// This is title-morph.js's effect applied to the whole page, and it reuses
+// morphWord() rather than reimplementing it, so both sample the same
+// letterforms through the same behaviour library and cannot drift apart.
 //
-// It exists because the whole-page transition it replaced was wrong in kind:
-// a mask over everything dressed content in motion it did not need and fought
-// the elements that already had their own. Morphing text into text is the
-// same gesture the title already makes, applied consistently.
-//
-// PAIRING IS BY ORDER, not by meaning. The nth morphable run on the outgoing
+// PAIRING IS BY ORDER, not by meaning. The nth run of text on the outgoing
 // page becomes the nth on the incoming one. There is no correspondence to
-// discover — "Rewards" becoming "Your collection" is the point, the same way
-// STORE becomes SOCIAL.
+// discover — "Latest release" becoming "Selected shows" is the point, exactly
+// as STORE becomes SOCIAL.
 import { morphWord, TITLE_MODES } from './title-morph.js';
 
 const KEY = 'morphics:text-from';
 
-// A budget, not a preference. Each morph rasterises two words and runs its own
-// canvas, so this is the difference between a transition and a stall. Twelve
-// is what fits comfortably inside the title's own 620ms on a mid-range
-// machine; the rest of the page simply appears, which is what it did before.
-const MAX_RUNS = 12;
+// Marks a run as hidden until its particles land. A class rather than an
+// inline style so the CSS failsafe can reveal it without JavaScript — see
+// global.css.
+const HIDE = 'tm-hide';
 
-// Short runs only. Headings, labels, counts, buttons — never a paragraph. A
-// long string rasterises to a wide, dense point cloud that costs the most and
-// reads the least: body copy coming apart into dust is noise, not motion.
-const MAX_CHARS = 32;
+// --- what counts as a run of text ------------------------------------------
 
-// Where the effect applies. Deliberately a STATIC selector rather than "any
-// element with short text": the same list is used by CSS to hide these runs
-// before first paint, and CSS cannot ask how long an element's text is.
-// [data-morph-text] is the escape hatch for anything else worth including.
-// h2/h3 are here for correctness, but this site barely uses them — its
-// section labels are spans carrying the .uppercase.tracking-widest pair from
-// the design system. Targeting only headings matched almost nothing, which is
-// exactly what the first build of this did.
-const SELECTOR = 'main h2, main h3, main .uppercase.tracking-widest, main [data-morph-text]';
+// Leaf text only: an element with text of its own and no child element that
+// also has text. Without this, a <div> wrapping three labels would morph as
+// one run AND each label would morph again inside it — the same pixels
+// animated three deep.
+function hasOwnText(el) {
+  for (const n of el.childNodes) {
+    if (n.nodeType === 3 && n.textContent.trim()) return true;
+  }
+  return false;
+}
+function hasTextChild(el) {
+  for (const c of el.children) {
+    if ((c.textContent || '').trim()) return true;
+  }
+  return false;
+}
 
-const textOf = (el) => (el?.textContent || '').trim().replace(/\s+/g, ' ');
+const textOf = (el) => (el.textContent || '').trim().replace(/\s+/g, ' ');
+
+// Skipped outright: the title (title-morph.js owns it), anything already
+// hidden from assistive tech, and the script/style content that is not really
+// text on a page.
+const SKIP = 'h1, script, style, noscript, svg, canvas, [aria-hidden="true"]';
 
 /**
- * The runs this page offers, in document order and already budgeted.
+ * Every text run under `root`, in document order.
  *
- * Filtered to what is actually on screen: an element far below the fold would
- * spend its share of the budget animating something nobody is looking at, and
- * the elements above it are the ones that carry the transition.
+ * Deliberately layout-free — no getBoundingClientRect anywhere. It has to run
+ * identically against the INCOMING document, which Astro hands over before it
+ * is in the page and therefore before it has any layout at all. Selecting on
+ * structure alone is what keeps the outgoing and incoming lists index-aligned,
+ * and that alignment is the whole pairing mechanism.
  */
-export function morphableRuns() {
-  const seen = new Set();
-  const candidates = [];
-
-  document.querySelectorAll(SELECTOR).forEach((el, order) => {
+export function runsIn(root) {
+  const out = [];
+  const main = root.querySelector('main');
+  if (!main) return out;
+  for (const el of main.querySelectorAll('*')) {
+    if (el.closest(SKIP)) continue;
+    if (!hasOwnText(el) || hasTextChild(el)) continue;
     const t = textOf(el);
-    if (!t || t.length > MAX_CHARS) return;
-
-    // Interactive chrome is excluded. Buttons and links repeat all over a
-    // page — /music carries "Name your price" twenty-two times — so in
-    // document order they would swallow the entire budget and the page's
-    // actual structure would never morph at all.
-    if (el.closest('a, button')) return;
-
-    // One morph per distinct string. Twelve copies of the same word coming
-    // apart in unison reads as a glitch, not as a page turning.
-    const key = t.toLowerCase();
-    if (seen.has(key)) return;
-
-    const r = el.getBoundingClientRect();
-    if (!r.width || !r.height) return;                                // hidden
-    if (r.top > window.innerHeight * 1.15 || r.bottom < 0) return;    // off screen
-
-    seen.add(key);
-    // Prominence, so the budget is spent on what carries the page rather than
-    // on whatever happens to be first in the DOM.
-    candidates.push({ el, text: t, order, weight: r.width * r.height });
-  });
-
-  return candidates
-    .sort((a, b) => b.weight - a.weight)
-    .slice(0, MAX_RUNS)
-    .sort((a, b) => a.order - b.order)   // back to document order, so the
-    .map(({ el, text }) => ({ el, text })); // stagger still reads top-down
+    if (t) out.push({ el, text: t });
+  }
+  return out;
 }
 
-// Reveal a run whatever happens. Same contract as the title's failsafe: these
-// elements start hidden so the particles can assemble them, so their
-// visibility must never depend on this module finishing, or even running.
+// Runs longer than this are paired and revealed but never morphed. A sentence
+// rasterises to a wide, dense cloud that costs the most and reads the least —
+// body copy coming apart into dust is noise, not motion. Headings, labels,
+// counts, buttons and titles all sit well under it.
+const MAX_MORPH_CHARS = 44;
+
+// Total particles across the whole page, split between the runs by their
+// rendered area. This is the number that decides whether this is a transition
+// or a stall, so it is spent deliberately rather than per-element.
+const POINT_BUDGET = 15000;
+const MIN_POINTS = 45;
+const MAX_POINTS = 900;
+
 function reveal(el) {
-  if (el) el.style.opacity = '1';
+  if (!el) return;
+  el.classList.remove(HIDE);
 }
 
-function revealAll() {
+function revealAll(root = document) {
   document.documentElement.classList.remove('text-morphing');
-  for (const el of document.querySelectorAll(SELECTOR)) reveal(el);
+  for (const el of root.querySelectorAll('.' + HIDE)) el.classList.remove(HIDE);
 }
 
 export function initTextMorph() {
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
 
-  // Record what is leaving, for whichever page comes next. Both events for
-  // the same reason title-morph binds both: pagehide covers a real navigation,
-  // astro:before-swap covers an in-app one, and neither fires for the other.
-  const recordOutgoing = () => {
+  // Record what is leaving, and hide what is arriving — both in the same
+  // moment, because this is the only moment that can do either.
+  //
+  // astro:before-swap fires while the outgoing DOM is still on screen AND
+  // hands over the incoming document before it is displayed. Marking the
+  // incoming runs here is what makes them hidden from their very first paint;
+  // astro:page-load would be too late and every word would flash into place
+  // before its particles arrived.
+  document.addEventListener('astro:before-swap', (e) => {
+    if (reduce.matches) return;
     try {
-      const runs = morphableRuns().map((r) => r.text);
-      if (runs.length) sessionStorage.setItem(KEY, JSON.stringify(runs));
-      else sessionStorage.removeItem(KEY);
-    } catch (e) { /* private mode: no morph, no harm */ }
-  };
-  window.addEventListener('pagehide', recordOutgoing);
-  document.addEventListener('astro:before-swap', recordOutgoing);
+      const outgoing = runsIn(document).map((r) => r.text);
+      if (!outgoing.length) { sessionStorage.removeItem(KEY); return; }
+      sessionStorage.setItem(KEY, JSON.stringify(outgoing));
+
+      const incoming = e.newDocument ? runsIn(e.newDocument) : [];
+      if (incoming.length) {
+        document.documentElement.classList.add('text-morphing');
+        for (const r of incoming) r.el.classList.add(HIDE);
+      }
+    } catch (err) { /* private mode or no newDocument: no morph, no harm */ }
+  });
+
+  // A full page load has no before-swap, so nothing was hidden and nothing
+  // should be morphed — there is no outgoing page in this tab to morph FROM.
+  // Clearing the record keeps a stale one from firing against the wrong page.
+  window.addEventListener('pagehide', () => {
+    try { sessionStorage.removeItem(KEY); } catch (err) { /* ignore */ }
+  });
 
   const run = () => {
     if (reduce.matches) { revealAll(); return; }
@@ -120,20 +130,19 @@ export function initTextMorph() {
       const raw = sessionStorage.getItem(KEY);
       sessionStorage.removeItem(KEY);
       if (raw) from = JSON.parse(raw);
-    } catch (e) { from = null; }
+    } catch (err) { from = null; }
 
     if (!Array.isArray(from) || !from.length) { revealAll(); return; }
 
-    // Same bounded wait as the title: rasterising against a fallback face
-    // samples the wrong letterforms, but these runs are HIDDEN until this
-    // resolves, so the wait cannot be open-ended. Past the deadline they are
-    // simply shown.
+    // Bounded wait, same as the title: rasterising against a fallback face
+    // samples the wrong letterforms, but these runs are hidden until this
+    // resolves, so it can never be open-ended. Past the deadline, show them.
     let started = false;
     const go = (morph) => {
       if (started) return;
       started = true;
       if (!morph) { revealAll(); return; }
-      try { play(from); } catch (e) { revealAll(); }
+      try { play(from); } catch (err) { revealAll(); }
     };
     const ready = document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve();
     ready.then(() => go(true), () => go(true));
@@ -141,34 +150,51 @@ export function initTextMorph() {
   };
 
   function play(from) {
-    const runs = morphableRuns();
+    const runs = runsIn(document);
     document.documentElement.classList.remove('text-morphing');
 
-    // One mode for the whole page, chosen per navigation. Per-element modes
-    // looked like a fault rather than a flourish — twelve different
-    // behaviours firing at once reads as chaos, not as one page turning into
-    // another.
-    const mode = TITLE_MODES[(Math.random() * TITLE_MODES.length) | 0];
-
-    runs.forEach((r, i) => {
-      const fromText = from[i];
-      // Nothing to morph from, or the text did not change: just show it.
-      if (!fromText || fromText === r.text) { reveal(r.el); return; }
-      // Staggered so the page resolves top-down rather than all at once —
-      // 26ms apart is under the threshold where it reads as a sequence, but
-      // enough to stop twelve canvases starting on the same frame.
-      setTimeout(() => {
-        try {
-          morphWord(r.el, fromText, r.text, { mode, onDone: () => reveal(r.el) });
-        } catch (e) { reveal(r.el); }
-      }, i * 26);
+    // Measure once, up front. Interleaving reads with the writes below would
+    // thrash layout across dozens of elements.
+    const measured = runs.map((r, i) => {
+      const rect = r.el.getBoundingClientRect();
+      const onScreen = rect.width > 0 && rect.height > 0
+        && rect.top < window.innerHeight * 1.1 && rect.bottom > -rect.height;
+      return { ...r, rect, onScreen, fromText: from[i] };
     });
 
-    // Anything the budget or the filters excluded is still hidden by the
-    // class-based rule until this point; make sure it comes back.
-    for (const el of document.querySelectorAll(SELECTOR)) {
-      if (!runs.some((r) => r.el === el)) reveal(el);
-    }
+    // Which runs actually morph: on screen, changed, and short enough to read
+    // as a word rather than as a paragraph.
+    const active = measured.filter((m) =>
+      m.onScreen && m.fromText && m.fromText !== m.text
+      && m.text.length <= MAX_MORPH_CHARS && m.fromText.length <= MAX_MORPH_CHARS);
+
+    // Everything else is simply shown — off screen, unchanged, or too long.
+    for (const m of measured) if (!active.includes(m)) reveal(m.el);
+
+    // Split the particle budget by rendered area, so a heading gets a dense
+    // cloud and a caption gets a sparse one instead of every run paying the
+    // same price regardless of how much of the page it occupies.
+    const totalArea = active.reduce((n, m) => n + m.rect.width * m.rect.height, 0) || 1;
+
+    // One behaviour for the whole page, chosen per navigation. Per-element
+    // modes read as a fault rather than a flourish: dozens of different
+    // behaviours at once is chaos, not one page becoming another.
+    const mode = TITLE_MODES[(Math.random() * TITLE_MODES.length) | 0];
+
+    active.forEach((m, i) => {
+      const share = (m.rect.width * m.rect.height) / totalArea;
+      const points = Math.max(MIN_POINTS, Math.min(MAX_POINTS, Math.round(POINT_BUDGET * share)));
+      // Staggered by document order so the page resolves top-down instead of
+      // every canvas starting on the same frame.
+      setTimeout(() => {
+        try {
+          morphWord(m.el, m.fromText, m.text, { mode, points, onDone: () => reveal(m.el) });
+        } catch (err) { reveal(m.el); }
+      }, Math.min(i * 14, 220));
+    });
+
+    // Backstop: whatever happens above, nothing stays hidden.
+    setTimeout(() => revealAll(), 1400);
   }
 
   document.addEventListener('astro:page-load', run);

@@ -113,13 +113,9 @@ const { title, currentPage = '' } = Astro.props;
         if (sessionStorage.getItem('morphics:title-from')) {
           document.documentElement.classList.add('title-morphing');
         }
-        // Same deal for the rest of the page's text — see text-morph.js. Kept
-        // in this one pre-paint script rather than a second one because both
-        // classes must land before the first paint, and two inline scripts
-        // racing for that is one more thing to get wrong.
-        if (sessionStorage.getItem('morphics:text-from')) {
-          document.documentElement.classList.add('text-morphing');
-        }
+        // Body text needs nothing here: text-morph.js hides its runs
+        // individually on the incoming document during astro:before-swap,
+        // which is already before their first paint.
       } catch (e) { /* private mode: just show the text */ }
     })();
   </script>
