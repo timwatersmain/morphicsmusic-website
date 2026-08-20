@@ -223,15 +223,29 @@
     view-transition-name: page-title;
   }
 
-  ::view-transition-old(page-title) {
-    animation: vt-title-out 180ms cubic-bezier(0.4, 0, 1, 1) both;
-  }
-  ::view-transition-new(page-title) {
-    animation: vt-title-in 220ms cubic-bezier(0, 0, 0.2, 1) 80ms both;
-  }
+  /* NO animation on the title. Not a mask, not a fade, nothing — the same
+     treatment #site-header gets, and for the same reason: an element that
+     already knows what it is doing must not be animated a second time by
+     the page transition.
 
-  @keyframes vt-title-out { to   { opacity: 0 } }
-  @keyframes vt-title-in  { from { opacity: 0 } }
+     The outgoing snapshot is hidden outright rather than faded. Holding it
+     visible would double the word: title-morph.js starts drawing the SAME
+     outgoing title as particles the instant the new document runs, so a
+     static picture of it sitting on top for ~380ms would sit over its own
+     particle field. Hiding it hands the word to the canvas cleanly.
+
+     The incoming snapshot takes whatever opacity the real <h1> has, which
+     .title-morphing has already set to 0 when a morph is pending — so the
+     canvas owns the title from start to finish and the page transition
+     never touches it. */
+  ::view-transition-old(page-title),
+  ::view-transition-new(page-title) {
+    animation: none !important;
+    mix-blend-mode: normal;
+  }
+  ::view-transition-old(page-title) {
+    opacity: 0;
+  }
 
   ::selection {
     background-color: #00f0ff;
