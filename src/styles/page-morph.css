@@ -1,0 +1,202 @@
+/* Page-morph variants, for auditioning.
+ *
+ * Every variant is a pair of animations on the browser's own view-transition
+ * snapshots: one for the outgoing page, one for the incoming. Nothing here
+ * runs JavaScript, so a variant can never delay or block navigation.
+ *
+ * Selection is an attribute on <html> (set from localStorage by an inline
+ * script in BaseLayout). No attribute means the site default, which lives in
+ * global.css and is deliberately NOT duplicated here — one default, one
+ * place.
+ *
+ * Auditioning happens at /lab/page-morph. This is the same way the title
+ * morph's nine modes were chosen: play them at real speed, keep what reads,
+ * drop what does not.
+ *
+ * A note on masks: the mask is what makes these read as a morph rather than
+ * a fade. Registering the animated custom properties with @property is what
+ * makes them interpolable — an unregistered property inside a gradient jumps
+ * between keyframes instead of animating. Where a variant has no @property
+ * support it falls back to its opacity/transform half, which is a crossfade.
+ */
+
+@property --vt-dot   { syntax: '<percentage>'; inherits: false; initial-value: 72%; }
+@property --vt-band  { syntax: '<percentage>'; inherits: false; initial-value: 100%; }
+@property --vt-ang   { syntax: '<angle>';      inherits: false; initial-value: 360deg; }
+@property --vt-iris  { syntax: '<percentage>'; inherits: false; initial-value: 150%; }
+@property --vt-sweep { syntax: '<percentage>'; inherits: false; initial-value: 140%; }
+
+/* ---- 01 blocks — square cells, not round points ------------------------ */
+html[data-morph="blocks"] ::view-transition-old(root),
+html[data-morph="blocks"] ::view-transition-new(root) {
+  mask-image:
+    linear-gradient(90deg, #000 var(--vt-band), transparent 0),
+    linear-gradient(0deg,  #000 var(--vt-band), transparent 0);
+  mask-size: 22px 22px;
+  mask-composite: intersect;
+  -webkit-mask-image:
+    linear-gradient(90deg, #000 var(--vt-band), transparent 0),
+    linear-gradient(0deg,  #000 var(--vt-band), transparent 0);
+  -webkit-mask-size: 22px 22px;
+  -webkit-mask-composite: source-in;
+}
+html[data-morph="blocks"] ::view-transition-old(root) { animation: m-blocks-out 320ms cubic-bezier(.4,0,1,1) both; }
+html[data-morph="blocks"] ::view-transition-new(root) { animation: m-blocks-in  380ms cubic-bezier(0,0,.2,1) 90ms both; }
+@keyframes m-blocks-out { from { --vt-band: 100%; opacity: 1 } to { --vt-band: 0%; opacity: 0 } }
+@keyframes m-blocks-in  { from { --vt-band: 0%;  opacity: 0 } to { --vt-band: 100%; opacity: 1 } }
+
+/* ---- 02 scanlines — horizontal bands close like a shutter -------------- */
+html[data-morph="scanlines"] ::view-transition-old(root),
+html[data-morph="scanlines"] ::view-transition-new(root) {
+  mask-image: linear-gradient(0deg, #000 var(--vt-band), transparent 0);
+  mask-size: 100% 7px;
+  -webkit-mask-image: linear-gradient(0deg, #000 var(--vt-band), transparent 0);
+  -webkit-mask-size: 100% 7px;
+}
+html[data-morph="scanlines"] ::view-transition-old(root) { animation: m-blocks-out 300ms linear both; }
+html[data-morph="scanlines"] ::view-transition-new(root) { animation: m-blocks-in  360ms linear 80ms both; }
+
+/* ---- 03 blinds — the same idea stood upright --------------------------- */
+html[data-morph="blinds"] ::view-transition-old(root),
+html[data-morph="blinds"] ::view-transition-new(root) {
+  mask-image: linear-gradient(90deg, #000 var(--vt-band), transparent 0);
+  mask-size: 9px 100%;
+  -webkit-mask-image: linear-gradient(90deg, #000 var(--vt-band), transparent 0);
+  -webkit-mask-size: 9px 100%;
+}
+html[data-morph="blinds"] ::view-transition-old(root) { animation: m-blocks-out 300ms cubic-bezier(.4,0,1,1) both; }
+html[data-morph="blinds"] ::view-transition-new(root) { animation: m-blocks-in  360ms cubic-bezier(0,0,.2,1) 80ms both; }
+
+/* ---- 04 iris — one circle, opening from the middle --------------------- */
+html[data-morph="iris"] ::view-transition-old(root),
+html[data-morph="iris"] ::view-transition-new(root) {
+  mask-image: radial-gradient(circle at 50% 45%, #000 var(--vt-iris), transparent calc(var(--vt-iris) + 12%));
+  mask-size: 100% 100%;
+  -webkit-mask-image: radial-gradient(circle at 50% 45%, #000 var(--vt-iris), transparent calc(var(--vt-iris) + 12%));
+  -webkit-mask-size: 100% 100%;
+}
+html[data-morph="iris"] ::view-transition-old(root) { animation: m-iris-out 320ms cubic-bezier(.4,0,1,1) both; }
+html[data-morph="iris"] ::view-transition-new(root) { animation: m-iris-in  420ms cubic-bezier(0,0,.2,1) 60ms both; }
+@keyframes m-iris-out { from { --vt-iris: 150%; opacity: 1 } to { --vt-iris: 0%;   opacity: .6 } }
+@keyframes m-iris-in  { from { --vt-iris: 0%;   opacity: .6 } to { --vt-iris: 150%; opacity: 1 } }
+
+/* ---- 05 sweep — a soft diagonal edge crossing the page ----------------- */
+html[data-morph="sweep"] ::view-transition-old(root),
+html[data-morph="sweep"] ::view-transition-new(root) {
+  mask-image: linear-gradient(115deg, #000 var(--vt-sweep), transparent calc(var(--vt-sweep) + 26%));
+  mask-size: 100% 100%;
+  -webkit-mask-image: linear-gradient(115deg, #000 var(--vt-sweep), transparent calc(var(--vt-sweep) + 26%));
+  -webkit-mask-size: 100% 100%;
+}
+html[data-morph="sweep"] ::view-transition-old(root) { animation: m-sweep-out 300ms cubic-bezier(.4,0,1,1) both; }
+html[data-morph="sweep"] ::view-transition-new(root) { animation: m-sweep-in  380ms cubic-bezier(0,0,.2,1) 70ms both; }
+@keyframes m-sweep-out { from { --vt-sweep: 140% } to { --vt-sweep: -30% } }
+@keyframes m-sweep-in  { from { --vt-sweep: -30% } to { --vt-sweep: 140% } }
+
+/* ---- 06 spiral — a conic wedge winding round --------------------------- */
+html[data-morph="spiral"] ::view-transition-old(root),
+html[data-morph="spiral"] ::view-transition-new(root) {
+  mask-image: conic-gradient(from -90deg at 50% 50%, #000 var(--vt-ang), transparent 0);
+  mask-size: 100% 100%;
+  -webkit-mask-image: conic-gradient(from -90deg at 50% 50%, #000 var(--vt-ang), transparent 0);
+  -webkit-mask-size: 100% 100%;
+}
+html[data-morph="spiral"] ::view-transition-old(root) { animation: m-spiral-out 340ms cubic-bezier(.4,0,1,1) both; }
+html[data-morph="spiral"] ::view-transition-new(root) { animation: m-spiral-in  420ms cubic-bezier(0,0,.2,1) 80ms both; }
+@keyframes m-spiral-out { from { --vt-ang: 360deg } to { --vt-ang: 0deg } }
+@keyframes m-spiral-in  { from { --vt-ang: 0deg }   to { --vt-ang: 360deg } }
+
+/* ---- 07 static — a very fine dot field, snapped hard ------------------- */
+html[data-morph="static"] ::view-transition-old(root),
+html[data-morph="static"] ::view-transition-new(root) {
+  mask-image: radial-gradient(circle at center, #000 var(--vt-dot), transparent calc(var(--vt-dot) + 4%));
+  mask-size: 4px 4px;
+  -webkit-mask-image: radial-gradient(circle at center, #000 var(--vt-dot), transparent calc(var(--vt-dot) + 4%));
+  -webkit-mask-size: 4px 4px;
+}
+html[data-morph="static"] ::view-transition-old(root) { animation: m-static-out 220ms steps(9, end) both; }
+html[data-morph="static"] ::view-transition-new(root) { animation: m-static-in  260ms steps(9, end) 60ms both; }
+@keyframes m-static-out { from { --vt-dot: 80%; opacity: 1 } to { --vt-dot: 0%;  opacity: 0 } }
+@keyframes m-static-in  { from { --vt-dot: 0%;  opacity: 0 } to { --vt-dot: 80%; opacity: 1 } }
+
+/* ---- 08 coarse — the default dot field, much bigger -------------------- */
+html[data-morph="coarse"] ::view-transition-old(root),
+html[data-morph="coarse"] ::view-transition-new(root) {
+  mask-image: radial-gradient(circle at center, #000 var(--vt-dot), transparent calc(var(--vt-dot) + 18%));
+  mask-size: 40px 40px;
+  -webkit-mask-image: radial-gradient(circle at center, #000 var(--vt-dot), transparent calc(var(--vt-dot) + 18%));
+  -webkit-mask-size: 40px 40px;
+}
+html[data-morph="coarse"] ::view-transition-old(root) { animation: m-static-out 340ms cubic-bezier(.4,0,1,1) both; }
+html[data-morph="coarse"] ::view-transition-new(root) { animation: m-static-in  420ms cubic-bezier(0,0,.2,1) 90ms both; }
+
+/* ---- 09 lens — no mask; a hard zoom-blur through the middle ------------ */
+html[data-morph="lens"] ::view-transition-old(root) { animation: m-lens-out 280ms cubic-bezier(.4,0,1,1) both; }
+html[data-morph="lens"] ::view-transition-new(root) { animation: m-lens-in  360ms cubic-bezier(0,0,.2,1) 80ms both; }
+@keyframes m-lens-out { from { opacity: 1; transform: scale(1);    filter: blur(0) }    to { opacity: 0; transform: scale(1.14); filter: blur(16px) } }
+@keyframes m-lens-in  { from { opacity: 0; transform: scale(.88);  filter: blur(20px) } to { opacity: 1; transform: scale(1);    filter: blur(0) } }
+
+/* ---- 10 drift — falls away downward, arrives from below ---------------- */
+html[data-morph="drift"] ::view-transition-old(root),
+html[data-morph="drift"] ::view-transition-new(root) {
+  mask-image: linear-gradient(0deg, #000 var(--vt-band), transparent calc(var(--vt-band) + 30%));
+  mask-size: 100% 100%;
+  -webkit-mask-image: linear-gradient(0deg, #000 var(--vt-band), transparent calc(var(--vt-band) + 30%));
+  -webkit-mask-size: 100% 100%;
+}
+html[data-morph="drift"] ::view-transition-old(root) { animation: m-drift-out 320ms cubic-bezier(.4,0,1,1) both; }
+html[data-morph="drift"] ::view-transition-new(root) { animation: m-drift-in  400ms cubic-bezier(0,0,.2,1) 80ms both; }
+@keyframes m-drift-out { from { --vt-band: 100%; transform: translateY(0) }    to { --vt-band: 0%;   transform: translateY(26px) } }
+@keyframes m-drift-in  { from { --vt-band: 0%;   transform: translateY(-26px) } to { --vt-band: 100%; transform: translateY(0) } }
+
+/* ---- 11 shear — the plate skews as it goes ----------------------------- */
+html[data-morph="shear"] ::view-transition-old(root) { animation: m-shear-out 260ms cubic-bezier(.4,0,1,1) both; }
+html[data-morph="shear"] ::view-transition-new(root) { animation: m-shear-in  340ms cubic-bezier(0,0,.2,1) 70ms both; }
+@keyframes m-shear-out { from { opacity: 1; transform: skewX(0)   translateX(0) }     to { opacity: 0; transform: skewX(-7deg) translateX(-40px) } }
+@keyframes m-shear-in  { from { opacity: 0; transform: skewX(7deg) translateX(40px) } to { opacity: 1; transform: skewX(0)     translateX(0) } }
+
+/* ---- 12 tear — torn into horizontal slices that slide apart ------------ */
+html[data-morph="tear"] ::view-transition-old(root),
+html[data-morph="tear"] ::view-transition-new(root) {
+  mask-image: repeating-linear-gradient(0deg, #000 0 var(--vt-band), transparent var(--vt-band) 34px);
+  mask-size: 100% 100%;
+  -webkit-mask-image: repeating-linear-gradient(0deg, #000 0 var(--vt-band), transparent var(--vt-band) 34px);
+  -webkit-mask-size: 100% 100%;
+}
+html[data-morph="tear"] ::view-transition-old(root) { animation: m-tear-out 300ms cubic-bezier(.5,0,.9,1) both; }
+html[data-morph="tear"] ::view-transition-new(root) { animation: m-tear-in  380ms cubic-bezier(0,0,.2,1) 70ms both; }
+@keyframes m-tear-out { from { --vt-band: 34px; transform: translateX(0) }    to { --vt-band: 0px;  transform: translateX(18px) } }
+@keyframes m-tear-in  { from { --vt-band: 0px;  transform: translateX(-18px) } to { --vt-band: 34px; transform: translateX(0) } }
+
+/* ---- 13 knit — checkerboard, alternate cells leave first --------------- */
+html[data-morph="knit"] ::view-transition-old(root),
+html[data-morph="knit"] ::view-transition-new(root) {
+  mask-image:
+    conic-gradient(#000 0 25%, transparent 0 50%, #000 0 75%, transparent 0),
+    radial-gradient(circle at center, #000 var(--vt-dot), transparent calc(var(--vt-dot) + 20%));
+  mask-size: 26px 26px, 13px 13px;
+  -webkit-mask-image:
+    conic-gradient(#000 0 25%, transparent 0 50%, #000 0 75%, transparent 0),
+    radial-gradient(circle at center, #000 var(--vt-dot), transparent calc(var(--vt-dot) + 20%));
+  -webkit-mask-size: 26px 26px, 13px 13px;
+}
+html[data-morph="knit"] ::view-transition-old(root) { animation: m-static-out 340ms cubic-bezier(.4,0,1,1) both; }
+html[data-morph="knit"] ::view-transition-new(root) { animation: m-static-in  420ms cubic-bezier(0,0,.2,1) 90ms both; }
+
+/* ---- 14 snap — almost nothing; the fastest thing that is not a cut ----- */
+html[data-morph="snap"] ::view-transition-old(root) { animation: m-snap-out 130ms linear both; }
+html[data-morph="snap"] ::view-transition-new(root) { animation: m-snap-in  170ms cubic-bezier(0,0,.2,1) 40ms both; }
+@keyframes m-snap-out { to { opacity: 0; transform: scale(1.004) } }
+@keyframes m-snap-in  { from { opacity: 0; transform: scale(.996) } }
+
+/* Reduced motion wins over every variant — same reasoning as global.css:
+   the mask has to come off too, not just the animation, or the page is
+   stencilled rather than morphed. */
+@media (prefers-reduced-motion: reduce) {
+  html[data-morph] ::view-transition-old(root),
+  html[data-morph] ::view-transition-new(root) {
+    animation: none !important;
+    mask-image: none !important;
+    -webkit-mask-image: none !important;
+  }
+}

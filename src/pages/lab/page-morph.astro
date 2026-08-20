@@ -1,0 +1,111 @@
+---
+// Audition page for the page-morph variants.
+//
+// Same approach the title morph's nine modes were chosen with: there is no
+// substitute for playing an effect at real speed and deciding by eye. A grid
+// of static previews would be worse than useless here — the whole quality of
+// a transition is in its timing.
+//
+// So this page does not simulate anything. Picking a variant stores it and
+// navigates for real, between real pages, at real speed. What you see is
+// exactly what a visitor gets.
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+const MORPHS = [
+  { id: '',          name: 'Default (fine dots)', note: 'What is live now. A 13px dot field that shrinks away and grows back.' },
+  { id: 'coarse',    name: 'Coarse dots',         note: 'The same idea at 40px. Far more visible — the page reads as tiles, not texture.' },
+  { id: 'static',    name: 'Static',              note: '4px dots in nine hard steps. Reads like signal loss rather than motion.' },
+  { id: 'blocks',    name: 'Blocks',              note: 'Square cells instead of round points. Cleaner, more architectural.' },
+  { id: 'knit',      name: 'Knit',                note: 'Checkerboard: alternate cells leave first, so it comes apart in a weave.' },
+  { id: 'scanlines', name: 'Scanlines',           note: 'Horizontal bands closing like a shutter. Very CRT.' },
+  { id: 'blinds',    name: 'Blinds',              note: 'The same upright. Narrower and quicker than it sounds.' },
+  { id: 'tear',      name: 'Tear',                note: 'Torn into slices that slide apart sideways. The most violent one here.' },
+  { id: 'iris',      name: 'Iris',                note: 'One circle closing on the centre and opening on the next page.' },
+  { id: 'spiral',    name: 'Spiral',              note: 'A conic wedge winding round. Slowest of the set at ~420ms.' },
+  { id: 'sweep',     name: 'Sweep',               note: 'A soft diagonal edge crossing the page. The most conventional option.' },
+  { id: 'drift',     name: 'Drift',               note: 'Falls away downward and arrives from below, with a soft gradient edge.' },
+  { id: 'lens',      name: 'Lens',                note: 'No mask at all — a hard zoom-blur through the middle. Punchy.' },
+  { id: 'shear',     name: 'Shear',               note: 'The whole plate skews out and the next skews in.' },
+  { id: 'snap',      name: 'Snap',                note: '170ms. Nearly a cut, for when any transition feels like a delay.' },
+];
+---
+
+<BaseLayout title="PAGE MORPH" currentPage="">
+  <meta slot="head" name="robots" content="noindex, nofollow" />
+
+  <div class="max-w-3xl mx-auto pb-24">
+    <header class="mb-10">
+      <h1 class="font-headline font-bold text-5xl md:text-6xl text-primary uppercase tracking-tighter leading-none">PAGE MORPH</h1>
+      <p class="font-mono text-[11px] text-white/40 leading-relaxed mt-4 max-w-[62ch]">
+        Pick one, then use the links at the bottom to move between real pages and
+        watch it. The choice is stored in this browser only — it changes nothing
+        for anyone else and nothing is deployed until you say so.
+      </p>
+      <p id="lab-current" class="font-mono text-[11px] text-secondary mt-3"></p>
+    </header>
+
+    <ul class="space-y-px mb-12">
+      {MORPHS.map(m => (
+        <li>
+          <button
+            type="button"
+            data-morph-pick={m.id}
+            class="lab-pick w-full text-left flex items-start gap-4 py-4 px-4 border-b border-white/5 hover:bg-white/[0.03] transition-colors"
+          >
+            <span class="lab-dot mt-[6px] w-2 h-2 rounded-full bg-white/15 shrink-0" aria-hidden="true"></span>
+            <span class="min-w-0 flex-1">
+              <span class="block font-mono text-[11px] text-white/80 uppercase tracking-widest">{m.name}</span>
+              <span class="block font-mono text-[10px] text-white/40 leading-relaxed mt-1">{m.note}</span>
+            </span>
+          </button>
+        </li>
+      ))}
+    </ul>
+
+    <div class="border border-white/10 p-6">
+      <p class="font-mono text-[10px] text-secondary uppercase tracking-widest mb-4">Try it — click between these</p>
+      <div class="flex flex-wrap gap-3">
+        {['/music', '/visuals', '/store', '/social', '/events', '/community', '/lab/page-morph'].map(href => (
+          <a href={href} class="font-mono text-[10px] uppercase tracking-widest text-primary border border-primary/20 hover:border-primary/60 px-4 py-2 rounded-full">{href}</a>
+        ))}
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const KEY = 'morphics:morph';
+    const label = document.getElementById('lab-current')!;
+
+    function current(): string {
+      try { return localStorage.getItem(KEY) || ''; } catch { return ''; }
+    }
+
+    function paint() {
+      const cur = current();
+      document.querySelectorAll<HTMLButtonElement>('.lab-pick').forEach(btn => {
+        const on = (btn.dataset.morphPick || '') === cur;
+        const dot = btn.querySelector('.lab-dot')!;
+        dot.classList.toggle('bg-secondary', on);
+        dot.classList.toggle('bg-white/15', !on);
+        btn.classList.toggle('bg-white/[0.04]', on);
+      });
+      const name = document.querySelector<HTMLElement>(`.lab-pick[data-morph-pick="${cur}"] .font-mono`);
+      label.textContent = 'Selected: ' + (name ? name.textContent : 'Default');
+    }
+
+    document.querySelectorAll<HTMLButtonElement>('.lab-pick').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const v = btn.dataset.morphPick || '';
+        try { v ? localStorage.setItem(KEY, v) : localStorage.removeItem(KEY); } catch {}
+        // Apply immediately as well as storing it, so the very next click on a
+        // nav link plays the new variant rather than the previous one — the
+        // inline script only runs on the NEXT document swap.
+        if (v) document.documentElement.setAttribute('data-morph', v);
+        else document.documentElement.removeAttribute('data-morph');
+        paint();
+      });
+    });
+
+    paint();
+  </script>
+</BaseLayout>

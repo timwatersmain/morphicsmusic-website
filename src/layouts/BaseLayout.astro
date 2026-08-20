@@ -4,6 +4,7 @@ import TopNav from '../components/TopNav.astro';
 import Cart from '../components/Cart.astro';
 import PlayerBar from '../components/PlayerBar.astro';
 import '../styles/global.css';
+import '../styles/page-morph.css';
 
 interface Props {
   title: string;
@@ -97,6 +98,27 @@ const { title, currentPage = '' } = Astro.props;
        hidden from the very first paint without waiting for any script. */
     html:not(.fonts-ready) .material-symbols-outlined { color: transparent; }
   </style>
+  <script is:inline data-astro-rerun>
+    // Page-morph variant selection, for auditioning at /lab/page-morph.
+    // Sets data-morph on <html> from a stored choice; no attribute means the
+    // site default in global.css.
+    //
+    // data-astro-rerun for the same reason the icon-font script needs it: the
+    // client router swaps the document element, so anything written onto
+    // <html> is gone on arrival and has to be reapplied every swap. Without
+    // it the chosen variant would survive exactly one navigation.
+    //
+    // It must also run BEFORE paint, not on astro:page-load — the attribute
+    // has to be on <html> while the browser captures the outgoing snapshot,
+    // and page-load fires after that.
+    (function () {
+      try {
+        var m = localStorage.getItem('morphics:morph');
+        if (m) document.documentElement.setAttribute('data-morph', m);
+        else document.documentElement.removeAttribute('data-morph');
+      } catch (e) { /* private mode: site default */ }
+    })();
+  </script>
   <script is:inline data-astro-rerun>
     // Before first paint: if the previous page left a title behind, this page's
     // <h1> must start hidden so the word never flashes into place before the
