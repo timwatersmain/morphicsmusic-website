@@ -133,7 +133,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 
           const { profile } = data;
           nameEl.textContent = profile.display_name || profile.handle;
-          sinceEl.textContent = 'Morphics since ' + fmtDate(profile.fan_since);
+          sinceEl.textContent = 'Since ' + fmtDate(profile.fan_since);
           handleEl.textContent = '@' + profile.handle;
 
           const stage = (profile.creature && profile.creature.stage) || 'egg';

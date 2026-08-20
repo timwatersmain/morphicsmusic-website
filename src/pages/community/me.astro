@@ -943,7 +943,7 @@ import DiscordInvite from '../../components/DiscordInvite.astro';
               ? 'You can change your handle again on ' + fmtDate(profile.handle_change_available_at) + '.'
               : '';
           }
-          fanSinceEl.textContent = 'Morphics since ' + fmtDate(profile.fan_since);
+          fanSinceEl.textContent = 'Since ' + fmtDate(profile.fan_since);
           bioInput.value = profile.bio || '';
           updateBioCount();
           myHandle = profile.handle || '';

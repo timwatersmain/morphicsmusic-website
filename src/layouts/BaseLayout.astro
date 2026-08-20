@@ -171,7 +171,11 @@ const { title, currentPage = '' } = Astro.props;
 <body class="neural-bg min-h-screen font-body text-on-surface overflow-x-hidden">
   <TopNav currentPage={currentPage} />
 
-  <main class="relative z-10 pt-24 pb-24 px-8">
+  <!-- pt tracks the fixed header's height and has to be changed WITH it:
+       the header is out of flow, so this padding is the only thing keeping
+       content from starting underneath it. Mobile keeps pt-24; only the
+       desktop bar got shorter. -->
+  <main class="relative z-10 pt-24 lg:pt-[5.4rem] pb-24 px-8">
     <slot />
   </main>
 

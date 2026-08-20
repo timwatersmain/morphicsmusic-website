@@ -113,7 +113,7 @@ import DiscordInvite from '../../components/DiscordInvite.astro';
             <a href="/community/u/${encodeURIComponent(f.handle)}" class="font-headline text-lg text-primary uppercase tracking-tight hover:text-secondary transition-colors truncate block">
               ${esc(f.display_name || f.handle)}
             </a>
-            <span class="font-mono text-[10px] text-white/40 uppercase tracking-widest">Morphics since ${esc(fmtDate(f.fan_since))}</span>
+            <span class="font-mono text-[10px] text-white/40 uppercase tracking-widest">Since ${esc(fmtDate(f.fan_since))}</span>
           </div>
           <span class="font-mono text-[11px] text-secondary uppercase tracking-widest">${esc(stageLabel(f.creature && f.creature.stage, f.handle))}</span>
         </li>
