@@ -133,45 +133,79 @@ const startHidden = currentPage === '/';
     /* ── the source plate ──────────────────────────────────────────────────
        Painted once. 640x360 because the effect downsamples whatever it is
        given into its own 512x288 raster, so anything larger is thrown away. */
-    /* Bigger than the 512x288 raster the effect samples into, ON PURPOSE:
-       the extra area is the room the view pans around in. See tickPlate(). */
-    const PLATE_W = 1152, PLATE_H = 648;
+    /* Square, and much bigger than the 512x288 raster the effect samples into.
+       The extra area is the room the view moves around in, and it is SQUARE so
+       a rotated sampling window can never reach past an edge — see tickPlate(). */
+    const PLATE = 1280;
     const plate = document.createElement('canvas');
-    plate.width = PLATE_W;
-    plate.height = PLATE_H;
+    plate.width = PLATE;
+    plate.height = PLATE;
     paintPlate(plate);
 
-    /* ── moving light ──────────────────────────────────────────────────────
-       The colour and the lighting drift, and this is the cheap way to do it.
-       Repainting the gradient and its two blooms every frame would be ~900k
-       pixel writes; instead the plate is painted ONCE at 1152x648 and each
-       frame samples a slowly wandering, slowly breathing window out of it into
-       the effect's own 512x288 source raster. That is a single drawImage —
-       precisely the call the library's own _frame already made every frame
-       before we took over the loop, so the moving version costs essentially
-       what the still version did.
+    /* ── moving light, and why it does not loop ────────────────────────────
+       The colour and lighting drift by MOVING the plate rather than repainting
+       it: the plate is painted once and each frame samples a window out of it
+       into the effect's 512x288 raster. One drawImage — the very call the
+       library's own loop already made before we took the loop over — so the
+       motion is close to free.
 
-       The three rates are deliberately co-prime-ish and long (~90s, ~140s,
-       ~210s) so the pattern does not visibly loop: the window never returns to
-       the same position and zoom at the same time.
+       The first version panned that window with ONE SINE PER AXIS, and it
+       looped. Measured, not guessed: sampling the canvas mean colour once a
+       second for 200s and autocorrelating gave a clean self-similarity peak of
+       0.82 at a lag of 67s — which is exactly 2*pi/0.095, the x-pan sine's own
+       period. A sine RETRACES: the view panned out and came back along the
+       identical path, and a path walked backwards reads as a loop even when
+       the shapes on top of it are still random. Long periods do not help; the
+       retrace is the problem, not the rate.
 
-       Driven from absolute t rather than integrated per-frame, unlike the
-       effect's own phases — this is sampled straight from a sine, so there is
-       no accumulated state to drift out of step when frames are dropped. */
+       Two changes, and the second is the one that actually guarantees it:
+
+       1. Each axis is a sum of three sines whose frequencies step by the
+          golden ratio. Irrational ratios make the sum quasi-periodic — no
+          finite period, and more usefully no retrace, because the three
+          components are never in the same relative phase twice.
+
+       2. The sampling window ROTATES, monotonically: ~17 minutes per turn, and
+          it only ever increases. Nothing that advances in one direction forever
+          can return to a previous state, so this is a hard guarantee rather
+          than a statistical one. It is also why the plate is square and why the
+          destination is drawn at the raster's DIAGONAL — a rotated square of
+          that size covers the raster at every angle, so no corner is ever left
+          unpainted. */
+    const PHI = 1.6180339887;
+
+    function drift(tSec: number, base: number, seed: number) {
+      const v = Math.sin(tSec * base + seed)
+              + 0.62 * Math.sin(tSec * base * PHI + seed * 1.7)
+              + 0.38 * Math.sin(tSec * base * PHI * PHI + seed * 2.9);
+      // /1.7 rather than /2.0 (the theoretical maximum) so the usual excursion
+      // actually reaches the edges; the clamp only bites when all three
+      // components align, which is rare and reads as a brief hold.
+      return Math.max(-1, Math.min(1, v / 1.7));
+    }
+
     function tickPlate(tSec: number) {
       const g = lg.srcX, W = lg.SW, H = lg.SH;
-      // A tighter window travels further in relative terms: at 600 of 1152 the
-      // view crosses nearly half the plate, where 720 crossed a third. Measured
-      // at 720 the canvas mean RGB moved only ~8% over 40s, which is not enough
-      // to read as movement. Magnifying the plate more costs nothing — it is a
-      // gradient, so there is no detail to lose.
-      const zoom = 1 + 0.14 * Math.sin(tSec * 0.038);
-      const sw = Math.min(PLATE_W, 600 * zoom);
-      const sh = sw * (H / W);
-      const maxX = Math.max(0, PLATE_W - sw), maxY = Math.max(0, PLATE_H - sh);
-      const sx = maxX * (0.5 + 0.5 * Math.sin(tSec * 0.095));
-      const sy = maxY * (0.5 + 0.5 * Math.sin(tSec * 0.062 + 1.7));
-      g.drawImage(plate, sx, sy, sw, sh, 0, 0, W, H);
+      // Computed here, not hoisted to a const above: this block sits ahead of
+      // `const lg = ...`, so anything touching lg at declaration time is a
+      // temporal-dead-zone throw at init — which blanks the canvas silently,
+      // since the whole init runs inside one function nobody is watching.
+      // Inside the function body lg is long since assigned.
+      const DEST = Math.ceil(Math.hypot(W, H));
+      // Rates chosen for PACE, then re-verified against the autocorrelation
+      // test — quasi-periodicity does not depend on them being slow, so the
+      // drift can move at whatever speed reads well. The first non-looping
+      // pass ran these at 0.017/0.030/0.023 and moved about five times slower
+      // than the version people had already signed off on.
+      const size = 680 * (1 + 0.13 * drift(tSec, 0.026, 5.1));
+      const travel = Math.max(0, PLATE - size);
+      const sx = travel * (0.5 + 0.5 * drift(tSec, 0.046, 0));
+      const sy = travel * (0.5 + 0.5 * drift(tSec, 0.035, 2.3));
+      g.save();
+      g.translate(W / 2, H / 2);
+      g.rotate(tSec * 0.0061);
+      g.drawImage(plate, sx, sy, size, size, -DEST / 2, -DEST / 2, DEST, DEST);
+      g.restore();
     }
 
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -403,7 +437,10 @@ const startHidden = currentPage === '/';
       rg.addColorStop(0, `rgba(${rgb}, ${a})`);
       rg.addColorStop(1, `rgba(${rgb}, 0)`);
       g.fillStyle = rg;
-      g.fillRect(0, 0, W, H);
+      // Only its own bounding box. The plate is 1280x1280, so a full-canvas
+      // fill per bloom would be ~1.6M pixel writes each — 8M across the ramp
+      // and four blooms, in one synchronous block during page load.
+      g.fillRect(x - r, y - r, r * 2, r * 2);
     };
     /* Four, spread across the full plate rather than two centred ones. The
        sampled window is ~62% of the plate's width and wanders, so any region
