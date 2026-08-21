@@ -1,0 +1,32 @@
+---
+// The one page title. Every top-level page renders its heading through this,
+// so size, weight, colour, casing and the space beneath it cannot drift apart
+// again — which they had: three sizes (text-6xl/8xl, 5xl/7xl, 5xl/6xl), four
+// bottom margins (mb-6, mb-12, mb-16, mb-20) and an eyebrow label on some
+// pages but not others, which put the titles themselves at different heights
+// from the top of the page.
+//
+// NO EYEBROW. Deliberately not a prop. The small green label above the title
+// was the thing making the heights differ, and it repeated what the nav had
+// already said — "Live" over EVENTS, "Account" over SIGN-IN DETAILS, "Your
+// account" over LIBRARY. Removing it is what makes every title land in the
+// same place.
+interface Props {
+  /** Rendered as-is. Pass it already-worded; casing is applied here. */
+  title?: string;
+  /** For a title written by script after load (e.g. a member's handle). */
+  id?: string;
+  class?: string;
+}
+
+const { title, id, class: className = '' } = Astro.props;
+---
+
+<header class={`mb-16 ${className}`}>
+  <h1
+    id={id}
+    class="font-headline font-bold text-6xl md:text-8xl text-primary uppercase tracking-tighter leading-none break-words"
+  >
+    {title}<slot />
+  </h1>
+</header>

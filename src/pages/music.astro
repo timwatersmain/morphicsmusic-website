@@ -1,4 +1,5 @@
 ---
+import PageTitle from '../components/PageTitle.astro';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Artwork from '../components/Artwork.astro';
 import catalog from '../data/music-catalog.json';
@@ -48,11 +49,7 @@ const discogFilters = [
 ---
 
 <BaseLayout title="MUSIC" currentPage="/music">
-  <header class="mb-20">
-    <h1 class="text-6xl md:text-8xl font-headline font-bold text-primary tracking-tighter leading-none">
-      MUSIC
-    </h1>
-  </header>
+  <PageTitle title="MUSIC" />
 
   <!-- Latest Release -->
   {latest && (

@@ -1,4 +1,5 @@
 ---
+import PageTitle from '../components/PageTitle.astro';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import merchItems from '../data/merch.json';
 import pluginItems from '../data/plugins.json';
@@ -12,11 +13,7 @@ const formatPrice = (lo: number | null, hi: number | null) => {
 ---
 
 <BaseLayout title="STORE" currentPage="/store">
-  <header class="mb-20">
-    <h1 class="text-6xl md:text-8xl font-headline font-bold text-primary tracking-tighter leading-none">
-      STORE
-    </h1>
-  </header>
+  <PageTitle title="STORE" />
 
   <!-- Catalog grid: plugins and merch share the same row so a card sits
        beside its neighbour rather than stacked in two separate sections. -->

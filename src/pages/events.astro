@@ -1,4 +1,5 @@
 ---
+import PageTitle from '../components/PageTitle.astro';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { INTENTS, INTENT_ORDER } from '../../functions/_lib/contact';
 import eventsData from '../data/events.json';
@@ -31,9 +32,8 @@ const fmtDate = (iso: string) => {
 <BaseLayout title="EVENTS" currentPage="/events">
   <div class="max-w-5xl">
 
+    <PageTitle title="EVENTS" class="mb-6" />
     <header class="mb-16">
-      <span class="font-mono text-xs text-secondary uppercase tracking-widest">Live</span>
-      <h1 class="font-headline font-bold text-5xl md:text-7xl text-primary uppercase tracking-tighter leading-none mt-2">EVENTS</h1>
       <p class="font-mono text-[11px] text-white/50 mt-4 leading-relaxed max-w-[60ch]">
         Where Morphics has played, where it's playing next, and the one place to
         get in touch about booking, licensing or press.

@@ -7,7 +7,7 @@ import DiscordInvite from '../components/DiscordInvite.astro';
 ---
 
 <BaseLayout title="ACCOUNT" currentPage="">
-  <div class="max-w-md mx-auto pt-12">
+  <div class="max-w-md">
     <!-- Shown only after /api/auth/me confirms a live session (same pattern
          as login.astro's signed-in panel and community/*.astro's signin
          panel). Never assume signed-in until that check resolves. -->
@@ -23,9 +23,8 @@ import DiscordInvite from '../components/DiscordInvite.astro';
     </div>
 
     <div id="acct-content" class="hidden">
-      <header class="mb-12">
-        <span class="font-mono text-xs text-secondary uppercase tracking-widest">Account</span>
-        <h1 class="font-headline font-bold text-5xl md:text-6xl text-primary uppercase tracking-tighter leading-none mt-2">SIGN-IN DETAILS</h1>
+      <header class="mb-16">
+        <h1 class="font-headline font-bold text-6xl md:text-8xl text-primary uppercase tracking-tighter leading-none break-words">SIGN-IN DETAILS</h1>
         <p class="font-mono text-[11px] text-white/50 mt-4 leading-relaxed">
           Signed in as <span id="acct-email" class="text-white/80"></span>
         </p>

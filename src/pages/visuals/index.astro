@@ -1,4 +1,5 @@
 ---
+import PageTitle from '../../components/PageTitle.astro';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import visualsData from '../../data/visuals.json';
 import videosData from '../../data/videos.json';
@@ -7,11 +8,7 @@ const featuredVisuals = visualsData.filter(v => v.featured);
 ---
 
 <BaseLayout title="VISUALS" currentPage="/visuals">
-  <header class="mb-16">
-    <h1 class="text-6xl md:text-8xl font-headline font-bold text-primary tracking-tighter leading-none">
-      VISUALS
-    </h1>
-  </header>
+  <PageTitle title="VISUALS" />
 
   <!-- ═══ MOTION SECTION ═══ -->
   <section id="motion-section" class="mb-24">

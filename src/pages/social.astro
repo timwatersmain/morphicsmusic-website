@@ -1,4 +1,5 @@
 ---
+import PageTitle from '../components/PageTitle.astro';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import signalData from '../data/signal.json';
 
@@ -52,11 +53,7 @@ import { INVITE_URL } from '../components/DiscordInvite.astro';
 ---
 
 <BaseLayout title="SOCIAL" currentPage="/social">
-  <header class="mb-6">
-    <h1 class="text-6xl md:text-8xl font-headline font-bold text-primary tracking-tighter leading-none">
-      SOCIAL
-    </h1>
-  </header>
+  <PageTitle title="SOCIAL" />
 
   <!-- Platform Nodes (Particle Array) -->
   <div class="mb-4 relative">

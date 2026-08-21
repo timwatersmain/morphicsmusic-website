@@ -31,14 +31,13 @@ const TURNSTILE_SITE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || '';
 ---
 
 <BaseLayout title="SIGN IN" currentPage="">
-  <div class="max-w-md mx-auto pt-12">
+  <div class="max-w-md">
     <!-- Shown only after /api/auth/me confirms a live session. The form
          below stays in the DOM and hidden by default — never assumed
          signed-out until the check resolves that way. -->
     <div id="signed-in-panel" class="hidden">
-      <header class="mb-12">
-        <span class="font-mono text-xs text-secondary uppercase tracking-widest">Account</span>
-        <h1 class="font-headline font-bold text-5xl md:text-6xl text-primary uppercase tracking-tighter leading-none mt-2">YOU'RE SIGNED IN</h1>
+      <header class="mb-16">
+          <h1 class="font-headline font-bold text-6xl md:text-8xl text-primary uppercase tracking-tighter leading-none break-words">YOU'RE SIGNED IN</h1>
         <p class="font-mono text-[11px] text-white/50 mt-4 leading-relaxed">
           Signed in as <span id="signed-in-email" class="text-white/80"></span>
         </p>
@@ -67,9 +66,8 @@ const TURNSTILE_SITE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || '';
     </div>
 
     <div id="login-form-panel">
-    <header class="mb-12">
-      <span class="font-mono text-xs text-secondary uppercase tracking-widest">Account</span>
-      <h1 class="font-headline font-bold text-5xl md:text-6xl text-primary uppercase tracking-tighter leading-none mt-2">SIGN IN</h1>
+    <header class="mb-16">
+      <h1 class="font-headline font-bold text-6xl md:text-8xl text-primary uppercase tracking-tighter leading-none break-words">SIGN IN</h1>
       <p class="font-mono text-[11px] text-white/50 mt-4 leading-relaxed">
         Username or email, plus your password.
       </p>
