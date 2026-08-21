@@ -8,9 +8,18 @@ import '../styles/global.css';
 interface Props {
   title: string;
   currentPage?: string;
+  /**
+   * Drop the breathing room reserved under the nav for a page title.
+   *
+   * That space exists so headings are not jammed against the bar, but the
+   * landing page has no page title — it has a hero sized to the viewport, and
+   * the extra padding pushed it past the fold and put a scrollbar on the
+   * front page.
+   */
+  flushTop?: boolean;
 }
 
-const { title, currentPage = '' } = Astro.props;
+const { title, currentPage = '', flushTop = false } = Astro.props;
 ---
 
 <!DOCTYPE html>
@@ -175,7 +184,7 @@ const { title, currentPage = '' } = Astro.props;
        the header is out of flow, so this padding is the only thing keeping
        content from starting underneath it. Mobile keeps pt-24; only the
        desktop bar got shorter. -->
-  <main class="relative z-10 pt-24 lg:pt-[5.4rem] pb-24 px-8">
+  <main class={`relative z-10 pt-24 pb-24 px-8 ${flushTop ? "lg:pt-[5.4rem]" : "lg:pt-[7.3rem]"}`}>
     <slot />
   </main>
 
