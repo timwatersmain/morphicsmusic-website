@@ -1,15 +1,34 @@
 ---
 const { currentPage = '' } = Astro.props;
 
+// Icon set is chosen for a CONSISTENT OPTICAL SIZE, not just a sensible
+// metaphor each. Every Material Symbol has the same 960-unit advance, so the
+// spacing was already even — what read as "different sizes" is the INK BOX,
+// how much of that em the drawn shape actually fills. Measured on the upstream
+// font, the old set ranged from person at 640x640 (44% ink) to groups at
+// 960x480 — an icon twice as wide as it is tall sitting beside one that is
+// square, which no amount of spacing can rescue.
+//
+// The three replacements below are the outliers, swapped for the nearest
+// same-meaning glyph that sits in the pack (ink now 56-70%, aspect ratio 0.90
+// to 1.13 apart from `group`, which is as square as any people icon gets):
+//   sensors       800x566 ar 1.41 -> share          720x800 ar 0.90
+//   groups        960x480 ar 2.00 -> group          880x640 ar 1.38
+//   person        640x640 ar 1.00 -> account_circle 800x800 ar 1.00
+//   shopping_bag  640x800 ar 0.80 -> shopping_cart  805x800 ar 1.01
+// (the cart swap also fits the label better — the button says "Cart")
+// Changing an icon name means re-running scripts/subset-icon-font.mjs: the
+// font is subset to the glyphs src/ actually references, so a name that has
+// not been through that pipeline renders as literal text.
 const navItems = [
-  { label: 'MUSIC',     href: '/music',     icon: 'graphic_eq' },
-  { label: 'VISUALS',   href: '/visuals',   icon: 'grid_view' },
+  { label: 'AUDIO',     href: '/music',     icon: 'graphic_eq' },
+  { label: 'VISUAL',    href: '/visuals',   icon: 'grid_view' },
   { label: 'STORE',     href: '/store',     icon: 'storefront' },
-  { label: 'SOCIAL',    href: '/social',    icon: 'sensors' },
+  { label: 'SOCIAL',    href: '/social',    icon: 'share' },
   // "COMMUNITY" overlaps its neighbors at 320px in the tiny mobile label
   // size (text-[8px]) that five items force here — mobileLabel shortens it
   // for that row only. The route and desktop label are unchanged.
-  { label: 'COMMUNITY', href: '/community', icon: 'groups', mobileLabel: 'FANS' },
+  { label: 'COMMUNITY', href: '/community', icon: 'group', mobileLabel: 'FANS' },
   // Sixth item — see the mobileLabel note above, which now matters more:
   // six labels share the 320px row, so this one is short by design.
   { label: 'EVENTS',    href: '/events',    icon: 'calendar_month', mobileLabel: 'LIVE' },
@@ -68,7 +87,7 @@ const navItems = [
       aria-label="Open cart"
       class="lg:hidden relative flex flex-col items-center text-primary/75 hover:text-primary transition-all duration-[400ms]"
     >
-      <span class="material-symbols-outlined text-[22px] leading-none">shopping_bag</span>
+      <span class="material-symbols-outlined text-[22px] leading-none">shopping_cart</span>
       <span class="font-headline uppercase tracking-[0.2em] text-[8px] mt-1 leading-none">Cart</span>
       <span class="cart-badge hidden absolute -top-1 -right-2 min-w-[16px] h-[16px] px-1 bg-secondary text-on-secondary text-[9px] font-mono font-bold rounded-full items-center justify-center">0</span>
     </button>
@@ -83,7 +102,7 @@ const navItems = [
       aria-label="Open cart"
       class="hidden lg:flex relative flex-row items-center lg:gap-2 text-primary/75 hover:text-primary hover:lg:scale-105 transition-all duration-[400ms]"
     >
-      <span class="material-symbols-outlined text-base leading-none">shopping_bag</span>
+      <span class="material-symbols-outlined text-base leading-none">shopping_cart</span>
       <span class="font-headline uppercase tracking-[0.16em] xl:tracking-[0.2em] text-[clamp(0.63rem,0.85vw,0.75rem)] leading-none whitespace-nowrap">Cart</span>
       <span id="cart-badge" class="cart-badge hidden absolute -top-1 -right-2 min-w-[16px] h-[16px] px-1 bg-secondary text-on-secondary text-[9px] font-mono font-bold rounded-full items-center justify-center">0</span>
     </button>
@@ -94,7 +113,7 @@ const navItems = [
          /community/me instead. -->
     <a id="account-link" href="/login" data-astro-reload
        class="flex flex-col lg:flex-row items-center lg:gap-2 text-primary/75 hover:text-primary hover:lg:scale-105 transition-all duration-[400ms]">
-      <span class="material-symbols-outlined text-[22px] lg:text-base leading-none">person</span>
+      <span class="material-symbols-outlined text-[22px] lg:text-base leading-none">account_circle</span>
       <!-- Two labels, one element: the stacked row needs the 8px size the
            other mobile items use, the horizontal row needs the fluid one.
            Both carry the same id target for the auth script, which writes to

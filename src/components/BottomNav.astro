@@ -2,13 +2,13 @@
 const { currentPage = '' } = Astro.props;
 
 const navItems = [
-  { label: 'MUSIC', href: '/music', icon: 'graphic_eq' },
-  { label: 'VISUALS', href: '/visuals', icon: 'grid_view' },
+  { label: 'AUDIO', href: '/music', icon: 'graphic_eq' },
+  { label: 'VISUAL', href: '/visuals', icon: 'grid_view' },
   { label: 'STORE', href: '/store', icon: 'storefront' },
   // Stale /signal path (301s to /social via _redirects) — left exactly as
   // it is; fixing it is outside this task.
-  { label: 'SOCIAL', href: '/signal', icon: 'sensors' },
-  { label: 'COMMUNITY', href: '/community', icon: 'groups' },
+  { label: 'SOCIAL', href: '/signal', icon: 'share' },
+  { label: 'COMMUNITY', href: '/community', icon: 'group' },
 ];
 ---
 

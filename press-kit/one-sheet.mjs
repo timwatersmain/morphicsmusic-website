@@ -13,6 +13,20 @@ const curtain = asset('public/images/press/morphics-composite.jpg');
 const contact = `${esc(D.mgmt.contact || 'Morphics')}${D.mgmt.company ? ' · ' + esc(D.mgmt.company) : ''}`;
 const email = esc(D.mgmt.email || 'morphicsmusic@gmail.com');
 
+// Rooms played, taken from the show history but CURATED. D.venues is derived
+// straight from events.json, so alongside real rooms it carries a street
+// address, a private farm and a bare city name — entries that are accurate
+// records of a gig but read, on a document handed to a talent buyer, as
+// padding. Dropping them makes the list shorter and stronger. Anything not
+// named here still counts in the show history; it just does not get printed.
+const NOT_A_ROOM = new Set([
+  '216 Westhampton Blvd',   // a street address
+  'Camp grounds',           // not a venue name at all
+  'River Farm Recreation',  // private property
+  'Tracy City',             // a town, not a room
+]);
+const roomList = D.venues.filter(v => !NOT_A_ROOM.has(v));
+
 // The blue set: artwork left in its OWN colour, not rotated. B1 pairs it
 // with the green accent (complementary, so the type pops off the image);
 // B2 pulls the accent out of the photograph itself (#3fa9ff, hue 207°) for
@@ -51,19 +65,22 @@ for (const v of variants) {
   .fmt span{border:1px solid #333;padding:1.8mm 4.5mm;font-size:7pt;font-weight:700;
     letter-spacing:.16em;text-transform:uppercase;color:#e4e4e4}
   .fmt span b{color:${A}}
-  .figs{display:flex;gap:13mm;margin:8mm 0 0;padding:4.5mm 0;
-    border-top:1px solid #1c1c1c;border-bottom:1px solid #1c1c1c}
-  .figs .n{font-size:16pt;font-weight:700;line-height:1;letter-spacing:-.02em}
-  .figs .k{font-size:6.5pt;letter-spacing:.2em;text-transform:uppercase;color:#6e6e6e;margin-top:1.6mm}
-  .cols{display:grid;grid-template-columns:86mm 1fr;gap:10mm;margin:7mm 0 0}
+  /* The old layout led with a five-figure strip (shows / active / states /
+     festivals / releases) over a DATED "Recent shows" list. Both are removed.
+     A span reading "2018-24" next to a most-recent date of Dec 2024 states,
+     in the largest type on the page, that nothing has happened in two years —
+     the one thing a one-sheet must never say. The credentials that actually
+     sell the act carry no timestamp at all: who the bills were shared with,
+     and which rooms were played. Those now lead instead, and neither goes
+     stale sitting in a promoter's inbox. */
+  .block{margin:8mm 0 0}
   .h{font-size:6.5pt;font-weight:700;letter-spacing:.2em;text-transform:uppercase;
     color:${A};display:block;margin-bottom:3mm}
-  .sh{list-style:none;margin:0;padding:0;font-size:7.8pt}
-  .sh li{display:flex;gap:3mm;padding:1.3mm 0;border-bottom:1px solid #141414}
-  .sh .d{color:#6b6b6b;width:19mm;flex-shrink:0;font-variant-numeric:tabular-nums}
-  .sh .c{color:#6b6b6b}
-  .bills{font-size:7.8pt;line-height:1.85;color:#c9c9c9}
-  .bills b{color:#fff;font-weight:500}
+  .bills{font-size:9.5pt;line-height:1.72;color:#e8e8e8;margin:0;max-width:170mm}
+  .bills b{color:#fff;font-weight:600}
+  .rooms{list-style:none;margin:0;padding:0;font-size:7.6pt;color:#c4c4c4;
+    columns:4;column-gap:8mm}
+  .rooms li{padding:1.15mm 0;break-inside:avoid;border-bottom:1px solid #141414}
   .band{margin:8mm 0 0}
   .band img{width:100%;height:auto;display:block}
   .foot{margin-top:auto;border-top:1px solid #fff;padding-top:5mm;
@@ -88,19 +105,13 @@ for (const v of variants) {
         <em>ever evolving</em> — fusing elements from every genre into a listening or live
         experience built fresh each time.</p>
       <div class="fmt"><span><b>Live A/V</b></span><span><b>Live — Ableton</b></span><span><b>DJ set</b></span></div>
-      <div class="figs">
-        ${[['shows', D.stats.shows], ['active', D.stats.span], ['states', D.stats.states],
-           ['festivals', D.stats.festivals], ['releases', D.stats.releases]]
-          .map(([k, n]) => `<div><div class="n">${n}</div><div class="k">${k}</div></div>`).join('')}
+      <div class="block">
+        <span class="h">Shared bills</span>
+        <p class="bills"><b>${D.bills.map(esc).join('</b> · <b>')}</b></p>
       </div>
-      <div class="cols">
-        <div><span class="h">Recent shows</span><ul class="sh">
-          ${D.past.slice(0, 6).map(e => `<li><span class="d">${esc(e.date_display)}</span>
-            <span style="flex:1">${esc(e.venue || e.title)}</span>
-            <span class="c">${esc((e.city || '').split(',')[0])}</span></li>`).join('')}
-        </ul></div>
-        <div><span class="h">Shared bills</span>
-          <p class="bills"><b>${D.bills.slice(0, 16).map(esc).join('</b> · <b>')}</b></p></div>
+      <div class="block">
+        <span class="h">Rooms played &mdash; ${roomList.length} venues across ${D.stats.states} states</span>
+        <ul class="rooms">${roomList.map(r => `<li>${esc(r)}</li>`).join('')}</ul>
       </div>
       <div class="band"><img src="${curtain}" alt=""></div>
       <div class="foot">

@@ -74,10 +74,15 @@ describe('subset-icon-font guard: assertExplicitIconsSurvive', () => {
 });
 
 describe('subset-icon-font guard: applied to the real nav components', () => {
-  it('collects the COMMUNITY icon (groups) as an explicit declaration', () => {
+  it('collects the COMMUNITY icon (group) as an explicit declaration', () => {
     const declarations = collectExplicitIconDeclarations();
     const icons = declarations.map((d) => d.icon);
-    expect(icons).toContain('groups');
+    // `groups` (960x480 ink, twice as wide as tall) was swapped for `group`
+    // (880x640) so the people icon sits at the same optical size as the rest
+    // of the nav. Pinned by NAME because the subset font is built from these
+    // declarations — the old name must not quietly come back.
+    expect(icons).toContain('group');
+    expect(icons).not.toContain('groups');
     expect(icons).toContain('storefront');
     // diversity_3 was moved off after a report that it rendered as literal
     // text in a real browser this repo's tooling could not reproduce; make
@@ -95,8 +100,8 @@ describe('subset-icon-font guard: applied to the real nav components', () => {
     // And it DOES throw if we simulate one declared icon missing upstream —
     // proving the guard is not a no-op against the real component data.
     const withOneMissing = new Set(fontGlyphNames);
-    withOneMissing.delete('groups');
-    expect(() => assertExplicitIconsSurvive(declarations, withOneMissing)).toThrow(/groups/);
+    withOneMissing.delete('group');
+    expect(() => assertExplicitIconsSurvive(declarations, withOneMissing)).toThrow(/group/);
   });
 });
 
