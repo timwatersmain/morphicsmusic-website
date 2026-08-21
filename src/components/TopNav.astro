@@ -75,7 +75,7 @@ const navItems = [
         ]}
       >
         <span class="material-symbols-outlined text-[22px] lg:text-base leading-none">{item.icon}</span>
-        <span class="lg:hidden font-headline uppercase tracking-[0.08em] min-[360px]:tracking-[0.2em] text-[8px] mt-1 leading-none">{item.mobileLabel || item.label}</span>
+        <span class="nav-label lg:hidden font-headline uppercase text-[8px] mt-1 leading-none">{item.mobileLabel || item.label}</span>
         <span class="hidden lg:inline font-headline uppercase tracking-[0.16em] xl:tracking-[0.2em] text-[clamp(0.63rem,0.85vw,0.75rem)] leading-none whitespace-nowrap">{item.label}</span>
       </a>
     ))}
@@ -88,7 +88,7 @@ const navItems = [
       class="lg:hidden relative flex flex-col items-center text-primary/75 hover:text-primary transition-all duration-[400ms]"
     >
       <span class="material-symbols-outlined text-[22px] leading-none">shopping_cart</span>
-      <span class="font-headline uppercase tracking-[0.2em] text-[8px] mt-1 leading-none">Cart</span>
+      <span class="nav-label font-headline uppercase text-[8px] mt-1 leading-none">Cart</span>
       <span class="cart-badge hidden absolute -top-1 -right-2 min-w-[16px] h-[16px] px-1 bg-secondary text-on-secondary text-[9px] font-mono font-bold rounded-full items-center justify-center">0</span>
     </button>
     <!-- Cart and account are part of the SAME row as the nav links, not a
@@ -118,7 +118,7 @@ const navItems = [
            other mobile items use, the horizontal row needs the fluid one.
            Both carry the same id target for the auth script, which writes to
            whichever is visible via the shared parent. -->
-      <span id="account-link-label" class="lg:hidden font-headline uppercase tracking-[0.08em] min-[360px]:tracking-[0.2em] text-[8px] mt-1 leading-none">Account</span>
+      <span id="account-link-label" class="nav-label lg:hidden font-headline uppercase text-[8px] mt-1 leading-none">Account</span>
       <span id="account-link-label-lg" class="hidden lg:inline font-headline uppercase tracking-[0.16em] xl:tracking-[0.2em] text-[clamp(0.63rem,0.85vw,0.75rem)] leading-none whitespace-nowrap">Account</span>
     </a>
   </nav>

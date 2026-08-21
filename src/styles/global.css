@@ -609,3 +609,42 @@ body:has(.art-lightbox.active) #site-header {
 /* "1 / 22" wrapped onto a second line inside the caption pill at 390px, which
    left the bar two lines tall under the artwork. */
 .art-lb-info { white-space: nowrap; }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   COMPACT NAV LABELS
+
+   The eight-item row never overflowed — measured at 320/360/390/430 the last
+   item always sat inside the viewport and the document never scrolled
+   sideways. What actually broke was the SPACE BETWEEN labels, which fell to
+   literally zero:
+
+     320px   gaps 0, 0, 0, 0.6, 3, 2.3, 0
+     360px   gaps 0, 0, 0, 0, 0.4, 0.4, 0     <- every label touching
+     390px   gaps 3.5
+     430px   gaps 8.5
+
+   The cause was the tracking step itself. The labels carried
+   `tracking-[0.08em] min-[360px]:tracking-[0.2em]`, so at exactly 360px the
+   letter-spacing more than doubled — and the extra width it added was
+   precisely the width that had been the gap. The row was widened at the one
+   breakpoint that could least afford it.
+
+   Tracking now widens at 420px, where the measurements show room for it, and
+   below 360px the labels step aside entirely: eight labels cannot be set at
+   any sane size in that width, and the icons carry the meaning on their own
+   (they were rebuilt to a consistent optical size for exactly that reason).
+
+   Driven from here rather than from stacked arbitrary Tailwind variants:
+   `min-[360px]:` and `lg:` are both media queries and their emitted order
+   decides the winner, which is a fragile thing to hang a layout on. The
+   #site-header prefix also outranks a plain utility class, so these hold.
+   ═══════════════════════════════════════════════════════════════════════ */
+@media (max-width: 1023px) {
+  #site-header nav .nav-label { letter-spacing: 0.04em; }
+}
+@media (min-width: 420px) and (max-width: 1023px) {
+  #site-header nav .nav-label { letter-spacing: 0.16em; }
+}
+@media (max-width: 359px) {
+  #site-header nav .nav-label { display: none; }
+}
