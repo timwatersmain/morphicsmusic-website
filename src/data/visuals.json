@@ -3,17 +3,19 @@
     "id": "perforated",
     "title": "PERFORATED",
     "image": "/images/visuals/perforated.jpg",
-    "tags": ["morphics", "artwork"],
+    "tags": ["morphics", "album-art"],
     "size": "square",
-    "featured": false
+    "featured": false,
+    "date": "2026-08-21"
   },
   {
     "id": "scrying-the-veil",
     "title": "SCRYING THE VEIL",
     "image": "/images/visuals/scrying-the-veil.jpg",
-    "tags": ["morphics", "artwork"],
+    "tags": ["morphics", "album-art"],
     "size": "square",
-    "featured": false
+    "featured": false,
+    "date": "2026-08-21"
   },
   {
     "id": "screenshot-macro",
