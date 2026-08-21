@@ -234,10 +234,9 @@ const ogImageUrl = new URL(ogImage, SITE).href;
        neural-bg's flat #131313 stays as the ground beneath it, which is what
        paints if the canvas or its script never arrives.
 
-       Mounted on EVERY page including the landing one, where it is hidden and
-       stopped rather than absent — currentPage only suppresses its first
-       paint. Rendering it conditionally would break it, see the component. -->
-  <LiquidBackground currentPage={currentPage} />
+       On every page, including the landing one — ScrambleGrid used to own
+       that screen and no longer does. -->
+  <LiquidBackground />
 
   <TopNav currentPage={currentPage} />
 

@@ -1,6 +1,5 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-import ScrambleGrid from '../components/ScrambleGrid.astro';
 ---
 
 <BaseLayout title="MORPHICS" currentPage="/" flushTop>
@@ -8,7 +7,12 @@ import ScrambleGrid from '../components/ScrambleGrid.astro';
        centers the wordmark + tagline on every device. No accents, no
        footer line, no decoration: the landing is the cleanest page. -->
   <section class="relative min-h-[calc(100dvh-12rem)] w-full flex flex-col items-center justify-center px-6 overflow-hidden">
-    <ScrambleGrid />
+    <!-- ScrambleGrid removed 2026-08-21. It was landing as a field of random
+         glyphs rather than resolving into words on at least one phone, so the
+         landing page read as broken. The component still exists at
+         src/components/ScrambleGrid.astro and re-adding it is this one line —
+         it is switched off, not deleted. The liquid-glass background now
+         carries this screen instead. -->
     <!-- Centred on the BUTTON, not on the block: the wordmark is much shorter
          on mobile than desktop, so centring the pair together put ENTER at a
          different height on each. The wordmark hangs above it instead, which
