@@ -18,9 +18,31 @@ interface Props {
    * front page.
    */
   flushTop?: boolean;
+  /** Overrides the shared description in the link preview and in search results. */
+  description?: string;
+  /** Site-root-relative path to a 1200x630 share image, if this page has its own. */
+  ogImage?: string;
 }
 
-const { title, currentPage = '', flushTop = false } = Astro.props;
+const {
+  title,
+  currentPage = '',
+  flushTop = false,
+  description = 'Electronic music, audiovisual work and releases from MORPHICS. The only constant is change.',
+  ogImage = '/images/og/og-default.jpg',
+} = Astro.props;
+
+/* The canonical origin, written out rather than taken from Astro.site — there
+   is no `site` in astro.config, so Astro.site is undefined and every absolute
+   URL built from it would silently come out broken. og:image in particular
+   MUST be absolute; a relative one is simply dropped by most scrapers. */
+const SITE = 'https://morphicsmusic.com';
+
+/* The landing page passes title="MORPHICS", and the old template appended the
+   brand unconditionally — so the share card read "MORPHICS // MORPHICS". */
+const pageTitle = title === 'MORPHICS' ? 'MORPHICS' : `${title} // MORPHICS`;
+const canonical = new URL(Astro.url.pathname, SITE).href;
+const ogImageUrl = new URL(ogImage, SITE).href;
 ---
 
 <!DOCTYPE html>
@@ -28,8 +50,36 @@ const { title, currentPage = '', flushTop = false } = Astro.props;
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{title} // MORPHICS</title>
+  <title>{pageTitle}</title>
   <link rel="icon" type="image/png" href="/favicon.png" />
+  <link rel="canonical" href={canonical} />
+
+  <!-- Link preview / social card.
+       The site had NO Open Graph tags at all, so iMessage, Slack, Discord and
+       every other unfurler fell back to scraping the page: it took the <title>
+       (which read "MORPHICS // MORPHICS") and picked the first sizeable image
+       it found, which was the white-on-transparent wordmark PNG. Composited
+       onto iMessage's white bubble that turned into pale grey on white, cropped
+       at both ends, with no description under it.
+
+       og:image is therefore a purpose-built 1200x630 JPEG with its own opaque
+       dark background — a transparent PNG can never be safe here, because the
+       colour behind it belongs to whatever app is drawing the card. -->
+  <meta name="description" content={description} />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="MORPHICS" />
+  <meta property="og:title" content={pageTitle} />
+  <meta property="og:description" content={description} />
+  <meta property="og:url" content={canonical} />
+  <meta property="og:image" content={ogImageUrl} />
+  <meta property="og:image:type" content="image/jpeg" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="MORPHICS — the only constant is change" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content={pageTitle} />
+  <meta name="twitter:description" content={description} />
+  <meta name="twitter:image" content={ogImageUrl} />
   <!-- Both text fonts are self-hosted (see global.css) and preloaded, so
        everything that sets the page's text metrics is on our own origin and
        arrives with the CSS instead of after a third-party handshake — that
