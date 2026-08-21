@@ -1,5 +1,13 @@
 [
   {
+    "id": "perforated",
+    "title": "PERFORATED",
+    "image": "/images/visuals/perforated.jpg",
+    "tags": ["morphics", "artwork"],
+    "size": "square",
+    "featured": false
+  },
+  {
     "id": "scrying-the-veil",
     "title": "SCRYING THE VEIL",
     "image": "/images/visuals/scrying-the-veil.jpg",
