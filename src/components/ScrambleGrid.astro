@@ -210,16 +210,24 @@
       holdMs: 2400,
     });
 
-    // The phrase sits in the lattice rows under the ENTER button, so the engine
-    // needs the button's rect relative to the canvas — remeasured on resize.
+    // PHRASE DISABLED 2026-08-21 — the lattice stays, the spelled words go.
+    //
+    // The grid is two things: an ambient field of morphing glyph cells, and a
+    // phrase locked to the cells under the ENTER button that resolves into real
+    // letters and brightens onto a second, higher-opacity canvas. On a real
+    // phone that phrase was landing as broken half-letters rather than words,
+    // so the page read as broken to a first-time visitor. The field itself was
+    // never the problem.
+    //
+    // Disabled by simply never setting the anchor: assignPhrase() clears every
+    // cell's phraseChar and returns early when this.anchor is null, so no cell
+    // is ever a phrase cell. Everything downstream falls out correctly on its
+    // own — `wantResolved` is `this.resolved && !!cell.phraseChar`, so the
+    // hover/tap resolve becomes a no-op, and the highlight canvas is never
+    // drawn to because that branch also tests cell.phraseChar. Nothing is
+    // ripped out; restoring the phrase is re-adding this one call.
     const trigger = document.querySelector('[data-resolve-trigger]');
-    const measure = () => {
-      if (!trigger) return;
-      const t = trigger.getBoundingClientRect();
-      const c = canvas.getBoundingClientRect();
-      engine.setPhraseAnchor({ cx: t.left + t.width / 2 - c.left, bottom: t.bottom - c.top });
-    };
-    measure();
+    const measure = () => {};
 
     // ResizeObserver rather than window 'resize': it fires for ANY change to
     // the canvas's own box — orientation, chrome sliding, the on-screen
