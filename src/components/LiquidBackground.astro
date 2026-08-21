@@ -1,12 +1,13 @@
 ---
 /**
  * Animated background — the `liquid_glass` channel from PHORM LIVE's SIGNAL
- * WALL, rendered behind every page.
+ * WALL, rendered behind every page EXCEPT the landing page.
  *
- * The landing page used to be excluded, because ScrambleGrid already owned
- * that screen and two textures competing for one field of view is one too
- * many. ScrambleGrid was removed on 2026-08-21, so that reason is gone and the
- * route gate went with it.
+ * The landing page is excluded deliberately: it carries the ScrambleGrid glyph
+ * lattice, and the two of them competing for the same field of view is one
+ * texture too many. The landing is the Morphian animation, full stop. It is
+ * excluded by being HIDDEN AND STOPPED, not by being unmounted — see
+ * enabledForRoute() for why that distinction is load-bearing.
  *
  * The effect (src/scripts/liquid-glass.js) is an anisotropic metaball field
  * contoured with marching squares, where each contour is filled with a *source
@@ -26,6 +27,17 @@
  * single frame under prefers-reduced-motion. See the notes on each.
  */
 
+interface Props {
+  /**
+   * First-paint state only. The route is authoritative at runtime (the client
+   * router swaps pages without re-rendering this component), but without this
+   * the landing page would paint one frame of background before the script
+   * hides it.
+   */
+  currentPage?: string;
+}
+const { currentPage = '' } = Astro.props;
+const startHidden = currentPage === '/';
 ---
 
 <canvas
@@ -33,6 +45,7 @@
   transition:persist
   aria-hidden="true"
   data-liquid-bg
+  style={startHidden ? 'visibility:hidden' : undefined}
 ></canvas>
 
 <!-- Dither. Sits directly above the canvas and below the content. See the
@@ -41,6 +54,7 @@
   id="liquid-grain"
   transition:persist
   aria-hidden="true"
+  style={startHidden ? 'visibility:hidden' : undefined}
 ></div>
 
 <style>
@@ -351,7 +365,77 @@
     // every browser this site's fonts and 100lvh already require has it.
     reduced.addEventListener('change', applyMotionPreference);
 
-    applyMotionPreference();
+    /* ── route gate ────────────────────────────────────────────────────────
+       The landing page gets no background: ScrambleGrid already owns that
+       screen.
+
+       HIDDEN AND STOPPED rather than unmounted, and that is not a style
+       choice. The canvas carries transition:persist, so if the component were
+       rendered conditionally the node would be destroyed on entering the
+       landing page and RECREATED on leaving it — while this init script,
+       guarded to run exactly once, would never re-attach to the new node. The
+       result is a canvas that is silently dead for the rest of the session,
+       on every page, until a hard reload. Keeping one node alive for the
+       lifetime of the tab sidesteps that entirely.
+
+       visibility:hidden rather than display:none for the same class of reason:
+       display:none collapses the element to zero size, and _resize() reads
+       clientWidth/clientHeight — so the buffer would be rebuilt at the 4px
+       floor and the field re-rolled every time you touched the landing page.
+       visibility:hidden keeps the box, so the canvas comes back exactly as it
+       left. It is not painted while hidden, and the loop is stopped, so the
+       landing page pays nothing for it.
+
+       Decided at runtime from location.pathname, not from the server-rendered
+       prop: under the client router this component is not re-rendered on
+       navigation, so the prop only ever describes the page that was loaded
+       first. The prop's one job is suppressing a frame of background before
+       this runs. */
+    function enabledForRoute() {
+      const path = location.pathname.replace(/index\.html$/, '');
+      return path !== '/';
+    }
+
+    /* The grain tile. Random black-or-white pixels at alpha 0..5/255 — the
+       symmetric mean is what keeps it a dither rather than a haze that lifts
+       the blacks. 64x64 is small enough that the tiling never reads at this
+       contrast and costs about a millisecond to generate, once. */
+    const grain = document.getElementById('liquid-grain');
+    if (grain) {
+      const n = document.createElement('canvas');
+      n.width = n.height = 64;
+      const ng = n.getContext('2d');
+      if (ng) {
+        const img = ng.createImageData(64, 64);
+        for (let i = 0; i < img.data.length; i += 4) {
+          const v = Math.random() < 0.5 ? 0 : 255;
+          img.data[i] = img.data[i + 1] = img.data[i + 2] = v;
+          img.data[i + 3] = Math.random() * 5;
+        }
+        ng.putImageData(img, 0, 0);
+        grain.style.backgroundImage = `url(${n.toDataURL()})`;
+      }
+    }
+
+    function applyRoute() {
+      const on = enabledForRoute();
+      // The grain follows the canvas exactly: on the landing page there is no
+      // background to dither, and a bare grain layer over the flat surface
+      // colour would just be noise on a solid panel.
+      if (grain) grain.style.visibility = on ? '' : 'hidden';
+      if (on) {
+        canvas.style.visibility = '';
+        applyMotionPreference();
+      } else {
+        stop();
+        canvas.style.visibility = 'hidden';
+      }
+    }
+
+    // Fires on the initial load as well as on every client-router swap.
+    document.addEventListener('astro:page-load', applyRoute);
+
+    applyRoute();
   }
 
   /**
