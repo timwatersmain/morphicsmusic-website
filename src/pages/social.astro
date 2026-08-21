@@ -18,8 +18,14 @@ function tiktokVideoId(url: string): string | null {
 
 const platforms = [
   { name: 'BANDCAMP', icon: 'album', url: 'https://morphics.bandcamp.com/' },
-  { name: 'SPOTIFY', icon: 'music_note', url: 'https://open.spotify.com/artist/morphics' },
+  { name: 'SPOTIFY', icon: 'music_note', url: 'https://open.spotify.com/artist/0pScX6R5xw3XiYjlGWeEDf' },
   { name: 'AUDIUS', icon: 'headphones', url: 'https://audius.co/morphics' },
+  // morphics-music WITH the hyphen — soundcloud.com/morphicsmusic is someone else.
+  { name: 'SOUNDCLOUD', icon: 'cloud', url: 'https://soundcloud.com/morphics-music' },
+  // Channel-ID URL rather than a handle: the ID is the one form that cannot
+  // break if the handle is ever changed, and it is the same id the signal feed
+  // ingests from (youtube_channel_id). Verified 200, title "Morphics - YouTube".
+  { name: 'YOUTUBE', icon: 'play_circle', url: 'https://www.youtube.com/channel/UCM-89PM2fMhNkrRiJyQOfrA' },
   { name: 'INSTAGRAM', icon: 'photo_camera', url: 'https://www.instagram.com/morphicsmusic/' },
   { name: 'TWITTER', icon: 'tag', url: 'https://www.twitter.com/MorphicsMusic' },
   { name: 'FACEBOOK', icon: 'group', url: 'https://www.facebook.com/morphicsmusic/' },
