@@ -1,5 +1,13 @@
 [
   {
+    "id": "scrying-the-veil",
+    "title": "SCRYING THE VEIL",
+    "image": "/images/visuals/scrying-the-veil.jpg",
+    "tags": ["morphics", "artwork"],
+    "size": "square",
+    "featured": false
+  },
+  {
     "id": "screenshot-macro",
     "title": "MACRO STUDY",
     "image": "/images/visuals/screenshot-macro.jpg",
