@@ -18,7 +18,16 @@ import ScrambleGrid from '../components/ScrambleGrid.astro';
         <img
           src="/images/logos/morphics-text-white.png"
           alt="MORPHICS"
-          class="max-h-24 md:h-36 lg:h-44 w-auto max-w-[86vw] mx-auto"
+          {/* calc(100vw - 5rem), NOT a plain vw fraction. The wordmark is
+              clipped by section's overflow:hidden, and that clip box is
+              main's content box — 100vw minus main's px-8, i.e. 100vw - 4rem —
+              not the viewport. 86vw measured against the viewport, so on a
+              390px phone the image came out 335.4px inside a 326px box and lost
+              4.7px off each end. It was wrong on every viewport under ~457px.
+              Subtracting 5rem keeps the full glyph inside the clip with about
+              8px of air each side. No effect above ~460px, where the height
+              rules decide the width instead. */}
+          class="max-h-24 md:h-36 lg:h-44 w-auto max-w-[calc(100vw-5rem)] mx-auto"
         />
       </h1>
       <a href="/music" data-resolve-trigger class="group relative inline-block px-12 py-4 overflow-hidden border border-primary/20 hover:border-primary/60 transition-all duration-500 hover:scale-105 active:scale-95 rounded-full">
