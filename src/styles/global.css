@@ -503,3 +503,109 @@
     transition: opacity 0.6s ease;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   ARTWORK LIGHTBOX — PREV / NEXT RAILS
+
+   Lives here, not in the pages, because /visuals and /visuals/gallery each
+   carried a byte-identical copy of these rules. Two copies of one control is
+   how they drift: a fix applied to the gallery would have quietly left the
+   visuals page behind.
+
+   The old control was a 48px square of rgba(0,0,0,0.5), inset 1rem, sitting
+   on a backdrop that is 97% black — a dark square on a dark field, which is
+   effectively invisible. Worse, both copies carried
+   `@media (max-width: 768px) { .art-lb-nav { display: none } }`, so on a
+   phone the buttons were removed outright and there was NO way to reach the
+   next piece: no arrows, no swipe, and a touch device has no arrow keys.
+
+   These are full-height glass rails pinned to the screen edges instead.
+   Edge-anchored means the target is the whole side of the screen rather than
+   a small square, which is both easier to hit and impossible to miss.
+   ═══════════════════════════════════════════════════════════════════════ */
+:root { --lb-rail: clamp(58px, 7vw, 104px); }
+
+.art-lb-nav {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: var(--lb-rail);
+  /* Overrides the old rule's vertical centring, which assumed a small box. */
+  transform: none;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  padding: 0;
+  color: #fff;
+  cursor: pointer;
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  backdrop-filter: blur(14px) saturate(140%);
+  transition: background 0.25s ease, box-shadow 0.25s ease;
+}
+
+.art-lb-prev {
+  left: 0;
+  border-right: 1px solid rgba(255, 255, 255, 0.10);
+  background: linear-gradient(90deg, rgba(255,255,255,0.11), rgba(255,255,255,0.02));
+}
+.art-lb-next {
+  right: 0;
+  border-left: 1px solid rgba(255, 255, 255, 0.10);
+  background: linear-gradient(270deg, rgba(255,255,255,0.11), rgba(255,255,255,0.02));
+}
+
+.art-lb-nav .material-symbols-outlined {
+  font-size: 42px;
+  line-height: 1;
+  /* The rail is translucent, so the chevron can end up over a bright part of
+     the artwork. The shadow keeps it readable against anything. */
+  filter: drop-shadow(0 2px 12px rgba(0, 0, 0, 0.9));
+  transition: transform 0.25s ease, color 0.25s ease;
+}
+
+.art-lb-prev:hover { background: linear-gradient(90deg, rgba(255,255,255,0.20), rgba(255,255,255,0.05)); }
+.art-lb-next:hover { background: linear-gradient(270deg, rgba(255,255,255,0.20), rgba(255,255,255,0.05)); }
+.art-lb-nav:hover .material-symbols-outlined { color: var(--primary); }
+.art-lb-prev:hover .material-symbols-outlined { transform: translateX(-5px); }
+.art-lb-next:hover .material-symbols-outlined { transform: translateX(5px); }
+
+/* Keyboard users get the same affordance the mouse does. */
+.art-lb-nav:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -6px;
+}
+
+/* The artwork is inset past the rails so a rail never covers the piece it is
+   there to navigate. Without this the 90vw image runs under both rails. */
+.art-lb-img {
+  max-width: min(90vw, calc(100vw - (2 * var(--lb-rail)) - 2rem));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .art-lb-nav,
+  .art-lb-nav .material-symbols-outlined { transition: none; }
+  .art-lb-nav:hover .material-symbols-outlined { transform: none; }
+}
+
+/* The lightbox is not actually fullscreen without this.
+   #art-lightbox carries z-index: 9999, but it lives inside <main class="relative
+   z-10">, and a positioned ancestor with a z-index opens a NEW STACKING CONTEXT.
+   9999 is therefore resolved *within* main, and the whole of main sits at 10 —
+   below #site-header at 50. So the nav painted straight through the viewer, and
+   raising the lightbox's z-index could never have fixed it: the number is not
+   the problem, the containing context is.
+   Retiring the header while a piece is open is the smaller change of the two
+   available (the other being to move the lightbox out of main, or promote it to
+   the top layer via <dialog>). :has() keeps it in CSS, so both /visuals and
+   /visuals/gallery inherit it with no script change. */
+body:has(.art-lightbox.active) #site-header {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+/* "1 / 22" wrapped onto a second line inside the caption pill at 390px, which
+   left the bar two lines tall under the artwork. */
+.art-lb-info { white-space: nowrap; }

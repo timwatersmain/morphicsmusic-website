@@ -650,29 +650,14 @@ const recentItems = [
     transition: all 0.2s;
   }
   .art-lb-close:hover { border-color: var(--primary); color: var(--primary); }
-  .art-lb-nav {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    z-index: 10;
-    background: rgba(0,0,0,0.5);
-    border: 1px solid rgba(255,255,255,0.1);
-    color: white;
-    width: 48px;
-    height: 48px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-  .art-lb-nav:hover { border-color: var(--primary); color: var(--primary); }
-  .art-lb-prev { left: 1rem; }
-  .art-lb-next { right: 1rem; }
+  /* .art-lb-nav / .art-lb-prev / .art-lb-next now live in src/styles/global.css
+     as full-height glass rails — shared, because this page and /visuals each
+     had an identical copy of them. Do not re-add them here: a scoped rule wins
+     on specificity and would silently shadow the shared one. */
   .art-lb-img {
     position: relative;
     z-index: 1;
-    max-width: 90vw;
+    /* max-width is set in global.css so the artwork clears the nav rails. */
     max-height: 85vh;
     object-fit: contain;
   }
@@ -708,6 +693,5 @@ const recentItems = [
       border-bottom: none;
       border-right: 1px solid var(--outline-variant);
     }
-    .art-lb-nav { display: none; }
   }
 </style>
