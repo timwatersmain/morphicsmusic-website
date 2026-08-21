@@ -3,6 +3,7 @@ import { ClientRouter } from 'astro:transitions';
 import TopNav from '../components/TopNav.astro';
 import Cart from '../components/Cart.astro';
 import PlayerBar from '../components/PlayerBar.astro';
+import LiquidBackground from '../components/LiquidBackground.astro';
 import '../styles/global.css';
 
 interface Props {
@@ -178,6 +179,16 @@ const { title, currentPage = '', flushTop = false } = Astro.props;
   <slot name="head" />
 </head>
 <body class="neural-bg min-h-screen font-body text-on-surface overflow-x-hidden">
+  <!-- First child of <body> and z-0, so it sits under <main> (z-10) and under
+       the nav / cart / player bar without any of them needing a z-index change.
+       neural-bg's flat #131313 stays as the ground beneath it, which is what
+       paints if the canvas or its script never arrives.
+
+       Mounted on EVERY page including the landing one, where it is hidden and
+       stopped rather than absent — currentPage only suppresses its first
+       paint. Rendering it conditionally would break it, see the component. -->
+  <LiquidBackground currentPage={currentPage} />
+
   <TopNav currentPage={currentPage} />
 
   <!-- pt tracks the fixed header's height and has to be changed WITH it:

@@ -1,0 +1,417 @@
+---
+/**
+ * Animated background — the `liquid_glass` channel from PHORM LIVE's SIGNAL
+ * WALL, rendered behind every page EXCEPT the landing page.
+ *
+ * The landing page is excluded deliberately: it already carries ScrambleGrid,
+ * and the two of them competing for the same field of view is one texture too
+ * many. It is excluded by being HIDDEN AND STOPPED, not by being unmounted —
+ * see enabledForRoute() for why that distinction is load-bearing.
+ *
+ * The effect (src/scripts/liquid-glass.js) is an anisotropic metaball field
+ * contoured with marching squares, where each contour is filled with a *source
+ * raster at a stronger magnification*. That last part is why the source here is
+ * a gradient and not a flat colour: a uniform source produces uniform contours
+ * and the whole liquid reading collapses into flat blobs. It is still a very
+ * simple plate — one diagonal ramp and two soft blooms — just not mathematically
+ * flat.
+ *
+ * The plate is painted ONCE into an offscreen canvas at init. There is no second
+ * animation loop and no asset to download; the motion is entirely the field
+ * moving over a still material.
+ *
+ * Everything below the plate is about cost. This is CPU Canvas 2D on the main
+ * thread, forever, on every page — so it is deliberately run poor:
+ * small buffer, dpr 1, capped frame rate, paused when hidden, and frozen to a
+ * single frame under prefers-reduced-motion. See the notes on each.
+ */
+
+interface Props {
+  /**
+   * First-paint state only. The route is authoritative at runtime (the client
+   * router swaps pages without re-rendering this component), but without this
+   * the landing page would paint one frame of background before the script
+   * hides it.
+   */
+  currentPage?: string;
+}
+const { currentPage = '' } = Astro.props;
+const startHidden = currentPage === '/';
+---
+
+<canvas
+  id="liquid-bg"
+  transition:persist
+  aria-hidden="true"
+  data-liquid-bg
+  style={startHidden ? 'visibility:hidden' : undefined}
+></canvas>
+
+<style>
+  /* height is 100lvh, NOT 100% or 100vh, and that is load-bearing.
+     `_resize()` in the effect clears its scratch state on any backing-store
+     change, which re-rolls the entire field. A fixed element sized to the
+     *visual* viewport changes height on every iOS URL-bar swipe, so the
+     background would re-roll continuously while scrolling on a phone. 100lvh
+     is the largest-viewport height: it does not move when the bar hides.
+     Same class of bug as the stale-backing-store stretch fixed in ScrambleGrid. */
+  #liquid-bg {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100lvh;
+    display: block;
+    z-index: 0;
+    pointer-events: none;
+    /* MEASURED, not chosen by eye. Sampling the brightest bare-background
+       pixel the field produces and computing contrast against the two text
+       colours that sit on it:
+
+                     body #e5e2e1      dim #b9cacb
+         opacity .25     9.2 : 1          7.0 : 1
+         opacity .40     7.2 : 1          5.5 : 1
+         opacity .55     5.4 : 1          4.1 : 1   <- dim text FAILS AA
+
+       .55 is where the effect reads best and is exactly where
+       --color-on-surface-variant drops under 4.5:1 against a bloom, so .40 was
+       the measured ceiling. Set to .28 by preference, not by the measurement —
+       .40 read as too light and too colourful behind the content. The ceiling
+       still stands: raising this past .40 is a contrast decision, not a taste
+       one, and needs re-measuring. Below .40 is free. */
+    opacity: 0.28;
+    /* Until the first frame lands, this is the flat surface colour the site
+       has always had — so there is no black flash before the effect starts. */
+    background: #131313;
+    /* KEEP MOVING DURING SCROLL.
+       Own compositor layer, so a scroll never invalidates or repaints this
+       canvas — the compositor just keeps showing the layer while the field
+       keeps writing into it. Without the promotion a position:fixed full-bleed
+       element is a classic cause of the background visibly hitching or
+       stalling the moment the page moves.
+       will-change: transform rather than a bare translateZ hack, and paired
+       with contain so the browser knows nothing inside can affect layout
+       elsewhere. */
+    will-change: transform;
+    transform: translateZ(0);
+    contain: strict;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    /* The script already freezes to one static frame; this only softens it
+       further so a still texture is not competing for attention either. */
+    #liquid-bg { opacity: 0.28; }
+  }
+</style>
+
+<script>
+  // Side-effect import, not a default import. liquid-glass.js is vendored
+  // VERBATIM from the export so that an upstream retune is a re-copy and not a
+  // merge — and it is UMD: it assigns `window.LiquidGlass` and only reaches for
+  // `module.exports` under CommonJS, so under Vite's ESM it has no default
+  // export to bind. Importing for the side effect and reading the global is the
+  // one wiring that keeps the file untouched.
+  import '../scripts/liquid-glass.js';
+  const LiquidGlass = (window as any).LiquidGlass;
+
+  /**
+   * The canvas carries transition:persist, so the client router keeps the DOM
+   * node across navigations and this loop keeps running untouched. Astro also
+   * does not re-execute an already-executed bundled script — but a flag is
+   * cheap insurance against ever ending up with two loops on one canvas, which
+   * would silently double the cost with no visible symptom.
+   */
+  if (!(window as any).__morphicsLiquidBg) {
+    (window as any).__morphicsLiquidBg = true;
+    initLiquidBackground();
+  }
+
+  function initLiquidBackground() {
+    const canvas = document.getElementById('liquid-bg') as HTMLCanvasElement | null;
+    if (!canvas) return;
+
+    /* ── the source plate ──────────────────────────────────────────────────
+       Painted once. 640x360 because the effect downsamples whatever it is
+       given into its own 512x288 raster, so anything larger is thrown away. */
+    /* Bigger than the 512x288 raster the effect samples into, ON PURPOSE:
+       the extra area is the room the view pans around in. See tickPlate(). */
+    const PLATE_W = 1152, PLATE_H = 648;
+    const plate = document.createElement('canvas');
+    plate.width = PLATE_W;
+    plate.height = PLATE_H;
+    paintPlate(plate);
+
+    /* ── moving light ──────────────────────────────────────────────────────
+       The colour and the lighting drift, and this is the cheap way to do it.
+       Repainting the gradient and its two blooms every frame would be ~900k
+       pixel writes; instead the plate is painted ONCE at 1152x648 and each
+       frame samples a slowly wandering, slowly breathing window out of it into
+       the effect's own 512x288 source raster. That is a single drawImage —
+       precisely the call the library's own _frame already made every frame
+       before we took over the loop, so the moving version costs essentially
+       what the still version did.
+
+       The three rates are deliberately co-prime-ish and long (~90s, ~140s,
+       ~210s) so the pattern does not visibly loop: the window never returns to
+       the same position and zoom at the same time.
+
+       Driven from absolute t rather than integrated per-frame, unlike the
+       effect's own phases — this is sampled straight from a sine, so there is
+       no accumulated state to drift out of step when frames are dropped. */
+    function tickPlate(tSec: number) {
+      const g = lg.srcX, W = lg.SW, H = lg.SH;
+      // A tighter window travels further in relative terms: at 600 of 1152 the
+      // view crosses nearly half the plate, where 720 crossed a third. Measured
+      // at 720 the canvas mean RGB moved only ~8% over 40s, which is not enough
+      // to read as movement. Magnifying the plate more costs nothing — it is a
+      // gradient, so there is no detail to lose.
+      const zoom = 1 + 0.14 * Math.sin(tSec * 0.038);
+      const sw = Math.min(PLATE_W, 600 * zoom);
+      const sh = sw * (H / W);
+      const maxX = Math.max(0, PLATE_W - sw), maxY = Math.max(0, PLATE_H - sh);
+      const sx = maxX * (0.5 + 0.5 * Math.sin(tSec * 0.095));
+      const sy = maxY * (0.5 + 0.5 * Math.sin(tSec * 0.062 + 1.7));
+      g.drawImage(plate, sx, sy, sw, sh, 0, 0, W, H);
+    }
+
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const small = window.matchMedia('(max-width: 820px)');
+
+    const lg = LiquidGlass.attach(canvas, {
+      source: plate,
+      speed: 0.35,          // slow drift. costs nothing, sets the whole mood
+      intensity: 0.8,
+      vignette: true,
+      // Render-resolution cap — derived from a target pixel AREA, not picked
+      // per breakpoint. See bufferWidth(); a fixed width cap is wrong on a
+      // portrait phone.
+      maxRenderWidth: bufferWidth(canvas),
+      maxDpr: 1,            // halves the work on retina, invisible at this blur
+      // We do our own resizing (see onResize) so that an iOS URL-bar swipe
+      // cannot re-roll the field, and so _resize() is not called 60x/second
+      // from a frame loop we are not using.
+      autoResize: false,
+      autoStart: false,     // we drive draw() ourselves, to cap the frame rate
+    });
+
+    // Not lg._tick(): that cover-fits the whole source with no motion. We do
+    // the same one drawImage ourselves, from a moving window — see tickPlate.
+    tickPlate(0);
+
+    /* ── frame governor ────────────────────────────────────────────────────
+       The stepper clamps dt at 0.05s (liquid-glass.js, `var dt = Math.min(0.05,`),
+       so below 20fps the motion SLOWS DOWN rather than merely dropping frames.
+       That is a hard floor under this cap: both rates below sit above it. */
+    const fpsFor = () => (small.matches ? 24 : 30);
+    let fps = fpsFor();
+    let raf = 0;
+    let t0 = 0;
+    let last = -Infinity;
+
+    function frame(ms: number) {
+      raf = requestAnimationFrame(frame);
+      // -1ms of slack: rAF timestamps rarely land exactly on the interval, and
+      // without it a 30fps cap on a 60Hz display drops to 20.
+      if (ms - last < 1000 / fps - 1) return;
+      last = ms;
+      if (!t0) t0 = ms;
+      const t = (ms - t0) / 1000;
+      tickPlate(t);
+      lg.draw(t, 0);
+    }
+
+    function start() {
+      if (!raf) raf = requestAnimationFrame(frame);
+    }
+    function stop() {
+      if (raf) { cancelAnimationFrame(raf); raf = 0; }
+    }
+
+    /* ── reduced motion ────────────────────────────────────────────────────
+       One frame, then nothing. A static plate of the same material, at zero
+       ongoing cost. Re-evaluated live, because the OS setting can change
+       while the page is open. */
+    function applyMotionPreference() {
+      if (reduced.matches) {
+        stop();
+        tickPlate(0);
+        lg.draw(0, 0);
+      } else {
+        t0 = 0;
+        last = -Infinity;
+        start();
+      }
+    }
+
+    /* ── pause when nothing is looking ─────────────────────────────────────
+       Browsers already throttle rAF in a hidden tab, but "throttle" is not
+       "stop" and a backgrounded tab burning any main thread at all is the
+       thing people notice in a battery graph. */
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) stop();
+      else if (!reduced.matches) start();
+    });
+
+    /* ── resize ────────────────────────────────────────────────────────────
+       Debounced, and only when the size genuinely moved: _resize() drops the
+       effect's scratch state, which re-rolls the field, so a chatty resize
+       handler shows up as the background randomly restarting. */
+    let resizeTimer = 0;
+    let lastW = canvas.clientWidth;
+    let lastH = canvas.clientHeight;
+
+    function onResize() {
+      window.clearTimeout(resizeTimer);
+      resizeTimer = window.setTimeout(() => {
+        const w = canvas.clientWidth;
+        const h = canvas.clientHeight;
+        if (Math.abs(w - lastW) < 24 && Math.abs(h - lastH) < 24) return;
+        lastW = w;
+        lastH = h;
+        // The breakpoint may have been crossed — the buffer cap and the frame
+        // rate both follow it, and a phone rotated to landscape should get the
+        // desktop budget rather than stay pinned to the mobile one.
+        lg.maxRenderWidth = bufferWidth(canvas);
+        fps = fpsFor();
+        lg._resize();
+        tickPlate(0);
+        if (reduced.matches) lg.draw(0, 0);
+      }, 180);
+    }
+
+    window.addEventListener('resize', onResize);
+    window.addEventListener('orientationchange', onResize);
+
+    // addEventListener over the deprecated addListener, with no fallback:
+    // every browser this site's fonts and 100lvh already require has it.
+    reduced.addEventListener('change', applyMotionPreference);
+
+    /* ── route gate ────────────────────────────────────────────────────────
+       The landing page gets no background: ScrambleGrid already owns that
+       screen.
+
+       HIDDEN AND STOPPED rather than unmounted, and that is not a style
+       choice. The canvas carries transition:persist, so if the component were
+       rendered conditionally the node would be destroyed on entering the
+       landing page and RECREATED on leaving it — while this init script,
+       guarded to run exactly once, would never re-attach to the new node. The
+       result is a canvas that is silently dead for the rest of the session,
+       on every page, until a hard reload. Keeping one node alive for the
+       lifetime of the tab sidesteps that entirely.
+
+       visibility:hidden rather than display:none for the same class of reason:
+       display:none collapses the element to zero size, and _resize() reads
+       clientWidth/clientHeight — so the buffer would be rebuilt at the 4px
+       floor and the field re-rolled every time you touched the landing page.
+       visibility:hidden keeps the box, so the canvas comes back exactly as it
+       left. It is not painted while hidden, and the loop is stopped, so the
+       landing page pays nothing for it.
+
+       Decided at runtime from location.pathname, not from the server-rendered
+       prop: under the client router this component is not re-rendered on
+       navigation, so the prop only ever describes the page that was loaded
+       first. The prop's one job is suppressing a frame of background before
+       this runs. */
+    function enabledForRoute() {
+      const path = location.pathname.replace(/index\.html$/, '');
+      return path !== '/';
+    }
+
+    function applyRoute() {
+      if (enabledForRoute()) {
+        canvas.style.visibility = '';
+        applyMotionPreference();
+      } else {
+        stop();
+        canvas.style.visibility = 'hidden';
+      }
+    }
+
+    // Fires on the initial load as well as on every client-router swap.
+    document.addEventListener('astro:page-load', applyRoute);
+
+    applyRoute();
+  }
+
+  /**
+   * The render buffer, sized by AREA rather than by width.
+   *
+   * `maxRenderWidth` caps the WIDTH, but the cost of this effect is the field
+   * scatter and the marching squares, and both scale with pixel AREA. Capping
+   * width alone gets that backwards on a portrait phone: measured here, a
+   * 1440x900 desktop capped at 560 renders a 560x350 buffer (196k px, 0.9ms
+   * median), while a 390x844 phone capped at 420 is not downscaled at all and
+   * renders 390x844 — 329k px, 1.7x MORE work than the desktop, on the device
+   * least able to afford it. The phone was quietly the expensive case.
+   *
+   * So: pick the width that lands the buffer on a target area at whatever
+   * aspect ratio the viewport actually is. Falls out to ~566 on a 16:10
+   * desktop (which is where the hand-picked 560 came from) and ~255 on a
+   * portrait phone. It also covers the mirror-image case a width cap misses —
+   * an ultrawide monitor, where 560 wide is comfortably under budget.
+   */
+  function bufferWidth(canvas: HTMLCanvasElement) {
+    const w = canvas.clientWidth || 1440;
+    const h = canvas.clientHeight || 900;
+    // Phones get roughly two thirds of the desktop budget: they are several
+    // times slower per pixel than this machine, and at 0.25 opacity behind a
+    // page of text nobody is inspecting the resolution of a blurred blob.
+    const target = window.matchMedia('(max-width: 820px)').matches ? 140_000 : 200_000;
+    return Math.round(Math.min(640, Math.max(220, Math.sqrt(target * (w / h)))));
+  }
+
+  /**
+   * The material. A diagonal ramp through the site's own cyan into a hint of
+   * the secondary green, plus two soft blooms so the magnified fill inside each
+   * contour has something to bite on.
+   *
+   * Kept dark on purpose: the contours magnify this, so a bright plate produces
+   * a background that fights the text no matter what opacity the canvas is at.
+   * The brightness budget lives here, not only in the CSS.
+   *
+   * Sized off the canvas passed in, which is larger than the sampled window —
+   * tickPlate() pans around inside it, so the composition has to read from any
+   * sub-rect, not just centred. Hence blooms placed off-centre and a ramp that
+   * runs corner to corner.
+   */
+  function paintPlate(c: HTMLCanvasElement) {
+    const g = c.getContext('2d');
+    if (!g) return;
+    const W = c.width;
+    const H = c.height;
+
+    g.fillStyle = '#131313';
+    g.fillRect(0, 0, W, H);
+
+    /* Deliberately desaturated. The first pass ran these stops at 0.30 / 0.16
+       with the blooms at 0.34 / 0.20, and the result read as a colourful teal
+       wash that competed with the content rather than sitting behind it. The
+       hue is the same; there is just far less of it. Tone is set HERE as well
+       as in the canvas opacity, because opacity alone dims the shapes and the
+       colour together — dropping the plate's saturation keeps the contours
+       readable while taking the colour out of them. */
+    const ramp = g.createLinearGradient(0, H, W, 0);
+    ramp.addColorStop(0.00, '#131313');
+    ramp.addColorStop(0.42, 'rgba(0, 219, 233, 0.16)');   // --color-surface-tint
+    ramp.addColorStop(0.78, 'rgba(125, 255, 179, 0.07)'); // --color-secondary
+    ramp.addColorStop(1.00, '#131313');
+    g.fillStyle = ramp;
+    g.fillRect(0, 0, W, H);
+
+    const bloom = (x: number, y: number, r: number, rgb: string, a: number) => {
+      const rg = g.createRadialGradient(x, y, 0, x, y, r);
+      rg.addColorStop(0, `rgba(${rgb}, ${a})`);
+      rg.addColorStop(1, `rgba(${rgb}, 0)`);
+      g.fillStyle = rg;
+      g.fillRect(0, 0, W, H);
+    };
+    /* Four, spread across the full plate rather than two centred ones. The
+       sampled window is ~62% of the plate's width and wanders, so any region
+       left empty would read as the lighting going flat for half a minute at a
+       time. Radii are large and overlapping so the falloffs always cross. */
+    bloom(W * 0.18, H * 0.72, W * 0.34, '0, 219, 233', 0.18);
+    bloom(W * 0.74, H * 0.24, W * 0.30, '125, 255, 179', 0.09);
+    bloom(W * 0.86, H * 0.78, W * 0.28, '0, 219, 233', 0.13);
+    bloom(W * 0.42, H * 0.12, W * 0.26, '0, 219, 233', 0.10);
+  }
+</script>

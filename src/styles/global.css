@@ -648,3 +648,119 @@ body:has(.art-lightbox.active) #site-header {
 @media (max-width: 359px) {
   #site-header nav .nav-label { display: none; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   GLASS PANELS
+
+   Every panel on the site is one of a handful of surface-container utilities —
+   `bg-surface-container-low` alone accounts for 37 of them. Rather than edit
+   37 call sites, the utilities themselves are re-pointed here at a translucent
+   tint plus a backdrop blur, so the liquid-glass background reads through
+   every card, every chip and every module on every page from one place.
+
+   Unlayered on purpose. Tailwind v4 emits its utilities inside @layer
+   utilities, and unlayered CSS outranks every layer — so these win without a
+   specificity fight or an !important. Same pattern as .art-lb-info above.
+
+   COST, because this is the expensive half of the background work and it
+   should not be a surprise later: backdrop-filter is not free like a plain
+   translucent fill. Each panel re-samples and re-blurs whatever is painted
+   beneath it, and because what is beneath it is a canvas that MOVES, that
+   work repeats on every frame the field advances rather than once. /music
+   carries ~25 of these at once. The blur radius below is therefore a budget,
+   not a taste setting — measure before raising it.
+   ═══════════════════════════════════════════════════════════════════════ */
+:root {
+  /* Channels, not a hex, so alpha can be varied per surface below. */
+  --glass-tint: 28 27 27;          /* --color-surface-container-low */
+  --glass-tint-deep: 14 14 14;     /* --color-surface-container-lowest */
+  --glass-alpha: 0.58;
+  --glass-blur: 14px;
+  /* A single hairline of the brand cyan along the top edge is what actually
+     reads as "glass" — more than the blur does. Cheap: it is a border, not a
+     filter. */
+  --glass-edge: rgba(219, 252, 255, 0.09);
+}
+
+.bg-surface-container-low,
+.bg-surface-container,
+.bg-surface-container-lowest,
+.glass-panel,
+.signal-card,
+.signal-empty,
+.video-switcher {
+  background-color: rgb(var(--glass-tint) / var(--glass-alpha));
+  backdrop-filter: blur(var(--glass-blur)) saturate(1.05);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.05);
+}
+
+.bg-surface-container-lowest {
+  background-color: rgb(var(--glass-tint-deep) / 0.62);
+}
+
+/* The edge only goes on things that are actually panels — elements that
+   already carry a radius. A chip or a bare div picking up a stray top border
+   looks like a rendering bug, not like glass. */
+.bg-surface-container-low[class*="rounded"],
+.bg-surface-container[class*="rounded"],
+.glass-panel {
+  border-top: 1px solid var(--glass-edge);
+}
+
+/* NO BLUR ON PHONES — measured, not assumed.
+   A 7px blur was tried first and it is not affordable. Driving a real touch
+   scroll gesture through /music at 390x844 with 22 panels on screen:
+
+                       canvas still animating   distance scrolled
+     blur on                0-21 / 30 samples          2201 px
+     blur off              19-29 / 30 samples          3975 px
+
+   With the blur on the background stalled for most of a 3-second scroll — one
+   run froze it outright, 0 of 29 samples — and the scroll itself fell short.
+   The compositor was re-blurring 22 panels against a canvas that changes every
+   frame, and it starved the draw loop. That is precisely the lag this whole
+   background was budgeted to avoid.
+
+   So phones keep the translucency and lose the filter: the background still
+   reads through every panel, there is just no frosting. The alpha rises to
+   compensate for the loss of the blur's own dimming, so the panels do not read
+   as thinner than they do on desktop.
+
+   (Measured under software rendering, which overstates blur cost relative to a
+   real phone GPU — so this is the conservative call, not the proven minimum.
+   Worth revisiting on a real device.)
+
+   Same reasoning that took the goo filter off mobile in ScrambleGrid. */
+@media (max-width: 820px) {
+  :root { --glass-alpha: 0.72; }
+  .bg-surface-container-low,
+  .bg-surface-container,
+  .bg-surface-container-lowest,
+  .glass-panel,
+  .signal-card,
+  .signal-empty,
+  .video-switcher {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+  .bg-surface-container-lowest { background-color: rgb(var(--glass-tint-deep) / 0.76); }
+}
+
+/* An explicit OS-level request for less transparency. Not the same setting as
+   prefers-reduced-motion, and it deserves a real answer: drop the filter
+   entirely and go back to the flat panels the site shipped with. */
+@media (prefers-reduced-transparency: reduce) {
+  .bg-surface-container-low,
+  .bg-surface-container,
+  .bg-surface-container-lowest,
+  .glass-panel,
+  .signal-card,
+  .signal-empty,
+  .video-switcher {
+    background-color: #1c1b1b;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border-top-color: transparent;
+  }
+  .bg-surface-container-lowest { background-color: #0e0e0e; }
+}

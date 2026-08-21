@@ -109,8 +109,15 @@ import { INVITE_URL } from '../components/DiscordInvite.astro';
                 <div class="pointer-events-none absolute inset-x-0 top-0 h-2 bg-[#0A0A0A]"></div>
               </div>
             ) : (
+              <!-- #t=0.1 is a media fragment, and it is what stops these cards
+                   being black rectangles. Every one of these posts has an empty
+                   `thumbnail` and there is no poster to fall back on, so a
+                   preload="metadata" video paints nothing until it is hovered.
+                   Seeking to 0.1s makes the browser render that frame as a de
+                   facto poster — and it costs one range request for the head of
+                   the file, not the whole video, so preload stays at metadata. -->
               <video
-                src={post.mediaUrl}
+                src={`${post.mediaUrl}#t=0.1`}
                 class="w-full aspect-video object-cover opacity-60 group-hover:opacity-90 transition-all duration-500"
                 muted loop playsinline preload="metadata" data-hover-play
               />
@@ -153,9 +160,16 @@ import { INVITE_URL } from '../components/DiscordInvite.astro';
       {photoPosts.length > 0 ? photoPosts.map(post => (
         <a href={post.url} class="signal-card group block" target="_blank" rel="noopener">
           <div class="relative overflow-hidden">
+            <!-- alt="" is deliberate. The caption is rendered as real text
+                 directly below this image, so repeating it in alt is duplicate
+                 content for a screen reader — and when the image fails to
+                 load, that duplicate is what paints, at body size, straight
+                 across the card. Decorative image, captioned in the DOM. -->
             <img
               src={post.thumbnail || post.mediaUrl || ''}
-              alt={post.caption}
+              alt=""
+              loading="lazy"
+              decoding="async"
               class="w-full aspect-square object-cover opacity-60 group-hover:opacity-90 transition-all duration-500"
             />
             <div class="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent"></div>
@@ -227,9 +241,12 @@ import { INVITE_URL } from '../components/DiscordInvite.astro';
     display: flex;
     flex-direction: column;
     gap: 1rem;
-    /* Fixed total column height — every column fills the same vertical space
-       regardless of post count; cards inside flex to share it equally. */
-    min-height: 920px;
+    /* Deliberately NO min-height. It used to be 920px, with the cards below
+       set to flex:1 1 0 so they divided it between them. That is what put a
+       200px void under every short post — "Never been more locked in" is one
+       line of text in a 260px card. Forcing three columns of unrelated content
+       to the same height can only be paid for out of whitespace inside the
+       cards. Columns now end where their content ends. */
   }
 
   .signal-column-header {
@@ -243,7 +260,13 @@ import { INVITE_URL } from '../components/DiscordInvite.astro';
 
   .signal-card {
     border: 1px solid rgba(255,255,255,0.05);
-    background: var(--surface-container-low);
+    /* NO background here on purpose. It used to hard-code
+       var(--surface-container-low), which is why these cards stayed opaque
+       when every other panel on the site went glass: a scoped Astro rule
+       carries a [data-astro-cid] attribute and outranks the global one. The
+       fill now comes from the shared glass block in global.css, which also
+       gets these cards the mobile no-blur path and the
+       prefers-reduced-transparency fallback for free. */
     transition: all 0.4s;
     /* Rounded on the same role scale as every other card surface
        (--radius-lg, see global.css). overflow:hidden is what actually clips
@@ -253,25 +276,31 @@ import { INVITE_URL } from '../components/DiscordInvite.astro';
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    /* Cards split the column height evenly — 2 videos each get 2× the
-       height of 4 photos so the columns line up flush. */
-    flex: 1 1 0;
-    min-height: 0;
+    /* Content-sized, not stretched. See the note on .signal-column. */
+    flex: 0 0 auto;
   }
   /* Media area takes the top portion, caption locked to bottom. */
   .signal-card > .relative {
-    flex: 1 1 auto;
-    min-height: 0;
+    flex: 0 0 auto;
     /* Safari drops the parent's overflow clip for an iframe/video inside a
        composited layer, so the media wrapper carries the top corners too. */
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
     overflow: hidden;
   }
-  .signal-card > .relative > video,
+  /* Images hold a square. They previously had height:100% + aspect-ratio:auto
+     so they could fill whatever height the flex stretch handed them — with the
+     stretch gone, that would collapse them. */
   .signal-card > .relative > img {
     width: 100%;
-    height: 100%;
-    aspect-ratio: auto !important;
+    height: auto;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+    border-radius: 0;
+  }
+  .signal-card > .relative > video {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 9;
     object-fit: cover;
     /* The global img/video rule rounds all four corners; inside a card the
        bottom two would float above a square caption block. The card clips. */
@@ -308,7 +337,7 @@ import { INVITE_URL } from '../components/DiscordInvite.astro';
   }
 
   .signal-empty {
-    flex: 1 1 0;
+    flex: 0 0 auto;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -336,7 +365,9 @@ import { INVITE_URL } from '../components/DiscordInvite.astro';
       const card = video.closest('a');
       if (!card) return;
       card.addEventListener('mouseenter', () => { (video as HTMLVideoElement).play().catch(() => {}); });
-      card.addEventListener('mouseleave', () => { (video as HTMLVideoElement).pause(); (video as HTMLVideoElement).currentTime = 0; });
+      // Back to 0.1, not 0 — 0 is the black frame these files start on, and
+      // resetting there would undo the poster the media fragment set.
+      card.addEventListener('mouseleave', () => { (video as HTMLVideoElement).pause(); (video as HTMLVideoElement).currentTime = 0.1; });
     });
   });
 </script>

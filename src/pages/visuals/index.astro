@@ -534,7 +534,12 @@ const recentItems = [
     display: flex;
     flex-direction: column;
     border-left: 1px solid var(--outline-variant);
-    background: var(--surface-container);
+    /* NO background here — it comes from the shared glass block in global.css.
+       This used to hard-code var(--surface-container), and a scoped Astro rule
+       carries a [data-astro-cid] attribute that outranks the global one, so
+       this panel stayed opaque while the rest of the site went glass. Same
+       trap as .signal-card on /social. The rows inside are already
+       `background: none`, so they read straight through. */
     max-height: 100%;
     overflow-y: auto;
     scrollbar-width: none;
