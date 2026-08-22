@@ -310,8 +310,19 @@
   }
 
 
-  /* The nav never changes, so it should not animate at all. */
-  ::view-transition-old(site-nav),
+  /* The nav never changes, so it should not animate at all.
+
+     `animation: none` alone was NOT enough, and it is what made the bar flash
+     brighter on every navigation. With no animation both snapshots sit at
+     opacity 1 for the transition's duration, so the outgoing header is painted
+     underneath the incoming one — and this header is a ~3.5% white fill over a
+     blur, i.e. a light layer. Two light layers stacked composite to roughly
+     twice the lift, which reads as the bar glowing and then settling. The old
+     snapshot has to be removed outright, not merely held still, so only one
+     copy is ever on screen. */
+  ::view-transition-old(site-nav) {
+    display: none;
+  }
   ::view-transition-new(site-nav) {
     animation: none;
     mix-blend-mode: normal;

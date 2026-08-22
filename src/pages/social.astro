@@ -64,19 +64,19 @@ import { INVITE_URL } from '../components/DiscordInvite.astro';
 
   <!-- Platform Nodes (Particle Array) -->
   <div class="mb-4 relative">
-    <div class="flex flex-wrap items-center justify-center gap-12 relative py-2">
+    <div class="platform-grid" style={`--cols:${Math.ceil(platforms.length / 2)}`}>
       {platforms.map((platform, i) => (
         <a
           href={platform.url}
-          class="group relative flex flex-col items-center gap-3 transition-all duration-[400ms] hover:scale-110"
+          class:list={[
+            'platform-node group transition-all duration-[400ms] hover:scale-110',
+            (i + 1) % Math.ceil(platforms.length / 2) === 0 && 'platform-node--row-end',
+          ]}
         >
-          <div class="w-16 h-16 border border-outline-variant/30 flex items-center justify-center bg-surface-container-low rounded-[var(--radius-lg)] hover:border-primary/60 hover:bg-primary/5 transition-all duration-[400ms] shadow-[0_0_40px_rgba(0,219,233,0.06)]">
-            <span class="material-symbols-outlined text-2xl text-primary/60 group-hover:text-primary transition-colors">{platform.icon}</span>
+          <div class="platform-tile border border-outline-variant/30 flex items-center justify-center bg-surface-container-low rounded-[var(--radius-lg)] hover:border-primary/60 hover:bg-primary/5 transition-all duration-[400ms] shadow-[0_0_40px_rgba(0,219,233,0.06)]">
+            <span class="material-symbols-outlined text-primary/60 group-hover:text-primary transition-colors">{platform.icon}</span>
           </div>
-          <span class="font-mono text-[9px] tracking-widest text-white/30 group-hover:text-primary transition-colors">{platform.name}</span>
-          {i < platforms.length - 1 && (
-            <div class="absolute top-8 left-full w-12 h-[0.5px] bg-outline-variant/30 hidden lg:block"></div>
-          )}
+          <span class="platform-label font-mono tracking-widest text-white/30 group-hover:text-primary transition-colors">{platform.name}</span>
         </a>
       ))}
     </div>
@@ -254,6 +254,84 @@ import { INVITE_URL } from '../components/DiscordInvite.astro';
 </BaseLayout>
 
 <style>
+  /* Two equal rows at EVERY width — the point of a grid here rather than the
+     flex-wrap this replaced. Wrapping decided the break from the available
+     space, so twelve nodes came out 9 + 3 on a wide screen and 4 + 4 + 4 or
+     worse on a narrow one. The column count is instead derived from the list
+     length (--cols, set inline as ceil(n / 2)), so the shape is fixed and adding
+     a platform re-balances both rows instead of starting a third.
+
+     Holding six across down to a 320px viewport means the NODE has to shrink,
+     not the layout: tile, icon and label are all fluid. The clamp floors are
+     what a 320px screen actually gets. */
+  .platform-grid {
+    --tile: clamp(2.4rem, 9vw, 4rem);
+    display: grid;
+    grid-template-columns: repeat(var(--cols, 6), minmax(0, 1fr));
+    /* No column gap: equal 1fr tracks already space the tiles evenly, and a
+       zero gap makes the connector length below simply (track - tile). */
+    column-gap: 0;
+    row-gap: clamp(1rem, 3vw, 2rem);
+    /* Uncapped, six 1fr tracks on a 1440px page fling the tiles to the far
+       edges. This keeps the cluster reading as one array. */
+    max-width: 46rem;
+    margin-inline: auto;
+    padding-block: 0.5rem;
+  }
+
+  .platform-node {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 0;
+  }
+
+  .platform-tile {
+    width: var(--tile);
+    height: var(--tile);
+    /* The radius has to scale with the tile or the shape changes meaning: a
+       flat 18px on a 38px phone tile is 47% of the side, i.e. a circle, where
+       on the 64px desktop tile the same 18px is the intended squircle. The
+       ratio is desktop's (18 / 64). */
+    border-radius: min(var(--radius-lg), calc(var(--tile) * 0.28));
+  }
+
+  .platform-tile .material-symbols-outlined {
+    font-size: calc(var(--tile) * 0.375);
+    line-height: 1;
+  }
+
+  .platform-label {
+    font-size: clamp(0.36rem, 1.6vw, 0.5625rem);
+    line-height: 1.2;
+    text-align: center;
+    max-width: 100%;
+  }
+
+  /* The connector between adjacent tiles. It was a fixed 48px stub hung off
+     `left-full`, which only lined up while the nodes were their natural width;
+     in equal tracks the distance is (track - tile), so it is measured instead:
+     100% is the track, minus the tile the line has to bridge. */
+  .platform-node::after {
+    content: '';
+    position: absolute;
+    top: calc(var(--tile) / 2);
+    left: calc(50% + var(--tile) / 2);
+    width: calc(100% - var(--tile));
+    height: 0.5px;
+    background: color-mix(in srgb, var(--color-outline-variant) 30%, transparent);
+    pointer-events: none;
+  }
+
+  /* No line trailing off the end of either row. The column count is a runtime
+     value, so this cannot be an :nth-child(6n) — var() is not legal in a
+     selector. The template marks the row-ending nodes instead. */
+  .platform-node--row-end::after {
+    display: none;
+  }
+
   .signal-feed {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
