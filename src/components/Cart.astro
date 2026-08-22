@@ -39,6 +39,23 @@
       <p class="font-mono text-[10px] text-white/40 leading-relaxed">
         Shipping calculated at checkout · Digital downloads delivered by email
       </p>
+      <!-- The free-song token, offered at the LAST moment it is useful. The
+           release page offers it too; someone who added to the cart and only
+           then remembered they had one would otherwise have to navigate back.
+           Hidden unless the cart holds music AND the server confirms an
+           unspent token. -->
+      <div id="cart-free-token" class="hidden p-3 border border-secondary/25 bg-secondary/[0.06] rounded-[var(--radius)]">
+        <div class="font-mono text-[10px] text-secondary uppercase tracking-widest mb-2">You have a free track</div>
+        <div class="flex flex-wrap gap-2">
+          <label class="sr-only" for="cart-ft-track">Free track</label>
+          <select id="cart-ft-track" class="flex-1 min-w-[10rem] px-2 py-2 bg-surface-container-low border border-white/10 focus:border-secondary outline-none font-mono text-[10px] text-primary rounded-[var(--radius)]"></select>
+          <button type="button" id="cart-ft-redeem" class="px-3 py-2 border border-secondary/40 bg-secondary/10 hover:bg-secondary hover:text-on-secondary text-secondary font-mono text-[9px] tracking-widest uppercase rounded-full transition-colors">
+            Get it free
+          </button>
+        </div>
+        <p id="cart-ft-msg" class="font-mono text-[9px] text-white/40 mt-2 min-h-[0.9rem]" role="status" aria-live="polite"></p>
+      </div>
+
       <button
         id="cart-checkout"
         class="block w-full py-4 bg-primary text-on-primary font-mono text-[11px] tracking-widest uppercase hover:bg-secondary hover:text-on-secondary transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
@@ -125,7 +142,90 @@
   // first click, the bubbled event reopens the drawer correctly.
   closeBtn.addEventListener('click', close);
   backdrop.addEventListener('click', close);
-  document.addEventListener('cart:open', open);
+  // ── free-song token ──────────────────────────────────────────────────
+  // Re-checked every time the drawer opens rather than once at load: the
+  // token can be spent from a release page in the same session, and a stale
+  // "you have one" here would send the fan into a refusal.
+  const ftBox = document.getElementById('cart-free-token');
+  const ftSelect = document.getElementById('cart-ft-track') as HTMLSelectElement | null;
+  const ftBtn = document.getElementById('cart-ft-redeem') as HTMLButtonElement | null;
+  const ftMsg = document.getElementById('cart-ft-msg');
+  let ftArmed = false;
+
+  function refreshFreeToken() {
+    if (!ftBox || !ftSelect || !ftBtn || !ftMsg) return;
+    const slugs = [...new Set(cart.items()
+      .filter((i: any) => i.type === 'music' && i.metadata?.release_slug)
+      .map((i: any) => i.metadata.release_slug as string))];
+    if (!slugs.length) { ftBox.classList.add('hidden'); return; }
+
+    fetch(`/api/free-token?slug=${encodeURIComponent(slugs.join(','))}`, { credentials: 'include' })
+      .then(r => (r.ok ? r.json() : null))
+      .then(d => {
+        if (!d?.available || !d.tracks?.length) { ftBox.classList.add('hidden'); return; }
+        // Prefixed with the release only when the cart holds more than one,
+        // so a single-release cart does not repeat the title on every option.
+        const many = slugs.length > 1;
+        ftSelect.innerHTML = d.tracks.map((t: any) => {
+          const label = many ? `${t.release} — ${t.label}` : t.label;
+          return `<option value="${String(t.key).replace(/"/g, '&quot;')}">${String(label).replace(/</g, '&lt;')}</option>`;
+        }).join('');
+        ftArmed = false;
+        ftBtn.disabled = false;
+        ftBtn.textContent = 'Get it free';
+        ftMsg.textContent = '';
+        ftBox.classList.remove('hidden');
+      })
+      .catch(() => { ftBox.classList.add('hidden'); });
+  }
+
+  ftBtn?.addEventListener('click', async () => {
+    if (!ftSelect || !ftMsg || !ftBtn) return;
+    // Two-step, same as the release page. One track EVER behind a single
+    // click is how it gets spent by accident.
+    if (!ftArmed) {
+      ftArmed = true;
+      ftBtn.textContent = 'Tap again';
+      ftMsg.textContent = 'Uses your one free track, permanently.';
+      setTimeout(() => {
+        if (!ftArmed) return;
+        ftArmed = false;
+        ftBtn.textContent = 'Get it free';
+        ftMsg.textContent = '';
+      }, 6000);
+      return;
+    }
+    ftArmed = false;
+    ftBtn.disabled = true;
+    ftBtn.textContent = 'Claiming…';
+    try {
+      const res = await fetch('/api/free-token', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: ftSelect.value }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        ftBtn.disabled = false;
+        ftBtn.textContent = 'Get it free';
+        ftMsg.textContent = data?.error === 'already spent'
+          ? 'Already used your free track.'
+          : data?.error === 'no token'
+            ? 'Verify your email first.'
+            : 'Could not claim that one.';
+        return;
+      }
+      ftBtn.textContent = '✓ Yours';
+      ftMsg.innerHTML = 'In <a href="/library" class="text-secondary underline">your library</a>. The cart is unchanged.';
+    } catch {
+      ftBtn.disabled = false;
+      ftBtn.textContent = 'Get it free';
+      ftMsg.textContent = 'Network error — try again.';
+    }
+  });
+
+  document.addEventListener('cart:open', () => { open(); refreshFreeToken(); });
   console.log('[cart] wired:', { button: !!button, drawer: !!drawer, panel: !!panel });
 
   function render() {

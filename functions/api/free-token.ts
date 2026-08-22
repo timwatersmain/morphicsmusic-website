@@ -92,14 +92,21 @@ export const onRequestGet: PagesFunction<Env> = corsHandler<Env>(async ({ reques
   // differently from its catalogue title), and any such mapping would
   // eventually spend a fan's one free track on the wrong song, silently.
   const url = new URL(request.url);
-  const slug = url.searchParams.get('slug');
-  let tracks: Array<{ key: string; label: string }> = [];
-  if (available && slug) {
-    const rel = (catalog as any).releases.find((r: any) => r.slug === slug);
-    if (rel && isReleased(rel.release_date)) {
-      tracks = (((manifest as any).releases?.[slug] || []) as any[])
-        .filter(e => e?.key && e?.filename)
-        .map(e => ({ key: e.key, label: prettyName(e.filename) }));
+  // Comma-separated, because the cart can hold several releases and asking
+  // once per release would be N requests to answer one question. Capped so a
+  // crafted query cannot walk the whole catalogue in one call.
+  const slugs = (url.searchParams.get('slug') || '')
+    .split(',').map(x => x.trim()).filter(Boolean).slice(0, 8);
+
+  let tracks: Array<{ key: string; label: string; release: string }> = [];
+  if (available && slugs.length) {
+    for (const slug of slugs) {
+      const rel = (catalog as any).releases.find((r: any) => r.slug === slug);
+      if (!rel || !isReleased(rel.release_date)) continue;
+      for (const e of (((manifest as any).releases?.[slug] || []) as any[])) {
+        if (!e?.key || !e?.filename) continue;
+        tracks.push({ key: e.key, label: prettyName(e.filename), release: rel.title });
+      }
     }
   }
 
