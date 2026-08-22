@@ -26,7 +26,7 @@ import { digitalSellable, isDigitalPreorderable } from '../_lib/preorder.mjs';
 import { readCookie, verifySession, SESSION_COOKIE, LEGACY_SESSION_COOKIE } from '../_lib/auth';
 import { corsHandler, preflight } from '../_lib/cors';
 import { rateLimit, rateLimitedJson, clientIp } from '../_lib/ratelimit';
-import { getCustomerRecord, saveCustomerRecord } from '../_lib/customer';
+import { getCustomerRecord, getOrCreateCustomerRecord, saveCustomerRecord } from '../_lib/customer';
 import { sendPreorderEmail } from '../_lib/emails';
 
 interface Env {
@@ -68,8 +68,13 @@ export const onRequestPost: PagesFunction<Env> = corsHandler<Env>(async ({ reque
   if (product.price_cents !== 0) return jsonRes({ error: 'not free' }, 403);
   if (!digitalSellable(product)) return jsonRes({ error: 'unavailable' }, 403);
 
-  let record = await getCustomerRecord(env, email);
-  if (!record) return jsonRes({ error: 'no account' }, 403);
+  // getOrCreate, not get. A customer record is written by signup and by the
+  // Stripe webhook, so someone who signed in by magic link and has never
+  // bought anything has NO record — and refusing them here would dead-end the
+  // exact person a free product is aimed at. A verified session is proof of
+  // identity; this record is only the ownership ledger, so opening one on
+  // first claim is the correct move rather than an error.
+  let record = await getOrCreateCustomerRecord(env, email);
 
   const alreadyOwns = (r: any) =>
     (r?.purchases || []).some((p: any) => (p.digital_slugs || []).includes(slug));
