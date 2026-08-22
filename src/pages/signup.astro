@@ -15,9 +15,37 @@ const TURNSTILE_SITE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || '';
   <div class="max-w-md">
     <header class="mb-16">
       <h1 class="font-headline font-bold text-6xl md:text-8xl text-primary uppercase tracking-tighter leading-none break-words">CREATE ACCOUNT</h1>
-      <p class="font-mono text-[11px] text-white/50 mt-4 leading-relaxed">
-        Username and password — no separate verification step.
-      </p>
+      <!-- The old line here read "Username and password — no separate
+           verification step." It promised nothing, and it CONTRADICTED the
+           mechanic: the free track is granted on email verification, so a
+           fan was told verification did not matter and then found the best
+           thing on the site gated behind it.
+           Everything below already existed. None of it was visible to anyone
+           who had not already signed up, which is the wrong way round for
+           the one page whose job is to convince. -->
+      <ul class="mt-6 space-y-3">
+        <li class="flex gap-3">
+          <span class="text-secondary font-mono text-[11px] mt-[2px]">01</span>
+          <span class="font-mono text-[11px] text-white/60 leading-relaxed">
+            <strong class="text-primary">A track of your choosing, free.</strong>
+            Verify your email and pick any song in the catalogue — yours to keep, forever.
+          </span>
+        </li>
+        <li class="flex gap-3">
+          <span class="text-secondary font-mono text-[11px] mt-[2px]">02</span>
+          <span class="font-mono text-[11px] text-white/60 leading-relaxed">
+            <strong class="text-primary">Everything you buy, downloadable for life.</strong>
+            No expiry, no limit on how many times.
+          </span>
+        </li>
+        <li class="flex gap-3">
+          <span class="text-secondary font-mono text-[11px] mt-[2px]">03</span>
+          <span class="font-mono text-[11px] text-white/60 leading-relaxed">
+            <strong class="text-primary">A creature that grows with you.</strong>
+            It evolves as you listen, buy and turn up — and once it is fully grown you begin a rarer line.
+          </span>
+        </li>
+      </ul>
     </header>
 
     <form id="signup-form" class="space-y-4" novalidate>

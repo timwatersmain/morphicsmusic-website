@@ -219,6 +219,9 @@ export const onRequestGet: PagesFunction<CommunityEnv> = corsHandler<CommunityEn
         cycle_ep: creatureUpdate.cycleEp,
         cycle_span: cycleSpan(creatureUpdate.prestige),
         can_ascend: creatureUpdate.canAscend,
+        // Self-view only. Verification is what grants the free track, so the
+        // profile has to be able to ask for it — nothing else on the site did.
+        email_verified: !!(record as any)?.email_verified_at,
         ascended_at: profile.ascended_at ?? null,
         // Self-view only augmentation, same pattern as can_change_handle —
         // toPublicProfile's allow-list stays untouched by this feature.

@@ -205,6 +205,23 @@ import SubscribeForm from '../../components/SubscribeForm.astro';
            granted-but-unspent token (see loadLibrary below). Choosing is
            permanent, so it always routes through the confirm dialog below
            rather than spending on click. -->
+      <!-- Verify-your-email prompt. Verification is the single most valuable
+           action a new fan can take — it is what grants the free track — and
+           until now nothing on the site asked for it. A fan who ignored the
+           email simply never learned what they had missed. -->
+      <section id="me-verify" class="hidden mb-10 p-6 border border-primary/30 bg-primary/[0.05] rounded-[var(--radius-lg)]">
+        <div class="font-mono text-[10px] text-primary uppercase tracking-widest mb-2">One step left</div>
+        <h3 class="font-headline text-2xl text-primary uppercase tracking-tight mb-3">Claim your free track</h3>
+        <p class="font-mono text-[11px] text-white/50 leading-relaxed mb-4 max-w-[54ch]">
+          Verify your email address and any one song in the catalogue is yours to keep, forever.
+          Check your inbox for the link — it is the only thing standing between you and it.
+        </p>
+        <button type="button" id="me-verify-resend" class="px-5 py-3 border border-primary/40 bg-primary/10 hover:bg-primary hover:text-on-primary text-primary font-mono text-[10px] tracking-widest uppercase rounded-full transition-colors">
+          Resend the link
+        </button>
+        <p id="me-verify-msg" class="font-mono text-[10px] text-white/40 mt-3 min-h-[1rem]" role="status" aria-live="polite"></p>
+      </section>
+
       <!-- Ascension. Shown only when the server says the line is complete —
            can_ascend is computed from stage AND cycle EP, and the endpoint
            re-checks it in SQL, so this is presentation rather than the gate. -->
@@ -490,6 +507,29 @@ import SubscribeForm from '../../components/SubscribeForm.astro';
     const fanSinceEl = document.getElementById('me-fan-since')!;
     const libraryEl = document.getElementById('me-library')!;
     const rewardsList = document.getElementById('me-rewards-list')!;
+    // ── verify prompt ─────────────────────────────────────────────────
+    const verifySection = document.getElementById('me-verify')!;
+    const verifyBtn = document.getElementById('me-verify-resend') as HTMLButtonElement;
+    const verifyMsg = document.getElementById('me-verify-msg')!;
+
+    verifyBtn.addEventListener('click', async () => {
+      verifyBtn.disabled = true;
+      verifyBtn.textContent = 'Sending…';
+      try {
+        const res = await fetch('/api/auth/resend-verification', { method: 'POST', credentials: 'include' });
+        // Deliberately the same message either way. This endpoint is
+        // rate-limited and does not confirm whether an address is on file;
+        // reporting failure here would leak that distinction back.
+        verifyMsg.textContent = 'Sent — check your inbox.';
+        verifyBtn.textContent = 'Sent';
+        void res;
+      } catch {
+        verifyBtn.disabled = false;
+        verifyBtn.textContent = 'Resend the link';
+        verifyMsg.textContent = 'Network error — try again.';
+      }
+    });
+
     // ── ascension ────────────────────────────────────────────────────
     const ascendSection = document.getElementById('me-ascend')!;
     const ascendBtn = document.getElementById('me-ascend-btn') as HTMLButtonElement;
@@ -1063,6 +1103,9 @@ import SubscribeForm from '../../components/SubscribeForm.astro';
           setWallToggle(!profile.hidden_from_wall);
           renderCreature(profile.creature);
           renderRankLadder(profile.creature.stage, profile.creature.prestige || 0);
+          // Shown only to a fan who has NOT verified. A verified fan seeing
+          // "one step left" would be told to do something already done.
+          verifySection.classList.toggle('hidden', profile.email_verified !== false);
           canAscendNow = !!profile.can_ascend;
           cycleEpNow = typeof profile.cycle_ep === 'number' ? profile.cycle_ep : null;
           ascendSection.classList.toggle('hidden', !canAscendNow);
