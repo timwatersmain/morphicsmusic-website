@@ -1,21 +1,21 @@
 ---
-import BaseLayout from '../../layouts/BaseLayout.astro';
-import DiscordInvite from '../../components/DiscordInvite.astro';
+/**
+ * The fan directory, extracted from src/pages/community/index.astro so that
+ * /social can carry it without the markup or its script existing twice.
+ *
+ * Mounted in exactly ONE place per page: the script binds by element id
+ * (dir-list, dir-more, ...), so a second instance on the same page would have
+ * both scripts fighting over the first instance's nodes.
+ *
+ * The page heading that used to sit here went with the page. On /social this
+ * is a section under a section heading, so the component renders only the
+ * directory itself plus its own action cluster.
+ */
+import DiscordInvite from './DiscordInvite.astro';
 ---
 
-<BaseLayout title="COMMUNITY" currentPage="/community">
-  <!-- pb-24 (96px) clears the fixed player bar (72px tall + 1px border), which
-       otherwise overlaps the bottom of this page's content once a preview is
-       playing. See src/components/PlayerBar.astro .pb-inner height. -->
-  <div class="max-w-4xl pb-24">
+  <div class="max-w-4xl">
     <header class="mb-12 flex flex-wrap items-end justify-between gap-4">
-      <div>
-        <!-- No eyebrow here on purpose. Every other page uses one to say where
-             you are, but this page's own heading already says COMMUNITY, and
-             the label above it would only repeat the word. It is not a "fan
-             wall" or any other named thing — it is just the community. -->
-        <h1 class="font-headline font-bold text-6xl md:text-8xl text-primary uppercase tracking-tighter leading-none break-words">COMMUNITY</h1>
-      </div>
       <!-- Top right, beside the profile link: both are "somewhere else you can
            go from here", so they belong in the same cluster rather than as a
            block interrupting the page. -->
@@ -64,9 +64,9 @@ import DiscordInvite from '../../components/DiscordInvite.astro';
   </div>
 
   <script>
-    import { creatureAvatarHtml } from '../../scripts/sprites/creature-avatar.js';
-    import { initCreatureCanvases } from '../../scripts/sprites/renderer.js';
-    import { STAGE_LABELS, rankLabelFor } from '../../scripts/community/xp-progress';
+    import { creatureAvatarHtml } from '../scripts/sprites/creature-avatar.js';
+    import { initCreatureCanvases } from '../scripts/sprites/renderer.js';
+    import { STAGE_LABELS, rankLabelFor } from '../scripts/community/xp-progress';
 
     // Wrapped for astro:page-load — see music.astro's doc comment. This page
     // fetches fresh directory data on every arrival, so it must actually
@@ -159,4 +159,3 @@ import DiscordInvite from '../../components/DiscordInvite.astro';
     load(false);
     }); // end astro:page-load
   </script>
-</BaseLayout>

@@ -2,6 +2,7 @@
 import PageTitle from '../components/PageTitle.astro';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import signalData from '../data/signal.json';
+import CommunityDirectory from '../components/CommunityDirectory.astro';
 
 // Cap each column so the feed stays a tidy, evenly-sized grid.
 const videoPosts = signalData.filter(p => p.type === 'video').slice(0, 2);
@@ -232,6 +233,23 @@ import { INVITE_URL } from '../components/DiscordInvite.astro';
       )}
     </div>
   </div>
+
+  <!-- COMMUNITY — merged in from /community on 2026-08-21 to take an item out
+       of the top nav. The directory itself lives in CommunityDirectory.astro
+       rather than being pasted here: /community/me and /community/u/<handle>
+       still exist and still link back, and one copy of the markup + script is
+       the only way those stay consistent with this. -->
+  <div class="brand-divider brand-divider--wide mt-16 mb-6">
+    <img src="/images/brand/morph-line-n.png" alt="" loading="lazy" />
+  </div>
+
+  <section class="mt-4">
+    <div class="signal-column-header mb-8">
+      <span class="material-symbols-outlined text-sm text-secondary">group</span>
+      <span class="font-mono text-[10px] text-secondary uppercase tracking-widest">Community</span>
+    </div>
+    <CommunityDirectory />
+  </section>
 
 </BaseLayout>
 

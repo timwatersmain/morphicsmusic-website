@@ -56,7 +56,10 @@ describe('the Discord invite', () => {
     // it is the dead end this feature exists to remove.
     for (const page of [
       'pages/account.astro',
-      'pages/community/index.astro',
+      // Was pages/community/index.astro. That page's index merged into a
+      // section on /social (2026-08-21) and its body became this component,
+      // which is what /social mounts — so this is the same surface, moved.
+      'components/CommunityDirectory.astro',
       'pages/community/me.astro',
       'pages/order-complete.astro',
     ]) {

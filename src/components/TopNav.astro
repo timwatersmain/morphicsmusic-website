@@ -25,12 +25,10 @@ const navItems = [
   { label: 'VISUAL',    href: '/visuals',   icon: 'grid_view' },
   { label: 'STORE',     href: '/store',     icon: 'storefront' },
   { label: 'SOCIAL',    href: '/social',    icon: 'share' },
-  // "COMMUNITY" overlaps its neighbors at 320px in the tiny mobile label
-  // size (text-[8px]) that five items force here — mobileLabel shortens it
-  // for that row only. The route and desktop label are unchanged.
-  { label: 'COMMUNITY', href: '/community', icon: 'group', mobileLabel: 'FANS' },
-  // Sixth item — see the mobileLabel note above, which now matters more:
-  // six labels share the 320px row, so this one is short by design.
+  // COMMUNITY was removed here on 2026-08-21 — the fan directory is a section
+  // on /social now. /community/me and /community/u/<handle> still exist and are
+  // reached from that section; only the top-level nav entry is gone.
+  // mobileLabel is short by design: these labels share a 320px row.
   { label: 'EVENTS',    href: '/events',    icon: 'calendar_month', mobileLabel: 'LIVE' },
 ];
 ---

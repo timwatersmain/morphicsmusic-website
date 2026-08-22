@@ -1,6 +1,17 @@
 /signal /social 301
 /sonics /music 301
 
+# /community's index moved into a section on /social (2026-08-21). Exact paths
+# only, never /community/* — the wildcard would swallow /community/me and the
+# /community/u/* rewrite below, which are still live pages. Both the bare and
+# trailing-slash forms are listed because Astro's static output makes the
+# trailing-slash form canonical and either can be linked from outside.
+# The page file itself was deleted rather than left in place: on Pages a
+# matching static asset wins over a redirect rule, so an index.html at
+# /community would simply keep serving and this rule would never fire.
+/community /social 301
+/community/ /social 301
+
 # Astro here is static output with no adapter, so a dynamic [handle].astro
 # route can't prerender unknown fan handles. Instead every /community/u/*
 # path is rewritten (200, not a redirect) to the same static shell, which
