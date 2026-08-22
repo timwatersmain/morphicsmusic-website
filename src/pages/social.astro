@@ -232,7 +232,7 @@ import { INVITE_URL } from '../components/DiscordInvite.astro';
        mt-16 is the SAME gap that separates every other section on this page —
        the spacing between sections should say "new section", and it can only
        do that if it is one distance rather than four. -->
-  <div class="mt-16 relative">
+  <div class="mt-10 relative">
     <div class="platform-grid" style={`--cols:${Math.ceil(platforms.length / 2)}`}>
       {platforms.map((platform, i) => (
         <a
@@ -273,7 +273,12 @@ import { INVITE_URL } from '../components/DiscordInvite.astro';
      not the layout: tile, icon and label are all fluid. The clamp floors are
      what a 320px screen actually gets. */
   .platform-grid {
-    --tile: clamp(2.4rem, 9vw, 4rem);
+    /* Bigger. 4rem tiles inside a 46rem cap left most of each 1fr track as
+       empty space, so the array read as small marks floating in a wide band
+       rather than as a row of buttons. The cap goes up with the tile so the
+       ratio of tile to track stays sane rather than the tiles simply
+       crowding into the same width. */
+    --tile: clamp(3rem, 11vw, 6rem);
     display: grid;
     grid-template-columns: repeat(var(--cols, 6), minmax(0, 1fr));
     /* No column gap: equal 1fr tracks already space the tiles evenly, and a
@@ -282,7 +287,7 @@ import { INVITE_URL } from '../components/DiscordInvite.astro';
     row-gap: clamp(1rem, 3vw, 2rem);
     /* Uncapped, six 1fr tracks on a 1440px page fling the tiles to the far
        edges. This keeps the cluster reading as one array. */
-    max-width: 46rem;
+    max-width: 60rem;
     margin-inline: auto;
     padding-block: 0.5rem;
   }
@@ -307,12 +312,15 @@ import { INVITE_URL } from '../components/DiscordInvite.astro';
   }
 
   .platform-tile .material-symbols-outlined {
-    font-size: calc(var(--tile) * 0.375);
+    font-size: calc(var(--tile) * 0.42);
     line-height: 1;
   }
 
   .platform-label {
-    font-size: clamp(0.36rem, 1.6vw, 0.5625rem);
+    /* Scaled with the tile. Left at the old size the labels read as captions
+       under buttons twice their previous width, which is the proportion that
+       makes an icon row look unfinished. */
+    font-size: clamp(0.36rem, 1.6vw, 0.6875rem);
     line-height: 1.2;
     text-align: center;
     max-width: 100%;
