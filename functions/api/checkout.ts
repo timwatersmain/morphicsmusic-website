@@ -147,6 +147,13 @@ export const onRequestPost: PagesFunction<Env> = corsHandler<Env>(async ({ reque
       if (!product) return new Response(`Unknown digital ${item.sku}`, { status: 400 });
       const dPreorder = isDigitalPreorderable(product.slug, product.release_date);
       if (!digitalSellable(product)) return new Response(`Unavailable ${item.sku}`, { status: 400 });
+      // Stripe cannot take a zero-amount payment — a $0 line item is an API
+      // error, not a free order — so a free product has no path through here
+      // at all. Refuse it explicitly with a message that names the right
+      // door, rather than letting it fail as an opaque Stripe error.
+      if (product.price_cents === 0) {
+        return new Response(`${item.sku} is free — claim it at /api/claim`, { status: 400 });
+      }
 
       hasDigital = true;
       lineItems.push({

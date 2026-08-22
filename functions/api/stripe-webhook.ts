@@ -12,6 +12,7 @@ import Stripe from 'stripe';
 
 import digitalData from '../../src/data/digital.json';
 import musicData from '../../src/data/music-catalog.json';
+import { sendPreorderEmail } from '../_lib/emails';
 
 interface FulfillmentEntry {
   type: 'merch' | 'music';
@@ -239,55 +240,6 @@ function releaseTitleFor(slug: string): string {
   return r?.title || slug.toUpperCase().replace(/-/g, ' ');
 }
 
-// A pre-order gets its own email, with NO download button. The ordinary
-// receipt cannot be reused with the link removed: its 7-day grant would have
-// expired long before a release that is weeks out, so pointing a buyer at a
-// link that is dead on arrival is worse than sending no link. The library is
-// the durable route, and it unlocks itself at midnight ET on the date.
-async function sendPreorderEmail(
-  env: Env,
-  to: string,
-  items: Array<{ title: string; date: string }>,
-) {
-  if (!env.RESEND_API_KEY) {
-    console.warn('RESEND_API_KEY missing — skipping email');
-    return;
-  }
-  const configured = env.ORDER_FROM_EMAIL;
-  const from = (!configured || configured.endsWith('@resend.dev'))
-    ? 'orders@morphicsmusic.com'
-    : configured;
-  const titles = items.map(i => i.title).join(', ');
-  const rows = items
-    .map(i => `<li style="margin-bottom:6px">${i.title} — unlocks ${i.date || 'on release'}</li>`)
-    .join('');
-  const res = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${env.RESEND_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      from: `Morphics <${from}>`,
-      to: [to],
-      subject: `Pre-order confirmed · ${titles}`,
-      html: `
-        <div style="font-family:-apple-system,sans-serif;background:#0a0a0f;color:#e8e8ec;padding:32px;max-width:560px;margin:auto">
-          <h1 style="font-weight:700;letter-spacing:-0.02em">Pre-order confirmed.</h1>
-          <p>Thanks for backing this before it is out. Nothing to download yet — the files appear in your library automatically on release day, and your access is permanent from then on.</p>
-          <ul style="opacity:0.85;font-size:14px;padding-left:18px">${rows}</ul>
-          <p style="margin:24px 0">
-            <a href="https://morphicsmusic.com/library" style="background:#fff;color:#000;padding:14px 24px;text-decoration:none;font-family:monospace;letter-spacing:0.1em;text-transform:uppercase;font-size:11px">Your library</a>
-          </p>
-          <p style="opacity:0.7;font-size:13px;margin:24px 0">
-            Sign in with this email address — no password needed.
-          </p>
-          <p style="opacity:0.4;font-size:11px;margin-top:32px">— Morphics</p>
-        </div>`,
-    }),
-  });
-  if (!res.ok) console.error('Resend failed:', await res.text());
-}
 
 async function sendDownloadEmail(env: Env, to: string, downloadUrl: string, releaseTitles: string[]) {
   if (!env.RESEND_API_KEY) {

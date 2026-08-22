@@ -28,7 +28,7 @@
     "name": "Morphorm",
     "tagline": "Multi-FX Audio Mangler",
     "kind": "plugin",
-    "price_cents": 1500,
+    "price_cents": 0,
     "available": false,
     "release_date": "2026-09-21",
     "thumbnail": "/images/plugins/morphorm-preview.jpg",

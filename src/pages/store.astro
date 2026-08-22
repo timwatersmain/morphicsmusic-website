@@ -65,7 +65,9 @@ const formatPrice = (lo: number | null, hi: number | null) => {
                 {kindOf((item as any).kind).label}
               </div>
               <div class="flex items-center gap-2 bg-background/80 px-2 py-1 backdrop-blur-md text-primary rounded-full">
-                ${item.price_cents % 100 === 0 ? item.price_cents / 100 : (item.price_cents / 100).toFixed(2)}
+                {item.price_cents === 0
+                  ? 'FREE'
+                  : `$${item.price_cents % 100 === 0 ? item.price_cents / 100 : (item.price_cents / 100).toFixed(2)}`}
               </div>
             </div>
           </div>
@@ -73,7 +75,9 @@ const formatPrice = (lo: number | null, hi: number | null) => {
             <h3 class="font-headline text-xl text-primary uppercase tracking-tight mb-1">{item.name}</h3>
             <p class="font-mono text-[11px] text-white/50 uppercase tracking-widest mb-4">{item.tagline}</p>
             <div class="w-full py-3 border border-secondary/30 font-mono text-[10px] tracking-widest uppercase text-center text-secondary group-hover:bg-secondary/10 transition-colors rounded-full">
-              {preorder ? `Pre-order · unlocks ${(item as any).release_date}` : 'Instant Download'}
+              {preorder
+                ? `${item.price_cents === 0 ? 'Free pre-order' : 'Pre-order'} · unlocks ${(item as any).release_date}`
+                : item.price_cents === 0 ? 'Free Download' : 'Instant Download'}
             </div>
           </div>
         </a>

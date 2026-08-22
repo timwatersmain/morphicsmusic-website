@@ -23,22 +23,30 @@ export function getStaticPaths() {
 
 const { item } = Astro.props;
 // Whole dollars stay clean; anything with cents shows them.
-const price = item.price_cents % 100 === 0
-  ? `$${item.price_cents / 100}`
-  : `$${(item.price_cents / 100).toFixed(2)}`;
+const price = item.price_cents === 0
+  ? 'FREE'
+  : item.price_cents % 100 === 0
+    ? `$${item.price_cents / 100}`
+    : `$${(item.price_cents / 100).toFixed(2)}`;
 // Pulled from the product's own `details`, so digital.json stays the single
 // source of truth for what a buyer may actually do with it. Null when a
 // product simply states no licence term.
 const licence = licenceTerms(item as any);
 // Build-time; corrected at runtime by the tick below once the date passes.
 const preorder = isDigitalPreorderable(item.slug, (item as any).release_date);
+// A free product cannot go through Stripe (no zero-amount charges), so it
+// takes the claim path instead of the cart. Price 0 IS the signal — there is
+// no separate flag to fall out of sync with it.
+const free = item.price_cents === 0;
 // Only the font carries a type specimen. Anything else would render an empty
 // "The alphabet" heading over a blank block.
 const showsSpecimen = item.slug === 'morphian';
 // Was "Typeface · Instant download", hardcoded — wrong on both halves for
 // anything that is neither a font nor delivered immediately.
 const KIND_WORD: Record<string, string> = { font: 'Typeface', plugin: 'Plugin', pack: 'Pack' };
-const kicker = `${KIND_WORD[(item as any).kind] || 'Download'} · ${preorder ? 'Pre-order' : 'Instant download'}`;
+const kicker = `${KIND_WORD[(item as any).kind] || 'Download'} · ${
+  preorder ? (item.price_cents === 0 ? 'Free pre-order' : 'Pre-order') : 'Instant download'
+}`;
 // The licence already has a home beside the price, so drop it from the bullet
 // list rather than printing the same sentence twice on the page.
 const details = (item.details || []).filter(d => d !== licence);
@@ -112,7 +120,9 @@ const details = (item.details || []).filter(d => d !== licence);
           class="w-full py-4 border border-secondary/40 bg-secondary/10 font-mono text-[11px] tracking-[0.2em] uppercase text-secondary hover:bg-secondary hover:text-on-secondary transition-colors rounded-full disabled:opacity-30 disabled:cursor-not-allowed"
           disabled={!preorder && !item.available}
         >
-          {preorder ? 'Pre-order' : item.available ? 'Add to cart' : 'Coming soon'}
+          {preorder
+            ? (free ? 'Pre-order — free' : 'Pre-order')
+            : item.available ? (free ? 'Get it free' : 'Add to cart') : 'Coming soon'}
         </button>
 
         {preorder && (
@@ -127,7 +137,7 @@ const details = (item.details || []).filter(d => d !== licence);
              music. See functions/_lib/entitlements.ts. -->
         <p class="font-mono text-[10px] text-white/30 uppercase tracking-widest mt-4">
           {preorder
-            ? `Pre-order · appears in your library on ${(item as any).release_date} · yours for life, unlimited re-downloads`
+            ? `${free ? 'Free pre-order' : 'Pre-order'} · appears in your library on ${(item as any).release_date} · yours for life, unlimited re-downloads`
             : 'Instant download after payment · yours for life, unlimited re-downloads'}
         </p>
 
@@ -209,6 +219,48 @@ const details = (item.details || []).filter(d => d !== licence);
       };
       timer = setInterval(tick, 1000);
       tick();
+    }
+
+    // A free product never touches the cart: there is nothing to charge, so
+    // it is claimed straight onto the signed-in account. A signed-out visitor
+    // is sent to sign in and returned here — ownership has to attach to an
+    // account or there is nowhere for it to show up.
+    if (item.price_cents === 0) {
+      btn.addEventListener('click', async () => {
+        if (btn.disabled) return;
+        const original = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = 'Claiming…';
+        try {
+          const res = await fetch('/api/claim', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ digital_slug: item.slug }),
+          });
+          if (res.status === 401) {
+            location.href = '/login?redirect=' + encodeURIComponent(location.pathname);
+            return;
+          }
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            btn.textContent = data?.error === 'no account' ? 'Sign in to claim' : 'Could not claim — try again';
+            btn.disabled = false;
+            setTimeout(() => { btn.textContent = original; }, 3000);
+            return;
+          }
+          // Deliberately different wording for a replay, so someone who
+          // clicks twice is told the truth rather than shown a second
+          // "confirmed" they never earned.
+          btn.textContent = data.already ? '✓ Already in your library' : '✓ Reserved — check your email';
+          btn.classList.add('bg-secondary', 'text-on-secondary');
+        } catch {
+          btn.textContent = 'Could not claim — try again';
+          btn.disabled = false;
+          setTimeout(() => { btn.textContent = original; }, 3000);
+        }
+      });
+      return;
     }
 
     btn.addEventListener('click', () => {

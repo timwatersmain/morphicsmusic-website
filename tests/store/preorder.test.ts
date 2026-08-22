@@ -178,3 +178,51 @@ describe('the library card for a digital pre-order', () => {
     expect(html).toContain('2026-09-01');
   });
 });
+
+describe('free products and the claim path', () => {
+  // Stripe cannot take a zero-amount payment, so a free product has NO route
+  // through checkout — the guard has to be explicit or it fails as an opaque
+  // Stripe API error at the worst possible moment.
+  const freePreorder = { slug: 'future-plugin', available: false, price_cents: 0, release_date: '2026-09-01' };
+  const paid = { slug: 'morphian', available: true, price_cents: 1000 };
+
+  it('a free pre-order is still sellable — free changes the door, not the gate', () => {
+    expect(digitalSellable(freePreorder, BEFORE)).toBe(true);
+    expect(isDigitalPreorderable(freePreorder.slug, freePreorder.release_date, BEFORE)).toBe(true);
+  });
+
+  it('and is still NOT deliverable before its date — free does not mean early', () => {
+    // The failure that would matter most: giving it away AND handing over the
+    // files immediately, because "free" got read as "no longer a pre-order".
+    expect(digitalDeliverable(freePreorder, BEFORE)).toBe(false);
+    expect(digitalDeliverable(freePreorder, AFTER)).toBe(true);
+  });
+
+  it('a free product that is not listed and not available still cannot be claimed', () => {
+    expect(digitalSellable({ slug: 'nope', available: false, price_cents: 0 }, BEFORE)).toBe(false);
+  });
+
+  it('price is a catalogue fact, so a paid product is never free', () => {
+    expect(paid.price_cents).toBeGreaterThan(0);
+  });
+});
+
+describe('the shipped catalogue', () => {
+  it('every digital product with a release_date is on the pre-order list, and vice versa', async () => {
+    // A dated product that is NOT listed is invisible (unbuyable, no way in);
+    // a listed product with NO date is refused at the gate. Either mismatch
+    // is a silent no-op rather than a loud failure, so it is pinned here.
+    const digital = (await import('../../src/data/digital.json')).default as any[];
+    const lists = JSON.parse((await import('../../src/data/preorders.json?raw')).default);
+    const dated = digital.filter(d => d.release_date).map(d => d.slug).sort();
+    expect(dated).toEqual([...(lists.digital_slugs || [])].sort());
+  });
+
+  it('a free product must be claimable, i.e. it must carry price_cents 0 exactly', async () => {
+    const digital = (await import('../../src/data/digital.json')).default as any[];
+    for (const d of digital) {
+      expect(typeof d.price_cents).toBe('number');
+      expect(d.price_cents).toBeGreaterThanOrEqual(0);
+    }
+  });
+});
