@@ -44,14 +44,56 @@ Until step 2 lands, signups are still **captured** — they just are not
 registered with the sending provider, and the export marks them
 `in_resend: false` so the gap is visible instead of silent.
 
-## Sending the monthly newsletter
+## Sending the monthly newsletter — free
 
-In Resend → Broadcasts. Write it, send it to the **Monthly Dispatch** topic.
-Unsubscribe links, one-click headers and bounce handling are Resend's.
+`MorphicsBrain/scripts/send-newsletter.mjs`. Resend's marketing plan is $40/mo;
+their free transactional tier is 3,000 emails/month at **100/day**, and a
+newsletter is just email — so the only thing between us and free is the daily
+cap. The script's real job is not sending (that is one fetch) but remembering
+exactly who has already received an issue, so a send can be spread over as many
+days as it needs and resumed safely.
 
-**You must put a postal address in the broadcast footer.** CAN-SPAM requires a
-valid physical mailing address in every commercial email; a PO box is fine.
-This is the one piece of the newsletter no code can supply.
+At a monthly cadence that is roughly **2,500 subscribers before this costs
+anything**.
+
+```
+export NEWSLETTER_POSTAL_ADDRESS="PO Box 1234, City, ST 00000"
+export RESEND_API_KEY=re_xxx
+source ~/.morphics-newsletter.env
+
+node scripts/send-newsletter.mjs --file newsletter-issues/2026-09.md --subject "September"
+node scripts/send-newsletter.mjs --send --dry-run     # rehearse; needs no API key
+node scripts/send-newsletter.mjs --send               # today's batch
+node scripts/send-newsletter.mjs --status
+```
+
+Run `--send` once a day until it reports complete. Write the issue in Markdown
+(headings, lists, links, bold, images) or drop in raw HTML.
+
+**It is not a mail server.** Delivery still goes through Resend, so SPF/DKIM/
+DMARC, IP reputation and bounce handling stay theirs. Running our own SMTP
+would save nothing and land the mail in spam — the expensive part of bulk email
+is deliverability, not the sending loop.
+
+The recipient list is re-fetched on **every** run, not frozen when the issue is
+queued: someone who unsubscribes on day 1 of a four-day send must not receive
+it on day 3. Verified.
+
+### The postal address
+
+CAN-SPAM requires a valid physical postal address in every commercial email.
+It does **not** have to be a street address — the FTC accepts a PO box
+registered with USPS, or a private mailbox from a commercial mail receiving
+agency (a UPS Store box). It does not have to be your home.
+
+The script refuses to queue an issue without `NEWSLETTER_POSTAL_ADDRESS`,
+because a placeholder that shipped would be a violation per email sent.
+
+### Resend Broadcasts (the alternative)
+
+Still available if you would rather use their editor: create the topic with
+`setup-newsletter-topic.mjs`, set `RESEND_TOPIC_ID`, and send from their
+dashboard. Not required for the script above, which only needs `RESEND_API_KEY`.
 
 ## Syncing contacts into the brain
 
