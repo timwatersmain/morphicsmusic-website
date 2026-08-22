@@ -5,13 +5,16 @@ import signalData from '../data/signal.json';
 import CommunityDirectory from '../components/CommunityDirectory.astro';
 import SubscribeForm from '../components/SubscribeForm.astro';
 
-// Cap each column so the feed stays a tidy, evenly-sized grid.
-const videoPosts = signalData.filter(p => p.type === 'video').slice(0, 2);
-const photoPosts = signalData.filter(p => p.type === 'image' || p.type === 'visual' || p.type === 'photo').slice(0, 4);
+// ONE post per column — the most recent of each kind. Unequal counts (2 / 4 / 4)
+// were what made the three columns different lengths no matter how the cards
+// were styled: a column's height is the sum of its cards, so the only way three
+// columns end level is the same number of cards in each.
+const videoPosts = signalData.filter(p => p.type === 'video').slice(0, 1);
+const photoPosts = signalData.filter(p => p.type === 'image' || p.type === 'visual' || p.type === 'photo').slice(0, 1);
 // Only true text/track posts — never let a media post fall through here just
 // because its mediaUrl is empty (TikTok video URLs aren't directly embeddable
 // by file, but they're still videos and belong in the video column).
-const textPosts = signalData.filter(p => p.type === 'text' || p.type === 'track').slice(0, 4);
+const textPosts = signalData.filter(p => p.type === 'text' || p.type === 'track').slice(0, 1);
 
 function tiktokVideoId(url: string): string | null {
   const m = url.match(/\/video\/(\d+)/);
@@ -63,31 +66,9 @@ import { INVITE_URL } from '../components/DiscordInvite.astro';
 <BaseLayout title="SOCIAL" currentPage="/social">
   <PageTitle title="SOCIAL" />
 
-  <!-- Platform Nodes (Particle Array) -->
-  <div class="mb-4 relative">
-    <div class="platform-grid" style={`--cols:${Math.ceil(platforms.length / 2)}`}>
-      {platforms.map((platform, i) => (
-        <a
-          href={platform.url}
-          class:list={[
-            'platform-node group transition-all duration-[400ms] hover:scale-110',
-            (i + 1) % Math.ceil(platforms.length / 2) === 0 && 'platform-node--row-end',
-          ]}
-        >
-          <div class="platform-tile border border-outline-variant/30 flex items-center justify-center bg-surface-container-low rounded-[var(--radius-lg)] hover:border-primary/60 hover:bg-primary/5 transition-all duration-[400ms] shadow-[0_0_40px_rgba(0,219,233,0.06)]">
-            <span class="material-symbols-outlined text-primary/60 group-hover:text-primary transition-colors">{platform.icon}</span>
-          </div>
-          <span class="platform-label font-mono tracking-widest text-white/30 group-hover:text-primary transition-colors">{platform.name}</span>
-        </a>
-      ))}
-    </div>
-  </div>
-
-
-  <!-- The list sits directly under the platform array, where someone has just
-       been deciding which of these to follow — the moment of intent, rather
-       than a footer they scroll past. -->
-  <section class="max-w-[46rem] mx-auto mt-8 mb-2">
+  <!-- First thing on the page. The mailing list is the only thing here we own
+       outright — every platform below it is someone else's audience on loan. -->
+  <section class="max-w-[46rem] mx-auto mt-2 mb-8">
     <SubscribeForm source="social" />
   </section>
 
@@ -133,7 +114,7 @@ import { INVITE_URL } from '../components/DiscordInvite.astro';
                    the file, not the whole video, so preload stays at metadata. -->
               <video
                 src={`${post.mediaUrl}#t=0.1`}
-                class="w-full aspect-video object-cover opacity-60 group-hover:opacity-90 transition-all duration-500"
+                class="w-full aspect-square object-cover opacity-60 group-hover:opacity-90 transition-all duration-500"
                 muted loop playsinline preload="metadata" data-hover-play
               />
             )}
@@ -259,6 +240,33 @@ import { INVITE_URL } from '../components/DiscordInvite.astro';
     <CommunityDirectory />
   </section>
 
+
+  <!-- Moved to the foot of the page: these are outbound links, so they belong
+       where someone has finished reading, not in front of the content. -->
+  <div class="brand-divider brand-divider--wide mt-16 mb-8">
+    <img src="/images/brand/morph-line-n.png" alt="" loading="lazy" />
+  </div>
+
+  <!-- Platform Nodes (Particle Array) -->
+  <div class="mb-4 relative">
+    <div class="platform-grid" style={`--cols:${Math.ceil(platforms.length / 2)}`}>
+      {platforms.map((platform, i) => (
+        <a
+          href={platform.url}
+          class:list={[
+            'platform-node group transition-all duration-[400ms] hover:scale-110',
+            (i + 1) % Math.ceil(platforms.length / 2) === 0 && 'platform-node--row-end',
+          ]}
+        >
+          <div class="platform-tile border border-outline-variant/30 flex items-center justify-center bg-surface-container-low rounded-[var(--radius-lg)] hover:border-primary/60 hover:bg-primary/5 transition-all duration-[400ms] shadow-[0_0_40px_rgba(0,219,233,0.06)]">
+            <span class="material-symbols-outlined text-primary/60 group-hover:text-primary transition-colors">{platform.icon}</span>
+          </div>
+          <span class="platform-label font-mono tracking-widest text-white/30 group-hover:text-primary transition-colors">{platform.name}</span>
+        </a>
+      ))}
+    </div>
+  </div>
+
 </BaseLayout>
 
 <style>
@@ -341,16 +349,23 @@ import { INVITE_URL } from '../components/DiscordInvite.astro';
   }
 
   .signal-feed {
+    /* The square media box plus the caption strip. Both media cards use the
+       SAME aspect now — the video card was aspect-video and the photo card
+       aspect-square, which alone made two of the three columns different
+       heights before any caption was measured. */
+    --signal-media-h: min(22rem, 26vw);
+    --signal-card-h: calc(var(--signal-media-h) + 7.5rem);
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 1.5rem;
-    align-items: stretch;
+    align-items: start;
   }
 
   .signal-column {
     display: flex;
     flex-direction: column;
     gap: 1rem;
+    min-width: 0;
     /* Deliberately NO min-height. It used to be 920px, with the cards below
        set to flex:1 1 0 so they divided it between them. That is what put a
        200px void under every short post — "Never been more locked in" is one
@@ -386,12 +401,18 @@ import { INVITE_URL } from '../components/DiscordInvite.astro';
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    /* Content-sized, not stretched. See the note on .signal-column. */
+    /* One card per column now, and all three are the same height. This is
+       only affordable BECAUSE there is one card each: the old 920px min-height
+       divided a fixed column between two-to-four cards of unrelated content
+       and paid for it in whitespace. A single card can simply be told the
+       height, and the three then line up exactly. */
     flex: 0 0 auto;
+    height: var(--signal-card-h);
   }
   /* Media area takes the top portion, caption locked to bottom. */
   .signal-card > .relative {
-    flex: 0 0 auto;
+    flex: 0 0 var(--signal-media-h);
+    height: var(--signal-media-h);
     /* Safari drops the parent's overflow clip for an iframe/video inside a
        composited layer, so the media wrapper carries the top corners too. */
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
@@ -400,25 +421,31 @@ import { INVITE_URL } from '../components/DiscordInvite.astro';
   /* Images hold a square. They previously had height:100% + aspect-ratio:auto
      so they could fill whatever height the flex stretch handed them — with the
      stretch gone, that would collapse them. */
-  .signal-card > .relative > img {
-    width: 100%;
-    height: auto;
-    aspect-ratio: 1 / 1;
-    object-fit: cover;
-    border-radius: 0;
-  }
+  /* Both fill the media box rather than setting their own aspect. The video
+     was 16/9 and the image 1/1, which is what made the two media columns
+     different heights before anything else was measured. */
+  .signal-card > .relative > img,
   .signal-card > .relative > video {
     width: 100%;
-    height: auto;
-    aspect-ratio: 16 / 9;
+    height: 100%;
     object-fit: cover;
     /* The global img/video rule rounds all four corners; inside a card the
        bottom two would float above a square caption block. The card clips. */
     border-radius: 0;
   }
+  /* The caption takes whatever is left, so the date sits on the same line in
+     all three cards instead of floating up under a short caption. */
   .signal-card > .p-4,
   .signal-card > .p-5 {
-    flex: 0 0 auto;
+    /* Grows to fill whatever the media box left over. The old `flex: 0 0 auto`
+       here was the leftover from content-sized cards and, being the later
+       declaration, silently cancelled the grow — which is why the text card's
+       date sat under its paragraph instead of at the foot of the card. */
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
   }
   .signal-card p {
     display: -webkit-box;
@@ -426,6 +453,15 @@ import { INVITE_URL } from '../components/DiscordInvite.astro';
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
+  /* The date row sits at the FOOT of the card, not directly under the text.
+     The text card has no media block, so its body is the whole card height and
+     a short post left the date floating in the middle of a tall box. Pushing
+     the last child down puts all three dates on the same line. */
+  .signal-card > .p-4 > :last-child,
+  .signal-card > .p-5 > :last-child {
+    margin-top: auto;
+  }
+
   .signal-card--text p {
     -webkit-line-clamp: 5;
   }
@@ -462,6 +498,10 @@ import { INVITE_URL } from '../components/DiscordInvite.astro';
   @media (max-width: 768px) {
     .signal-feed {
       grid-template-columns: 1fr;
+      /* 26vw is right for a third of the width and far too squat once the card
+         is the WHOLE width — the media box has to be sized against the column
+         it actually occupies, not the viewport in the abstract. */
+      --signal-media-h: min(20rem, 72vw);
     }
   }
 </style>
