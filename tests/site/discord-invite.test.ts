@@ -56,10 +56,11 @@ describe('the Discord invite', () => {
     // it is the dead end this feature exists to remove.
     for (const page of [
       'pages/account.astro',
-      // Was pages/community/index.astro. That page's index merged into a
-      // section on /social (2026-08-21) and its body became this component,
-      // which is what /social mounts — so this is the same surface, moved.
-      'components/CommunityDirectory.astro',
+      // CommunityDirectory was on this list (as pages/community/index.astro
+      // before the 2026-08-21 merge). It was removed 2026-08-22: /social
+      // already links to Discord from the platform grid at its foot, so the
+      // invite inside the directory was the same door twice on one page.
+      // The profile page below is where it lives for signed-in fans.
       'pages/community/me.astro',
       'pages/order-complete.astro',
     ]) {

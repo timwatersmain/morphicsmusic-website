@@ -11,16 +11,15 @@
  * is a section under a section heading, so the component renders only the
  * directory itself plus its own action cluster.
  */
-import DiscordInvite from './DiscordInvite.astro';
 ---
 
   <div class="max-w-4xl">
     <header class="mb-12 flex flex-wrap items-end justify-between gap-4">
-      <!-- Top right, beside the profile link: both are "somewhere else you can
-           go from here", so they belong in the same cluster rather than as a
-           block interrupting the page. -->
+      <!-- The Discord invite used to sit here too. It lives on the profile page
+           (community/me) instead — /social already links out to Discord from
+           the platform grid at the foot, so a second invite in the middle of
+           the directory was the same door offered twice on one page. -->
       <div class="flex flex-wrap items-center gap-3">
-        <DiscordInvite />
         <a href="/community/me" class="font-mono text-[10px] text-white/40 hover:text-secondary uppercase tracking-widest border border-white/10 hover:border-secondary/30 px-4 py-2 rounded-full">
           Your profile
         </a>
