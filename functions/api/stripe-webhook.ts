@@ -451,7 +451,9 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, waitUnti
       // delivery, so it must not go into the grant: download.ts would refuse
       // it anyway, and including it would only put a title in a "download
       // now" email that cannot be downloaded.
-      const digitalItems = fulfillment.filter(f => f.type === 'digital');
+      const allDigital = fulfillment.filter(f => f.type === 'digital');
+      const digitalItems = allDigital.filter(d => !d.preorder);
+      const preorderDigital = allDigital.filter(d => d.preorder);
       const preorderItems = musicItems.filter(m => m.preorder);
       const readyMusic = musicItems.filter(m => !m.preorder);
       if ((readyMusic.length > 0 || digitalItems.length > 0) && email) {
@@ -469,15 +471,20 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, waitUnti
       // "download now" and is true, the other says "unlocks on the 14th" and
       // is also true. One email trying to say both is how a buyer misses the
       // half that applies to them.
-      if (preorderItems.length > 0 && email) {
-        await sendPreorderEmail(
-          env,
-          email,
-          preorderItems
+      if ((preorderItems.length > 0 || preorderDigital.length > 0) && email) {
+        await sendPreorderEmail(env, email, [
+          ...preorderItems
             .map(m => m.release_slug!)
             .filter(Boolean)
             .map(slug => ({ title: releaseTitleFor(slug), date: releaseDateFor(slug) })),
-        );
+          ...preorderDigital
+            .map(d => d.digital_slug!)
+            .filter(Boolean)
+            .map(slug => {
+              const prod = (digitalData as any[]).find(x => x.slug === slug);
+              return { title: prod?.name || slug, date: prod?.release_date || '' };
+            }),
+        ]);
       }
       await env.DOWNLOADS.put(completedKey, '1', { expirationTtl: 60 * 60 * 24 * 30 });
     } catch (e) {

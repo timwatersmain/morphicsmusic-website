@@ -11,6 +11,7 @@ import manifest from '../../src/data/masters-manifest.json';
 import digitalData from '../../src/data/digital.json';
 import catalog from '../../src/data/music-catalog.json';
 import { isReleased } from '../_lib/release-gate.mjs';
+import { digitalDeliverable } from '../_lib/preorder.mjs';
 import { readCookie, verifySession, SESSION_COOKIE, LEGACY_SESSION_COOKIE } from '../_lib/auth';
 import { corsHandler, preflight } from '../_lib/cors';
 import { rateLimit, rateLimitedText, clientIp } from '../_lib/ratelimit';
@@ -117,13 +118,22 @@ export const onRequestGet: PagesFunction<Env> = corsHandler<Env>(async ({ reques
     if (!raw) return new Response('no purchases', { status: 403 });
     let rec: CustomerRecord;
     try { rec = JSON.parse(raw); } catch { return new Response('corrupt record', { status: 500 }); }
-    // Digital products (fonts, packs) have their own allow-list and no
-    // release-date gate; music keeps its existing path untouched.
+    // Digital products (fonts, packs, plugins) have their own allow-list and,
+    // since pre-orders, their own release-date gate too. Most digital products
+    // carry no release_date and are delivered on purchase exactly as before —
+    // only one that states a date is held to it.
     const digital = parseAndValidateDigitalKey(key);
     const parsed = digital || parseAndValidateKey(key, manifest);
     if (!parsed) return new Response('invalid key', { status: 400 });
     const owned = new Set<string>();
     if (digital) {
+      // The delivery half of a digital pre-order. Without this the buyer
+      // would own the slug the instant they paid and could pull the file
+      // immediately, which is the whole thing a pre-order must not do.
+      const dProduct = (digitalData as any[]).find(p => p.slug === digital.slug);
+      if (!digitalDeliverable(dProduct)) {
+        return new Response('not yet released', { status: 403 });
+      }
       for (const p of (rec.purchases || [])) for (const d of (p.digital_slugs || [])) owned.add(d);
     } else {
       const rel = (catalog as any).releases.find((r: any) => r.slug === parsed.slug);
@@ -178,7 +188,12 @@ export const onRequestGet: PagesFunction<Env> = corsHandler<Env>(async ({ reques
         slug: d.slug,
         title: d.name,
         artwork: d.thumbnail,
-        files: [{ key: d.file.r2_key, filename: d.file.filename }],
+        preorder: !digitalDeliverable(d),
+        release_date: d.release_date || '',
+        // A pre-order lists no key. The download of that key would 403 two
+        // lines further down anyway; publishing it here would only produce a
+        // link that exists to fail.
+        files: digitalDeliverable(d) ? [{ key: d.file.r2_key, filename: d.file.filename }] : [],
       }));
     return new Response(JSON.stringify({
       email: grant.email,
@@ -198,6 +213,13 @@ export const onRequestGet: PagesFunction<Env> = corsHandler<Env>(async ({ reques
   const parsed = digital || parseAndValidateKey(key, manifest);
   if (!parsed) return new Response('invalid key', { status: 400 });
   if (digital) {
+    // Same gate as the cookie path above. A token grant is a second door into
+    // the same files, so it needs the same lock — a pre-order that is blocked
+    // for signed-in buyers but open via an emailed link is not blocked.
+    const dProduct = (digitalData as any[]).find(p => p.slug === digital.slug);
+    if (!digitalDeliverable(dProduct)) {
+      return new Response('not yet released', { status: 403 });
+    }
     if (!(grant.digital_slugs || []).includes(parsed.slug)) {
       return new Response('not in your grant', { status: 403 });
     }

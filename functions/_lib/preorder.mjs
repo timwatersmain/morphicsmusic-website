@@ -18,6 +18,7 @@ import { isReleased, goLiveUtcMs } from './release-gate.mjs';
 import preorderData from '../../src/data/preorders.json';
 
 const SLUGS = new Set(preorderData.slugs || []);
+const DIGITAL_SLUGS = new Set(preorderData.digital_slugs || []);
 
 // True when a release is not out yet AND has been opted in to pre-orders.
 // Both halves matter: the allow-list alone would sell a release forever, and
@@ -47,4 +48,37 @@ export function daysUntilUnlock(releaseDateStr, nowMs = Date.now()) {
   const live = goLiveUtcMs(releaseDateStr);
   if (!Number.isFinite(live) || nowMs >= live) return null;
   return Math.ceil((live - nowMs) / 86_400_000);
+}
+
+// --- digital products (fonts, packs, plugins) ---------------------------
+//
+// The same three states, over a different catalogue. Digital products had no
+// release-date concept at all before this — `available` was the only switch,
+// and download.ts served any owned digital key immediately. So a digital
+// pre-order needs BOTH halves added: the sell gate here, and the matching
+// delivery gate in download.ts. Selling one without the other would hand the
+// buyer the file the moment they paid.
+
+export function isDigitalPreorderable(slug, releaseDateStr, nowMs = Date.now()) {
+  if (!slug || !DIGITAL_SLUGS.has(slug)) return false;
+  if (!Number.isFinite(goLiveUtcMs(releaseDateStr))) return false;
+  return !isReleased(releaseDateStr, nowMs);
+}
+
+// Whether a digital product may be delivered. A product with no release_date
+// at all is the ordinary case — fonts and packs ship the moment they are
+// bought — so a missing date means "yes", not "not yet". Only a product that
+// states a date is held to it.
+export function digitalDeliverable(product, nowMs = Date.now()) {
+  if (!product?.release_date) return true;
+  return isReleased(product.release_date, nowMs);
+}
+
+// Whether a digital product can go in the cart: on sale now, or an opted-in
+// pre-order. `available` stays the master switch — an unavailable product
+// that is not listed for pre-order is still simply not for sale.
+export function digitalSellable(product, nowMs = Date.now()) {
+  if (!product) return false;
+  if (isDigitalPreorderable(product.slug, product.release_date, nowMs)) return true;
+  return !!product.available && digitalDeliverable(product, nowMs);
 }

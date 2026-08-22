@@ -11,7 +11,7 @@ import merchData from '../../src/data/merch.json';
 import musicData from '../../src/data/music-catalog.json';
 import digitalData from '../../src/data/digital.json';
 import { isReleased } from '../_lib/release-gate.mjs';
-import { isPreorderable } from '../_lib/preorder.mjs';
+import { isPreorderable, isDigitalPreorderable, digitalSellable } from '../_lib/preorder.mjs';
 import { corsHandler, preflight } from '../_lib/cors';
 import { rateLimit, rateLimitedJson, clientIp } from '../_lib/ratelimit';
 
@@ -138,12 +138,15 @@ export const onRequestPost: PagesFunction<Env> = corsHandler<Env>(async ({ reque
       });
       fulfillment.push({ type: 'music', release_slug: release.slug, quantity: item.qty, preorder });
     } else if (item.type === 'digital') {
-      // Fixed-price downloads (fonts, packs). Unlike music these are not
-      // name-your-price and have no release-date gate — the price comes from
-      // the catalogue, never from the client.
+      // Fixed-price downloads (fonts, packs, plugins). Unlike music these are
+      // not name-your-price — the price comes from the catalogue, never from
+      // the client. A `release_date` on the product is optional: without one
+      // it ships on purchase, as fonts and packs always have; with one it can
+      // be pre-ordered and is held until that date.
       const product = (digitalData as any[]).find(p => p.slug === item.metadata.digital_slug);
       if (!product) return new Response(`Unknown digital ${item.sku}`, { status: 400 });
-      if (!product.available) return new Response(`Unavailable ${item.sku}`, { status: 400 });
+      const dPreorder = isDigitalPreorderable(product.slug, product.release_date);
+      if (!digitalSellable(product)) return new Response(`Unavailable ${item.sku}`, { status: 400 });
 
       hasDigital = true;
       lineItems.push({
@@ -152,14 +155,16 @@ export const onRequestPost: PagesFunction<Env> = corsHandler<Env>(async ({ reque
           currency: 'usd',
           unit_amount: product.price_cents,
           product_data: {
-            name: product.name,
-            description: product.tagline,
+            name: dPreorder ? `${product.name} (pre-order)` : product.name,
+            description: dPreorder
+              ? `${product.tagline} · unlocks ${product.release_date}`
+              : product.tagline,
             images: product.thumbnail?.startsWith('http') ? [product.thumbnail] : undefined,
-            metadata: { digital_slug: product.slug, kind: 'digital' },
+            metadata: { digital_slug: product.slug, kind: 'digital', preorder: dPreorder ? '1' : '0' },
           },
         },
       });
-      fulfillment.push({ type: 'digital', digital_slug: product.slug, quantity: 1 });
+      fulfillment.push({ type: 'digital', digital_slug: product.slug, quantity: 1, preorder: dPreorder });
     } else {
       return new Response(`Unknown item type`, { status: 400 });
     }
@@ -173,7 +178,7 @@ export const onRequestPost: PagesFunction<Env> = corsHandler<Env>(async ({ reque
   const summary = fulfillment
     .map(f => {
       if (f.type === 'music') return `${f.preorder ? 'preorder' : 'music'}:${f.release_slug}x${f.quantity}`;
-      if (f.type === 'digital') return `digital:${f.digital_slug}`;
+      if (f.type === 'digital') return `${f.preorder ? 'preorder' : 'digital'}:${f.digital_slug}`;
       return `merch:${f.printful_variant_id}x${f.quantity}`;
     })
     .join(',')

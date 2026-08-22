@@ -1,9 +1,18 @@
 ---
 import Artwork from '../../../components/Artwork.astro';
-// Product page for downloadable goods (typefaces, packs). Fixed price, no
-// variants, no release gate — the counterpart to store/merch/[slug].astro.
+// Product page for downloadable goods (typefaces, packs, plugins). Fixed
+// price, no variants — the counterpart to store/merch/[slug].astro.
+//
+// This started as the Morphian page and had that product's specifics welded
+// in: its licence line, its trial link, and a type specimen. Those are now
+// either read from the product (licence, trial) or fenced behind an explicit
+// slug check (the specimen), so a second product does not inherit a font's
+// furniture. It is not a general template beyond that — a product with its
+// own showcase section needs its own branch here, deliberately.
 import BaseLayout from '../../../layouts/BaseLayout.astro';
 import digitalItems from '../../../data/digital.json';
+import { licenceTerms } from '../../../../functions/_lib/entitlements';
+import { isDigitalPreorderable } from '../../../../functions/_lib/preorder.mjs';
 
 export function getStaticPaths() {
   return digitalItems.map(item => ({
@@ -17,6 +26,15 @@ const { item } = Astro.props;
 const price = item.price_cents % 100 === 0
   ? `$${item.price_cents / 100}`
   : `$${(item.price_cents / 100).toFixed(2)}`;
+// Pulled from the product's own `details`, so digital.json stays the single
+// source of truth for what a buyer may actually do with it. Null when a
+// product simply states no licence term.
+const licence = licenceTerms(item as any);
+// Build-time; corrected at runtime by the tick below once the date passes.
+const preorder = isDigitalPreorderable(item.slug, (item as any).release_date);
+// Only the font carries a type specimen. Anything else would render an empty
+// "The alphabet" heading over a blank block.
+const showsSpecimen = item.slug === 'morphian';
 ---
 
 <style is:global>
@@ -71,36 +89,50 @@ const price = item.price_cents % 100 === 0
 
         <div class="flex items-baseline gap-4 mb-6">
           <div class="font-headline text-4xl text-primary">{price}</div>
-          <div class="font-mono text-[10px] tracking-widest uppercase text-white/40">
-            Commercial licence · up to 5 users
-          </div>
+          {licence && (
+            <div class="font-mono text-[10px] tracking-widest uppercase text-white/40">
+              {licence}
+            </div>
+          )}
         </div>
 
         <button
           id="add-btn"
-          class="w-full py-4 border border-secondary/40 bg-secondary/10 font-mono text-[11px] tracking-[0.2em] uppercase text-secondary hover:bg-secondary hover:text-on-secondary transition-colors rounded-full"
+          class="w-full py-4 border border-secondary/40 bg-secondary/10 font-mono text-[11px] tracking-[0.2em] uppercase text-secondary hover:bg-secondary hover:text-on-secondary transition-colors rounded-full disabled:opacity-30 disabled:cursor-not-allowed"
+          disabled={!preorder && !item.available}
         >
-          Add to cart
+          {preorder ? 'Pre-order' : item.available ? 'Add to cart' : 'Coming soon'}
         </button>
+
+        {preorder && (
+          <p id="digital-countdown" class="font-mono text-[10px] text-secondary uppercase tracking-widest mt-3 text-center" data-release-date={(item as any).release_date}>
+            Unlocks {(item as any).release_date}
+          </p>
+        )}
 
         <!-- The licence line above is the only limit on this product, and
              it is a USAGE-RIGHTS limit (seats), never a download one — the
              file itself is re-downloadable for life from /library, same as
              music. See functions/_lib/entitlements.ts. -->
         <p class="font-mono text-[10px] text-white/30 uppercase tracking-widest mt-4">
-          Instant download after payment · yours for life, unlimited re-downloads
+          {preorder
+            ? `Pre-order · appears in your library on ${(item as any).release_date} · yours for life, unlimited re-downloads`
+            : 'Instant download after payment · yours for life, unlimited re-downloads'}
         </p>
 
-        <a
-          href="/downloads/Morphian-Trial.zip"
-          download
-          class="block w-full text-center mt-3 py-3 border border-white/10 hover:border-white/30 font-mono text-[10px] tracking-[0.2em] uppercase text-white/50 hover:text-white/80 transition-colors rounded-full"
-        >
-          Try it free — 26 letters
-        </a>
+        {(item as any).trial && (
+          <a
+            href={(item as any).trial.href}
+            download
+            class="block w-full text-center mt-3 py-3 border border-white/10 hover:border-white/30 font-mono text-[10px] tracking-[0.2em] uppercase text-white/50 hover:text-white/80 transition-colors rounded-full"
+          >
+            {(item as any).trial.label}
+          </a>
+        )}
       </div>
     </div>
 
+    {showsSpecimen && (
     <section class="mt-20 border-t border-white/10 pt-12">
       <div class="font-mono text-[10px] tracking-[0.25em] uppercase text-white/40 mb-6">
         The alphabet
@@ -123,12 +155,18 @@ const price = item.price_cents % 100 === 0
         Letters shown in the free trial cut · full set included with purchase
       </p>
     </section>
+    )}
   </div>
 
   <script type="application/json" id="item-data" set:html={JSON.stringify(item)} is:inline />
 
   <script>
     import '../../../scripts/cart.js';
+    import { goLiveUtcMs, isReleased } from '../../../../functions/_lib/release-gate.mjs';
+
+    // Module scope runs once under the client router; the timer is tracked
+    // here so astro:before-swap can always clear the most recent one.
+    let timer: ReturnType<typeof setInterval> | null = null;
 
     // Wrapped for astro:page-load: this is a dynamic route ([slug].astro),
     // so the same compiled script serves every digital item — without this,
@@ -136,15 +174,44 @@ const price = item.price_cents % 100 === 0
     // the second page's "add to cart" button unwired (see music.astro's
     // doc comment for the general reasoning).
     document.addEventListener('astro:page-load', () => {
+    if (timer) { clearInterval(timer); timer = null; }
     const item = JSON.parse(document.getElementById('item-data')!.textContent || '{}');
     const btn = document.getElementById('add-btn') as HTMLButtonElement;
 
+    // The page is built statically, so a build from before the release date
+    // would otherwise keep saying "Pre-order" forever. Rewrite the label and
+    // drop the countdown the moment the date has actually passed.
+    const cdEl = document.getElementById('digital-countdown');
+    const liveAt = goLiveUtcMs(item.release_date || '');
+    if (cdEl && Number.isFinite(liveAt)) {
+      const tick = () => {
+        if (isReleased(item.release_date)) {
+          cdEl.style.display = 'none';
+          btn.disabled = false;
+          btn.textContent = 'Add to cart';
+          if (timer) { clearInterval(timer); timer = null; }
+          return;
+        }
+        const s = Math.max(0, Math.floor((liveAt - Date.now()) / 1000));
+        const d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600), m = Math.floor((s % 3600) / 60);
+        cdEl.textContent = `Unlocks in ${d}d ${h}h ${m}m`;
+      };
+      timer = setInterval(tick, 1000);
+      tick();
+    }
+
     btn.addEventListener('click', () => {
+      if (btn.disabled) return;
+      // The cart line has to carry the pre-order too — it is the surface
+      // someone reviews before paying.
+      const isPre = !!item.release_date && !isReleased(item.release_date);
       (window as any).morphicsCart.add({
         type: 'digital',
         sku: `digital:${item.slug}`,
         title: item.name,
-        subtitle: item.tagline,
+        subtitle: isPre
+          ? `${item.tagline} · pre-order, unlocks ${item.release_date}`
+          : item.tagline,
         image: item.thumbnail,
         unit_amount: item.price_cents,
         qty: 1,
@@ -160,5 +227,9 @@ const price = item.price_cents % 100 === 0
       }, 2000);
     });
     }); // end astro:page-load
+
+    document.addEventListener('astro:before-swap', () => {
+      if (timer) { clearInterval(timer); timer = null; }
+    });
   </script>
 </BaseLayout>

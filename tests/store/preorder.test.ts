@@ -4,10 +4,13 @@ import { describe, it, expect, vi } from 'vitest';
 // given a fixture one. Mocking the JSON rather than editing the real file keeps
 // these tests from turning green or red depending on what is currently on sale.
 vi.mock('../../src/data/preorders.json', () => ({
-  default: { slugs: ['future-ep'] },
+  default: { slugs: ['future-ep'], digital_slugs: ['future-plugin'] },
 }));
 
-const { isPreorderable, isSellable, daysUntilUnlock } = await import('../../functions/_lib/preorder.mjs');
+const {
+  isPreorderable, isSellable, daysUntilUnlock,
+  isDigitalPreorderable, digitalDeliverable, digitalSellable,
+} = await import('../../functions/_lib/preorder.mjs');
 const { isReleased } = await import('../../functions/_lib/release-gate.mjs');
 const realPreorders = (await import('../../src/data/preorders.json?raw')).default;
 
@@ -116,5 +119,62 @@ describe('the library card for a pre-order', () => {
     ]);
     expect(html).toContain('/api/download');
     expect(html).not.toContain('Pre-order');
+  });
+});
+
+describe('digital pre-orders', () => {
+  const plugin = { slug: 'future-plugin', available: false, release_date: '2026-09-01' };
+  const font = { slug: 'morphian', available: true };
+  const withdrawn = { slug: 'gone', available: false };
+
+  it('a listed, dated, unavailable product is sellable as a pre-order', () => {
+    expect(isDigitalPreorderable(plugin.slug, plugin.release_date, BEFORE)).toBe(true);
+    expect(digitalSellable(plugin, BEFORE)).toBe(true);
+  });
+
+  it('and is NOT deliverable at that same instant — the property the gate exists for', () => {
+    expect(digitalDeliverable(plugin, BEFORE)).toBe(false);
+  });
+
+  it('flips to deliverable, and stops being a pre-order, once the date passes', () => {
+    expect(digitalDeliverable(plugin, AFTER)).toBe(true);
+    expect(isDigitalPreorderable(plugin.slug, plugin.release_date, AFTER)).toBe(false);
+  });
+
+  it('a product with NO release_date is delivered on purchase, exactly as before', () => {
+    // The regression that would hurt most: every existing font and pack has
+    // no date, and a missing date must mean "ship it", not "hold it".
+    expect(digitalDeliverable(font, BEFORE)).toBe(true);
+    expect(digitalSellable(font, BEFORE)).toBe(true);
+  });
+
+  it('an unavailable product that is not listed stays unsellable', () => {
+    expect(digitalSellable(withdrawn, BEFORE)).toBe(false);
+    expect(isDigitalPreorderable(withdrawn.slug, undefined, BEFORE)).toBe(false);
+  });
+
+  it('a listed product with no date is refused, same as music', () => {
+    expect(isDigitalPreorderable('future-plugin', '', BEFORE)).toBe(false);
+  });
+});
+
+describe('the library card for a digital pre-order', () => {
+  it('offers no download link and names the date', async () => {
+    const { digitalSection } = await import('../../src/scripts/library-view');
+    const html = digitalSection([
+      {
+        slug: 'future-plugin',
+        title: 'Future Plugin',
+        kind: 'plugin',
+        artwork: '/x.png',
+        licence: 'Commercial licence',
+        preorder: true,
+        release_date: '2026-09-01',
+        files: [],
+      },
+    ]);
+    expect(html).not.toContain('/api/download');
+    expect(html).toContain('Pre-order');
+    expect(html).toContain('2026-09-01');
   });
 });

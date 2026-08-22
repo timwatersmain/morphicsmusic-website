@@ -115,14 +115,28 @@ export function digitalSection(items: any[]): string {
   // The licence line rides on the item itself — it is the one and only
   // place a limit is ever stated, and it is about usage rights, not
   // downloads, which stay unlimited exactly like music.
-  const cards = items.map(d => itemCard({
-    artwork: d.artwork,
-    kicker: d.kind || 'download',
-    title: d.title,
-    footnote: d.licence,
-    files: d.files || [],
-    emptyNote: 'File coming soon — check back shortly.',
-  })).join('');
+  const cards = items.map(d => {
+    if (d.preorder) {
+      return itemCard({
+        artwork: d.artwork,
+        kicker: 'Pre-order',
+        title: d.title,
+        footnote: d.release_date ? `Unlocks ${d.release_date}` : d.licence,
+        files: [],
+        emptyNote: d.release_date
+          ? `Not out yet. The download appears here on ${d.release_date} — nothing to do, and no second email needed.`
+          : 'Not out yet. The download appears here on release day.',
+      });
+    }
+    return itemCard({
+      artwork: d.artwork,
+      kicker: d.kind || 'download',
+      title: d.title,
+      footnote: d.licence,
+      files: d.files || [],
+      emptyNote: 'File coming soon — check back shortly.',
+    });
+  }).join('');
   return `<div>${sectionHeader('Fonts, plugins & downloads', LIFETIME_NOTE)}<div class="space-y-4">${cards}</div></div>`;
 }
 

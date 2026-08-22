@@ -1,3 +1,5 @@
+import { digitalDeliverable } from './preorder.mjs';
+
 // What a customer OWNS, derived from their purchase history.
 //
 // The rule this module encodes: ownership is permanent and uncapped. A
@@ -29,6 +31,9 @@ export interface DigitalProduct {
   thumbnail?: string;
   details?: string[];
   file?: { r2_key?: string; filename?: string };
+  /** Optional. Present only on products that can be pre-ordered; absent
+   *  means the ordinary case — delivered the moment it is bought. */
+  release_date?: string;
 }
 
 export interface OwnedDigital {
@@ -38,6 +43,9 @@ export interface OwnedDigital {
   artwork: string;
   /** The licence terms for this product — the only limit we ever show. */
   licence: string | null;
+  /** Bought, but not yet deliverable — a pre-order awaiting its date. */
+  preorder?: boolean;
+  release_date?: string;
   files: Array<{ key: string; filename: string; ext: string }>;
 }
 
@@ -71,13 +79,21 @@ export function ownedDigital(record: RecordLike | null | undefined, catalogue: D
     .map(p => {
       const key = p.file?.r2_key || '';
       const filename = p.file?.filename || '';
+      // Owned but not out yet: listed, with no files. Same reasoning as the
+      // music side — download.ts refuses an undelivered key regardless, so
+      // publishing it could only produce a button that 403s.
+      const deliverable = digitalDeliverable(p);
       return {
         slug: p.slug,
         title: p.name,
         kind: p.kind || 'download',
         artwork: p.thumbnail || '',
         licence: licenceTerms(p),
-        files: key ? [{ key, filename, ext: (filename.split('.').pop() || '').toLowerCase() }] : [],
+        preorder: !deliverable,
+        release_date: p.release_date || '',
+        files: key && deliverable
+          ? [{ key, filename, ext: (filename.split('.').pop() || '').toLowerCase() }]
+          : [],
       };
     });
 }
