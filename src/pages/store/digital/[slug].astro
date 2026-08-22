@@ -35,6 +35,13 @@ const preorder = isDigitalPreorderable(item.slug, (item as any).release_date);
 // Only the font carries a type specimen. Anything else would render an empty
 // "The alphabet" heading over a blank block.
 const showsSpecimen = item.slug === 'morphian';
+// Was "Typeface · Instant download", hardcoded — wrong on both halves for
+// anything that is neither a font nor delivered immediately.
+const KIND_WORD: Record<string, string> = { font: 'Typeface', plugin: 'Plugin', pack: 'Pack' };
+const kicker = `${KIND_WORD[(item as any).kind] || 'Download'} · ${preorder ? 'Pre-order' : 'Instant download'}`;
+// The licence already has a home beside the price, so drop it from the bullet
+// list rather than printing the same sentence twice on the page.
+const details = (item.details || []).filter(d => d !== licence);
 ---
 
 <style is:global>
@@ -64,12 +71,16 @@ const showsSpecimen = item.slug === 'morphian';
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20">
       <div class="bg-surface-container-low border border-white/5 rounded-lg overflow-hidden">
-        <Artwork src={item.thumbnail} alt={item.name} priority sizes="(max-width: 767px) 100vw, 460px" class="w-full aspect-square object-cover" />
+        <!-- object-cover suits artwork that is composed square (the typeface
+             card). A plugin's art is a UI screenshot in its native aspect, and
+             cropping one to a square cuts the product's own name off the left
+             edge — so those are contained and letterboxed instead. -->
+        <Artwork src={item.thumbnail} alt={item.name} priority sizes="(max-width: 767px) 100vw, 460px" class:list={["w-full aspect-square", (item as any).kind === 'font' ? 'object-cover' : 'object-contain']} />
       </div>
 
       <div class="flex flex-col justify-center">
         <div class="font-mono text-[10px] tracking-[0.25em] uppercase text-secondary mb-4">
-          Typeface · Instant download
+          {kicker}
         </div>
 
         <h1 class="text-5xl md:text-6xl font-headline font-bold text-primary tracking-tighter leading-none mb-3">
@@ -80,7 +91,7 @@ const showsSpecimen = item.slug === 'morphian';
         <p class="text-white/70 leading-relaxed mb-8 max-w-[52ch]">{item.blurb}</p>
 
         <ul class="space-y-2 mb-10">
-          {item.details.map(d => (
+          {details.map(d => (
             <li class="flex items-start gap-3 font-mono text-[11px] text-white/50 uppercase tracking-wider">
               <span class="text-secondary mt-[2px]">·</span>{d}
             </li>

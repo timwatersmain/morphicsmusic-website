@@ -4,6 +4,28 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import merchItems from '../data/merch.json';
 import pluginItems from '../data/plugins.json';
 import digitalItems from '../data/digital.json';
+import { isDigitalPreorderable } from '../../functions/_lib/preorder.mjs';
+
+// The card used to hardcode TYPEFACE / text_fields, which was true while a
+// typeface was the only digital product. `kind` drives it now.
+const KIND_LABEL: Record<string, { label: string; icon: string }> = {
+  font: { label: 'TYPEFACE', icon: 'text_fields' },
+  plugin: { label: 'PLUGIN', icon: 'memory' },
+  pack: { label: 'PACK', icon: 'folder_zip' },
+};
+const kindOf = (k?: string) => KIND_LABEL[k || ''] || { label: 'DOWNLOAD', icon: 'download' };
+
+// Build-time. A card that goes stale after the release date self-corrects on
+// the product page, which re-checks at runtime.
+const sellableDigital = digitalItems
+  .map(item => ({ item, preorder: isDigitalPreorderable(item.slug, (item as any).release_date) }))
+  .filter(({ item, preorder }) => item.available || preorder);
+
+// plugins.json is the teaser list for things with no price yet. A plugin that
+// becomes purchasable moves into digital.json, so the count has to span both
+// or it reads 0 the moment the first one ships.
+const pluginCount =
+  pluginItems.length + digitalItems.filter(d => (d as any).kind === 'plugin').length;
 
 const formatPrice = (lo: number | null, hi: number | null) => {
   if (lo == null) return '';
@@ -19,7 +41,7 @@ const formatPrice = (lo: number | null, hi: number | null) => {
        beside its neighbour rather than stacked in two separate sections. -->
   <section class="max-w-[1400px] mx-auto mb-24">
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-      {digitalItems.filter(item => item.available).map(item => (
+      {sellableDigital.map(({ item, preorder }) => (
         <a
           href={`/store/digital/${item.slug}`}
           class="group relative bg-surface-container-low border border-white/5 rounded-lg overflow-hidden transition-all duration-500 hover:border-secondary/30 terminal-glow block"
@@ -32,10 +54,15 @@ const formatPrice = (lo: number | null, hi: number | null) => {
               loading="lazy"
             />
             <div class="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent opacity-70"></div>
+            {preorder && (
+              <div class="absolute top-4 right-4 font-mono text-[9px] tracking-[0.25em] uppercase px-2 py-1 bg-secondary/15 text-secondary border border-secondary/30 backdrop-blur-md rounded-full">
+                Pre-order
+              </div>
+            )}
             <div class="absolute bottom-4 left-4 font-mono text-[10px] space-y-1">
               <div class="flex items-center gap-2 bg-background/80 px-2 py-1 backdrop-blur-md text-secondary rounded-full">
-                <span class="material-symbols-outlined text-sm">text_fields</span>
-                TYPEFACE
+                <span class="material-symbols-outlined text-sm">{kindOf((item as any).kind).icon}</span>
+                {kindOf((item as any).kind).label}
               </div>
               <div class="flex items-center gap-2 bg-background/80 px-2 py-1 backdrop-blur-md text-primary rounded-full">
                 ${item.price_cents % 100 === 0 ? item.price_cents / 100 : (item.price_cents / 100).toFixed(2)}
@@ -46,7 +73,7 @@ const formatPrice = (lo: number | null, hi: number | null) => {
             <h3 class="font-headline text-xl text-primary uppercase tracking-tight mb-1">{item.name}</h3>
             <p class="font-mono text-[11px] text-white/50 uppercase tracking-widest mb-4">{item.tagline}</p>
             <div class="w-full py-3 border border-secondary/30 font-mono text-[10px] tracking-widest uppercase text-center text-secondary group-hover:bg-secondary/10 transition-colors rounded-full">
-              Instant Download
+              {preorder ? `Pre-order · unlocks ${(item as any).release_date}` : 'Instant Download'}
             </div>
           </div>
         </a>
@@ -156,7 +183,7 @@ const formatPrice = (lo: number | null, hi: number | null) => {
     <div class="flex gap-12">
       <div>
         <div class="font-mono text-[9px] text-white/20 uppercase mb-1">Plugins</div>
-        <div class="font-headline text-lg text-primary">{pluginItems.length}</div>
+        <div class="font-headline text-lg text-primary">{pluginCount}</div>
       </div>
       <div>
         <div class="font-mono text-[9px] text-white/20 uppercase mb-1">Merch</div>

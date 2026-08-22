@@ -22,5 +22,26 @@
       "href": "/downloads/Morphian-Trial.zip",
       "label": "Try it free \u2014 26 letters"
     }
+  },
+  {
+    "slug": "morphorm",
+    "name": "Morphorm",
+    "tagline": "Multi-FX Audio Mangler",
+    "kind": "plugin",
+    "price_cents": 1500,
+    "available": false,
+    "release_date": "2026-09-21",
+    "thumbnail": "/images/plugins/morphorm-preview.jpg",
+    "blurb": "Seven effect banks in one plugin \u2014 squelch, resonator, foldbank, wavesetting and more \u2014 morphing between states rather than switching. VST3 and AU, macOS and Windows.",
+    "details": [
+      "VST3 + AU \u00b7 macOS (Universal) and Windows",
+      "Seven effect banks with continuous morphing",
+      "Oversampled, latency-compensated",
+      "Personal licence, up to 3 machines"
+    ],
+    "file": {
+      "r2_key": "digital/morphorm/Morphorm.zip",
+      "filename": "Morphorm.zip"
+    }
   }
 ]
