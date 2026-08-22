@@ -12,7 +12,7 @@
 // complaint, which costs far more than the link staying valid forever.
 
 import { verifyUnsubscribe } from '../_lib/auth';
-import { subscriberKey, normaliseEmail } from './subscribe';
+import { subscriberKey, normaliseEmail } from '../_lib/newsletter';
 
 interface Env {
   DOWNLOADS: KVNamespace;
