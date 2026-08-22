@@ -5,54 +5,149 @@
 //
 // `source` is written onto the subscriber record so you can tell which
 // placement actually earns signups. Give every instance a distinct one.
+// `variant` changes the FRAME only — the row, the field, the button, the
+// script and the endpoint are identical in all of them. That is the point:
+// placement and prominence are a design decision that should not fork the
+// behaviour, and a variant that reimplements the form is one that will drift.
+type Variant = 'block' | 'panel' | 'band' | 'inline' | 'centred';
+
 interface Props {
   source?: string;
   heading?: string;
   blurb?: string;
+  title?: string;
+  variant?: Variant;
   compact?: boolean;
 }
 const {
   source = 'site',
   heading = 'MONTHLY DISPATCH',
+  title = 'One email a month',
+  variant = 'block',
   blurb = 'New releases, what I\'m building, and where I\'m playing. Once a month. Nothing else.',
   compact = false,
 } = Astro.props;
 ---
 
-<form class="subscribe-form" data-source={source} data-compact={compact ? '1' : null} novalidate>
-  {!compact && (
-    <div class="mb-4">
-      <div class="font-mono text-[10px] text-secondary uppercase tracking-widest mb-2">{heading}</div>
-      <p class="font-mono text-[11px] text-white/40 leading-relaxed max-w-[46ch]">{blurb}</p>
+<div class:list={['subscribe-wrap', `subscribe-wrap--${variant}`]}>
+  {variant !== 'inline' && !compact && (
+    <div class="subscribe-copy">
+      <div class="subscribe-kicker">{heading}</div>
+      {(variant === 'panel' || variant === 'band' || variant === 'centred') && (
+        <h3 class="subscribe-title">{variant === 'band' ? heading : title}</h3>
+      )}
+      <p class="subscribe-blurb">{blurb}</p>
     </div>
   )}
-  <div class="subscribe-row">
-    <label class="sr-only" for={`sub-email-${source}`}>Email address</label>
-    <input
-      id={`sub-email-${source}`}
-      type="email"
-      name="email"
-      inputmode="email"
-      autocomplete="email"
-      required
-      placeholder="you@example.com"
-      class="subscribe-input"
-    />
-    {/* Honeypot: hidden from people, not from naive bots. aria-hidden and
-        tabindex=-1 keep it out of the screen-reader and keyboard paths so it
-        cannot trap a real person, and autocomplete=off stops a password
-        manager helpfully filling it in and getting them silently dropped. */}
-    <div class="subscribe-hp" aria-hidden="true">
-      <label>Website<input type="text" name="website" tabindex="-1" autocomplete="off" /></label>
+
+  <form class="subscribe-form" data-source={source} novalidate>
+    <div class="subscribe-row">
+      {variant === 'inline' && <span class="subscribe-inline-label">{heading}</span>}
+      <label class="sr-only" for={`sub-email-${source}`}>Email address</label>
+      <input
+        id={`sub-email-${source}`}
+        type="email"
+        name="email"
+        inputmode="email"
+        autocomplete="email"
+        required
+        placeholder="you@example.com"
+        class="subscribe-input"
+      />
+      {/* Honeypot: hidden from people, not from naive bots. aria-hidden and
+          tabindex=-1 keep it out of the screen-reader and keyboard paths so it
+          cannot trap a real person, and autocomplete=off stops a password
+          manager helpfully filling it in and getting them silently dropped. */}
+      <div class="subscribe-hp" aria-hidden="true">
+        <label>Website<input type="text" name="website" tabindex="-1" autocomplete="off" /></label>
+      </div>
+      <button type="submit" class="subscribe-btn">{variant === 'inline' ? '\u2192' : 'Subscribe'}</button>
     </div>
-    <button type="submit" class="subscribe-btn">Subscribe</button>
-  </div>
-  {/* aria-live so the outcome is announced, not just painted — this is the
-      only feedback the form gives. */}
-  <p class="subscribe-msg" role="status" aria-live="polite"></p>
-</form>
+    {/* aria-live so the outcome is announced, not just painted — this is the
+        only feedback the form gives. */}
+    <p class="subscribe-msg" role="status" aria-live="polite"></p>
+  </form>
+</div>
 
 <style>
+  /* ── frames. Only the FRAME differs between variants. ─────────────── */
+  .subscribe-kicker {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.625rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--color-secondary);
+    margin-bottom: 0.5rem;
+  }
+  .subscribe-title {
+    font-family: var(--font-headline, sans-serif);
+    text-transform: uppercase;
+    color: var(--color-primary);
+    letter-spacing: -0.02em;
+    line-height: 0.95;
+    font-size: clamp(1.75rem, 3.2vw, 2.75rem);
+    margin: 0 0 0.75rem;
+  }
+  .subscribe-blurb {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.6875rem;
+    line-height: 1.7;
+    color: rgba(255, 255, 255, 0.4);
+    max-width: 44ch;
+    margin: 0;
+  }
+  .subscribe-copy { margin-bottom: 1.5rem; }
+
+  /* B — a bordered panel. Reads as an offer rather than as page furniture. */
+  .subscribe-wrap--panel {
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-lg);
+    background: rgb(var(--glass-tint) / 0.45);
+    padding: clamp(1.5rem, 3vw, 2.5rem);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1.5rem;
+  }
+  .subscribe-wrap--panel .subscribe-copy { margin-bottom: 0; flex: 1 1 20rem; }
+
+  /* C — rules top and bottom and nothing else. The most editorial: it borrows
+     the page's own horizontal lines instead of adding another box. */
+  .subscribe-wrap--band {
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-block: clamp(1.75rem, 4vw, 3rem);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: clamp(1.5rem, 4vw, 3rem);
+  }
+  .subscribe-wrap--band .subscribe-copy { margin-bottom: 0; flex: 1 1 22rem; }
+  .subscribe-wrap--band .subscribe-kicker { display: none; }
+  .subscribe-wrap--band .subscribe-title { font-size: clamp(2.5rem, 5vw, 4rem); line-height: 0.85; }
+  .subscribe-wrap--band .subscribe-form { flex: 1 1 20rem; }
+
+  /* D — one line. For a footer, or anywhere the page has said its piece and
+     this is a postscript rather than an ask. */
+  .subscribe-inline-label {
+    align-self: center;
+    font-family: var(--font-mono, monospace);
+    font-size: 0.625rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--color-secondary);
+    white-space: nowrap;
+    margin-right: 0.25rem;
+  }
+  .subscribe-wrap--inline .subscribe-row { max-width: 34rem; }
+  .subscribe-wrap--inline .subscribe-btn { padding-inline: 1.1rem; font-size: 0.95rem; letter-spacing: 0; }
+
+  /* E — centred, given room. Where it is the only thing being asked. */
+  .subscribe-wrap--centred { text-align: center; padding-block: clamp(2rem, 5vw, 3.5rem); }
+  .subscribe-wrap--centred .subscribe-blurb { margin-inline: auto; }
+  .subscribe-wrap--centred .subscribe-row { margin-inline: auto; }
+
   .subscribe-row {
     display: flex;
     gap: 0.5rem;
