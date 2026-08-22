@@ -68,7 +68,7 @@ import { INVITE_URL } from '../components/DiscordInvite.astro';
 
   <!-- First thing on the page. The mailing list is the only thing here we own
        outright — every platform below it is someone else's audience on loan. -->
-  <section class="max-w-[46rem] mx-auto mt-2 mb-14">
+  <section class="max-w-[46rem] mx-auto mt-2">
     <SubscribeForm source="social" />
   </section>
 
@@ -77,8 +77,8 @@ import { INVITE_URL } from '../components/DiscordInvite.astro';
        rather than being pasted here: /community/me and /community/u/<handle>
        still exist and still link back, and one copy of the markup + script is
        the only way those stay consistent with this. -->
-  <section class="mt-16">
-    <div class="signal-column-header mb-8">
+  <section class="mt-24">
+    <div class="signal-column-header mb-6">
       <span class="material-symbols-outlined text-sm text-secondary">group</span>
       <span class="font-mono text-[10px] text-secondary uppercase tracking-widest">Community</span>
     </div>
@@ -89,7 +89,7 @@ import { INVITE_URL } from '../components/DiscordInvite.astro';
   <!-- Feed: 3-column by media type. Sits between the community and the
        platform grid — recent posts are a reason to follow, so they read
        better next to the follow links than ahead of the page's own content. -->
-  <div class="signal-feed mt-20">
+  <div class="signal-feed mt-24">
     <!-- Video Posts -->
     <div class="signal-column">
       <div class="signal-column-header">
@@ -235,9 +235,11 @@ import { INVITE_URL } from '../components/DiscordInvite.astro';
   </div>
 
   <!-- The platform tiles sit at the foot of the page: outbound links belong
-       where someone has finished reading, not in front of the content. -->
-  <!-- Platform Nodes (Particle Array) -->
-  <div class="mb-4 relative">
+       where someone has finished reading, not in front of the content.
+       mt-24 is the SAME gap that separates every other section on this page —
+       the spacing between sections should say "new section", and it can only
+       do that if it is one distance rather than four. -->
+  <div class="mt-24 relative">
     <div class="platform-grid" style={`--cols:${Math.ceil(platforms.length / 2)}`}>
       {platforms.map((platform, i) => (
         <a
@@ -257,8 +259,10 @@ import { INVITE_URL } from '../components/DiscordInvite.astro';
   </div>
 
   <!-- Closes the page under the icons rather than separating them from what is
-       above. Nothing follows it, so it reads as a bottom rule. -->
-  <div class="brand-divider brand-divider--wide mt-10">
+       above. Deliberately HALF the section gap: a closing rule that sits as far
+       from its own content as sections sit from each other stops reading as
+       part of that content and starts looking like an empty section. -->
+  <div class="brand-divider brand-divider--wide mt-12">
     <img src="/images/brand/morph-line-n.png" alt="" loading="lazy" />
   </div>
 
@@ -379,6 +383,16 @@ import { INVITE_URL } from '../components/DiscordInvite.astro';
     padding-bottom: 0.75rem;
     border-bottom: 1px solid var(--outline-variant);
     margin-bottom: 0.25rem;
+  }
+
+  /* No rule under the three feed headers. Each card already draws its own
+     border a few pixels below, so the rule was a second horizontal line
+     stacked on top of one that was doing the same job — three of them across
+     the row. The Community header keeps its rule: nothing is boxed under it,
+     so there it is the only thing separating the heading from the list. */
+  .signal-feed .signal-column-header {
+    border-bottom: none;
+    padding-bottom: 0.25rem;
   }
 
   .signal-card {
