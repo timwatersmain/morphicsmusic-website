@@ -22,7 +22,13 @@
       <!-- Filled once the first page lands; the element is present from the
            start so the header does not jump when the number arrives. -->
       <div id="dir-total" class="font-mono text-[11px] text-secondary uppercase tracking-widest"></div>
-      <div class="flex flex-wrap items-center gap-3">
+      <!-- Hidden until the directory confirms a session. "Your profile" and
+           the sign-up panel are the two halves of one answer, so they are
+           driven by the SAME signal — the directory's own 200 vs 401 — rather
+           than one being always-on and the other conditional. That is what let
+           them appear together: a signed-out visitor was told to sign up AND
+           offered a profile they do not have. -->
+      <div id="dir-profile-link" class="hidden flex-wrap items-center gap-3">
         <a href="/community/me" class="font-mono text-[10px] text-white/40 hover:text-secondary uppercase tracking-widest border border-white/10 hover:border-secondary/30 px-4 py-2 rounded-full">
           Your profile
         </a>
@@ -83,6 +89,7 @@
     const list = document.getElementById('dir-list')!;
     const pager = document.getElementById('dir-pager')!;
     const totalEl = document.getElementById('dir-total')!;
+    const profileLink = document.getElementById('dir-profile-link')!;
 
     const esc = (s: any) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
 
@@ -180,6 +187,9 @@
           if (r.status === 401) {
             loading.classList.add('hidden');
             signin.classList.remove('hidden');
+            // Belt and braces: it starts hidden, but a second load must not
+            // leave it on from a previous signed-in render.
+            profileLink.classList.add('hidden');
             return null;
           }
           if (!r.ok) throw new Error(await r.text());
@@ -188,6 +198,10 @@
         .then((data: any) => {
           if (!data) return;
           loading.classList.add('hidden');
+          // A 200 IS the proof of a session — the endpoint requires one.
+          signin.classList.add('hidden');
+          profileLink.classList.remove('hidden');
+          profileLink.classList.add('flex');
 
           total = typeof data.total === 'number' ? data.total : (data.fans || []).length;
           totalEl.textContent = total ? `${total} member${total === 1 ? '' : 's'}` : '';
