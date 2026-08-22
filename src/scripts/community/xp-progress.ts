@@ -6,7 +6,7 @@
 // this file, only consulted. Importing STAGE_LABELS (rather than declaring a
 // second copy here) is also why the fan wall (src/pages/community/index.astro)
 // and this page can never drift onto two different sets of stage names.
-import { STAGE_LABELS, STAGE_THRESHOLDS, rankLabelFor, type CreatureStage } from '../../../functions/_lib/community/ep';
+import { STAGE_LABELS, cycleThresholds, rankLabelFor, type CreatureStage } from '../../../functions/_lib/community/ep';
 
 export { STAGE_LABELS, rankLabelFor };
 export type { CreatureStage };
@@ -33,7 +33,11 @@ export interface RankLadderStep {
  * never any 'ahead' entries; that is not a bug, it's what "nothing left to
  * reach" looks like.
  */
-export function rankLadder(currentStage: CreatureStage): RankLadderStep[] {
+export function rankLadder(currentStage: CreatureStage, prestige = 0): RankLadderStep[] {
+  // Per-LINE prices. The ladder used to print the first line's 50/200/600 for
+  // everyone, so an ascended fan on a 900-wide line was quoted entry costs
+  // they had already passed — the chips disagreed with their own bar.
+  const T = cycleThresholds(prestige);
   const idx = STAGE_ORDER.indexOf(currentStage);
   const currentIdx = idx === -1 ? 0 : idx; // unknown/legacy stage reads as egg
   return STAGE_ORDER.map((stage, i) => ({
@@ -43,7 +47,7 @@ export function rankLadder(currentStage: CreatureStage): RankLadderStep[] {
     // Carried on the step itself so the ladder can state its own entry
     // price — "Chrysalis, 200 XP" — instead of a fan having to guess what
     // the stage ahead of them actually costs.
-    requiredEp: stage === 'egg' ? 0 : STAGE_THRESHOLDS[stage],
+    requiredEp: stage === 'egg' ? 0 : T[stage],
   }));
 }
 
@@ -52,12 +56,16 @@ export function rankLadder(currentStage: CreatureStage): RankLadderStep[] {
 // to reach it (STAGE_THRESHOLDS is keyed by "threshold to REACH this stage",
 // so reading it back for the stage itself gives its own band's start for free
 // — no separate table, no re-derivation of the thresholds themselves).
-function bandStart(stage: CreatureStage): number {
-  return stage === 'egg' ? 0 : STAGE_THRESHOLDS[stage];
+function bandStart(stage: CreatureStage, prestige = 0): number {
+  return stage === 'egg' ? 0 : cycleThresholds(prestige)[stage];
 }
 
 export interface CreatureProgressInput {
+  /** Progress within the CURRENT line, not the running total. Feeding the
+   *  total here showed an ascended fan a full bar at egg, because 640 total
+   *  is past every threshold of a line they had just started. */
   ep: number;
+  prestige?: number;
   stage: CreatureStage;
   /** Absolute EP needed to reach the NEXT stage, or null at the top stage. */
   next_stage_ep: number | null;
@@ -72,7 +80,12 @@ export interface CreatureProgressInput {
  * emerges. Milestones are a display concept only: nothing server-side reads
  * them, no stage or sprite changes, and the rank stays Emergent forever.
  */
-export const MILESTONE_STEP = STAGE_THRESHOLDS.adult - STAGE_THRESHOLDS.pupa;
+// Width of the repeating band the bar fills across once a fan is at the top
+// of a line. Derived from line 0 deliberately: it is a display cadence, not a
+// rank threshold, and keeping it constant means the bar moves at the same
+// speed on every line rather than slowing down each time a fan ascends.
+const L0 = cycleThresholds(0);
+export const MILESTONE_STEP = L0.adult - L0.pupa;
 
 export interface Milestone {
   /** 1-based: the first milestone after emerging is 1. */
@@ -130,7 +143,8 @@ export function computeStageProgress(input: CreatureProgressInput): StageProgres
   const isFinal = input.next_stage_ep === null;
   const nextStage = isFinal ? null : (STAGE_ORDER[idx + 1] ?? null);
   const ep = Math.max(0, Number(input.ep) || 0);
-  const start = bandStart(stage);
+  const prestige = Math.max(0, Math.floor(Number(input.prestige) || 0));
+  const start = bandStart(stage, prestige);
   const epInStage = Math.max(0, ep - start);
 
   if (isFinal) {

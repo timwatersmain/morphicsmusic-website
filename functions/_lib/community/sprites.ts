@@ -45,6 +45,31 @@ export const COLOURWAY_IDS: string[] = COLORWAYS.map((c: { id: string }) => c.id
 // per-stage arrays directly.
 const ALL_SPRITE_REFS: Set<string> = new Set(Object.values(SPRITE_REFS_BY_STAGE).flat());
 
+/**
+ * How many prestige tiers the catalogue is divided into. The sprite set is
+ * already ordered plain -> elaborate within each stage (plain-egg ... 
+ * paperlantern-egg; owlwing-moth ... nebular-sphinx-graft), so a later line
+ * simply draws from a later slice. Nothing about the art had to change — the
+ * gradient was already authored into it.
+ */
+export const PRESTIGE_TIERS = 3;
+
+/** Fractional cut points. Tier 0 is the widest because it is the line every
+ *  fan starts on and most will never leave; the top tier is the narrowest so
+ *  the rarest creatures stay rare. */
+const TIER_BOUNDS = [0, 0.45, 0.78, 1];
+
+/** The slice of a stage's pool a given prestige level draws from. Levels past
+ *  the last tier keep drawing from it rather than erroring or wrapping back to
+ *  the plain end — a fan on their fifth line must never be handed a starter
+ *  egg again. */
+export function tierSlice(refs: string[], prestige: number): string[] {
+  const tier = Math.min(Math.max(0, Math.floor(Number(prestige) || 0)), PRESTIGE_TIERS - 1);
+  const lo = Math.floor(refs.length * TIER_BOUNDS[tier]);
+  const hi = Math.max(lo + 1, Math.floor(refs.length * TIER_BOUNDS[tier + 1]));
+  return refs.slice(lo, hi);
+}
+
 async function sha256Hex(input: string): Promise<string> {
   const bytes = new TextEncoder().encode(input);
   // Web Crypto, not a Node built-in — this runs in the Workers runtime.
@@ -62,9 +87,15 @@ function pickIndex(hex: string, length: number): number {
  * Deterministically pick one sprite ref for a single stage. Exported mainly
  * for tests; assignSpriteRefs is the entry point every real caller uses.
  */
-export async function assignSpriteForStage(email: string, stage: SpriteStage): Promise<string> {
-  const refs = SPRITE_REFS_BY_STAGE[stage];
-  const hex = await sha256Hex(`${SPRITE_SALT}:${stage}:${email.toLowerCase().trim()}`);
+export async function assignSpriteForStage(
+  email: string, stage: SpriteStage, prestige = 0,
+): Promise<string> {
+  const refs = tierSlice(SPRITE_REFS_BY_STAGE[stage], prestige);
+  // The prestige level is part of the hash, so a fan's second line is not a
+  // reshuffle of their first — it is an independent draw from a different
+  // pool. Without it, the same email would land on the same relative index in
+  // every tier and the lines would feel like recolours of one another.
+  const hex = await sha256Hex(`${SPRITE_SALT}:${stage}:${prestige}:${email.toLowerCase().trim()}`);
   return refs[pickIndex(hex, refs.length)];
 }
 
@@ -81,12 +112,12 @@ export async function assignColourway(email: string): Promise<string> {
  * is what makes "adding/removing sprites later never changes anyone's
  * existing assignment" true for everyone assigned before that change.
  */
-export async function assignSpriteRefs(email: string): Promise<SpriteAssignment> {
+export async function assignSpriteRefs(email: string, prestige = 0): Promise<SpriteAssignment> {
   const [egg, grub, pupa, adult, colourway] = await Promise.all([
-    assignSpriteForStage(email, 'egg'),
-    assignSpriteForStage(email, 'grub'),
-    assignSpriteForStage(email, 'pupa'),
-    assignSpriteForStage(email, 'adult'),
+    assignSpriteForStage(email, 'egg', prestige),
+    assignSpriteForStage(email, 'grub', prestige),
+    assignSpriteForStage(email, 'pupa', prestige),
+    assignSpriteForStage(email, 'adult', prestige),
     assignColourway(email),
   ]);
   return { sprite_egg: egg, sprite_grub: grub, sprite_pupa: pupa, sprite_adult: adult, colourway };

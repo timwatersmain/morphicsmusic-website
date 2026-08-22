@@ -98,6 +98,59 @@ export const STAGE_THRESHOLDS: Record<Exclude<CreatureStage, 'egg'>, number> = {
   adult: 600,
 };
 
+/* ── Prestige ────────────────────────────────────────────────────────────
+ *
+ * Reaching Emergent used to be the end: XP kept counting and bought nothing.
+ * A fan at 600 EP had no reason to come back, which is the opposite of what a
+ * loyalty ladder is for.
+ *
+ * So a completed line can be ASCENDED: the fan starts a new egg from a more
+ * elaborate tier of the sprite catalogue and climbs again. Two rules make it
+ * safe to offer:
+ *
+ *   1. TOTAL XP NEVER RESETS. It is the site's one standing promise to fans
+ *      ("XP only ever goes up — a rank once reached is never taken back") and
+ *      a prestige system that quietly breaks it is a betrayal, not a feature.
+ *      Progress within a line is measured against `cycleBaseEp`, the total at
+ *      which the current line began, so the running total is untouched.
+ *   2. ASCENDING IS A CHOICE. Automatic ascension at 600 would mean nobody is
+ *      ever an Emergent — they would arrive and be turned back into an egg in
+ *      the same page load, having never seen the creature they spent months
+ *      earning. The option appears; the fan takes it when they want it.
+ */
+
+/** Cycle 0 is 600 EP wide — the original ladder, unchanged. Each line after
+ *  is half again as long, so ascending means something without becoming a
+ *  grind: 600, 900, 1200, 1500. */
+export function cycleSpan(prestige: number): number {
+  const p = Math.max(0, Math.floor(Number(prestige) || 0));
+  return Math.round(STAGE_THRESHOLDS.adult * (1 + 0.5 * p));
+}
+
+/** The stage thresholds for a given line, in CYCLE EP (not total).
+ *  Derived from the span so cycle 0 reproduces 50 / 200 / 600 exactly. */
+export function cycleThresholds(prestige: number): Record<Exclude<CreatureStage, 'egg'>, number> {
+  const span = cycleSpan(prestige);
+  return {
+    grub: Math.round(span / 12),
+    pupa: Math.round(span / 3),
+    adult: span,
+  };
+}
+
+/** Progress within the current line. Never negative — a cycleBase above the
+ *  fan's total would otherwise read as negative progress, which resolveStage
+ *  would floor to 'egg' and silently demote a fan. */
+export function cycleEp(totalEp: number, cycleBaseEp: number): number {
+  return Math.max(0, (Number(totalEp) || 0) - (Number(cycleBaseEp) || 0));
+}
+
+/** May this fan begin a new line? Only from the top of the current one. */
+export function canAscend(stage: CreatureStage | null, totalEp: number, cycleBaseEp: number, prestige: number): boolean {
+  if ((stage || 'egg') !== 'adult') return false;
+  return cycleEp(totalEp, cycleBaseEp) >= cycleSpan(prestige);
+}
+
 export interface EpInputs {
   /** Count of distinct owned releases/digital slugs — see me.ts's `owned`. */
   purchaseCount: number;
@@ -160,19 +213,22 @@ export function computeEp(inputs: EpInputs): number {
   return Math.max(0, Math.floor(raw));
 }
 
-/** Which stage a given EP total qualifies for, taken in isolation (no history). */
-export function stageForEp(ep: number): CreatureStage {
-  if (ep >= STAGE_THRESHOLDS.adult) return 'adult';
-  if (ep >= STAGE_THRESHOLDS.pupa) return 'pupa';
-  if (ep >= STAGE_THRESHOLDS.grub) return 'grub';
+/** Which stage a given EP total qualifies for, taken in isolation (no history).
+ *  `prestige` selects the line's thresholds; omitted means the first line, so
+ *  every existing caller keeps its previous behaviour exactly. */
+export function stageForEp(ep: number, prestige = 0): CreatureStage {
+  const t = cycleThresholds(prestige);
+  if (ep >= t.adult) return 'adult';
+  if (ep >= t.pupa) return 'pupa';
+  if (ep >= t.grub) return 'grub';
   return 'egg';
 }
 
 /** EP needed to reach the stage AFTER `stage`, or null once already at the top. */
-export function nextStageThreshold(stage: CreatureStage): number | null {
+export function nextStageThreshold(stage: CreatureStage, prestige = 0): number | null {
   const idx = STAGE_ORDER.indexOf(stage);
   const next = STAGE_ORDER[idx + 1] as Exclude<CreatureStage, 'egg'> | undefined;
-  return next ? STAGE_THRESHOLDS[next] : null;
+  return next ? cycleThresholds(prestige)[next] : null;
 }
 
 /**
@@ -183,8 +239,10 @@ export function nextStageThreshold(stage: CreatureStage): number | null {
  * higher of "what current EP implies" and "what they already had".
  * `currentStage` of null (a legacy pre-migration row) is read as 'egg'.
  */
-export function resolveStage(ep: number, currentStage: CreatureStage | null): CreatureStage {
-  const computed = stageForEp(ep);
+export function resolveStage(
+  ep: number, currentStage: CreatureStage | null, prestige = 0,
+): CreatureStage {
+  const computed = stageForEp(ep, prestige);
   const current = currentStage || 'egg';
   return STAGE_ORDER.indexOf(computed) > STAGE_ORDER.indexOf(current) ? computed : current;
 }
@@ -198,13 +256,17 @@ export function resolveStage(ep: number, currentStage: CreatureStage | null): Cr
  * that keeps growth visually continuous across the pupa->adult boundary
  * instead of jumping straight to "fully grown".
  */
-function stageBand(stage: CreatureStage): { start: number; width: number } {
+function stageBand(stage: CreatureStage, prestige = 0): { start: number; width: number } {
+  // Per-LINE thresholds, not the global ones: on a second line the bands are
+  // wider, and using cycle-0 numbers would show a fan 100% through a stage
+  // they were a third of the way into.
+  const T = cycleThresholds(prestige);
   const idx = STAGE_ORDER.indexOf(stage);
-  const start = idx === 0 ? 0 : STAGE_THRESHOLDS[STAGE_ORDER[idx] as Exclude<CreatureStage, 'egg'>];
+  const start = idx === 0 ? 0 : T[STAGE_ORDER[idx] as Exclude<CreatureStage, 'egg'>];
   const next = STAGE_ORDER[idx + 1] as Exclude<CreatureStage, 'egg'> | undefined;
-  if (next) return { start, width: STAGE_THRESHOLDS[next] - start };
+  if (next) return { start, width: T[next] - start };
   // Top stage: reuse the previous band's width so the curve stays continuous.
-  const prevStart = idx <= 1 ? 0 : STAGE_THRESHOLDS[STAGE_ORDER[idx - 1] as Exclude<CreatureStage, 'egg'>];
+  const prevStart = idx <= 1 ? 0 : T[STAGE_ORDER[idx - 1] as Exclude<CreatureStage, 'egg'>];
   return { start, width: Math.max(1, start - prevStart) };
 }
 
@@ -218,8 +280,8 @@ function stageBand(stage: CreatureStage): { start: number; width: number } {
  * is high enough for `stage` to have been reached, but this stays defensive
  * against a stale/out-of-sync (ep, stage) pair.
  */
-export function stageXp(ep: number, stage: CreatureStage): number {
-  const { start, width } = stageBand(stage);
+export function stageXp(ep: number, stage: CreatureStage, prestige = 0): number {
+  const { start, width } = stageBand(stage, prestige);
   const pct = ((ep - start) / width) * 100;
   return Math.max(0, Math.min(100, pct));
 }

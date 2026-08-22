@@ -699,11 +699,17 @@ export function toPublicProfile(
     } : null,
     creature: {
       stage,
+      // Which line this creature belongs to. Public: a fan's prestige is a
+      // visible achievement, and the wall needs it to badge the row.
+      prestige: Math.max(0, Math.floor(Number(row.prestige) || 0)),
       sprite_ref: currentSpriteRef(row, stage),
       colourway: row.colourway || null,
       ep: row.ep || 0,
-      stage_xp: stageXp(row.ep || 0, stage),
-      next_stage_ep: nextStageThreshold(stage),
+      // Measured within the LINE. Passing the total would show an ascended
+      // fan as fully grown the moment they started over.
+      stage_xp: stageXp(Math.max(0, (row.ep || 0) - (Number(row.cycle_base_ep) || 0)), stage,
+                        Number(row.prestige) || 0),
+      next_stage_ep: nextStageThreshold(stage, Number(row.prestige) || 0),
     },
   };
 }
@@ -831,4 +837,44 @@ export async function claimAwardEvent(
     + 'RETURNING event_key',
   ).bind(eventKey, nowSec).first<{ event_key: string }>();
   return !!row;
+}
+
+/**
+ * Begin a new creature line.
+ *
+ * Three writes that must happen together, which is why this is one statement:
+ * the prestige level goes up, the current TOTAL becomes the new line's base,
+ * and the fan drops back to 'egg' with sprites drawn from the next tier.
+ *
+ * The guard is `WHERE stage = 'adult' AND ep - cycle_base_ep >= ?`, re-checked
+ * in SQL rather than trusted from the caller. Two concurrent requests would
+ * otherwise both read "can ascend" and both apply, costing the fan two lines
+ * for one earned ascension. The second UPDATE matches nothing.
+ *
+ * Total EP is deliberately untouched. It is the site's standing promise to
+ * fans and the one number a prestige system must not quietly reset.
+ */
+export async function ascendCreature(
+  db: D1Database,
+  email: string,
+  opts: { requiredCycleEp: number; nextPrestige: number; sprites: {
+    sprite_egg: string; sprite_grub: string; sprite_pupa: string; sprite_adult: string;
+  } },
+): Promise<FanProfileRow | null> {
+  const t = now();
+  const row = await db.prepare(
+    `UPDATE fan_profiles
+        SET prestige = ?, cycle_base_ep = ep, ascended_at = ?, stage = 'egg',
+            sprite_egg = ?, sprite_grub = ?, sprite_pupa = ?, sprite_adult = ?,
+            override_sprite = NULL, updated_at = ?
+      WHERE email = ? AND deleted_at IS NULL
+        AND stage = 'adult' AND (ep - cycle_base_ep) >= ?
+      RETURNING *`,
+  ).bind(
+    opts.nextPrestige, t,
+    opts.sprites.sprite_egg, opts.sprites.sprite_grub,
+    opts.sprites.sprite_pupa, opts.sprites.sprite_adult,
+    t, email.toLowerCase().trim(), opts.requiredCycleEp,
+  ).first<FanProfileRow>();
+  return row || null;
 }

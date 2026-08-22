@@ -15,6 +15,7 @@ import { evaluateUnlocks } from '../../_lib/community/unlocks';
 import { evaluateCreature } from '../../_lib/community/creature';
 import { epInputsFor, ownedSlugsFromRecord } from '../../_lib/community/ep-inputs';
 import { requireAdmin } from '../../_lib/admin';
+import { cycleSpan } from '../../_lib/community/ep';
 
 interface CustomerRecord {
   // Deliberately no `name` field: the KV record's `name` is the Stripe
@@ -190,6 +191,8 @@ export const onRequestGet: PagesFunction<CommunityEnv> = corsHandler<CommunityEn
           collection_count: owned.size,
           ep: creatureUpdate.ep,
           stage: creatureUpdate.stage,
+          prestige: creatureUpdate.prestige,
+          cycle_base_ep: profile.cycle_base_ep,
           hatched_at: hatchedAt,
         }, equipped),
         is_self: true,
@@ -210,6 +213,13 @@ export const onRequestGet: PagesFunction<CommunityEnv> = corsHandler<CommunityEn
         // Self-view only, same reasoning as can_change_handle above — lets
         // the UI show a one-time hatch celebration on the visit that caused it.
         just_hatched: creatureUpdate.justHatched,
+        // Prestige, self-view only. `can_ascend` is the button's gate; the
+        // endpoint re-checks it in SQL, so this is presentation, not security.
+        prestige: creatureUpdate.prestige,
+        cycle_ep: creatureUpdate.cycleEp,
+        cycle_span: cycleSpan(creatureUpdate.prestige),
+        can_ascend: creatureUpdate.canAscend,
+        ascended_at: profile.ascended_at ?? null,
         // Self-view only augmentation, same pattern as can_change_handle —
         // toPublicProfile's allow-list stays untouched by this feature.
         // is_admin gates the picker's visibility client-side; the actual

@@ -205,6 +205,23 @@ import SubscribeForm from '../../components/SubscribeForm.astro';
            granted-but-unspent token (see loadLibrary below). Choosing is
            permanent, so it always routes through the confirm dialog below
            rather than spending on click. -->
+      <!-- Ascension. Shown only when the server says the line is complete —
+           can_ascend is computed from stage AND cycle EP, and the endpoint
+           re-checks it in SQL, so this is presentation rather than the gate. -->
+      <section id="me-ascend" class="hidden mb-10 p-6 border border-secondary/30 bg-secondary/[0.06] rounded-[var(--radius-lg)]">
+        <div class="font-mono text-[10px] text-secondary uppercase tracking-widest mb-2">Line complete</div>
+        <h3 class="font-headline text-2xl text-primary uppercase tracking-tight mb-3">Begin a new line</h3>
+        <p class="font-mono text-[11px] text-white/50 leading-relaxed mb-4 max-w-[54ch]">
+          Your creature has reached the end of its evolution. Ascend and you start again from a
+          new egg — drawn from a rarer set than the one you began with — and climb a longer road.
+          <strong class="text-white/80">Your total XP is not reset.</strong> It never is.
+        </p>
+        <button type="button" id="me-ascend-btn" class="px-5 py-3 border border-secondary/40 bg-secondary/10 hover:bg-secondary hover:text-on-secondary text-secondary font-mono text-[10px] tracking-widest uppercase rounded-full transition-colors">
+          Ascend
+        </button>
+        <p id="me-ascend-msg" class="font-mono text-[10px] text-white/40 mt-3 min-h-[1rem]" role="status" aria-live="polite"></p>
+      </section>
+
       <section id="me-free-token" class="hidden mb-10">
         <div class="flex items-baseline gap-3 mb-4">
           <span class="font-mono text-xs text-secondary uppercase">Free song token</span>
@@ -473,6 +490,54 @@ import SubscribeForm from '../../components/SubscribeForm.astro';
     const fanSinceEl = document.getElementById('me-fan-since')!;
     const libraryEl = document.getElementById('me-library')!;
     const rewardsList = document.getElementById('me-rewards-list')!;
+    // ── ascension ────────────────────────────────────────────────────
+    const ascendSection = document.getElementById('me-ascend')!;
+    const ascendBtn = document.getElementById('me-ascend-btn') as HTMLButtonElement;
+    const ascendMsg = document.getElementById('me-ascend-msg')!;
+    let ascendArmed = false;
+
+    ascendBtn.addEventListener('click', async () => {
+      // Two-step, like the free token. Ascending is not destructive — no XP is
+      // lost — but it does retire a creature the fan spent months growing, and
+      // that deserves a beat rather than a single click.
+      if (!ascendArmed) {
+        ascendArmed = true;
+        ascendBtn.textContent = 'Confirm — retire this creature';
+        ascendMsg.textContent = 'Your Emergent is replaced by a new egg. Total XP is untouched.';
+        setTimeout(() => {
+          if (!ascendArmed) return;
+          ascendArmed = false;
+          ascendBtn.textContent = 'Ascend';
+          ascendMsg.textContent = '';
+        }, 8000);
+        return;
+      }
+      ascendArmed = false;
+      ascendBtn.disabled = true;
+      ascendBtn.textContent = 'Ascending…';
+      try {
+        const res = await fetch('/api/community/ascend', { method: 'POST', credentials: 'include' });
+        const d = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          ascendBtn.disabled = false;
+          ascendBtn.textContent = 'Ascend';
+          ascendMsg.textContent = d?.error === 'not ready'
+            ? 'Not ready yet — finish this line first.'
+            : 'Could not ascend. Try again.';
+          return;
+        }
+        ascendMsg.textContent = 'A new egg. Reloading…';
+        // Full reload rather than patching the DOM: the sprite, the stage, the
+        // bar and every rank label all changed at once, and re-deriving them
+        // by hand here would be a second implementation of the render.
+        setTimeout(() => location.reload(), 700);
+      } catch {
+        ascendBtn.disabled = false;
+        ascendBtn.textContent = 'Ascend';
+        ascendMsg.textContent = 'Network error — try again.';
+      }
+    });
+
     const freeTokenSection = document.getElementById('me-free-token')!;
     const freeTokenList = document.getElementById('me-free-token-list')!;
     const freeTokenDialog = document.getElementById('me-free-token-confirm') as HTMLDialogElement;
@@ -543,8 +608,8 @@ import SubscribeForm from '../../components/SubscribeForm.astro';
       ahead: ' — not yet reached',
     };
 
-    function renderRankLadder(stage: string) {
-      const steps = rankLadder(stage as any);
+    function renderRankLadder(stage: string, prestige = 0) {
+      const steps = rankLadder(stage as any, prestige);
       rankLadderEl.innerHTML = steps.map(step => `
         <li>
           <span
@@ -555,9 +620,19 @@ import SubscribeForm from '../../components/SubscribeForm.astro';
       `).join('');
     }
 
+    // Set on every paint, read by renderXpBar. A module-scope flag rather than
+    // another parameter because renderXpBar is called from three places and
+    // only one of them has the profile object to hand.
+    let canAscendNow = false;
+    let cycleEpNow: number | null = null;
+
     function renderXpBar(creature: any, handle?: string) {
       const progress = computeStageProgress({
-        ep: creature.ep || 0,
+        // CYCLE ep, not the running total. `cycle_ep` is sent by /me; the
+        // fallback keeps a fan on their first line correct if it is absent,
+        // where the two are the same number by definition.
+        ep: (typeof cycleEpNow === 'number' ? cycleEpNow : (creature.ep || 0)),
+        prestige: creature.prestige || 0,
         stage: creature.stage,
         next_stage_ep: creature.next_stage_ep,
       });
@@ -565,7 +640,10 @@ import SubscribeForm from '../../components/SubscribeForm.astro';
       // The BAR still tracks the real stage band — the artist keeps earning
       // and the milestone maths is unchanged. Only the printed word differs.
       xpStageLabelEl.textContent = rankLabelFor(creature.stage, handle);
-      xpTotalEl.textContent = progress.totalEp.toLocaleString();
+      // The running TOTAL, always — progress.totalEp is cycle EP now, and
+      // showing that here would look exactly like the reset this system
+      // promises never to do.
+      xpTotalEl.textContent = (creature.ep || 0).toLocaleString();
       xpFillEl.style.width = progress.pct + '%';
       xpFillEl.setAttribute('aria-valuenow', String(Math.round(progress.pct)));
       xpFillEl.setAttribute(
@@ -581,9 +659,10 @@ import SubscribeForm from '../../components/SubscribeForm.astro';
         // a fan who is fully grown still watches a number move.
         const m = progress.milestone!;
         xpNumbersEl.textContent = m.epInto + ' / ' + m.width + ' EP · milestone ' + m.index;
-        xpNextEl.textContent =
-          'Fully evolved — Emergent is the final stage, and XP keeps counting: '
-          + m.epRemaining + ' EP to ' + m.target + ' XP.';
+        xpNextEl.textContent = canAscendNow
+          ? 'This line is complete — you can begin a new one below.'
+          : 'Fully evolved — Emergent is the final stage of this line, and XP keeps counting: '
+            + m.epRemaining + ' EP to ' + m.target + ' XP.';
       } else {
         // Both numbers are re-based to THIS stage's own band (not raw EP
         // against a fixed total) so they always agree with the bar's fill —
@@ -983,7 +1062,10 @@ import SubscribeForm from '../../components/SubscribeForm.astro';
           myHandle = profile.handle || '';
           setWallToggle(!profile.hidden_from_wall);
           renderCreature(profile.creature);
-          renderRankLadder(profile.creature.stage);
+          renderRankLadder(profile.creature.stage, profile.creature.prestige || 0);
+          canAscendNow = !!profile.can_ascend;
+          cycleEpNow = typeof profile.cycle_ep === 'number' ? profile.cycle_ep : null;
+          ascendSection.classList.toggle('hidden', !canAscendNow);
           renderXpBar(profile.creature, profile.handle);
           rewardsProfile = { ...profile, avatars: data.avatars };
           renderRewards();
