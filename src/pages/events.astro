@@ -14,7 +14,20 @@ const hasEvents = upcoming.length > 0 || past.length > 0;
 
 const pressPhotos = (epk.press_photos || []) as Array<{ src: string; full: string; width?: number; height?: number }>;
 const liveVideos = (epk.live_videos || []) as Array<{ label: string; url: string }>;
-const pastVenues = (epk.past_venues || []) as string[];
+// Derived from the show history, not listed separately: a hand-kept venue
+// array is how this page came to print 23 rooms while the one-sheet PDF
+// printed 19. The exclusions in epk.json are the single curation both read.
+const notARoom = new Set((epk.not_a_room || []) as string[]);
+// How many past shows stay visible before the disclosure. Four fills the
+// section without the page becoming a scrolling archive.
+const SHOWN = 4;
+// The venue roll-call moved off this page — it belongs on the one-sheet,
+// where a promoter is reading credentials, not on a page whose job is "what
+// is coming up". The derivation stays because `hasEpk` still uses it: a kit
+// that is nothing BUT a venue list is still a kit worth linking, and dropping
+// it from that test would hide the section for a catalogue that has one.
+const pastVenues = [...new Set(past.map((e: any) => e.venue).filter(Boolean) as string[])]
+  .filter((v) => !notARoom.has(v));
 // The EPK block is worth building but not worth showing empty — a heading
 // with nothing under it reads as neglect, which is the opposite of what a
 // press kit is for.
@@ -33,12 +46,10 @@ const fmtDate = (iso: string) => {
   <div class="max-w-5xl">
 
     <PageTitle title="EVENTS" class="mb-6" />
-    <header class="mb-16">
-      <p class="font-mono text-[11px] text-white/50 mt-4 leading-relaxed max-w-[60ch]">
-        Where Morphics has played, where it's playing next, and the one place to
-        get in touch about booking, licensing or press.
-      </p>
-      <a href="#contact" class="inline-block mt-6 px-6 py-3 rounded-full bg-primary text-on-primary font-mono text-[11px] tracking-widest uppercase hover:bg-secondary hover:text-on-secondary transition-colors">
+    <!-- mb-6/mt-0: the paragraph that used to sit between the title and this
+         button is gone, and its two margins were still holding the gap open. -->
+    <header class="mb-10">
+      <a href="#contact" class="inline-block px-6 py-3 rounded-full bg-primary text-on-primary font-mono text-[11px] tracking-widest uppercase hover:bg-secondary hover:text-on-secondary transition-colors">
         Booking &amp; enquiries
       </a>
     </header>
@@ -77,8 +88,13 @@ const fmtDate = (iso: string) => {
           <span class="font-mono text-xs text-secondary uppercase tracking-widest">Selected shows</span>
           <div class="h-[1px] flex-1 bg-outline-variant/30"></div>
         </div>
+        <!-- The first few, then the rest behind a disclosure. A back
+             catalogue of shows is reference material: worth having on the
+             page, not worth spending the whole page on. <details> because it
+             needs no JavaScript, survives the client router with no wiring,
+             and is open to find-in-page in every current browser. -->
         <ul class="divide-y divide-white/5 border-y border-white/5">
-          {past.map((e: any) => (
+          {past.slice(0, SHOWN).map((e: any) => (
             <li class="grid grid-cols-1 sm:grid-cols-[7rem_1fr_auto] items-baseline gap-x-6 gap-y-1 py-4">
               <time datetime={e.date} class="font-mono text-[10px] text-white/30 tabular-nums whitespace-nowrap">
                 {e.date_display || fmtDate(e.date)}
@@ -97,6 +113,40 @@ const fmtDate = (iso: string) => {
             </li>
           ))}
         </ul>
+
+        {past.length > SHOWN && (
+          <details class="shows-more group">
+            <!-- FIRST child, because a <summary> that is not the first child of
+                 its <details> stops being the disclosure control and renders as
+                 ordinary content. It is moved visually below the rows with
+                 flex order instead, so the toggle sits under what it reveals
+                 rather than making you scroll back up to collapse. -->
+            <summary class="shows-toggle font-mono text-[10px] text-white/40 hover:text-secondary uppercase tracking-widest cursor-pointer py-4">
+              <span class="group-open:hidden">Show {past.length - SHOWN} more</span>
+              <span class="hidden group-open:inline">Show fewer</span>
+            </summary>
+            <ul class="divide-y divide-white/5 border-b border-white/5">
+              {past.slice(SHOWN).map((e: any) => (
+                <li class="grid grid-cols-1 sm:grid-cols-[7rem_1fr_auto] items-baseline gap-x-6 gap-y-1 py-4">
+                  <time datetime={e.date} class="font-mono text-[10px] text-white/30 tabular-nums whitespace-nowrap">
+                    {e.date_display || fmtDate(e.date)}
+                  </time>
+                  <div class="min-w-0">
+                    <span class="font-mono text-[12px] text-white/80">{e.title}</span>
+                    <span class="block font-mono text-[10px] text-white/40 mt-0.5">
+                      {[e.venue, e.city].filter(Boolean).join(' · ')}
+                    </span>
+                  </div>
+                  {e.role && (
+                    <span class="font-mono text-[9px] uppercase tracking-widest text-white/30 border border-white/10 px-3 py-1 rounded-full justify-self-start sm:justify-self-end whitespace-nowrap">
+                      {e.role}
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </details>
+        )}
       </section>
     )}
 
@@ -115,12 +165,6 @@ const fmtDate = (iso: string) => {
 
     {hasEpk && (
       <section class="mb-16">
-        <div class="flex items-baseline gap-3 mb-6">
-          <span class="font-mono text-xs text-secondary uppercase tracking-widest">Press kit</span>
-          <div class="h-[1px] flex-1 bg-outline-variant/30"></div>
-          <span class="font-mono text-[10px] text-white/30 normal-case">No form, no email — take what you need</span>
-        </div>
-
         {epk.bio_short && (
           <p class="font-body text-white/70 leading-relaxed max-w-[62ch] mb-4">{epk.bio_short}</p>
         )}
@@ -151,9 +195,6 @@ const fmtDate = (iso: string) => {
                 </a>
               ))}
             </div>
-            {epk.photo_credit && (
-              <p class="font-mono text-[10px] text-white/30 mt-3">{epk.photo_credit}</p>
-            )}
           </div>
         )}
 
@@ -166,11 +207,6 @@ const fmtDate = (iso: string) => {
           ))}
         </div>
 
-        {pastVenues.length > 0 && (
-          <p class="font-mono text-[10px] text-white/30 mt-6 leading-relaxed max-w-[62ch]">
-            Played: {pastVenues.join(' · ')}
-          </p>
-        )}
       </section>
     )}
 
@@ -370,3 +406,10 @@ const fmtDate = (iso: string) => {
     });
   </script>
 </BaseLayout>
+
+<style>
+  .shows-more { display: flex; flex-direction: column; }
+  .shows-toggle { order: 2; list-style: none; }
+  /* Safari still paints its own triangle without this. */
+  .shows-toggle::-webkit-details-marker { display: none; }
+</style>
