@@ -20,9 +20,13 @@
 //
 // So the export never drops a row for being in one store, and marks which.
 
+import { signUnsubscribe } from '../../_lib/auth';
+
 interface Env {
   DOWNLOADS: KVNamespace;
   SUBSCRIBERS_EXPORT_TOKEN?: string;
+  AUTH_SECRET: string;
+  PUBLIC_SITE_URL?: string;
   RESEND_API_KEY?: string;
   RESEND_TOPIC_ID?: string;
 }
@@ -87,23 +91,32 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
 
   const [kv, resend] = await Promise.all([allKvSubscribers(env), allResendContacts(env)]);
 
+  const site = env.PUBLIC_SITE_URL || 'https://morphicsmusic.com';
   const emails = new Set<string>([...kv.keys(), ...resend.keys()]);
-  const rows = [...emails].sort().map(email => {
+  const rows = await Promise.all([...emails].sort().map(async email => {
     const k = kv.get(email);
     const r = resend.get(email);
     return {
       email,
       source: k?.source || (r ? 'resend' : null),
       first_seen_at: k?.first_seen_at ?? null,
-      // Resend's own flag wins when present: it is the state the unsubscribe
-      // link actually writes, and our KV tombstone is only set when the opt-out
-      // came through our endpoint rather than through a broadcast footer.
-      unsubscribed: r ? !!r.unsubscribed : !!k?.unsubscribed_at,
+      // EITHER store saying "unsubscribed" is enough. Not "whichever is more
+      // authoritative" — there is no safe way to be wrong here. Emailing
+      // someone who opted out is the failure that costs a domain its
+      // reputation, while skipping someone who is actually still subscribed
+      // costs one newsletter. So the two are ORed, and the fail-safe
+      // direction is the one that sends less.
+      unsubscribed: (r ? !!r.unsubscribed : false) || !!k?.unsubscribed_at,
       unsubscribed_at: k?.unsubscribed_at ?? null,
+      // Minted here so AUTH_SECRET never has to exist on the sending machine.
+      // The local sender needs a working per-recipient unsubscribe link in
+      // every email it puts out; handing it the signing key instead would
+      // spread the secret that also signs session cookies onto a laptop.
+      unsubscribe_url: `${site}/api/unsubscribe?e=${encodeURIComponent(email)}&t=${await signUnsubscribe(env.AUTH_SECRET, email)}`,
       in_kv: !!k,
       in_resend: !!r,
     };
-  });
+  }));
 
   return new Response(JSON.stringify({
     generated_at: Math.floor(Date.now() / 1000),
