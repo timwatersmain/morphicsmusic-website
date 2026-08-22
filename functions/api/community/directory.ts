@@ -6,7 +6,7 @@
 import { corsHandler, preflight } from '../../_lib/cors';
 import { rateLimit, rateLimitedJson, clientIp } from '../../_lib/ratelimit';
 import { requireFan, unauthorized, type CommunityEnv } from '../../_lib/community/session';
-import { getDirectory, getCatalogue, toPublicProfile } from '../../_lib/community/repo';
+import { countDirectory, getDirectory, getCatalogue, toPublicProfile } from '../../_lib/community/repo';
 
 export const onRequestOptions: PagesFunction<CommunityEnv> = async ({ request }) => preflight(request);
 
@@ -35,7 +35,10 @@ export const onRequestGet: PagesFunction<CommunityEnv> = corsHandler<CommunityEn
     );
     const offset = Math.max(parseInt(url.searchParams.get('offset') || '0', 10) || 0, 0);
 
-    const rows = await getDirectory(env.GATES, { limit, offset });
+    const [rows, total] = await Promise.all([
+      getDirectory(env.GATES, { limit, offset }),
+      countDirectory(env.GATES),
+    ]);
     const catalogue = await getCatalogue(env.GATES);
     const byId = new Map(catalogue.map(a => [a.id, a]));
 
@@ -44,7 +47,13 @@ export const onRequestGet: PagesFunction<CommunityEnv> = corsHandler<CommunityEn
       return { ...toPublicProfile(r, avatar), position: offset + i + 1 };
     });
 
-    return new Response(JSON.stringify({ fans, limit, offset, has_more: rows.length === limit }), {
+    // has_more is derived from the total now, not from "did this page come
+    // back full". The old test was wrong on the exact boundary: a final page
+    // that happens to hold exactly `limit` rows reported another page after
+    // it, which paginated UI renders as a real, empty page.
+    return new Response(JSON.stringify({
+      fans, limit, offset, total, has_more: offset + rows.length < total,
+    }), {
       headers: { 'Content-Type': 'application/json' },
     });
   },

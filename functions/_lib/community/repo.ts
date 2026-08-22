@@ -282,10 +282,31 @@ export async function getDirectory(
        LEFT JOIN fan_avatar_unlocks u ON u.fan_id = fp.id
        WHERE fp.hidden_from_wall = 0 AND fp.deleted_at IS NULL
        GROUP BY fp.id
-       ORDER BY unlock_count DESC, fp.fan_since ASC
+       -- Most recently active first. It was unlock_count DESC, which ranked
+       -- the wall by collection size and left it looking frozen: the same
+       -- people at the top for months, and a fan who signed in today buried
+       -- behind whoever happened to own the most avatars. NULLs last so a
+       -- profile that predates last_seen_at tracking does not sort above
+       -- everyone (NULL is lower than any integer in SQLite's ordering).
+       ORDER BY (fp.last_seen_at IS NULL), fp.last_seen_at DESC, fp.fan_since ASC
        LIMIT ? OFFSET ?`,
   ).bind(limit, offset).all<FanProfileRow>();
   return results || [];
+}
+
+/**
+ * How many profiles the directory would page through. Its WHERE clause has to
+ * stay identical to getDirectory's or the page count is a lie — a member
+ * hidden from the wall must not be counted into a page that will never show
+ * them.
+ */
+export async function countDirectory(db: D1Database): Promise<number> {
+  const row = await db.prepare(
+    `SELECT COUNT(*) AS n
+       FROM fan_profiles fp
+       WHERE fp.hidden_from_wall = 0 AND fp.deleted_at IS NULL`,
+  ).first<{ n: number }>();
+  return row?.n ?? 0;
 }
 
 function buildProfileSets(

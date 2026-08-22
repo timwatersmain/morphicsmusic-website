@@ -19,6 +19,9 @@
            (community/me) instead — /social already links out to Discord from
            the platform grid at the foot, so a second invite in the middle of
            the directory was the same door offered twice on one page. -->
+      <!-- Filled once the first page lands; the element is present from the
+           start so the header does not jump when the number arrives. -->
+      <div id="dir-total" class="font-mono text-[11px] text-secondary uppercase tracking-widest"></div>
       <div class="flex flex-wrap items-center gap-3">
         <a href="/community/me" class="font-mono text-[10px] text-white/40 hover:text-secondary uppercase tracking-widest border border-white/10 hover:border-secondary/30 px-4 py-2 rounded-full">
           Your profile
@@ -54,11 +57,11 @@
 
     <div id="dir-content" class="hidden">
       <ul id="dir-list" class="divide-y divide-white/5 border-y border-white/5"></ul>
-      <div class="mt-8 text-center">
-        <button id="dir-more" class="hidden font-mono text-[10px] text-white/40 hover:text-secondary uppercase tracking-widest border border-white/10 hover:border-secondary/30 px-6 py-3 rounded-full">
-          Load more
-        </button>
-      </div>
+      <!-- Pages, not an ever-growing list. With the wall ordered by who was
+           here most recently, "load more" would keep appending to a list whose
+           top half has already gone stale — a page you can leave and come back
+           to is the honest shape for that. -->
+      <nav id="dir-pager" class="hidden mt-8 flex flex-wrap items-center justify-center gap-2" aria-label="Community pages"></nav>
     </div>
   </div>
 
@@ -78,7 +81,8 @@
     const errorMsg = document.getElementById('dir-error-msg')!;
     const content = document.getElementById('dir-content')!;
     const list = document.getElementById('dir-list')!;
-    const moreBtn = document.getElementById('dir-more') as HTMLButtonElement;
+    const pager = document.getElementById('dir-pager')!;
+    const totalEl = document.getElementById('dir-total')!;
 
     const esc = (s: any) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
 
@@ -95,8 +99,11 @@
       return new Date(unix * 1000).toLocaleDateString(undefined, { year: 'numeric', month: 'long' });
     }
 
-    let offset = 0;
-    const limit = 48;
+    let page = 0;
+    let total = 0;
+    // 15 a page. The endpoint still caps at 40, so this is comfortably inside
+    // it and stays one request per page.
+    const limit = 15;
 
     // 40px — the compact, many-rows size for the fan wall list; see
     // avatar.js's tier 4 outline note for why 40px is the size that has to
@@ -122,8 +129,49 @@
       initCreatureCanvases(list);
     }
 
-    function load(append = false) {
-      fetch(`/api/community/directory?limit=${limit}&offset=${offset}`, { credentials: 'include' })
+    function renderPager() {
+      const pages = Math.max(1, Math.ceil(total / limit));
+      if (pages <= 1) { pager.classList.add('hidden'); return; }
+      pager.classList.remove('hidden');
+
+      // A window around the current page rather than every page number: at 50
+      // members that is 4 buttons, at 5,000 it would be 334 and would wrap
+      // into a wall of its own.
+      const span = 2;
+      const nums: (number | '…')[] = [];
+      for (let i = 0; i < pages; i++) {
+        if (i === 0 || i === pages - 1 || Math.abs(i - page) <= span) nums.push(i);
+        else if (nums[nums.length - 1] !== '…') nums.push('…');
+      }
+
+      const btn = (label: string, target: number | null, current = false) => {
+        if (target === null) return `<span class="px-2 font-mono text-[10px] text-white/20">${label}</span>`;
+        const base = 'font-mono text-[10px] uppercase tracking-widest px-3 py-2 rounded-full border transition-colors';
+        return current
+          ? `<span aria-current="page" class="${base} border-primary bg-primary/10 text-primary">${label}</span>`
+          : `<button type="button" data-page="${target}" class="${base} border-white/10 text-white/40 hover:text-secondary hover:border-secondary/30">${label}</button>`;
+      };
+
+      pager.innerHTML = [
+        btn('Prev', page > 0 ? page - 1 : null),
+        ...nums.map(n => (n === '…' ? btn('…', null) : btn(String(n + 1), n, n === page))),
+        btn('Next', page < pages - 1 ? page + 1 : null),
+      ].join('');
+
+      pager.querySelectorAll<HTMLButtonElement>('button[data-page]').forEach(b => {
+        b.addEventListener('click', () => {
+          page = Number(b.dataset.page);
+          load();
+          // Back to the top of the list, not the top of the document — a page
+          // change that leaves you looking at the pager you just clicked
+          // reads as nothing having happened.
+          list.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+      });
+    }
+
+    function load() {
+      fetch(`/api/community/directory?limit=${limit}&offset=${page * limit}`, { credentials: 'include' })
         .then(async r => {
           if (r.status === 401) {
             loading.classList.add('hidden');
@@ -137,15 +185,19 @@
           if (!data) return;
           loading.classList.add('hidden');
 
-          if (!append && (!data.fans || !data.fans.length)) {
+          total = typeof data.total === 'number' ? data.total : (data.fans || []).length;
+          totalEl.textContent = total ? `${total} member${total === 1 ? '' : 's'}` : '';
+
+          if (!data.fans || !data.fans.length) {
+            content.classList.add('hidden');
             empty.classList.remove('hidden');
             return;
           }
 
+          empty.classList.add('hidden');
           content.classList.remove('hidden');
-          renderFans(data.fans, append);
-          offset = data.offset + data.fans.length;
-          moreBtn.classList.toggle('hidden', !data.has_more);
+          renderFans(data.fans, false);
+          renderPager();
         })
         .catch(e => {
           loading.classList.add('hidden');
@@ -154,7 +206,6 @@
         });
     }
 
-    moreBtn.addEventListener('click', () => load(true));
-    load(false);
+    load();
     }); // end astro:page-load
   </script>

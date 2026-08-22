@@ -227,29 +227,59 @@ describe('getDirectory ordering', () => {
               '{"type":"own_release","slug":"second"}','Own SECOND',1)`);
   });
 
-  it('ranks a fan with more unlocks above an older fan with fewer, even though they joined later', async () => {
-    // Older fan, zero unlocks.
-    const veteran = await ensureProfile(db, { email: 'veteran@b.com', fanSince: 5, displayName: 'Veteran' });
-    // Much younger fan, but holds two avatars — under the old
-    // rank_points/tenure ordering this fan would rank LAST, not first.
-    const collector = await ensureProfile(db, { email: 'collector@b.com', fanSince: 5000, displayName: 'Collector' });
+  it('puts the most recently seen fan first, regardless of collection size', async () => {
+    // The wall used to order by unlock_count DESC, which ranked it by
+    // collection size and left it looking frozen — the same people on top for
+    // months while someone who signed in today sat below them. Ordering by
+    // last activity is what makes the page worth reloading.
+    const collector = await ensureProfile(db, { email: 'collector@b.com', fanSince: 5, displayName: 'Collector' });
     await grantUnlocks(db, collector.id, [
       { avatarId: 'release:perception', source: 'own_release', sourceRef: 'perception' },
       { avatarId: 'release:second', source: 'own_release', sourceRef: 'second' },
     ]);
+    const lurker = await ensureProfile(db, { email: 'lurker@b.com', fanSince: 5000, displayName: 'Lurker' });
 
-    const rows = await getDirectory(db, { limit: 10, offset: 0 });
-    const handles = rows.map(r => r.handle);
-    expect(handles.indexOf('collector')).toBeLessThan(handles.indexOf('veteran'));
+    raw.exec(`UPDATE fan_profiles SET last_seen_at = 100 WHERE handle = '${collector.handle}'`);
+    raw.exec(`UPDATE fan_profiles SET last_seen_at = 900 WHERE handle = '${lurker.handle}'`);
+
+    const handles = (await getDirectory(db, { limit: 10, offset: 0 })).map(r => r.handle);
+    expect(handles.indexOf(lurker.handle)).toBeLessThan(handles.indexOf(collector.handle));
   });
 
-  it('falls back to tenure (ascending) when unlock counts tie', async () => {
+  it('sorts a profile with NO last_seen_at LAST, not first', async () => {
+    // SQLite orders NULL below every integer, so a plain `last_seen_at DESC`
+    // would float every profile that predates activity tracking to the top of
+    // the wall — the exact opposite of "most recently active".
+    const active = await ensureProfile(db, { email: 'active@b.com', fanSince: 10, displayName: 'Active' });
+    const never = await ensureProfile(db, { email: 'never@b.com', fanSince: 20, displayName: 'Never' });
+    raw.exec(`UPDATE fan_profiles SET last_seen_at = 50 WHERE handle = '${active.handle}'`);
+    raw.exec(`UPDATE fan_profiles SET last_seen_at = NULL WHERE handle = '${never.handle}'`);
+
+    const handles = (await getDirectory(db, { limit: 10, offset: 0 })).map(r => r.handle);
+    expect(handles.indexOf(active.handle)).toBeLessThan(handles.indexOf(never.handle));
+  });
+
+  it('falls back to tenure (ascending) when last_seen_at ties', async () => {
     const older = await ensureProfile(db, { email: 'older@b.com', fanSince: 10, displayName: 'Older' });
     const younger = await ensureProfile(db, { email: 'younger@b.com', fanSince: 999, displayName: 'Younger' });
+    raw.exec(`UPDATE fan_profiles SET last_seen_at = 500`);
 
-    const rows = await getDirectory(db, { limit: 10, offset: 0 });
-    const handles = rows.map(r => r.handle);
+    const handles = (await getDirectory(db, { limit: 10, offset: 0 })).map(r => r.handle);
     expect(handles.indexOf(older.handle)).toBeLessThan(handles.indexOf(younger.handle));
+  });
+});
+
+describe('countDirectory', () => {
+  it('counts exactly what the directory pages through, so the page count cannot lie', async () => {
+    const { countDirectory } = await import('../../functions/_lib/community/repo.ts');
+    const a = await ensureProfile(db, { email: 'a@b.com', fanSince: 1, displayName: 'A' });
+    await ensureProfile(db, { email: 'b@b.com', fanSince: 2, displayName: 'B' });
+    expect(await countDirectory(db)).toBe(2);
+
+    // Both exclusions the directory query applies must apply here too, or a
+    // hidden or deleting member is counted into a page that never shows them.
+    raw.exec(`UPDATE fan_profiles SET hidden_from_wall = 1 WHERE handle = '${a.handle}'`);
+    expect(await countDirectory(db)).toBe(1);
   });
 });
 

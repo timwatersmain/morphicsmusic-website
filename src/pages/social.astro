@@ -72,8 +72,24 @@ import { INVITE_URL } from '../components/DiscordInvite.astro';
     <SubscribeForm source="social" />
   </section>
 
-  <!-- Feed: 3-column by media type -->
-  <div class="signal-feed">
+  <!-- COMMUNITY — merged in from /community on 2026-08-21 to take an item out
+       of the top nav. The directory itself lives in CommunityDirectory.astro
+       rather than being pasted here: /community/me and /community/u/<handle>
+       still exist and still link back, and one copy of the markup + script is
+       the only way those stay consistent with this. -->
+  <section class="mt-16">
+    <div class="signal-column-header mb-8">
+      <span class="material-symbols-outlined text-sm text-secondary">group</span>
+      <span class="font-mono text-[10px] text-secondary uppercase tracking-widest">Community</span>
+    </div>
+    <CommunityDirectory />
+  </section>
+
+
+  <!-- Feed: 3-column by media type. Sits between the community and the
+       platform grid — recent posts are a reason to follow, so they read
+       better next to the follow links than ahead of the page's own content. -->
+  <div class="signal-feed mt-20">
     <!-- Video Posts -->
     <div class="signal-column">
       <div class="signal-column-header">
@@ -218,20 +234,6 @@ import { INVITE_URL } from '../components/DiscordInvite.astro';
     </div>
   </div>
 
-  <!-- COMMUNITY — merged in from /community on 2026-08-21 to take an item out
-       of the top nav. The directory itself lives in CommunityDirectory.astro
-       rather than being pasted here: /community/me and /community/u/<handle>
-       still exist and still link back, and one copy of the markup + script is
-       the only way those stay consistent with this. -->
-  <section class="mt-16">
-    <div class="signal-column-header mb-8">
-      <span class="material-symbols-outlined text-sm text-secondary">group</span>
-      <span class="font-mono text-[10px] text-secondary uppercase tracking-widest">Community</span>
-    </div>
-    <CommunityDirectory />
-  </section>
-
-
   <!-- Moved to the foot of the page: these are outbound links, so they belong
        where someone has finished reading, not in front of the content. -->
   <div class="brand-divider brand-divider--wide mt-16 mb-8">
@@ -344,8 +346,11 @@ import { INVITE_URL } from '../components/DiscordInvite.astro';
        SAME aspect now — the video card was aspect-video and the photo card
        aspect-square, which alone made two of the three columns different
        heights before any caption was measured. */
-    --signal-media-h: min(22rem, 26vw);
-    --signal-card-h: calc(var(--signal-media-h) + 7.5rem);
+    /* Shorter. 26vw put a 370px media box on a 1440 screen and the three
+       cards then owned most of a viewport on their own — too much height for
+       what is now a footer-adjacent strip rather than the page's main event. */
+    --signal-media-h: min(15rem, 18vw);
+    --signal-card-h: calc(var(--signal-media-h) + 6.5rem);
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 1.5rem;
