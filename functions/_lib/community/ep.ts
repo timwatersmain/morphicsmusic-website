@@ -66,18 +66,26 @@ export function rankLabelFor(stage: CreatureStage, handle?: string | null): stri
   return STAGE_LABELS[stage] || STAGE_LABELS.egg;
 }
 
-// Owner decision, 18 Aug 2026: TICKET SALES are the behaviour XP should push
-// hardest on — specifically tickets bought through morphicsmusic.com. That is
-// why PER_TICKET below is the largest single award in the system by a wide
-// margin, and why it is verified-only: it can be granted solely by a payment
-// webhook writing an xp_events row, never by anything a fan can self-report.
+// Owner decision, 18 Aug 2026, revised 22 Aug 2026: TICKET SALES are the
+// behaviour XP should push hardest on — specifically tickets bought through
+// morphicsmusic.com. PER_TICKET is therefore still the largest single award
+// in the system, and still verified-only: it can be granted solely by a
+// payment webhook writing an xp_events row, never by anything a fan can
+// self-report.
 //
-// NOTE: nothing emits PER_TICKET yet. The site has no ticket-selling path at
-// all — the weight and the ledger are in place so that wiring one up is the
-// only remaining work, rather than a redesign.
+// Lowered 400 -> 200 on 22 Aug 2026. At 400 a single ticket was worth nearly
+// nine releases, which made every other way of supporting the artist look
+// like rounding error next to it. At 200 a ticket is still worth more than
+// four releases — comfortably the top award — without flattening the rest of
+// the ladder into irrelevance.
+//
+// NOTE: nothing emits PER_TICKET yet, by design rather than oversight. It is
+// waiting on shows being posted to the site with tickets sold through it; the
+// weight and the xp_events ledger are already in place so that wiring the
+// payment path up is the only remaining work, not a redesign.
 export const EP_WEIGHTS = {
-  // The headline award. One ticket is worth more than eight releases.
-  PER_TICKET: 400,
+  // The headline award. One ticket is worth more than four releases.
+  PER_TICKET: 200,
   // Purchases are the strongest signal a fan is real and invested.
   PER_PURCHASE: 45,
   // Tenure cannot be rushed or bought — a slow, steady trickle instead.

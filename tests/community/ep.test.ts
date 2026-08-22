@@ -185,7 +185,16 @@ describe('computeEp — the ledger half of the hybrid', () => {
     expect(computeEp({ ...base, purchaseCount: 1, ledgerXp: -9999 })).toBe(0);
   });
 
-  it('one ticket outweighs eight releases — the owner\'s stated priority, encoded', () => {
-    expect(EP_WEIGHTS.PER_TICKET).toBeGreaterThan(EP_WEIGHTS.PER_PURCHASE * 8);
+  it('a ticket is still the top award, and still outweighs four releases', () => {
+    // Lowered 400 -> 200 on 22 Aug 2026. The RATIO is what this pins, not the
+    // number: tickets must stay the behaviour XP pushes hardest on, without
+    // being so far ahead that every other way of supporting the artist reads
+    // as rounding error beside it.
+    expect(EP_WEIGHTS.PER_TICKET).toBeGreaterThan(EP_WEIGHTS.PER_PURCHASE * 4);
+    for (const [name, weight] of Object.entries(EP_WEIGHTS)) {
+      if (name === 'PER_TICKET') continue;
+      expect(EP_WEIGHTS.PER_TICKET, `${name} must not out-earn a ticket`)
+        .toBeGreaterThan(weight as number);
+    }
   });
 });
