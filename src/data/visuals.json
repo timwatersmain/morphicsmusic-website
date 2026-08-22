@@ -1,5 +1,14 @@
 [
   {
+    "id": "dscf4638",
+    "title": "DSCF4638",
+    "image": "/images/visuals/dscf4638.jpg",
+    "tags": ["morphics", "album-art"],
+    "size": "wide",
+    "date": "2026-08-22",
+    "featured": false
+  },
+  {
     "id": "perforated",
     "title": "PERFORATED",
     "image": "/images/visuals/perforated.jpg",
