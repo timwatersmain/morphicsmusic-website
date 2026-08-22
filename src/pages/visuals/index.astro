@@ -25,7 +25,10 @@ const recentItems = [
 ]
   .filter(v => v.date)
   .sort((a, b) => String(b.date).localeCompare(String(a.date)))
-  .slice(0, 6);
+  // 12, not 6. Publishing from PHORM happens in sessions, not one file at a
+  // time — eight photos went up in ninety seconds on 2026-08-22 and a six-slot
+  // strip silently dropped two of them, which reads as a failed publish.
+  .slice(0, 12);
 ---
 
 <BaseLayout title="VISUAL" currentPage="/visuals">
