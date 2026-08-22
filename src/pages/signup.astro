@@ -79,6 +79,23 @@ const TURNSTILE_SITE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || '';
         >
       </div>
 
+      <!-- UNCHECKED by default, and it stays that way. A pre-ticked marketing
+           box is not consent — it is prohibited outright under GDPR and it
+           poisons a list either way, because people who never chose to be on
+           it are the ones who report mail as spam. The whole value of this
+           list is that everyone on it asked. -->
+      <label for="su-newsletter" class="flex items-start gap-3 cursor-pointer select-none pt-2">
+        <input
+          id="su-newsletter"
+          type="checkbox"
+          name="newsletter"
+          class="mt-[2px] w-4 h-4 shrink-0 accent-[var(--color-secondary)] cursor-pointer"
+        >
+        <span class="font-mono text-[10px] text-white/40 leading-relaxed">
+          Email me the monthly dispatch — new releases, what I'm building, and where I'm playing. One email a month, unsubscribe any time.
+        </span>
+      </label>
+
       {TURNSTILE_SITE_KEY && (
         <div
           class="cf-turnstile flex justify-center"
@@ -159,6 +176,7 @@ const TURNSTILE_SITE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || '';
       const fd = new FormData(form);
       const username = String(fd.get('username') || '').trim().toLowerCase();
       const email = String(fd.get('email') || '').trim();
+      const newsletter = fd.get('newsletter') === 'on';
       const password = String(fd.get('password') || '');
       const confirm = String(fd.get('confirm') || '');
       // Turnstile drops a hidden cf-turnstile-response input into the form
@@ -179,7 +197,7 @@ const TURNSTILE_SITE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || '';
         const r = await fetch('/api/auth/signup', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, email, password, confirm, turnstile: turnstileToken }),
+          body: JSON.stringify({ username, email, password, confirm, newsletter, turnstile: turnstileToken }),
         });
         if (!r.ok) {
           const data = await r.json().catch(() => ({}));

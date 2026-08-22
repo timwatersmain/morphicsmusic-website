@@ -1,6 +1,7 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import DiscordInvite from '../../components/DiscordInvite.astro';
+import SubscribeForm from '../../components/SubscribeForm.astro';
 ---
 
 <BaseLayout title="MY COMMUNITY" currentPage="/community">
@@ -386,6 +387,19 @@ import DiscordInvite from '../../components/DiscordInvite.astro';
     </div>
   </div>
 
+  <!-- The mailing list, for anyone who made an account without ticking the box
+       on the way in. The endpoint is idempotent, so someone already subscribed
+       who submits again simply re-affirms it — no duplicate, no second welcome
+       mail. The field is prefilled with their own address by the script below,
+       which turns this into one click. -->
+  <section class="mt-16 pt-10 border-t border-white/10 max-w-[32rem]">
+    <SubscribeForm
+      source="profile"
+      heading="MONTHLY DISPATCH"
+      blurb="New releases, what I'm building, and where I'm playing. One email a month."
+    />
+  </section>
+
   <!-- One-time-choice confirm dialog for the free-song token. A native
        <dialog> keeps this out of the DOM's tab order until opened and needs
        no extra dependency. -->
@@ -421,6 +435,23 @@ import DiscordInvite from '../../components/DiscordInvite.astro';
     const errorBox = document.getElementById('me-error')!;
     const errorMsg = document.getElementById('me-error-msg')!;
     const content = document.getElementById('me-content')!;
+    // Prefill the mailing-list field with the signed-in address, so subscribing
+    // from here is one click rather than typing an address the page already
+    // knows. No extra request: TopNav broadcasts morphics:auth-state on every
+    // page and caches the last known state, so this reads what is already
+    // there and listens in case the network answer lands later.
+    const subEmail = document.querySelector<HTMLInputElement>('.subscribe-form input[name="email"]');
+    const prefill = (email: string | null) => {
+      if (subEmail && email && !subEmail.value) subEmail.value = email;
+    };
+    try {
+      const cached = JSON.parse(localStorage.getItem('morphics_auth_cache_v1') || 'null');
+      if (cached?.state === 'signed-in') prefill(cached.email ?? null);
+    } catch { /* private mode: they can type it */ }
+    document.addEventListener('morphics:auth-state', (e: any) => {
+      if (e.detail?.state === 'signed-in') prefill(e.detail.email ?? null);
+    });
+
     const handleEl = document.getElementById('me-handle')!;
     const creatureEl = document.getElementById('me-creature')!;
     const colourwaysEl = document.getElementById('me-colourways')!;

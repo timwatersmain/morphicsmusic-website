@@ -28,6 +28,7 @@ import {
   saveUsernameIndex,
   CustomerRecord,
 } from '../../_lib/customer';
+import { subscribeToNewsletter } from '../../_lib/newsletter';
 
 interface Env {
   DOWNLOADS: KVNamespace;
@@ -200,6 +201,16 @@ export const onRequestPost: PagesFunction<Env> = corsHandler<Env>(async ({ reque
   // fact about the address, it doesn't gate this signup in any way.
   const origin = env.PUBLIC_SITE_URL || new URL(request.url).origin;
   waitUntil(sendVerificationEmail(env, origin, email));
+
+  // Opt-in only, and never inferred: the flag has to arrive true. Creating an
+  // account is not asking for marketing, so an absent field means no.
+  //
+  // Deliberately NOT awaited and deliberately not able to fail the signup —
+  // the account is already written by this point, and a Resend outage must not
+  // turn "you now have an account" into an error page.
+  if (body.newsletter === true) {
+    waitUntil(subscribeToNewsletter(env, email, 'signup'));
+  }
 
   return genericOk();
 });

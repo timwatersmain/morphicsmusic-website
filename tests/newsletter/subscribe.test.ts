@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { normaliseEmail, subscriberKey } from '../../functions/api/subscribe';
+import { readFileSync } from 'node:fs';
+// Moved to _lib/newsletter when the opt-in checkbox on signup started
+// sharing this path — one implementation, two doors.
+import { normaliseEmail, subscriberKey } from '../../functions/_lib/newsletter';
 import { signUnsubscribe, verifyUnsubscribe } from '../../functions/_lib/auth';
 
 describe('normaliseEmail', () => {
@@ -67,5 +70,37 @@ describe('unsubscribe tokens', () => {
   it('a different secret does not validate', async () => {
     const t = await signUnsubscribe(SECRET, 'tim@example.com');
     expect(await verifyUnsubscribe('other-secret', 'tim@example.com', t)).toBe(false);
+  });
+});
+
+describe('the signup opt-in', () => {
+  const src = readFileSync(
+    new URL('../../functions/api/auth/signup.ts', import.meta.url), 'utf8');
+  const page = readFileSync(
+    new URL('../../src/pages/signup.astro', import.meta.url), 'utf8');
+
+  it('subscribes ONLY on an explicit true, never on a missing or truthy-ish field', () => {
+    // `if (body.newsletter)` would opt in on the string "false", on "0", on
+    // any stray value a client sent. Creating an account is not asking for
+    // marketing, so the flag has to arrive as the boolean true.
+    expect(src).toMatch(/body\.newsletter === true/);
+  });
+
+  it('cannot fail the signup — the account is already written by then', () => {
+    const call = src.slice(src.indexOf('body.newsletter === true'));
+    expect(call.slice(0, 200)).toMatch(/waitUntil\(\s*subscribeToNewsletter/);
+  });
+
+  it('ships the checkbox UNCHECKED', () => {
+    // A pre-ticked marketing box is not consent — prohibited outright under
+    // GDPR, and it poisons the list either way, because people who never chose
+    // to be on it are the ones who report mail as spam.
+    const box = page.slice(page.indexOf('name="newsletter"') - 400, page.indexOf('name="newsletter"') + 200);
+    expect(box).not.toMatch(/\bchecked\b/);
+  });
+
+  it('sends the flag to the endpoint', () => {
+    expect(page).toMatch(/newsletter,/);
+    expect(page).toMatch(/fd\.get\('newsletter'\) === 'on'/);
   });
 });
