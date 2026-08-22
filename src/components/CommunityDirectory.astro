@@ -14,7 +14,7 @@
 ---
 
   <div class="max-w-4xl">
-    <header class="mb-12 flex flex-wrap items-end justify-between gap-4">
+    <header class="mb-6 flex flex-wrap items-end justify-between gap-4">
       <!-- The Discord invite used to sit here too. It lives on the profile page
            (community/me) instead — /social already links out to Discord from
            the platform grid at the foot, so a second invite in the middle of
@@ -105,23 +105,27 @@
     // it and stays one request per page.
     const limit = 15;
 
-    // 40px — the compact, many-rows size for the fan wall list; see
-    // avatar.js's tier 4 outline note for why 40px is the size that has to
-    // hold up under scrutiny.
-    const WALL_SIZE = 40;
+    // 32px, down from 40. The sprite art is natively 32x32 and the renderer
+    // only ever draws at integer scale, so 40 was a 32px sprite centred in a
+    // 40px frame — the extra 8px was empty ring, not more creature. At 32 the
+    // art fills the frame exactly and every row loses 8px of height for free.
+    const WALL_SIZE = 32;
 
     function renderFans(fans: any[], append: boolean) {
       const html = fans.map(f => `
-        <li class="flex items-center gap-4 py-4">
-          <span class="font-mono text-[10px] text-white/30 w-8 text-right">${esc(f.position)}</span>
+        <li class="flex items-center gap-3 py-2">
+          <span class="font-mono text-[10px] text-white/30 w-6 text-right shrink-0">${esc(f.position)}</span>
           ${creatureAvatarHtml(f.creature, WALL_SIZE)}
-          <div class="flex-1 min-w-0">
-            <a href="/community/u/${encodeURIComponent(f.handle)}" class="font-headline text-lg text-primary uppercase tracking-tight hover:text-secondary transition-colors truncate block">
-              ${esc(f.display_name || f.handle)}
-            </a>
-            <span class="block truncate font-mono text-[10px] text-white/40 uppercase tracking-widest">Since ${esc(fmtDate(f.fan_since))}</span>
-          </div>
-          <span class="shrink-0 whitespace-nowrap font-mono text-[11px] text-secondary uppercase tracking-widest">${esc(stageLabel(f.creature && f.creature.stage, f.handle))}</span>
+          <a href="/community/u/${encodeURIComponent(f.handle)}" class="flex-1 min-w-0 truncate font-headline text-base text-primary uppercase tracking-tight hover:text-secondary transition-colors">
+            ${esc(f.display_name || f.handle)}
+          </a>
+          <!-- On ONE line with the name now, not stacked under it. The stacked
+               form spent a whole second line on a joined-date almost nobody
+               reads, which was most of the row's height. Dropped entirely
+               below sm, where there is no room for it and the name matters
+               more. -->
+          <span class="hidden sm:block shrink-0 whitespace-nowrap font-mono text-[10px] text-white/30 uppercase tracking-widest w-36 text-right">${esc(fmtDate(f.fan_since))}</span>
+          <span class="shrink-0 whitespace-nowrap font-mono text-[10px] text-secondary uppercase tracking-widest w-24 text-right">${esc(stageLabel(f.creature && f.creature.stage, f.handle))}</span>
         </li>
       `).join('');
       if (append) list.innerHTML += html;

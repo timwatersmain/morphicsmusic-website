@@ -234,12 +234,8 @@ import { INVITE_URL } from '../components/DiscordInvite.astro';
     </div>
   </div>
 
-  <!-- Moved to the foot of the page: these are outbound links, so they belong
+  <!-- The platform tiles sit at the foot of the page: outbound links belong
        where someone has finished reading, not in front of the content. -->
-  <div class="brand-divider brand-divider--wide mt-16 mb-8">
-    <img src="/images/brand/morph-line-n.png" alt="" loading="lazy" />
-  </div>
-
   <!-- Platform Nodes (Particle Array) -->
   <div class="mb-4 relative">
     <div class="platform-grid" style={`--cols:${Math.ceil(platforms.length / 2)}`}>
@@ -258,6 +254,12 @@ import { INVITE_URL } from '../components/DiscordInvite.astro';
         </a>
       ))}
     </div>
+  </div>
+
+  <!-- Closes the page under the icons rather than separating them from what is
+       above. Nothing follows it, so it reads as a bottom rule. -->
+  <div class="brand-divider brand-divider--wide mt-10">
+    <img src="/images/brand/morph-line-n.png" alt="" loading="lazy" />
   </div>
 
 </BaseLayout>
