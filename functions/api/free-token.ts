@@ -54,6 +54,63 @@ function resolveMasterKey(key: string): { slug: string } | null {
   return null;
 }
 
+// A file's display name. The masters are named inconsistently across the
+// catalogue — "Morphics - Eartoy.wav", "MorphicsThe6thSense.wav",
+// "Morphics - Blindly 6.wav" — so this tidies rather than parses. It is only
+// ever a LABEL: the value the client sends back is the key itself.
+function prettyName(filename: string): string {
+  return filename
+    .replace(/\.[a-z0-9]+$/i, '')
+    .replace(/^Morphics\s*[-–—]\s*/i, '')
+    .replace(/^Morphics(?=[A-Z0-9])/, '')
+    .replace(/\s*\(\d+\)$/, '')
+    .replace(/\s+\d+$/, '')
+    .trim() || filename;
+}
+
+// GET — "have I still got it?" Deliberately its own endpoint rather than
+// reusing /api/library, which reads the whole manifest and catalogue to build
+// a library view; this is two fields off one KV record and is cheap enough for
+// a store page to ask on every visit.
+export const onRequestGet: PagesFunction<Env> = corsHandler<Env>(async ({ request, env }) => {
+  const cookie =
+    readCookie(request, SESSION_COOKIE) ||
+    readCookie(request, LEGACY_SESSION_COOKIE) ||
+    '';
+  const email = await verifySession(env.AUTH_SECRET, cookie, env);
+  // 401 rather than a signed-out payload: the store surfaces hide entirely on
+  // this, and "no session" is not the same answer as "no token".
+  if (!email) return jsonRes({ error: 'unauthorized' }, 401);
+
+  const record = await getCustomerRecord(env, email);
+  const available = !!record?.free_token_granted_at && !record?.free_token_spent_key;
+
+  // With ?slug= it also returns that release's redeemable files. The client
+  // then posts back an exact KEY, so nothing has to map a track number onto a
+  // filename — the master filenames are not consistently numbered (some are
+  // "01 Title.wav", most are "Morphics - Title.wav", and at least one is spelt
+  // differently from its catalogue title), and any such mapping would
+  // eventually spend a fan's one free track on the wrong song, silently.
+  const url = new URL(request.url);
+  const slug = url.searchParams.get('slug');
+  let tracks: Array<{ key: string; label: string }> = [];
+  if (available && slug) {
+    const rel = (catalog as any).releases.find((r: any) => r.slug === slug);
+    if (rel && isReleased(rel.release_date)) {
+      tracks = (((manifest as any).releases?.[slug] || []) as any[])
+        .filter(e => e?.key && e?.filename)
+        .map(e => ({ key: e.key, label: prettyName(e.filename) }));
+    }
+  }
+
+  return jsonRes({
+    granted: !!record?.free_token_granted_at,
+    spent_key: record?.free_token_spent_key || null,
+    available,
+    tracks,
+  });
+});
+
 export const onRequestOptions: PagesFunction<Env> = async ({ request }) => preflight(request);
 
 export const onRequestPost: PagesFunction<Env> = corsHandler<Env>(async ({ request, env }) => {
@@ -71,6 +128,9 @@ export const onRequestPost: PagesFunction<Env> = corsHandler<Env>(async ({ reque
 
   let body: any;
   try { body = await request.json(); } catch { return jsonRes({ error: 'invalid body' }, 400); }
+  // Two ways in, one outcome. The profile picker names an exact key (it has
+  // them, from /api/library); a store page names a slug and a track number and
+  // this side does the lookup.
   const key = typeof body?.key === 'string' ? body.key : '';
   const resolved = resolveMasterKey(key);
   if (!resolved) return jsonRes({ error: 'invalid track' }, 400);

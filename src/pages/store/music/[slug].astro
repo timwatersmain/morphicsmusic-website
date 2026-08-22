@@ -125,6 +125,32 @@ function fmtDuration(seconds: number | null) {
           )}
         </form>
 
+        <!-- The free-song token, offered AT THE POINT OF PAYMENT. It is
+             granted on email verification and, until now, could only be spent
+             from a picker on the profile page — so a fan who had one met it
+             nowhere near the moment they would actually want it. Hidden by
+             default and revealed only when /api/free-token says there is an
+             unspent one, so a signed-out or already-spent visitor sees nothing
+             and the panel never flashes in and out. -->
+        <div id="free-token-panel" class="hidden mt-4 p-4 border border-secondary/25 bg-secondary/[0.06] rounded-[var(--radius-lg)]">
+          <div class="font-mono text-[10px] text-secondary uppercase tracking-widest mb-2">You have a free track</div>
+          <p class="font-mono text-[10px] text-white/40 leading-relaxed mb-3">
+            One track, once, yours to keep. Pick one from this release instead of paying — or save it for another.
+          </p>
+          <label class="sr-only" for="free-token-track">Track</label>
+          <div class="flex flex-wrap gap-2">
+            <!-- Populated from /api/free-token?slug=, which returns the real
+                 master keys. The catalogue's track list is NOT used here: the
+                 master filenames do not map onto track numbers, so the value
+                 posted back has to be the key itself. -->
+            <select id="free-token-track" class="flex-1 min-w-[12rem] px-3 py-2 bg-surface-container-low border border-white/10 focus:border-secondary outline-none font-mono text-[11px] text-primary rounded-[var(--radius)]"></select>
+            <button type="button" id="free-token-redeem" class="px-4 py-2 border border-secondary/40 bg-secondary/10 hover:bg-secondary hover:text-on-secondary text-secondary font-mono text-[10px] tracking-widest uppercase rounded-full transition-colors">
+              Get it free
+            </button>
+          </div>
+          <p id="free-token-msg" class="font-mono text-[10px] text-white/40 mt-3 min-h-[1rem]" role="status" aria-live="polite"></p>
+        </div>
+
         {release.bandcamp_url && (
           <a href={release.bandcamp_url} target="_blank" rel="noopener" class="block mt-4 text-center py-3 border border-white/10 hover:border-secondary/40 font-mono text-[10px] text-white/60 hover:text-secondary uppercase tracking-widest transition-colors rounded-full">
             Or get on Bandcamp →
@@ -289,6 +315,85 @@ function fmtDuration(seconds: number | null) {
           submitBtn.classList.remove('bg-secondary', 'text-on-secondary');
         }, 2000);
       });
+
+    // ── free-song token ────────────────────────────────────────────────
+    // Offered AT THE POINT OF PAYMENT. The token is granted on email
+    // verification and could previously only be spent from a picker on the
+    // profile page, so a fan who had one met it nowhere near the moment they
+    // would want it.
+    //
+    // Revealed only on a definite yes. A 401 (signed out), a spent token, and
+    // a release with no masters all leave it hidden — "signed in" is not the
+    // same as "still holds an unspent token", which is why this asks the
+    // server rather than reading a cached auth state.
+    const ftPanel = document.getElementById('free-token-panel');
+    if (ftPanel) {
+      const ftSelect = document.getElementById('free-token-track') as HTMLSelectElement;
+      const ftBtn = document.getElementById('free-token-redeem') as HTMLButtonElement;
+      const ftMsg = document.getElementById('free-token-msg')!;
+
+      fetch(`/api/free-token?slug=${encodeURIComponent(release.slug)}`, { credentials: 'include' })
+        .then(r => (r.ok ? r.json() : null))
+        .then(d => {
+          if (!d?.available || !d.tracks?.length) return;
+          // Options carry the KEY as their value. The master filenames do not
+          // map onto catalogue track numbers — most are named by title, some
+          // inconsistently — so anything that resolved a number to a file
+          // would eventually spend the one free track on the wrong song.
+          ftSelect.innerHTML = d.tracks
+            .map((t: any) => `<option value="${String(t.key).replace(/"/g, '&quot;')}">${String(t.label).replace(/</g, '&lt;')}</option>`)
+            .join('');
+          ftPanel.classList.remove('hidden');
+        })
+        .catch(() => {});
+
+      let armed = false;
+      ftBtn?.addEventListener('click', async () => {
+        // Two-step, deliberately. This is one track EVER, and an irreversible
+        // choice behind a single click is how someone spends it by accident on
+        // whatever release they happened to be looking at.
+        if (!armed) {
+          armed = true;
+          ftBtn.textContent = 'Tap again to confirm';
+          ftMsg.textContent = 'This uses your one free track, permanently.';
+          setTimeout(() => {
+            if (!armed) return;
+            armed = false;
+            ftBtn.textContent = 'Get it free';
+            ftMsg.textContent = '';
+          }, 6000);
+          return;
+        }
+        armed = false;
+        ftBtn.disabled = true;
+        ftBtn.textContent = 'Claiming…';
+        try {
+          const res = await fetch('/api/free-token', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ key: ftSelect.value }),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            ftBtn.disabled = false;
+            ftBtn.textContent = 'Get it free';
+            ftMsg.textContent = data?.error === 'already spent'
+              ? 'You have already used your free track.'
+              : data?.error === 'no token'
+                ? 'Verify your email first — the free track arrives with it.'
+                : 'Could not claim that one. Try again.';
+            return;
+          }
+          ftBtn.textContent = '✓ Yours';
+          ftMsg.innerHTML = 'Saved to <a href="/library" class="text-secondary underline">your library</a>, permanently.';
+        } catch {
+          ftBtn.disabled = false;
+          ftBtn.textContent = 'Get it free';
+          ftMsg.textContent = 'Network error — try again.';
+        }
+      });
+    }
     });
 
     // Stop the countdown tick before this page's markup is swapped away.
