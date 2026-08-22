@@ -110,7 +110,26 @@ const {
     justify-content: space-between;
     gap: 1.5rem;
   }
-  .subscribe-wrap--panel .subscribe-copy { margin-bottom: 0; flex: 1 1 20rem; }
+  .subscribe-wrap--panel .subscribe-copy { margin-bottom: 0; flex: 1 1 18rem; }
+  /* The row wraps at 14rem, so without a floor the field and button stack the
+     moment the copy column takes its share. 22rem keeps them on one line and
+     still collapses under the copy on a phone. */
+  /* min-width belongs with the nowrap below, not here: 20rem is wider than
+     the panel's whole inner width at 390px, so on its own it pushed the form
+     out through the right edge. */
+  .subscribe-wrap--panel .subscribe-form { flex: 0 1 26rem; min-width: 0; }
+  /* The field must be allowed to SHRINK rather than push the button onto its
+     own line. 14rem is the right basis when the row owns the page width and
+     the wrong one inside a two-column panel. */
+  .subscribe-wrap--panel .subscribe-input { flex: 1 1 9rem; }
+  .subscribe-wrap--panel .subscribe-row { max-width: none; }
+  /* nowrap only where there is room for it. Unscoped it forced the field and
+     button onto one line at 390px too, and the button ran straight out
+     through the panel's right edge. */
+  @media (min-width: 640px) {
+    .subscribe-wrap--panel .subscribe-form { min-width: 20rem; }
+    .subscribe-wrap--panel .subscribe-row { flex-wrap: nowrap; }
+  }
 
   /* C — rules top and bottom and nothing else. The most editorial: it borrows
      the page's own horizontal lines instead of adding another box. */

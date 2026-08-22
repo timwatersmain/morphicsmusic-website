@@ -392,11 +392,15 @@ import SubscribeForm from '../../components/SubscribeForm.astro';
        who submits again simply re-affirms it — no duplicate, no second welcome
        mail. The field is prefilled with their own address by the script below,
        which turns this into one click. -->
-  <section class="mt-16 pt-10 border-t border-white/10 max-w-[32rem]">
+  <!-- Full page width, not a 32rem column: the panel variant lays copy and
+       form side by side and collapses to a tall stack when it cannot. -->
+  <section class="mt-16 max-w-4xl">
     <SubscribeForm
       source="profile"
+      variant="panel"
       heading="MONTHLY DISPATCH"
-      blurb="New releases, what I'm building, and where I'm playing. One email a month."
+      title="One email a month"
+      blurb="New releases, what I'm building, and where I'm playing. Nothing else, ever."
     />
   </section>
 

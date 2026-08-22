@@ -1,7 +1,6 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import DiscordInvite from '../components/DiscordInvite.astro';
-import SubscribeForm from '../components/SubscribeForm.astro';
 ---
 
 <BaseLayout title="THANK YOU" currentPage="">
@@ -41,18 +40,6 @@ import SubscribeForm from '../components/SubscribeForm.astro';
 
       <div id="dl-pending" class="hidden font-mono text-[11px] text-white/40 mt-8">
         Preparing your download…
-      </div>
-
-      <!-- The highest-intent moment on the whole site: they have just paid.
-           Nothing else asks at a point where the answer is this likely to be
-           yes, which is why this placement matters more than the form's
-           visual prominence anywhere else. -->
-      <div class="mt-12 pt-8 border-t border-white/10 text-left max-w-[30rem] mx-auto">
-        <SubscribeForm
-          source="order-complete"
-          heading="KEEP IN TOUCH"
-          blurb="Once a month: new releases, what I'm building, and where I'm playing. No sales pitches."
-        />
       </div>
 
       <div class="pt-8 flex justify-center gap-4">

@@ -3,7 +3,6 @@ import PageTitle from '../components/PageTitle.astro';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import signalData from '../data/signal.json';
 import CommunityDirectory from '../components/CommunityDirectory.astro';
-import SubscribeForm from '../components/SubscribeForm.astro';
 
 // ONE post per column — the most recent of each kind. Unequal counts (2 / 4 / 4)
 // were what made the three columns different lengths no matter how the cards
@@ -66,18 +65,12 @@ import { INVITE_URL } from '../components/DiscordInvite.astro';
 <BaseLayout title="SOCIAL" currentPage="/social">
   <PageTitle title="SOCIAL" />
 
-  <!-- First thing on the page. The mailing list is the only thing here we own
-       outright — every platform below it is someone else's audience on loan. -->
-  <section class="max-w-[46rem] mx-auto mt-2">
-    <SubscribeForm source="social" />
-  </section>
-
   <!-- COMMUNITY — merged in from /community on 2026-08-21 to take an item out
        of the top nav. The directory itself lives in CommunityDirectory.astro
        rather than being pasted here: /community/me and /community/u/<handle>
        still exist and still link back, and one copy of the markup + script is
        the only way those stay consistent with this. -->
-  <section class="mt-16">
+  <section class="mt-2">
     <div class="signal-column-header mb-6">
       <span class="material-symbols-outlined text-sm text-secondary">group</span>
       <span class="font-mono text-[10px] text-secondary uppercase tracking-widest">Community</span>
