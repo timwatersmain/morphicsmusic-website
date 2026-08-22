@@ -1,5 +1,14 @@
 [
   {
+    "id": "stack-8-copy",
+    "title": "STACK 8 COPY",
+    "image": "/images/visuals/stack-8-copy.jpg",
+    "tags": ["morphics", "album-art"],
+    "size": "wide",
+    "date": "2026-08-22",
+    "featured": false
+  },
+  {
     "id": "timeline-2-00112381",
     "title": "TIMELINE 2 00112381",
     "image": "/images/visuals/timeline-2-00112381.jpg",
