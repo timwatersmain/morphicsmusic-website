@@ -208,14 +208,25 @@ describe('free products and the claim path', () => {
 });
 
 describe('the shipped catalogue', () => {
-  it('every digital product with a release_date is on the pre-order list, and vice versa', async () => {
-    // A dated product that is NOT listed is invisible (unbuyable, no way in);
-    // a listed product with NO date is refused at the gate. Either mismatch
-    // is a silent no-op rather than a loud failure, so it is pinned here.
+  it('every listed digital slug exists in the catalogue and carries a usable date', async () => {
+    // Only this direction is a bug. The reverse — a dated product that is NOT
+    // listed — is the deliberate SHELVED state: everything about the product
+    // stays in place while it is off sale, and re-listing is one line. An
+    // earlier version of this test demanded the two lists match exactly,
+    // which made shelving impossible and was wrong about the design.
+    //
+    // A listed slug that does not exist, or exists with no usable date, is
+    // silently unsellable: isDigitalPreorderable returns false and the
+    // product simply never appears. That failure is invisible in production,
+    // which is why it is pinned here.
     const digital = (await import('../../src/data/digital.json')).default as any[];
     const lists = JSON.parse((await import('../../src/data/preorders.json?raw')).default);
-    const dated = digital.filter(d => d.release_date).map(d => d.slug).sort();
-    expect(dated).toEqual([...(lists.digital_slugs || [])].sort());
+    for (const slug of (lists.digital_slugs || [])) {
+      const product = digital.find(d => d.slug === slug);
+      expect(product, `preorders.json lists "${slug}", which is not in digital.json`).toBeTruthy();
+      expect(product.release_date, `"${slug}" is listed for pre-order but has no release_date`)
+        .toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    }
   });
 
   it('a free product must be claimable, i.e. it must carry price_cents 0 exactly', async () => {
