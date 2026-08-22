@@ -1,0 +1,185 @@
+---
+// Mailing-list signup. Placed wherever someone has just decided they like
+// something — the point of capture is the moment of interest, not a footer
+// they scroll past.
+//
+// `source` is written onto the subscriber record so you can tell which
+// placement actually earns signups. Give every instance a distinct one.
+interface Props {
+  source?: string;
+  heading?: string;
+  blurb?: string;
+  compact?: boolean;
+}
+const {
+  source = 'site',
+  heading = 'MONTHLY DISPATCH',
+  blurb = 'New releases, what I\'m building, and where I\'m playing. Once a month. Nothing else.',
+  compact = false,
+} = Astro.props;
+---
+
+<form class="subscribe-form" data-source={source} data-compact={compact ? '1' : null} novalidate>
+  {!compact && (
+    <div class="mb-4">
+      <div class="font-mono text-[10px] text-secondary uppercase tracking-widest mb-2">{heading}</div>
+      <p class="font-mono text-[11px] text-white/40 leading-relaxed max-w-[46ch]">{blurb}</p>
+    </div>
+  )}
+  <div class="subscribe-row">
+    <label class="sr-only" for={`sub-email-${source}`}>Email address</label>
+    <input
+      id={`sub-email-${source}`}
+      type="email"
+      name="email"
+      inputmode="email"
+      autocomplete="email"
+      required
+      placeholder="you@example.com"
+      class="subscribe-input"
+    />
+    {/* Honeypot: hidden from people, not from naive bots. aria-hidden and
+        tabindex=-1 keep it out of the screen-reader and keyboard paths so it
+        cannot trap a real person, and autocomplete=off stops a password
+        manager helpfully filling it in and getting them silently dropped. */}
+    <div class="subscribe-hp" aria-hidden="true">
+      <label>Website<input type="text" name="website" tabindex="-1" autocomplete="off" /></label>
+    </div>
+    <button type="submit" class="subscribe-btn">Subscribe</button>
+  </div>
+  {/* aria-live so the outcome is announced, not just painted — this is the
+      only feedback the form gives. */}
+  <p class="subscribe-msg" role="status" aria-live="polite"></p>
+</form>
+
+<style>
+  .subscribe-row {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    align-items: stretch;
+    max-width: 30rem;
+  }
+
+  .subscribe-input {
+    flex: 1 1 14rem;
+    min-width: 0;
+    padding: 0.85rem 1rem;
+    background: rgb(var(--glass-tint) / 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--color-primary);
+    font-family: var(--font-mono, monospace);
+    font-size: 0.8125rem;
+    border-radius: var(--radius);
+    outline: none;
+  }
+  .subscribe-input:focus { border-color: var(--color-secondary); }
+  .subscribe-input::placeholder { color: rgba(255, 255, 255, 0.25); }
+
+  .subscribe-btn {
+    padding: 0.85rem 1.5rem;
+    border: 1px solid color-mix(in srgb, var(--color-secondary) 40%, transparent);
+    background: color-mix(in srgb, var(--color-secondary) 10%, transparent);
+    color: var(--color-secondary);
+    font-family: var(--font-mono, monospace);
+    font-size: 0.6875rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 240ms, color 240ms;
+  }
+  .subscribe-btn:hover:not(:disabled) {
+    background: var(--color-secondary);
+    color: var(--color-on-secondary);
+  }
+  .subscribe-btn:disabled { opacity: 0.4; cursor: default; }
+
+  /* Off-screen rather than display:none — a bot reading the DOM sees a normal
+     field, which is the whole trick. */
+  .subscribe-hp {
+    position: absolute;
+    left: -9999px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+  }
+
+  .subscribe-msg {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.6875rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-top: 0.75rem;
+    min-height: 1rem;
+    color: var(--color-secondary);
+  }
+  .subscribe-msg[data-error] { color: #ff9a8a; }
+</style>
+
+<script>
+  // astro:page-load, not top level: bundled scripts run once per session under
+  // the client router, so a top-level binding would leave the form dead on
+  // every page reached by soft navigation.
+  document.addEventListener('astro:page-load', () => {
+    document.querySelectorAll<HTMLFormElement>('.subscribe-form').forEach(form => {
+      if (form.dataset.wired) return;
+      form.dataset.wired = '1';
+
+      const input = form.querySelector<HTMLInputElement>('input[name="email"]')!;
+      const hp = form.querySelector<HTMLInputElement>('input[name="website"]')!;
+      const btn = form.querySelector<HTMLButtonElement>('button[type="submit"]')!;
+      const msg = form.querySelector<HTMLParagraphElement>('.subscribe-msg')!;
+
+      const say = (text: string, isError = false) => {
+        msg.textContent = text;
+        if (isError) msg.setAttribute('data-error', '');
+        else msg.removeAttribute('data-error');
+      };
+
+      form.addEventListener('submit', async e => {
+        e.preventDefault();
+        const email = input.value.trim();
+        // Checked here only to save a round trip on an obvious typo. The
+        // server validates independently and does not trust this.
+        if (!email || !/^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/.test(email)) {
+          say('That address looks wrong', true);
+          input.focus();
+          return;
+        }
+
+        btn.disabled = true;
+        say('Subscribing…');
+        try {
+          const res = await fetch('/api/subscribe', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              email,
+              source: form.dataset.source || 'site',
+              website: hp.value,
+            }),
+          });
+          if (res.status === 429) {
+            say('Too many tries — wait a few minutes', true);
+            btn.disabled = false;
+            return;
+          }
+          if (!res.ok) {
+            say('That address was rejected', true);
+            btn.disabled = false;
+            return;
+          }
+          // Intentionally identical whether or not they were already on the
+          // list: the endpoint does not distinguish, so that a stranger cannot
+          // use this form to test whether an address is subscribed.
+          form.querySelector('.subscribe-row')?.setAttribute('hidden', '');
+          say('Check your inbox — you\'re on the list');
+        } catch {
+          say('Network error — try again', true);
+          btn.disabled = false;
+        }
+      });
+    });
+  });
+</script>

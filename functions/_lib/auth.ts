@@ -208,3 +208,28 @@ export async function consumeVerifyEmailToken(
   await env.DOWNLOADS.delete(`verifyemail:${token}`);
   try { return JSON.parse(raw); } catch { return null; }
 }
+
+
+// ── Unsubscribe links ───────────────────────────────────────────────────
+// A mailing-list unsubscribe link has to work with NO session and NO expiry:
+// it is clicked from an email months later, often on a different device, and
+// possibly by someone who never had an account. So it cannot reuse the login
+// token machinery — those are single-use and short-lived by design, and a
+// dead unsubscribe link is a spam complaint.
+//
+// It is signed rather than bare so the URL cannot be edited to unsubscribe a
+// different address. The signature is not a secret and does not need to be:
+// the worst a leaked link does is remove the one person it names, which is
+// the same thing they could do by clicking it.
+export async function signUnsubscribe(secret: string, email: string): Promise<string> {
+  const sig = await hmac(secret, `unsub|${email}`);
+  return b64url(sig);
+}
+
+export async function verifyUnsubscribe(secret: string, email: string, token: string): Promise<boolean> {
+  if (!email || !token) return false;
+  const expected = await hmac(secret, `unsub|${email}`);
+  let given: Uint8Array;
+  try { given = unb64url(token); } catch { return false; }
+  return constantTimeEqual(expected, given);
+}
