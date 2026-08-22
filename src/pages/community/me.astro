@@ -458,6 +458,7 @@ import SubscribeForm from '../../components/SubscribeForm.astro';
     import { NATIVE_COLOURWAY } from '../../scripts/sprites/native-palette.js';
     import { computeStageProgress, rankLadder, STAGE_LABELS, rankLabelFor, type RankStatus } from '../../scripts/community/xp-progress';
     import { EP_WEIGHTS } from '../../../functions/_lib/community/ep';
+    import { prestigeDiscountPct } from '../../../functions/_lib/community/perks';
     import { libraryHtml, safeImg } from '../../scripts/library-view';
     // The cap is the SERVER's constant, imported rather than re-typed — a
     // counter that disagrees with the write path is worse than no counter.
@@ -955,6 +956,19 @@ import SubscribeForm from '../../components/SubscribeForm.astro';
       if (rewardsProfile && rewardsProfile.creature) {
         rows.push(rewardRow('XP', `${(rewardsProfile.creature.ep || 0).toLocaleString()} earned`,
           `${EP_WEIGHTS.PER_PURCHASE} XP for every release you buy, ${EP_WEIGHTS.PER_TENURE_DAY} a day just for being here, plus whatever you do in the Discord. XP only ever goes up — a rank once reached is never taken back.`, 'held'));
+      }
+
+      // --- Store discount ---------------------------------------------------
+      // The money value of prestige. Listed even at 0% so a fan on their first
+      // line can see what completing it is worth — a reward nobody knows about
+      // is not a reward.
+      if (rewardsProfile) {
+        const pct = prestigeDiscountPct(rewardsProfile.creature?.prestige);
+        rows.push(rewardRow('Store discount', pct ? `${pct}% off everything` : 'None yet',
+          pct
+            ? `Earned by completing ${rewardsProfile.creature.prestige} creature line${rewardsProfile.creature.prestige === 1 ? '' : 's'}. Applied automatically at checkout while you are signed in.`
+            : 'Complete a creature line and every purchase is 5% cheaper, up to 15% at three lines. Applied automatically at checkout.',
+          pct ? 'held' : 'open'));
       }
 
       // --- Discord ----------------------------------------------------------

@@ -14,6 +14,9 @@ import { isReleased } from '../_lib/release-gate.mjs';
 import { isPreorderable, isDigitalPreorderable, digitalSellable } from '../_lib/preorder.mjs';
 import { corsHandler, preflight } from '../_lib/cors';
 import { rateLimit, rateLimitedJson, clientIp } from '../_lib/ratelimit';
+import { prestigeDiscountPct, applyDiscount } from '../_lib/community/perks';
+import { requireFan } from '../_lib/community/session';
+import { getProfileByEmail } from '../_lib/community/repo';
 
 interface CartItem {
   type: 'merch' | 'music' | 'digital';
@@ -53,6 +56,23 @@ export const onRequestPost: PagesFunction<Env> = corsHandler<Env>(async ({ reque
   }
   if (!body?.items?.length) return new Response('Empty cart', { status: 400 });
 
+  // The fan's prestige discount, resolved from their SESSION and the
+  // database — never from anything the client sent. A percentage off is the
+  // one field a cart would love to set for itself.
+  //
+  // Checkout stays open to signed-out buyers, so this is best-effort: no
+  // session, no profile, or an unavailable D1 all mean 0%. A discount that
+  // fails closed costs a loyal fan five percent; one that fails open costs
+  // every purchase on the site.
+  let discountPct = 0;
+  try {
+    const fan = await requireFan(env as any, request);
+    if (fan) {
+      const profile = await getProfileByEmail((env as any).GATES, fan.email);
+      discountPct = prestigeDiscountPct(profile?.prestige);
+    }
+  } catch { discountPct = 0; }
+
   const stripe = new Stripe(env.STRIPE_SECRET_KEY, { apiVersion: '2024-11-20.acacia' as any });
 
   const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [];
@@ -80,7 +100,7 @@ export const onRequestPost: PagesFunction<Env> = corsHandler<Env>(async ({ reque
       if (!variant || !variant.available) return new Response(`Unavailable ${item.sku}`, { status: 400 });
 
       hasPhysical = true;
-      const cents = Math.round(variant.retail_price * 100);
+      const cents = applyDiscount(Math.round(variant.retail_price * 100), discountPct);
       lineItems.push({
         quantity: item.qty,
         price_data: {
@@ -103,7 +123,11 @@ export const onRequestPost: PagesFunction<Env> = corsHandler<Env>(async ({ reque
     } else if (item.type === 'music') {
       const release = (musicData as any).releases.find((r: any) => r.slug === item.metadata.release_slug);
       if (!release) return new Response(`Unknown release ${item.sku}`, { status: 400 });
-      if (item.unit_amount < release.min_price_cents) {
+      // Name-your-price: the discount lowers the FLOOR rather than setting a
+      // price. Overriding what the fan typed would be the wrong shape — it
+      // would cap a generous supporter at the discounted amount.
+      const minCents = applyDiscount(release.min_price_cents, discountPct);
+      if (item.unit_amount < minCents) {
         return new Response(`Below minimum for ${release.slug}`, { status: 400 });
       }
       // Two ways to be sellable: it is out, or it is an opted-in pre-order.
@@ -160,7 +184,7 @@ export const onRequestPost: PagesFunction<Env> = corsHandler<Env>(async ({ reque
         quantity: 1, // one licence per order; quantity is meaningless here
         price_data: {
           currency: 'usd',
-          unit_amount: product.price_cents,
+          unit_amount: applyDiscount(product.price_cents, discountPct),
           product_data: {
             name: dPreorder ? `${product.name} (pre-order)` : product.name,
             description: dPreorder
