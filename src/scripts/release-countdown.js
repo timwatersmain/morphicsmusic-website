@@ -37,7 +37,14 @@ function wire(el) {
       activeTimers = activeTimers.filter((t) => t !== timer);
       return;
     }
-    if (label) label.textContent = `Releases in ${fmt(liveAt - Date.now())}`;
+    // A pre-orderable release is already on sale, so "Releases in" would be
+    // the wrong verb here — what the buyer is waiting on is delivery, not
+    // availability. The element carries data-preorder when that is the case.
+    if (label) {
+      label.textContent = el.dataset.preorder
+        ? `Unlocks in ${fmt(liveAt - Date.now())}`
+        : `Releases in ${fmt(liveAt - Date.now())}`;
+    }
   }
   const timer = setInterval(tick, 1000);
   activeTimers.push(timer);

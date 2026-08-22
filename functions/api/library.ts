@@ -5,6 +5,7 @@ import { readCookie, verifySession, SESSION_COOKIE, LEGACY_SESSION_COOKIE } from
 import { corsHandler, preflight } from '../_lib/cors';
 import { rateLimit, rateLimitedJson, clientIp } from '../_lib/ratelimit';
 import { isReleased } from '../_lib/release-gate.mjs';
+import { daysUntilUnlock } from '../_lib/preorder.mjs';
 import { ownedDigital } from '../_lib/entitlements';
 import manifest from '../../src/data/masters-manifest.json';
 import catalog from '../../src/data/music-catalog.json';
@@ -65,16 +66,27 @@ export const onRequestGet: PagesFunction<Env> = corsHandler<Env>(async ({ reques
   for (const p of record.purchases || []) {
     for (const slug of (p.music_release_slugs || [])) ownedSlugs.add(slug);
   }
+  // A pre-ordered release is owned but not yet deliverable, and the library is
+  // where the buyer looks to check that the money did something. So it is
+  // listed — with no files. Not out of caution about the UI: download.ts
+  // refuses an unreleased key regardless, so publishing the keys here could
+  // only ever produce a button that 403s.
   const releases = (catalog as any).releases
     .filter((r: any) => ownedSlugs.has(r.slug))
-    .map((r: any) => ({
-      slug: r.slug,
-      title: r.title,
-      type: r.type,
-      artwork: r.artwork,
-      track_count: r.track_count,
-      files: ((manifest as any).releases?.[r.slug] || []),
-    }));
+    .map((r: any) => {
+      const released = isReleased(r.release_date);
+      return {
+        slug: r.slug,
+        title: r.title,
+        type: r.type,
+        artwork: r.artwork,
+        track_count: r.track_count,
+        release_date: r.release_date || '',
+        preorder: !released,
+        unlocks_in_days: released ? null : daysUntilUnlock(r.release_date),
+        files: released ? ((manifest as any).releases?.[r.slug] || []) : [],
+      };
+    });
 
   // If the fan already spent their free-song token on a track from a
   // release they don't otherwise own, surface it as its own entry — with

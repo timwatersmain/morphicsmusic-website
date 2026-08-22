@@ -82,13 +82,31 @@ function itemCard(opts: { artwork: string; kicker: string; title: string; footno
 
 export function musicSection(releases: any[]): string {
   if (!releases?.length) return '';
-  const cards = releases.map(r => itemCard({
-    artwork: r.artwork,
-    kicker: r.free_song ? 'Free song' : r.type,
-    title: r.title,
-    files: r.files || [],
-    emptyNote: 'Files coming soon — check back shortly.',
-  })).join('');
+  const cards = releases.map(r => {
+    // A pre-order is listed here from the moment it is paid for — this page is
+    // where someone checks that their money did something — but it carries no
+    // files and says why. The empty-state branch of itemCard already does the
+    // work; it only needs a truthful note instead of "coming soon".
+    if (r.preorder) {
+      const d = r.unlocks_in_days;
+      const when = d == null ? 'on release day' : d <= 1 ? 'within a day' : `in ${d} days`;
+      return itemCard({
+        artwork: r.artwork,
+        kicker: 'Pre-order',
+        title: r.title,
+        footnote: r.release_date ? `Unlocks ${r.release_date}` : null,
+        files: [],
+        emptyNote: `Not out yet. The files appear here ${when} — nothing to do, and no second email needed.`,
+      });
+    }
+    return itemCard({
+      artwork: r.artwork,
+      kicker: r.free_song ? 'Free song' : r.type,
+      title: r.title,
+      files: r.files || [],
+      emptyNote: 'Files coming soon — check back shortly.',
+    });
+  }).join('');
   return `<div>${sectionHeader('Music', LIFETIME_NOTE)}<div class="space-y-4">${cards}</div></div>`;
 }
 

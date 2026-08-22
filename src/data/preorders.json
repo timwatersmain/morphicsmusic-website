@@ -1,0 +1,20 @@
+{
+  "_comment": [
+    "Which unreleased music releases may be PRE-ORDERED. Hand-edited: add a",
+    "slug here and that release becomes buyable before its release_date; the",
+    "files stay locked until midnight ET on the date either way.",
+    "",
+    "This lives in its own file rather than as a `preorder` field on the",
+    "release because src/data/music-catalog.json is REGENERATED wholesale by",
+    "scripts/sync-music-catalog.mjs from the brain DB — a flag added there is",
+    "silently wiped on the next sync.",
+    "",
+    "A slug listed here that is already released is a harmless no-op: the",
+    "release date always wins.",
+    "",
+    "Opt-in on purpose. Not every future-dated release should be on sale early",
+    "— announcing one is a decision, and the default for a date that simply",
+    "has not arrived yet is still 'not for sale'."
+  ],
+  "slugs": []
+}

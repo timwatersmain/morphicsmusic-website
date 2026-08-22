@@ -3,6 +3,7 @@ import Artwork from '../../../components/Artwork.astro';
 import BaseLayout from '../../../layouts/BaseLayout.astro';
 import catalog from '../../../data/music-catalog.json';
 import previews from '../../../data/previews.json';
+import { isPreorderable } from '../../../../functions/_lib/preorder.mjs';
 
 export function getStaticPaths() {
   return catalog.releases.map(r => ({ params: { slug: r.slug }, props: { release: r } }));
@@ -24,6 +25,11 @@ const firstTrackTitle =
 
 const buyable =
   !!release.has_masters && (!release.release_date || new Date(release.release_date) <= new Date());
+// Evaluated at BUILD time, like `buyable` above it. That is fine in one
+// direction only: a page built while the release was still pending goes stale
+// the moment the date passes, so the countdown script below re-enables the
+// button and rewrites its label at runtime rather than trusting this.
+const preorder = !!release.has_masters && isPreorderable(release.slug, release.release_date);
 
 function fmtDuration(seconds: number | null) {
   if (!seconds) return '—';
@@ -95,19 +101,23 @@ function fmtDuration(seconds: number | null) {
                 required
               />
             </div>
-            <p class="font-mono text-[9px] text-white/30 mt-2">FLAC + MP3 download · Delivered by email after purchase</p>
+            <p class="font-mono text-[9px] text-white/30 mt-2">
+              {preorder
+                ? `FLAC + MP3 · Unlocks in your library on ${release.release_date}`
+                : 'FLAC + MP3 download · Delivered by email after purchase'}
+            </p>
           </div>
           <button
             id="release-submit"
             type="submit"
             class="w-full py-4 bg-primary text-on-primary font-mono text-[11px] tracking-widest uppercase hover:bg-secondary hover:text-on-secondary transition-colors disabled:opacity-30"
-            disabled={!release.has_masters || (!!release.release_date && new Date(release.release_date) > new Date())}
+            disabled={!release.has_masters || (!preorder && !!release.release_date && new Date(release.release_date) > new Date())}
           >
-            {release.has_masters ? 'Add to Cart' : 'Coming soon'}
+            {!release.has_masters ? 'Coming soon' : preorder ? 'Pre-order' : 'Add to Cart'}
           </button>
           {release.release_date && new Date(release.release_date) > new Date() && (
-            <p id="release-countdown" class="font-mono text-[10px] text-secondary uppercase tracking-widest mt-2" data-release-date={release.release_date}>
-              Releases {release.release_date}
+            <p id="release-countdown" class="font-mono text-[10px] text-secondary uppercase tracking-widest mt-2" data-release-date={release.release_date} data-preorder={preorder ? '1' : null}>
+              {preorder ? `Unlocks ${release.release_date}` : `Releases ${release.release_date}`}
             </p>
           )}
           {!release.has_masters && (
@@ -192,6 +202,7 @@ function fmtDuration(seconds: number | null) {
     track_count: release.track_count,
     type: release.type,
     release_date: release.release_date,
+    preorder,
   })} />
 
   <script>
@@ -227,14 +238,24 @@ function fmtDuration(seconds: number | null) {
       if (cdEl && Number.isFinite(liveAt)) {
         const tick = () => {
           if (isReleased(release.release_date)) {
+            // The page was built before the release date and is now being
+            // viewed after it. Undo everything the build-time state decided:
+            // the countdown, the disabled button, AND the label — a page that
+            // silently keeps saying "Pre-order" after the release is out is
+            // the failure mode this branch exists to prevent.
             cdEl.style.display = 'none';
-            if (submitBtn) submitBtn.disabled = false;
+            if (submitBtn) {
+              submitBtn.disabled = false;
+              submitBtn.textContent = 'Add to Cart';
+            }
             if (timer) { clearInterval(timer); timer = null; }
             return;
           }
           const s = Math.max(0, Math.floor((liveAt - Date.now()) / 1000));
           const d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600), m = Math.floor((s % 3600) / 60);
-          cdEl.textContent = `Releases in ${d}d ${h}h ${m}m`;
+          cdEl.textContent = release.preorder
+            ? `Unlocks in ${d}d ${h}h ${m}m`
+            : `Releases in ${d}d ${h}h ${m}m`;
         };
         timer = setInterval(tick, 1000);
         tick();
@@ -251,7 +272,9 @@ function fmtDuration(seconds: number | null) {
           type: 'music',
           sku: `music:${release.slug}`,
           title: release.title,
-          subtitle: `${release.type.toUpperCase()} · ${release.track_count} track${release.track_count === 1 ? '' : 's'} · digital`,
+          subtitle: release.preorder
+            ? `${release.type.toUpperCase()} · ${release.track_count} track${release.track_count === 1 ? '' : 's'} · digital · pre-order, unlocks ${release.release_date}`
+            : `${release.type.toUpperCase()} · ${release.track_count} track${release.track_count === 1 ? '' : 's'} · digital`,
           image: release.image,
           unit_amount: cents,
           qty: 1,

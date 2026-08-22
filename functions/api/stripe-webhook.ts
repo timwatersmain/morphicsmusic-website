@@ -11,6 +11,7 @@
 import Stripe from 'stripe';
 
 import digitalData from '../../src/data/digital.json';
+import musicData from '../../src/data/music-catalog.json';
 
 interface FulfillmentEntry {
   type: 'merch' | 'music';
@@ -19,6 +20,11 @@ interface FulfillmentEntry {
   retail_price?: number;
   release_slug?: string;
   digital_slug?: string;
+  // Set by checkout for a music line bought before its release date. The
+  // ORDER is complete; the delivery is not. Nothing here grants anything —
+  // download.ts gates on the release date independently — this only decides
+  // which email the buyer gets.
+  preorder?: boolean;
 }
 
 interface DownloadGrant {
@@ -223,6 +229,66 @@ async function revokeAccessForSession(env: Env, sessionId: string, email: string
   }
 }
 
+function releaseDateFor(slug: string): string {
+  const r = (musicData as any).releases.find((x: any) => x.slug === slug);
+  return r?.release_date || '';
+}
+
+function releaseTitleFor(slug: string): string {
+  const r = (musicData as any).releases.find((x: any) => x.slug === slug);
+  return r?.title || slug.toUpperCase().replace(/-/g, ' ');
+}
+
+// A pre-order gets its own email, with NO download button. The ordinary
+// receipt cannot be reused with the link removed: its 7-day grant would have
+// expired long before a release that is weeks out, so pointing a buyer at a
+// link that is dead on arrival is worse than sending no link. The library is
+// the durable route, and it unlocks itself at midnight ET on the date.
+async function sendPreorderEmail(
+  env: Env,
+  to: string,
+  items: Array<{ title: string; date: string }>,
+) {
+  if (!env.RESEND_API_KEY) {
+    console.warn('RESEND_API_KEY missing — skipping email');
+    return;
+  }
+  const configured = env.ORDER_FROM_EMAIL;
+  const from = (!configured || configured.endsWith('@resend.dev'))
+    ? 'orders@morphicsmusic.com'
+    : configured;
+  const titles = items.map(i => i.title).join(', ');
+  const rows = items
+    .map(i => `<li style="margin-bottom:6px">${i.title} — unlocks ${i.date || 'on release'}</li>`)
+    .join('');
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${env.RESEND_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from: `Morphics <${from}>`,
+      to: [to],
+      subject: `Pre-order confirmed · ${titles}`,
+      html: `
+        <div style="font-family:-apple-system,sans-serif;background:#0a0a0f;color:#e8e8ec;padding:32px;max-width:560px;margin:auto">
+          <h1 style="font-weight:700;letter-spacing:-0.02em">Pre-order confirmed.</h1>
+          <p>Thanks for backing this before it is out. Nothing to download yet — the files appear in your library automatically on release day, and your access is permanent from then on.</p>
+          <ul style="opacity:0.85;font-size:14px;padding-left:18px">${rows}</ul>
+          <p style="margin:24px 0">
+            <a href="https://morphicsmusic.com/library" style="background:#fff;color:#000;padding:14px 24px;text-decoration:none;font-family:monospace;letter-spacing:0.1em;text-transform:uppercase;font-size:11px">Your library</a>
+          </p>
+          <p style="opacity:0.7;font-size:13px;margin:24px 0">
+            Sign in with this email address — no password needed.
+          </p>
+          <p style="opacity:0.4;font-size:11px;margin-top:32px">— Morphics</p>
+        </div>`,
+    }),
+  });
+  if (!res.ok) console.error('Resend failed:', await res.text());
+}
+
 async function sendDownloadEmail(env: Env, to: string, downloadUrl: string, releaseTitles: string[]) {
   if (!env.RESEND_API_KEY) {
     console.warn('RESEND_API_KEY missing — skipping email');
@@ -380,9 +446,16 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, waitUnti
       }
       // One grant covers everything downloadable in the order, so a cart with
       // a release and a font produces a single email rather than two.
+      //
+      // Pre-ordered music is split off first. It is a purchase but not yet a
+      // delivery, so it must not go into the grant: download.ts would refuse
+      // it anyway, and including it would only put a title in a "download
+      // now" email that cannot be downloaded.
       const digitalItems = fulfillment.filter(f => f.type === 'digital');
-      if ((musicItems.length > 0 || digitalItems.length > 0) && email) {
-        const slugs = musicItems.map(m => m.release_slug!).filter(Boolean);
+      const preorderItems = musicItems.filter(m => m.preorder);
+      const readyMusic = musicItems.filter(m => !m.preorder);
+      if ((readyMusic.length > 0 || digitalItems.length > 0) && email) {
+        const slugs = readyMusic.map(m => m.release_slug!).filter(Boolean);
         const dslugs = digitalItems.map(d => d.digital_slug!).filter(Boolean);
         const token = await issueDownloadGrant(env, email, slugs, full.id, dslugs);
         const url = `${env.PUBLIC_SITE_URL || new URL(request.url).origin}/download?token=${token}`;
@@ -391,6 +464,20 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, waitUnti
           ...dslugs.map(d => digitalTitle(d)),
         ];
         await sendDownloadEmail(env, email, url, titles);
+      }
+      // A mixed cart therefore gets two emails, deliberately: one says
+      // "download now" and is true, the other says "unlocks on the 14th" and
+      // is also true. One email trying to say both is how a buyer misses the
+      // half that applies to them.
+      if (preorderItems.length > 0 && email) {
+        await sendPreorderEmail(
+          env,
+          email,
+          preorderItems
+            .map(m => m.release_slug!)
+            .filter(Boolean)
+            .map(slug => ({ title: releaseTitleFor(slug), date: releaseDateFor(slug) })),
+        );
       }
       await env.DOWNLOADS.put(completedKey, '1', { expirationTtl: 60 * 60 * 24 * 30 });
     } catch (e) {

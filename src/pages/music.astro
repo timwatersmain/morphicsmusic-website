@@ -4,6 +4,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import Artwork from '../components/Artwork.astro';
 import catalog from '../data/music-catalog.json';
 import previews from '../data/previews.json';
+import { isPreorderable } from '../../functions/_lib/preorder.mjs';
 
 // slug → first preview key + the title of the track that key actually plays
 // (so the player bar names the track, e.g. "Synaptic Acid", not the release).
@@ -28,6 +29,9 @@ const releases = catalog.releases.map(r => ({
   date: r.release_date || '',
   genre: r.genre || [],
   minPriceDollars: ((r.min_price_cents || 0) / 100).toFixed(0),
+  // Build-time, and corrected at runtime by release-countdown.js once the
+  // date passes — same arrangement as the release page.
+  preorder: !!r.has_masters && isPreorderable(r.slug, r.release_date),
 }));
 
 const latest = [...releases]
@@ -118,17 +122,21 @@ const discogFilters = [
               data-track-count={latest.track_count}
               data-type={latest.type}
               data-live-label={`Add ${latest.title} to cart · $${latest.minPriceDollars}+`}
-              disabled={!latest.has_masters || (!!latest.release_date && new Date(latest.release_date) > new Date())}
+              data-preorder={latest.preorder ? '1' : null}
+              data-release-date={latest.release_date || null}
+              disabled={!latest.has_masters || (!latest.preorder && !!latest.release_date && new Date(latest.release_date) > new Date())}
             >
               {!latest.has_masters
                 ? 'Coming soon'
-                : (!!latest.release_date && new Date(latest.release_date) > new Date())
-                  ? 'Coming soon'
-                  : `Add ${latest.title} to cart · $${latest.minPriceDollars}+`}
+                : latest.preorder
+                  ? `Pre-order ${latest.title} · $${latest.minPriceDollars}+`
+                  : (!!latest.release_date && new Date(latest.release_date) > new Date())
+                    ? 'Coming soon'
+                    : `Add ${latest.title} to cart · $${latest.minPriceDollars}+`}
             </button>
             {latest.release_date && new Date(latest.release_date) > new Date() && (
-              <div class="release-countdown flex-1 text-center font-mono text-[9px] text-secondary uppercase tracking-widest" data-release-date={latest.release_date}>
-                <span class="countdown-label">Releases {latest.release_date}</span>
+              <div class="release-countdown flex-1 text-center font-mono text-[9px] text-secondary uppercase tracking-widest" data-release-date={latest.release_date} data-preorder={latest.preorder ? '1' : null}>
+                <span class="countdown-label">{latest.preorder ? `Unlocks ${latest.release_date}` : `Releases ${latest.release_date}`}</span>
               </div>
             )}
             <a href={`/store/music/${latest.slug}`} class="px-4 py-3 font-mono text-[10px] text-white/40 hover:text-secondary uppercase tracking-widest transition-colors">
@@ -219,17 +227,21 @@ const discogFilters = [
             data-track-count={release.track_count}
             data-type={release.type}
             data-live-label={`Add to cart · $${release.minPriceDollars}+`}
-            disabled={!release.has_masters || (!!release.release_date && new Date(release.release_date) > new Date())}
+            data-preorder={release.preorder ? '1' : null}
+            data-release-date={release.release_date || null}
+            disabled={!release.has_masters || (!release.preorder && !!release.release_date && new Date(release.release_date) > new Date())}
           >
             {!release.has_masters
               ? 'Coming soon'
-              : (!!release.release_date && new Date(release.release_date) > new Date())
-                ? 'Coming soon'
-                : `Add to cart · $${release.minPriceDollars}+`}
+              : release.preorder
+                ? `Pre-order · $${release.minPriceDollars}+`
+                : (!!release.release_date && new Date(release.release_date) > new Date())
+                  ? 'Coming soon'
+                  : `Add to cart · $${release.minPriceDollars}+`}
           </button>
           {release.release_date && new Date(release.release_date) > new Date() && (
-            <div class="release-countdown mt-2 text-center font-mono text-[9px] text-secondary uppercase tracking-widest" data-release-date={release.release_date}>
-              <span class="countdown-label">Releases {release.release_date}</span>
+            <div class="release-countdown mt-2 text-center font-mono text-[9px] text-secondary uppercase tracking-widest" data-release-date={release.release_date} data-preorder={release.preorder ? '1' : null}>
+              <span class="countdown-label">{release.preorder ? `Unlocks ${release.release_date}` : `Releases ${release.release_date}`}</span>
             </div>
           )}
           <a href={`/store/music/${release.slug}`} class="block text-center mt-2 font-mono text-[8px] text-white/30 hover:text-secondary uppercase tracking-widest transition-colors">
@@ -285,11 +297,18 @@ const discogFilters = [
           const minCents = parseInt(btn.dataset.minCents || '0', 10);
           const trackCount = parseInt(btn.dataset.trackCount || '0', 10);
           const type = btn.dataset.type || '';
+          // The cart line has to say pre-order too. It is the surface someone
+          // reviews before paying, and a line that reads exactly like an
+          // in-stock download is the one place this could mislead.
+          const base = `${type.toUpperCase()} · ${trackCount} track${trackCount === 1 ? '' : 's'} · digital`;
+          const subtitle = btn.dataset.preorder
+            ? `${base} · pre-order, unlocks ${btn.dataset.releaseDate || 'on release'}`
+            : base;
           (window as any).morphicsCart.add({
             type: 'music',
             sku: `music:${btn.dataset.slug}`,
             title: btn.dataset.title,
-            subtitle: `${type.toUpperCase()} · ${trackCount} track${trackCount === 1 ? '' : 's'} · digital`,
+            subtitle,
             image: btn.dataset.image,
             unit_amount: minCents,
             qty: 1,

@@ -11,6 +11,7 @@ import merchData from '../../src/data/merch.json';
 import musicData from '../../src/data/music-catalog.json';
 import digitalData from '../../src/data/digital.json';
 import { isReleased } from '../_lib/release-gate.mjs';
+import { isPreorderable } from '../_lib/preorder.mjs';
 import { corsHandler, preflight } from '../_lib/cors';
 import { rateLimit, rateLimitedJson, clientIp } from '../_lib/ratelimit';
 
@@ -105,7 +106,12 @@ export const onRequestPost: PagesFunction<Env> = corsHandler<Env>(async ({ reque
       if (item.unit_amount < release.min_price_cents) {
         return new Response(`Below minimum for ${release.slug}`, { status: 400 });
       }
-      if (!isReleased(release.release_date)) {
+      // Two ways to be sellable: it is out, or it is an opted-in pre-order.
+      // Anything else is still refused here — this gate is the ONLY thing
+      // that decides what may be bought, so the client cannot talk its way
+      // past it by putting an unreleased slug in the cart by hand.
+      const preorder = isPreorderable(release.slug, release.release_date);
+      if (!preorder && !isReleased(release.release_date)) {
         return new Response(`Not yet released: ${release.slug}`, { status: 403 });
       }
 
@@ -115,15 +121,22 @@ export const onRequestPost: PagesFunction<Env> = corsHandler<Env>(async ({ reque
         price_data: {
           currency: 'usd',
           unit_amount: item.unit_amount,
+          // The buyer is about to be handed to Stripe's checkout page, and it
+          // is the last screen before their card is charged. If what they are
+          // buying will not arrive today, it has to say so THERE, not only on
+          // our own page — a pre-order that reads as an ordinary purchase at
+          // the moment of payment is how chargebacks start.
           product_data: {
-            name: `${release.title} (digital)`,
-            description: `${release.type.toUpperCase()} · ${release.track_count} track${release.track_count === 1 ? '' : 's'}`,
+            name: preorder ? `${release.title} (digital pre-order)` : `${release.title} (digital)`,
+            description: preorder
+              ? `${release.type.toUpperCase()} · ${release.track_count} track${release.track_count === 1 ? '' : 's'} · unlocks ${release.release_date}`
+              : `${release.type.toUpperCase()} · ${release.track_count} track${release.track_count === 1 ? '' : 's'}`,
             images: release.artwork?.startsWith('http') ? [release.artwork] : undefined,
-            metadata: { release_slug: release.slug, kind: 'digital' },
+            metadata: { release_slug: release.slug, kind: 'digital', preorder: preorder ? '1' : '0' },
           },
         },
       });
-      fulfillment.push({ type: 'music', release_slug: release.slug, quantity: item.qty });
+      fulfillment.push({ type: 'music', release_slug: release.slug, quantity: item.qty, preorder });
     } else if (item.type === 'digital') {
       // Fixed-price downloads (fonts, packs). Unlike music these are not
       // name-your-price and have no release-date gate — the price comes from
@@ -159,7 +172,7 @@ export const onRequestPost: PagesFunction<Env> = corsHandler<Env>(async ({ reque
   // just a human-readable hint for the Stripe dashboard.
   const summary = fulfillment
     .map(f => {
-      if (f.type === 'music') return `music:${f.release_slug}x${f.quantity}`;
+      if (f.type === 'music') return `${f.preorder ? 'preorder' : 'music'}:${f.release_slug}x${f.quantity}`;
       if (f.type === 'digital') return `digital:${f.digital_slug}`;
       return `merch:${f.printful_variant_id}x${f.quantity}`;
     })
