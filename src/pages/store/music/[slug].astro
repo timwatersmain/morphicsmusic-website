@@ -29,6 +29,12 @@ const buyable =
 // direction only: a page built while the release was still pending goes stale
 // the moment the date passes, so the countdown script below re-enables the
 // button and rewrites its label at runtime rather than trusting this.
+// Its own card if one was generated (every release with artwork has one), the
+// site card otherwise. The same `artwork` field decides both here and in
+// scripts/generate-og-cards.mjs, so the two cannot disagree.
+const ogImage = release.artwork
+  ? `/images/og/release-${release.slug}.jpg`
+  : '/images/og/og-default.jpg';
 const preorder = !!release.has_masters && isPreorderable(release.slug, release.release_date);
 
 function fmtDuration(seconds: number | null) {
@@ -39,7 +45,7 @@ function fmtDuration(seconds: number | null) {
 }
 ---
 
-<BaseLayout title={release.title} currentPage="/store">
+<BaseLayout title={release.title} currentPage="/store" ogImage={ogImage}>
   <div class="max-w-[1400px] mx-auto">
     <a href="/store" class="inline-flex items-center gap-2 font-mono text-[10px] text-white/40 hover:text-secondary uppercase tracking-widest mb-8">
       <span class="material-symbols-outlined text-sm">arrow_back</span> Back to store
