@@ -1,5 +1,14 @@
 [
   {
+    "id": "dscf4550",
+    "title": "DSCF4550",
+    "image": "/images/visuals/dscf4550.jpg",
+    "tags": ["morphics", "album-art"],
+    "size": "wide",
+    "date": "2026-08-22",
+    "featured": false
+  },
+  {
     "id": "stack-8-copy",
     "title": "STACK 8 COPY",
     "image": "/images/visuals/stack-8-copy.jpg",
