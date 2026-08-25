@@ -4,31 +4,48 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import visualsData from '../../data/visuals.json';
 import videosData from '../../data/videos.json';
 
-const featuredVisuals = visualsData.filter(v => v.featured);
+// ONE wall of artwork, not a RECENT strip above a curated grid.
+//
+// The strip existed because publishing from PHORM writes `featured: false`,
+// so new work could not reach the curated picks and was otherwise buried in
+// the full gallery. It solved that by adding a second section saying NEW,
+// which is a lot of page for what is really an ordering question. So: newest
+// three lead the wall, the rest of the collection scatters behind them, and
+// the page stops well short of the full gallery — that is what the VIEW FULL
+// GALLERY button is for.
+//
+// Artwork only. MOTION at the top of the page already plays every video and
+// lists them in its switcher; a video tile down here behaved differently from
+// its neighbours (it drove that player instead of opening the lightbox), which
+// is the kind of thing nobody discovers and everybody misclicks.
 
-// RECENT ADDITIONS. Publishing from PHORM writes `featured: false` so it can never
-// shove work into the curated ARTWORK picks above — which meant a published cover
-// was reachable only by digging through the full gallery. This strip is where new
-// work actually surfaces. Featured items are excluded so nothing appears twice on
-// the page, and only dated entries qualify: the older hand-authored ones carry no
-// date and are not "recent" by any reading.
-// Mixed: artwork and video in one feed, newest first, so "recent" means recent
-// across the whole site rather than per-medium. Videos keep their index into
-// videosData — a video tile does not open the image lightbox, it drives the MOTION
-// player above, which is already the page's one place for playback.
-const recentItems = [
-  ...visualsData
-    .filter(v => v.date && !v.featured)
-    .map(v => ({ kind: 'art', date: v.date, title: v.title, image: v.image, tags: v.tags, size: v.size })),
-  ...videosData
-    .map((v, i) => ({ kind: 'video', date: v.date, title: v.title, src: v.src, tags: v.tags, size: 'wide', index: i })),
-]
+/** Fisher-Yates, at BUILD time. Every visitor's browser reshuffles on load
+ *  (see the inline script under the grid), so this pass only decides what a
+ *  visitor with no JavaScript sees, and what the crawler indexes. */
+function shuffled<T>(items: T[]): T[] {
+  const out = [...items];
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+}
+
+// Only dated entries can be "newest" — the older hand-authored ones carry no
+// date at all, and would otherwise take the lead slots by accident of order.
+const newest = visualsData
   .filter(v => v.date)
   .sort((a, b) => String(b.date).localeCompare(String(a.date)))
-  // 12, not 6. Publishing from PHORM happens in sessions, not one file at a
-  // time — eight photos went up in ninety seconds on 2026-08-22 and a six-slot
-  // strip silently dropped two of them, which reads as a failed publish.
-  .slice(0, 12);
+  .slice(0, 3);
+
+const leads = new Set(newest);
+const galleryItems = [...newest, ...shuffled(visualsData.filter(v => !leads.has(v)))];
+
+// How many of those tiles the page shows. Every item is rendered — the rest
+// are hidden by CSS rather than dropped, because that is what gives the
+// browser something to shuffle from without a second request. Hidden tiles
+// have no layout box, so their lazy images are never fetched.
+const ON_PAGE = 12;
 ---
 
 <BaseLayout title="VISUAL" currentPage="/visuals" ogImage="/images/og/og-visuals.jpg">
@@ -121,80 +138,6 @@ const recentItems = [
     <img src="/images/brand/morph-line-g.png" alt="" loading="lazy" />
   </div>
 
-  <!-- ═══ RECENT ADDITIONS ═══ -->
-  {recentItems.length > 0 && (
-    <section class="mt-8 mb-20">
-      <div class="flex items-center gap-4 mb-8">
-        <span class="material-symbols-outlined text-primary text-2xl">new_releases</span>
-        <h2 class="font-headline text-3xl md:text-4xl font-bold tracking-tighter text-on-surface leading-none">
-          RECENT ADDITIONS
-        </h2>
-        <div class="flex-1 h-px bg-outline-variant ml-4"></div>
-      </div>
-
-      <div class="masonry-grid" id="recent-grid">
-        {recentItems.map((v) => (
-          <div
-            class:list={[
-              v.kind === 'art' ? "visual-card" : "recent-video-card",
-              "group relative border border-outline-variant bg-surface-container-low rounded-lg overflow-hidden transition-all duration-500 hover:scale-[1.02] hover:z-10 card-glow violet-pulse cursor-pointer",
-              v.size === 'tall' && 'masonry-item-tall',
-              v.size === 'wide' && 'masonry-item-wide',
-              v.size === 'square' && 'masonry-item-square',
-            ]}
-            data-video-index={v.kind === 'video' ? v.index : undefined}
-          >
-            {v.kind === 'art' ? (
-              <img
-                src={v.image}
-                alt={v.title}
-                loading="lazy"
-                class="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-opacity duration-500"
-              />
-            ) : (
-              <!-- poster + preload="none" together, and both matter.
-                   Without a poster a video paints BLACK until it has decoded a
-                   frame, which is why these cards were empty boxes with just a
-                   play button. preload="metadata" did not save them: Pages does
-                   not honour Range on /videos/* (a Range request comes back 200
-                   with the whole body, and there is no accept-ranges header), so
-                   there is no cheap way to reach frame one — the browser would
-                   have to pull the entire file. These five total 40MB.
-                   With a real poster there is nothing to fetch until someone
-                   presses play, so preload drops to "none" and /visuals now
-                   loads zero video bytes on arrival. Posters are generated by
-                   scripts/generate-video-posters.mjs; re-run it after adding a
-                   video or the card falls back to black. -->
-              <video
-                src={v.src}
-                poster={v.src.replace('/videos/', '/images/video-posters/').replace(/\.\w+$/, '.jpg')}
-                muted
-                playsinline
-                preload="none"
-                class="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-opacity duration-500"
-              ></video>
-            )}
-            {v.kind === 'video' && (
-              <div class="absolute top-3 right-3 flex items-center gap-1 px-2 py-1 rounded-full bg-background/70">
-                <span class="material-symbols-outlined text-primary text-sm">play_arrow</span>
-              </div>
-            )}
-            <div class="absolute inset-0 flex flex-col justify-end opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-              <div class="p-4 bg-gradient-to-t from-background/90 via-background/40 to-transparent">
-                <p class="font-headline text-sm font-bold text-white">{v.title}</p>
-                <div class="flex gap-2 mt-1">
-                  {v.tags.map(t => (
-                    <span class="font-mono text-[8px] text-primary/60 uppercase">#{t}</span>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </section>
-  )}
-
   <!-- ═══ ARTWORK SECTION ═══ -->
   <section class="mt-8">
     <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
@@ -215,7 +158,7 @@ const recentItems = [
     </div>
 
     <div class="masonry-grid" id="visuals-grid">
-      {featuredVisuals.map((v, i) => (
+      {galleryItems.map((v, i) => (
         <div
           class:list={[
             "visual-card group relative border border-outline-variant bg-surface-container-low rounded-lg overflow-hidden transition-all duration-500 hover:scale-[1.02] hover:z-10 card-glow violet-pulse cursor-pointer",
@@ -224,10 +167,12 @@ const recentItems = [
             v.size === 'square' && 'masonry-item-square',
           ]}
           data-slide-index={i}
+          data-scatter={i >= 3 ? '' : undefined}
         >
           <img
             src={v.image}
             alt={v.title}
+            loading={i < 3 ? 'eager' : 'lazy'}
             class="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-opacity duration-500"
           />
           <div class="absolute inset-0 flex flex-col justify-end opacity-0 group-hover:opacity-100 transition-opacity duration-300">
@@ -243,6 +188,42 @@ const recentItems = [
         </div>
       ))}
     </div>
+
+    <!--
+      Reshuffle the scattered tiles for this visitor.
+
+      is:inline and placed directly under the grid on purpose: it runs while
+      the parser is still working through the page, before the browser has
+      painted the wall, so the reorder is never something you see happen. A
+      bundled module would run after paint and the tiles would visibly jump.
+
+      Only the tiles behind the newest three move. Which of them are visible
+      is decided by CSS (:nth-child, below) rather than by this script, so a
+      visitor with JavaScript off still gets a page-sized wall instead of the
+      whole collection — and the images in the tiles this shuffle leaves
+      hidden are never fetched, because a display:none tile has no box for
+      the lazy loader to bring into view.
+    -->
+    <script is:inline>
+      (() => {
+        const grid = document.getElementById('visuals-grid');
+        if (!grid) return;
+        const scattered = [...grid.querySelectorAll('[data-scatter]')];
+        for (let i = scattered.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [scattered[i], scattered[j]] = [scattered[j], scattered[i]];
+        }
+        // Re-appending an element that is already in the DOM moves it, so the
+        // three lead tiles keep their places and everything else lands behind
+        // them in the new order.
+        for (const tile of scattered) grid.appendChild(tile);
+      })();
+    </script>
+
+    <!-- The page-sized wall, in one rule. Written from ON_PAGE so the count
+         lives in exactly one place, and positional so it keeps meaning the
+         same thing after the shuffle above reorders the tiles. -->
+    <style is:inline set:html={`#visuals-grid > *:nth-child(n+${ON_PAGE + 1}) { display: none; }`}></style>
   </section>
 
   <!-- Artwork Lightbox (click to expand fullscreen) -->
@@ -400,7 +381,13 @@ const recentItems = [
   const lbClose = document.getElementById('art-lb-close');
   const lbPrev = document.getElementById('art-lb-prev');
   const lbNext = document.getElementById('art-lb-next');
-  const cards = document.querySelectorAll('.visual-card');
+  // Only the tiles actually on the wall. The grid renders the whole collection
+  // and CSS shows a page's worth (see the rule under the grid), so filtering on
+  // display here is what keeps the lightbox's arrows and its "4 / 12" counter
+  // describing what the visitor can see, rather than stepping through images
+  // that are on the page but hidden.
+  const cards = Array.from(document.querySelectorAll<HTMLElement>('.visual-card'))
+    .filter(card => getComputedStyle(card).display !== 'none');
 
   const artItems = Array.from(cards).map(card => ({
     src: card.querySelector('img')?.src ?? '',
@@ -427,18 +414,6 @@ const recentItems = [
     if (lbTitle) lbTitle.textContent = item.title;
     if (lbCounter) lbCounter.textContent = `${lbIndex + 1} / ${artItems.length}`;
   }
-
-  // A video tile in RECENT ADDITIONS is not lightbox content — it selects that
-  // track in the MOTION player above and scrolls to it, so playback stays in the
-  // one place the page already handles it.
-  document.querySelectorAll('.recent-video-card').forEach(card => {
-    card.addEventListener('click', () => {
-      const idx = (card as HTMLElement).dataset.videoIndex;
-      const btn = document.querySelector<HTMLElement>(`.video-switch-btn[data-video-index="${idx}"]`);
-      btn?.click();
-      document.getElementById('motion-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
-  });
 
   cards.forEach((card, i) => {
     card.addEventListener('click', () => openLightbox(i));
