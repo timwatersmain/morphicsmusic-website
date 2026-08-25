@@ -1,11 +1,25 @@
 [
   {
+    "id": "ink-bloom",
+    "title": "INK BLOOM",
+    "src": "/videos/ink-bloom.mp4",
+    "description": "Macro ink study — black beading into white",
+    "date": "2026-02-16",
+    "tags": [
+      "macro",
+      "fluid"
+    ]
+  },
+  {
     "id": "av-shorts-01",
     "title": "AV SHORTS 01",
     "src": "/videos/av-shorts-01.mp4",
     "description": "Audiovisual experiment — chromatic distortion and fluid dynamics",
     "date": "2025-01-31",
-    "tags": ["audiovisual", "experimental"]
+    "tags": [
+      "audiovisual",
+      "experimental"
+    ]
   },
   {
     "id": "morphics-glitch",
@@ -13,7 +27,10 @@
     "src": "/videos/morphics-glitch.mp4",
     "description": "Generative glitch synthesis — real-time visual corruption",
     "date": "2023-09-28",
-    "tags": ["glitch", "generative"]
+    "tags": [
+      "glitch",
+      "generative"
+    ]
   },
   {
     "id": "shorts-outro",
@@ -21,7 +38,10 @@
     "src": "/videos/shorts-outro.mp4",
     "description": "Morphics shorts outro sequence — motion graphics",
     "date": "2025-01-27",
-    "tags": ["motion", "branding"]
+    "tags": [
+      "motion",
+      "branding"
+    ]
   },
   {
     "id": "glitch-sequence",
@@ -29,7 +49,10 @@
     "src": "/videos/glitch-sequence.mp4",
     "description": "Extended glitch synthesis",
     "date": "2023-12-19",
-    "tags": ["glitch", "experimental"]
+    "tags": [
+      "glitch",
+      "experimental"
+    ]
   },
   {
     "id": "new-glitch",
@@ -37,6 +60,9 @@
     "src": "/videos/new-glitch.mp4",
     "description": "High-resolution glitch render",
     "date": "2025-08-25",
-    "tags": ["glitch", "generative"]
+    "tags": [
+      "glitch",
+      "generative"
+    ]
   }
 ]
