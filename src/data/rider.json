@@ -1,0 +1,198 @@
+{
+  "_readme": [
+    "EVERY WORD OF THE RIDER LIVES HERE. Edit this file, run `node press-kit/build-all.mjs`,",
+    "and public/downloads/morphics-rider.pdf is reissued. No HTML, no code.",
+    "The build refuses rather than printing a broken document, and names the field.",
+    "",
+    "Text formatting (works in any text field):",
+    "  **bold**    -> white bold, for the words a promoter must not miss",
+    "  *accent*    -> the green accent (used in the cover title)",
+    "  ~normal~    -> cancels bold inside a bold cell, e.g. \"2 ~(4 pref.)~\"",
+    "  Type & < > ' \" normally. They are escaped for you.",
+    "",
+    "Placeholders, filled from src/data/epk.json so they can never go stale:",
+    "  {contact} {company} {email} {phone} {updated}",
+    "",
+    "Section numbers (01, 02, ...) are counted automatically in the order the",
+    "sections appear. Add, delete or reorder a section and everything renumbers.",
+    "",
+    "A section is { title, blocks: [] }. A block is ONE of:",
+    "  { \"p\": \"a paragraph\" }",
+    "  { \"list\": [\"bullet\", \"bullet\"] }",
+    "  { \"note\": \"the boxed, green-ruled callout\" }",
+    "  { \"checklist\": [\"tick box\", \"tick box\"] }",
+    "  { \"table\": { \"head\": [...], \"cols\": [...], \"rows\": [...] } }",
+    "    cols sets each column's style: \"f\" = white bold label, \"q\" = narrow",
+    "    number column, \"\" = ordinary. A row is either [\"cell\", \"cell\"] or",
+    "    { \"key\": true, \"cells\": [...] } to shade it as a must-have.",
+    "",
+    "Keep to three pages, and keep no page half empty — the layout is built for",
+    "that. If a page overflows, the PDF will show it."
+  ],
+
+  "updated": "August 2026",
+  "coverTitle": "Performance & *Technical Rider*",
+  "coverStrap": "Updated {updated} · supersedes all previous",
+  "footer": "Morphics — Performance & Technical Rider · {updated}",
+
+  "page1": {
+    "intro": "Morphics performs three ways. **All three are offered on every booking** — confirm which at advance; the requirements below apply only to the one chosen. This rider is executed with the performance contract and the Purchaser is bound by each clause collectively and independently.",
+    "formats": {
+      "head": ["Format", "Artist provides", "Venue provides"],
+      "cols": ["f", "", ""],
+      "rows": [
+        ["Live A/V",
+         "Laptop, controllers, audio interface, all visual content and playback",
+         "2× balanced line input (DI or XLR), projector or LED wall with a feed, monitor"],
+        ["Live — Ableton",
+         "Laptop, controllers, audio interface. Audio routed from the artist's own interface",
+         "2× balanced line input (DI or XLR) and a monitor. Nothing else"],
+        ["DJ set",
+         "USB drives",
+         "Linked CDJ setup as specified overleaf, and a monitor"]
+      ]
+    },
+    "note": "**Flexibility is the default.** The rig adapts to the room — if the house cannot meet a spec, say so at advance rather than on the day and it can almost always be worked around. What matters is a clean stereo feed into a capable system and enough monitoring to play to.",
+    "sections": [
+      {
+        "title": "Common to every format",
+        "blocks": [
+          { "list": [
+            "A competent, experienced sound engineer on site from sound-check through the entire set.",
+            "System loud and clear enough for the room, with real low end and no bleed from other stages.",
+            "One monitor minimum, two preferred, on stands and adjustable from the position played. Placed left and right of the artist, **within about a metre** — not on the floor, and not behind. Where only one can be provided it goes on the **artist's left**, facing the audience.",
+            "A stable, structurally safe performance area at a **booth height of 90–100 cm**, and a fan for the booth."
+          ] },
+          { "p": "The Artist reserves the right to refuse equipment judged unfit, unsafe or outside these specifications, and to have people removed from the stage during the performance." }
+        ]
+      },
+      {
+        "title": "DJ set — required equipment",
+        "blocks": [
+          { "table": {
+            "head": ["Qty", "DJ set — required equipment", "Notes"],
+            "cols": ["q", "", ""],
+            "rows": [
+              { "key": true, "cells": ["2 ~(4 pref.)~", "**Pioneer CDJ-3000** preferred", "CDJ-2000NXS2 accepted. USB and Ethernet must be functional."] },
+              { "key": true, "cells": ["1", "**Pioneer DJM-900NXS2** or better", "DJM-A9 or V10 equally welcome."] },
+              ["1", "Ethernet hub", "Netgear ProSAFE GS105 or similar, linking all CDJs."],
+              ["1", "Technics 1200 turntable", "Where available."]
+            ]
+          } },
+          { "note": "Decks and mixer must LINK, with working USB and Ethernet — the set is prepared as a linked multi-deck performance. A four-deck layout needs roughly **2200 mm** of stable table; two decks fit comfortably in less. Where a venue cannot provide this, the **Ableton format needs only two line inputs** and is the simpler booking." }
+        ]
+      }
+    ]
+  },
+
+  "page2": {
+    "title": "Stage plot & signal path",
+    "intro": "Plan view. The booth footprint is the same for all three formats — only what sits on it changes. Green marks what the artist brings or what the house is asked to patch. **Advancing production:** {contact}, {email} · {phone}.",
+    "sections": [
+      {
+        "title": "Signal path by format",
+        "blocks": [
+          { "table": {
+            "head": ["Format", "Source", "To house"],
+            "cols": ["f", "", ""],
+            "rows": [
+              ["Live A/V", "Artist's audio interface", "2× balanced line (DI or XLR) + video feed to projector or LED"],
+              ["Live — Ableton", "Artist's audio interface", "2× balanced line (DI or XLR)"],
+              ["DJ set", "DJM master out", "House standard from the mixer"]
+            ]
+          } },
+          { "note": "Booth width is the one thing worth confirming early: a four-deck layout needs roughly **2200 mm** of stable table, two decks fit comfortably in less. Say which you can host at advance and the set is prepared for it." }
+        ]
+      },
+      {
+        "title": "Visuals — A/V format only",
+        "blocks": [
+          { "p": "Content is supplied and played back by the artist; the house provides the surface and the feed to it." },
+          { "list": [
+            "Projector or LED wall, **1920 × 1080 minimum**, 16:9, at **50 or 60 Hz**.",
+            "**HDMI** from the booth position. Where the run is long, the venue provides the cable or an HDMI-over-Cat extender. **SDI is accepted** where the house standard — the venue supplies the converter.",
+            "Screen behind or above the performance position, not in front of it, with a sightline to it from the booth.",
+            "**Screen mapping, edge blending and pixel alignment are the venue's**, not the artist's. The artist delivers one clean 16:9 feed; how it lands on the surface is the house system's job.",
+            "Where the venue runs its own VJ or house visuals, the artist can supply content to them instead — say so at advance.",
+            "The set plays without visuals if the room cannot host them; the A/V format simply becomes the Ableton format."
+          ] }
+        ]
+      }
+    ]
+  },
+
+  "page3": {
+    "title": "Terms, logistics & hospitality",
+    "sections": [
+      {
+        "title": "Advancing",
+        "blocks": [
+          { "p": "The Purchaser or their representative will be available to advance the show by phone or email no later than **ten business days** before the performance, confirming: chosen format; fee, capacity, ticket pricing and any tax withheld; stage size and condition of sound and lighting; parking, internet, green room access and exits; day-of contact; and times for load-in, sound-check, performance and curfew." }
+        ]
+      },
+      {
+        "title": "Billing",
+        "blocks": [
+          { "p": "The name is **Morphics** — one word, as written here — in all printed advertising and mentioned in any radio or social advertising. For support slots it is listed, published and promoted in full. It is never shortened or restyled." }
+        ]
+      },
+      {
+        "title": "Load-in, parking & access",
+        "blocks": [
+          { "list": [
+            "Access at the contracted load-in time, and for 45 minutes after curfew for load-out when headlining.",
+            "Free parking at the venue, or as close as possible.",
+            "A competent driver between airport, hotel and venue where contracted.",
+            "All-access credentials for Artist, crew and management, for the duration of the event."
+          ] }
+        ]
+      },
+      {
+        "title": "Comps & payment",
+        "blocks": [
+          { "p": "Comps as contracted; where unstated, **five**, two of them all-access — band, crew and management not counted against that total. Cash preferred. Cheques only with written approval from management in advance, payable to **Morphics LLC**. Where management travels with the Artist, the Purchaser settles with management. Please provide a private space for settlement." }
+        ]
+      },
+      {
+        "title": "Hospitality",
+        "blocks": [
+          { "p": "Morphics typically travels alone; confirm numbers at advance. Contracted meals are served one hour before the performance or 30 minutes after. In the green room before arrival:" },
+          { "list": [
+            "Bottled water, sufficient for Artist and any crew.",
+            "Alcoholic and non-alcoholic drinks, or a bar tab on site.",
+            "A meal, before the show or at the venue.",
+            "Safe, on-time transport to and from the necessary locations."
+          ] },
+          { "p": "Where a meal cannot be provided, a **$30** buyout per person applies." }
+        ]
+      },
+      {
+        "title": "Accommodation",
+        "blocks": [
+          { "p": "Where provided: a double room at a three-star hotel, B&B or similar, close to the venue, booked for late arrival and late check-out, available until the day after the performance. The Purchaser is not responsible for incidentals. Where a hotel was contracted but not provided, a **$175** buyout applies at settlement." }
+        ]
+      }
+    ],
+    "closingNote": "Anything here can be discussed — raise it at advance rather than on the day. Nearly everything is negotiable with notice; almost nothing is, without it. **{contact} · {email}**",
+    "confirm": {
+      "title": "Confirm at advance",
+      "blocks": [
+        { "checklist": [
+          "Performance format — A/V, Ableton or DJ",
+          "Booth width, and deck count you can host",
+          "Monitor count and position",
+          "Sound engineer on site for the full set",
+          "Load-in, sound-check, set and curfew times",
+          "Parking, and driver if contracted",
+          "Green room access, hospitality, accommodation",
+          "Day-of contact name and number"
+        ] }
+      ]
+    },
+    "signature": [
+      { "label": "Purchaser", "under": "name and company" },
+      { "label": "Signature", "under": "accepting this rider" },
+      { "label": "Date", "under": "" }
+    ]
+  }
+}

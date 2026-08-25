@@ -11,14 +11,14 @@
 // annotations carry.
 
 export function stagePlot(accent = '#3df082') {
-  const W = 168, H = 124;                      // mm, inside the page margins
+  const W = 168, H = 100;                      // mm, inside the page margins
   const t = (x, y, s, opts = {}) =>
     `<text x="${x}" y="${y}" fill="${opts.fill || '#cfcfcf'}" font-size="${opts.size || 2.6}"
        font-family="Rubik, sans-serif" font-weight="${opts.weight || 400}"
        letter-spacing="${opts.ls || 0}" text-anchor="${opts.anchor || 'start'}">${s}</text>`;
 
   // Booth: 2200mm of table is the real-world ask for a four-deck layout.
-  const bx = 30, by = 54, bw = 108, bh = 26;
+  const bx = 30, by = 46, bw = 108, bh = 26;
   const deckW = 18.4, deckH = 18, gap = 2.2;
   const decks = [];
   let dx = bx + 4;
@@ -51,7 +51,7 @@ export function stagePlot(accent = '#3df082') {
     <rect x="${bx}" y="${by}" width="${bw}" height="${bh}" rx="1"
           fill="#0e0e0e" stroke="#fff" stroke-width=".5"/>
     ${decks.join('')}
-    ${t(bx + bw / 2, by - 3, 'BOOTH TABLE — 2200 × 700 mm MIN, STABLE', {
+    ${t(bx + bw / 2, by - 3, 'BOOTH TABLE — 2200 × 700 mm MIN · 90–100 cm HIGH · STABLE', {
         anchor: 'middle', size: 2.4, ls: .4, fill: '#8d8d8d' })}
 
     <!-- laptop + controller, the Ableton / A-V position -->
@@ -66,6 +66,8 @@ export function stagePlot(accent = '#3df082') {
     ${monitor(bx + bw + 14, true)}
     ${t(bx - 9.5, by - 32, 'MONITOR', { anchor: 'middle', size: 2.3, ls: .3, fill: accent })}
     ${t(bx + bw + 9.5, by - 32, 'MONITOR', { anchor: 'middle', size: 2.3, ls: .3, fill: accent })}
+    ${t(bx - 9.5, by - 7.5, '≤ 1 m, not on floor', { anchor: 'middle', size: 2.1, fill: '#8d8d8d' })}
+    ${t(bx + bw + 9.5, by - 7.5, '≤ 1 m, not on floor', { anchor: 'middle', size: 2.1, fill: '#8d8d8d' })}
 
     <!-- signal path -->
     <path d="M${bx + bw / 2 + 8} ${by + bh} L${bx + bw / 2 + 8} ${by + bh + 9} L${W - 26} ${by + bh + 9}"
