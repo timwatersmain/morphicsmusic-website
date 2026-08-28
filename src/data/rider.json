@@ -73,13 +73,12 @@
             "head": ["Qty", "DJ set — required equipment", "Notes"],
             "cols": ["q", "", ""],
             "rows": [
-              { "key": true, "cells": ["2 ~(4 pref.)~", "**Pioneer CDJ-3000** preferred", "CDJ-2000NXS2 accepted. USB and Ethernet must be functional."] },
+              { "key": true, "cells": ["2 ~(3 pref.)~", "**Pioneer CDJ-3000** preferred", "CDJ-2000NXS2 accepted. USB and Ethernet must be functional."] },
               { "key": true, "cells": ["1", "**Pioneer DJM-900NXS2** or better", "DJM-A9 or V10 equally welcome."] },
-              ["1", "Ethernet hub", "Netgear ProSAFE GS105 or similar, linking all CDJs."],
               ["1", "Technics 1200 turntable", "Where available."]
             ]
           } },
-          { "note": "Decks and mixer must LINK, with working USB and Ethernet — the set is prepared as a linked multi-deck performance. A four-deck layout needs roughly **2200 mm** of stable table; two decks fit comfortably in less. Where a venue cannot provide this, the **Ableton format needs only two line inputs** and is the simpler booking." }
+          { "note": "Decks and mixer must LINK, with working USB and Ethernet — the set is prepared as a linked multi-deck performance. No separate network switch is needed: the DJM's own LAN ports link the decks. The full layout — three CDJs, turntable, mixer and laptop — needs roughly **2500 mm** of stable table; two decks fit comfortably in less. Where a venue cannot provide this, the **Ableton format needs only two line inputs** and is the simpler booking." }
         ]
       }
     ]
@@ -101,7 +100,7 @@
               ["DJ set", "DJM master out", "House standard from the mixer"]
             ]
           } },
-          { "note": "Booth width is the one thing worth confirming early: a four-deck layout needs roughly **2200 mm** of stable table, two decks fit comfortably in less. Say which you can host at advance and the set is prepared for it." }
+          { "note": "Booth width is the one thing worth confirming early: the full layout — three CDJs, turntable, mixer and room for the laptop — needs roughly **2500 mm** of stable table, two decks fit comfortably in less. Say which you can host at advance and the set is prepared for it." }
         ]
       },
       {
