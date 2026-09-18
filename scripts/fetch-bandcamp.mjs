@@ -4,14 +4,21 @@
 const BANDCAMP_URL = 'https://morphics.bandcamp.com/music';
 const BAND_ID = 682291013;
 
+// Bandcamp is scraped, not an API — when its markup shifts, keep the committed
+// bandcamp-latest.json rather than failing the whole Pages build (2026-09-18:
+// links moved into escaped JSON and every deploy failed here).
+function keepCommitted() {
+  console.log('• Bandcamp fetch failed — leaving src/data/bandcamp-latest.json as committed');
+}
+
 async function fetchLatest() {
   try {
     const res = await fetch(BANDCAMP_URL);
     const html = await res.text();
 
     // Find the first track or album link (latest release)
-    const trackMatch = html.match(/\/track\/([^"'\s<]+)/);
-    const albumMatch = html.match(/\/album\/([^"'\s<]+)/);
+    const trackMatch = html.match(/\/track\/([a-z0-9-]+)/);
+    const albumMatch = html.match(/\/album\/([a-z0-9-]+)/);
 
     // Try latest track first
     let type = 'track';
@@ -25,7 +32,7 @@ async function fetchLatest() {
 
     if (!slug) {
       console.error('No tracks or albums found on Bandcamp page');
-      process.exit(1);
+      return keepCommitted();
     }
 
     // Fetch the track/album page to get the numeric ID
@@ -38,7 +45,7 @@ async function fetchLatest() {
 
     if (!numericId) {
       console.error(`Could not find numeric ID for ${type}/${slug}`);
-      process.exit(1);
+      return keepCommitted();
     }
 
     // Extract title
@@ -63,7 +70,7 @@ async function fetchLatest() {
     console.log(`Saved to ${outPath}`);
   } catch (err) {
     console.error('Failed to fetch Bandcamp data:', err.message);
-    process.exit(1);
+    return keepCommitted();
   }
 }
 
