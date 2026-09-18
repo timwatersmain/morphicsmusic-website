@@ -1,6 +1,6 @@
 {
   "bucket": "morphicsbrain-media",
-  "generated_at": "2026-05-27T01:24:41.904Z",
+  "generated_at": "2026-09-18T22:50:08.000Z",
   "previews": {
     "befuddled": [
       {
@@ -434,6 +434,36 @@
         "filename": "mysterium.mp3",
         "size": 4288305,
         "duration_seconds": 178
+      }
+    ],
+    "scrying-the-veil": [
+      {
+        "track_number": 1,
+        "key": "previews/scrying-the-veil/01_Rephractal.mp3",
+        "filename": "01 Rephractal.wav",
+        "size": 3717791,
+        "duration_seconds": 232
+      },
+      {
+        "track_number": 2,
+        "key": "previews/scrying-the-veil/02_Through_Prisms.mp3",
+        "filename": "02 Through Prisms.wav",
+        "size": 2957941,
+        "duration_seconds": 184
+      },
+      {
+        "track_number": 3,
+        "key": "previews/scrying-the-veil/03_Seraphic.mp3",
+        "filename": "03 Seraphic.wav",
+        "size": 4542424,
+        "duration_seconds": 283
+      },
+      {
+        "track_number": 4,
+        "key": "previews/scrying-the-veil/04_Mirage.mp3",
+        "filename": "04 Mirage.wav",
+        "size": 3900439,
+        "duration_seconds": 243
       }
     ]
   }

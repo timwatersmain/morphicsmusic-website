@@ -1,6 +1,6 @@
 {
   "bucket": "morphicsbrain-media",
-  "generated_at": "2026-05-27T01:03:34.566Z",
+  "generated_at": "2026-09-18T22:50:08.000Z",
   "releases": {
     "befuddled": [
       {
@@ -361,6 +361,32 @@
         "filename": "02 Croaky Acid.wav",
         "key": "masters/swamp-logic/02_Croaky_Acid.wav",
         "size": 43013456,
+        "ext": "wav"
+      }
+    ],
+    "scrying-the-veil": [
+      {
+        "filename": "01 Rephractal.wav",
+        "key": "masters/scrying-the-veil/01_Rephractal.wav",
+        "size": 61466682,
+        "ext": "wav"
+      },
+      {
+        "filename": "02 Through Prisms.wav",
+        "key": "masters/scrying-the-veil/02_Through_Prisms.wav",
+        "size": 48898182,
+        "ext": "wav"
+      },
+      {
+        "filename": "03 Seraphic.wav",
+        "key": "masters/scrying-the-veil/03_Seraphic.wav",
+        "size": 75101520,
+        "ext": "wav"
+      },
+      {
+        "filename": "04 Mirage.wav",
+        "key": "masters/scrying-the-veil/04_Mirage.wav",
+        "size": 64483122,
         "ext": "wav"
       }
     ]

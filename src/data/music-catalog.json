@@ -1,6 +1,60 @@
 {
-  "generated_at": "2026-08-22T00:49:02.330Z",
+  "generated_at": "2026-09-18T22:50:08.000Z",
   "releases": [
+    {
+      "id": "62f8046df00541f6800e1e82803785fb",
+      "slug": "scrying-the-veil",
+      "title": "SCRYING THE VEIL",
+      "type": "ep",
+      "release_date": "2026-09-18",
+      "artwork": "/images/albums/scrying-the-veil.jpg",
+      "genre": [
+        "Electronic"
+      ],
+      "description": "",
+      "bandcamp_url": null,
+      "min_price_cents": 400,
+      "track_count": 4,
+      "has_masters": true,
+      "tracks": [
+        {
+          "id": "8712751a45e943a9b994fb5e3adb936e",
+          "track_number": 1,
+          "title": "Rephractal",
+          "isrc": "QZTV32682008",
+          "duration_seconds": 232,
+          "min_price_cents": 100,
+          "master_filename": "01 Rephractal.wav"
+        },
+        {
+          "id": "92bbd194c8e240269403d89ff553a863",
+          "track_number": 2,
+          "title": "Through Prisms",
+          "isrc": "QZTV32682011",
+          "duration_seconds": 184,
+          "min_price_cents": 100,
+          "master_filename": "02 Through Prisms.wav"
+        },
+        {
+          "id": "f63568603acd469d92caf29b2dce9569",
+          "track_number": 3,
+          "title": "Seraphic",
+          "isrc": "QZTV32682014",
+          "duration_seconds": 283,
+          "min_price_cents": 100,
+          "master_filename": "03 Seraphic.wav"
+        },
+        {
+          "id": "8c2a5df876fb4f4f8177cb377d880647",
+          "track_number": 4,
+          "title": "Mirage",
+          "isrc": "QZTV32682015",
+          "duration_seconds": 243,
+          "min_price_cents": 100,
+          "master_filename": "04 Mirage.wav"
+        }
+      ]
+    },
     {
       "id": "edb40167312d42adbed12c13da2f65fa",
       "slug": "swamp-logic",
